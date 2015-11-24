@@ -15,7 +15,7 @@ def create_app(config_name):
     mail.init_app(app)
 
     # attach routes and custom error pages here
-    import scqcp as scqcp_blueprint
+    from scqcp import scqcp as scqcp_blueprint
     app.register_blueprint(scqcp_blueprint)
 
     return app

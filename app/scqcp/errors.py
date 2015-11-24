@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-import scqcp
+from app.scqcp import scqcp
 
 from flask import render_template
 

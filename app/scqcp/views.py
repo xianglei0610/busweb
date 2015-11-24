@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-
-import scqcp
+from app.scqcp import scqcp
 
 
 @scqcp.route('/', methods=['GET', 'POST'])
