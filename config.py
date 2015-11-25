@@ -21,17 +21,22 @@ class DevelopmentConfig(Config):
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
 
-class TestingConfig(Config):
-    TESTING = True
-
-
 class ProductionConfig(Config):
     pass
 
 
+class LocalConfig(Config):
+
+    DEBUG = True
+    MONGODB_SETTINGS = {
+        'db': 'test',
+        'host': 'localhost',
+        'port': 27017,
+    }
+
 config = {
+    'local': LocalConfig,
     'dev': DevelopmentConfig,
-    'test': TestingConfig,
     'prod': ProductionConfig,
-    'default': DevelopmentConfig
+    'default': LocalConfig
 }
