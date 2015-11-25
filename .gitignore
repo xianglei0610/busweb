@@ -1,1 +1,4 @@
 .py[o|c]
+.project
+.pydevproject
+.settings/
