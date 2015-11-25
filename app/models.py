@@ -25,7 +25,7 @@ class ScqcpRebot(db.Document):
     last_login_time = db.DateTimeField(default=datetime.now)
 
     meta = {
-        "indexes": [("telephone", "password"), ],
+        "indexes": ["telephone", ],
     }
 
     def relogin(self):
@@ -103,3 +103,50 @@ class ScqcpRebot(db.Document):
             if bot.relogin() == "OK":
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
+
+    def add_rider(self, name, id_card, birthday):
+        uri = "/scqcp/api/v2/ticket/add_rider"
+        data = {
+            "open_id": self.open_id,
+            "rider_name": name,
+            "id_type": 0,
+            "id_number": id_card,
+            "birthday": birthday,
+        }
+        ret = self.http_post(uri, data)
+        if ret["status"] == 1:
+            current_app.logger.info("[%s] add rider(%s,%s) success!", self.telephone, name, id_card)
+        else:
+            current_app.logger.error("[%s] add rider(%s,%s) fail! %s", self.telephone, name, id_card, ret.get("msg", ""))
+
+    def http_post(self, uri, data):
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        request = urllib2.Request(url)
+        request.add_header('User-Agent', self.user_agent)
+        request.add_header('Authorization', self.token)
+        request.add_header('Content-type', "application/json; charset=UTF-8")
+        qstr = urllib.urlencode(data)
+        response = urllib2.urlopen(request, qstr, timeout=5)
+        ret = json.loads(response.read())
+        return ret
+
+    def order(self, line, riders, contacter):
+        # 锁票
+        uri = "/api/v1/telecom/lock"
+        tickets = []
+        for r in riders:
+            lst = [r["id_number"], r["real_name"], contacter, "0", "0"]
+            tickets.append("|".join(lst))
+
+        data = {
+            "carry_sta_id": line["carry_sta_id"],
+            "stop_name": line["stop_name"],
+            "str_date": line["str_date"],
+            "sign_id": line["sign_id"],
+            "phone_num": contacter,
+            "buy_ticket_info": "$".join(tickets),
+            "open_id": self.open_id,
+        }
+        ret = self.http_post(uri, data)
+
+        # 保险?
