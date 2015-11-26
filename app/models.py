@@ -152,7 +152,7 @@ class ScqcpRebot(db.Document):
             del attrs["msg"]
             ScqcpOrder(**attrs).save()
             return ""
-        current_app.logger.info("order fail! %s", reg["msg"])
+        current_app.logger.info("order fail! %s", ret["msg"])
         return ret["msg"]
 
     def pay(self, order):
@@ -166,21 +166,17 @@ class ScqcpRebot(db.Document):
         临时测试方法，后期将移到单元测试模块
         """
         line = dict(
-                carry_sta_id="zjcz",
-                stop_name="八一",
-                str_date="2015-11-26 18:40",
-                sign_id="273d96c5817743b5ada282ce63d152d0"
-                )
+            carry_sta_id="zjcz",
+            stop_name="八一",
+            str_date="2015-11-26 18:40",
+            sign_id="273d96c5817743b5ada282ce63d152d0"
+            )
         contacter = "15575101324"
         riders = [
             {
                 "id_number": "431021199004165616",
                 "real_name": "罗军平",
             },
-            #{
-            #    "id_number": "430521199002198525",
-            #    "real_name": "曾雁飞",
-            #}
         ]
         self.order(line, riders, contacter)
 
