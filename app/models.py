@@ -2,6 +2,7 @@
 import urllib2
 import urllib
 import random
+import copy
 
 from datetime import datetime
 from flask import current_app, json
@@ -13,7 +14,7 @@ from app import db
 
 class ScqcpRebot(db.Document):
     """
-    针对四川汽车票务网的Rebot
+    机器人: 对被爬网站用户的抽象
     """
     telephone = db.StringField(required=True, unique=True)
     password = db.StringField()
@@ -46,22 +47,15 @@ class ScqcpRebot(db.Document):
 
         # 登陆
         uri = "/api/v1/user/login_phone"
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
-        request = urllib2.Request(url)
-        request.add_header('User-Agent', ua)
-        request.add_header('Authorization', token)
-        request.add_header('Content-type', "application/json; charset=UTF-8")
         data = {
             "username": self.telephone,
             "password": self.password,
             "is_encrypt": self.is_encrypt,
         }
-        qstr = urllib.urlencode(data)
-        response = urllib2.urlopen(request, qstr, timeout=5)
-        ret = json.loads(response.read())
+        ret = self.http_post(uri, data, user_agent=ua, token=token)
         if "open_id" not in ret:
             # 登陆失败
-            current_app.logger.error("%s %s login scqcp.com failed! %s", self.telephone, self.password, ret.get("msg", ""))
+            current_app.logger.error("%s %s login failed! %s", self.telephone, self.password, ret.get("msg", ""))
             self.update(is_active=False)
             return ret.get("msg", "fail")
         open_id = ret["open_id"]
@@ -119,19 +113,22 @@ class ScqcpRebot(db.Document):
         else:
             current_app.logger.error("[%s] add rider(%s,%s) fail! %s", self.telephone, name, id_card, ret.get("msg", ""))
 
-    def http_post(self, uri, data):
+    def http_post(self, uri, data, user_agent=None, token=None):
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         request = urllib2.Request(url)
-        request.add_header('User-Agent', self.user_agent)
-        request.add_header('Authorization', self.token)
+        request.add_header('User-Agent', user_agent or self.user_agent)
+        request.add_header('Authorization', token or self.token)
         request.add_header('Content-type', "application/json; charset=UTF-8")
         qstr = urllib.urlencode(data)
         response = urllib2.urlopen(request, qstr, timeout=5)
         ret = json.loads(response.read())
+        current_app.logger.debug("http_post %s %s", uri, qstr)
         return ret
 
     def order(self, line, riders, contacter):
-        # 锁票
+        """
+        下订单
+        """
         uri = "/api/v1/telecom/lock"
         tickets = []
         for r in riders:
@@ -148,5 +145,60 @@ class ScqcpRebot(db.Document):
             "open_id": self.open_id,
         }
         ret = self.http_post(uri, data)
+        if ret["status"] == 1:
+            current_app.logger.info("order succ! %s", str(ret))
+            attrs = copy.copy(ret)
+            del attrs["status"]
+            del attrs["msg"]
+            ScqcpOrder(**attrs).save()
+            return ""
+        current_app.logger.info("order fail! %s", reg["msg"])
+        return ret["msg"]
 
-        # 保险?
+    def pay(self, order):
+        """
+        支付
+        """
+        pass
+
+    def test_order(self):
+        """
+        临时测试方法，后期将移到单元测试模块
+        """
+        line = dict(
+                carry_sta_id="zjcz",
+                stop_name="八一",
+                str_date="2015-11-26 18:40",
+                sign_id="273d96c5817743b5ada282ce63d152d0"
+                )
+        contacter = "15575101324"
+        riders = [
+            {
+                "id_number": "431021199004165616",
+                "real_name": "罗军平",
+            },
+            #{
+            #    "id_number": "430521199002198525",
+            #    "real_name": "曾雁飞",
+            #}
+        ]
+        self.order(line, riders, contacter)
+
+
+class ScqcpOrder(db.Document):
+    """
+    scqcp.com下订单时的返回信息
+    """
+    expire_time = db.DateTimeField()
+    code = db.StringField()
+    ticket_code = db.StringField()
+    pay_order_id = db.LongField()
+    ticket_list = db.ListField()
+    ticket_lines = db.DictField()
+    ticket_ids = db.ListField()
+    order_ids = db.ListField()
+    ticket_price_list = db.ListField()
+    ticket_type = db.ListField()
+    web_order_id = db.ListField()
+    seat_number_list = db.ListField()
+    lock_data = db.StringField()
