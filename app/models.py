@@ -12,6 +12,88 @@ from app.constans import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app import db
 
 
+class Line(db.Document):
+    sch_id = db.StringField()  # 路线id
+    start_city_id = db.StringField()
+    start_city_name = db.StringField()
+    start_sta_id = db.StringField()
+    start_sta_name = db.StringField()
+    end_city_id = db.StringField()
+    end_city_name = db.StringField()
+    end_sta_id = db.StringField()
+    end_sta_name = db.StringField()
+    drv_date_time = db.DateTimeField(required=True)  # 开车时间
+    distance = db.StringField()
+    vehicle_type = db.StringField()  # 车型
+    seat_type = db.StringField()     # 座位类型
+    bus_num = db.StringField()       # 车次
+    full_price = db.StringField()
+    half_price = db.FloatField()
+    crawl_source = db.StringField()       # 爬取来源
+    crawl_datetime = db.DateTimeField()   # 爬取的时间
+    extra_info = db.DictField()  # 额外信息字段
+
+
+class Rider(db.Document):
+    telephone = db.StringField(unique=True)
+    name = db.StringField()
+    email = db.EmailField()
+    id_card = db.StringField()
+
+
+class Order(db.Document):
+    # 订单信息
+    order_no = db.StringField(unique=True)
+    status = db.IntField()
+    order_from = db.StringField()  # 售票来源
+    order_price = db.FloatField()  # 订单金额
+    create_date_time = db.DateTimeField()
+
+    # 车票信息
+    line = db.ReferenceField(Line)
+    seat_no_list = db.ListField()
+    ticket_price = db.FloatField()
+    ticket_amount = db.IntField()
+    ticket_fee = db.FloatField()   # 手续费
+    discount = db.FloatField()     # 优惠金额
+
+    # 支付信息
+    pay_no = db.StringField()      # 支付号
+    pay_status = db.IntField()
+    pay_channel = db.StringField()     # 支付方式
+    pay_account = db.StringField()
+    pay_datetime = db.DateTimeField()
+
+    # 联系人信息
+    contacter_phone = db.StringField()
+    contacter_email = db.StringField()
+    contacter_emailemail = db.EmailField()
+    contacter_name = db.StringField()
+    contacter_idcard = db.StringField()
+
+    # 乘客信息
+    riders = db.ListField(db.ReferenceField(Rider))
+
+
+class ScqcpOrder(db.Document):
+    """
+    scqcp.com下订单时的返回信息
+    """
+    expire_time = db.DateTimeField()
+    code = db.StringField()
+    ticket_code = db.StringField()
+    pay_order_id = db.LongField()
+    ticket_list = db.ListField()
+    ticket_lines = db.DictField()
+    ticket_ids = db.ListField()
+    order_ids = db.ListField()
+    ticket_price_list = db.ListField()
+    ticket_type = db.ListField()
+    web_order_id = db.ListField()
+    seat_number_list = db.ListField()
+    lock_data = db.StringField()
+
+
 class ScqcpRebot(db.Document):
     """
     机器人: 对被爬网站用户的抽象
@@ -180,21 +262,3 @@ class ScqcpRebot(db.Document):
         ]
         self.order(line, riders, contacter)
 
-
-class ScqcpOrder(db.Document):
-    """
-    scqcp.com下订单时的返回信息
-    """
-    expire_time = db.DateTimeField()
-    code = db.StringField()
-    ticket_code = db.StringField()
-    pay_order_id = db.LongField()
-    ticket_list = db.ListField()
-    ticket_lines = db.DictField()
-    ticket_ids = db.ListField()
-    order_ids = db.ListField()
-    ticket_price_list = db.ListField()
-    ticket_type = db.ListField()
-    web_order_id = db.ListField()
-    seat_number_list = db.ListField()
-    lock_data = db.StringField()

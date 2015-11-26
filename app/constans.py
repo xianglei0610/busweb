@@ -36,3 +36,15 @@ MOBILE_USER_AGENG = [
     "Mozilla/5.0 (Linux; U; Android 2.3.5; en-us; HTC Vision Build/GRI40) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
     "Dalvik/1.6.0 (Linux; U; Android 4.4.4; MI 4W MIUI/V7.0.5.0.KXDCNCI)",
 ]
+
+# 爬取来源
+SOURCE_SCQCP = 1
+SOURCE_BUS100 = 2
+
+# 订单状态
+STATUS_FAIL = 0         # 失败
+STATUS_SUCC = 1         # 支付成功
+STATUS_ISSUE_DOING = 2  # 正在出票
+STATUS_LOCK = 3         # 锁票成功
+STATUS_ISSUE_FAIL = 13  # 出票失败
+STATUS_ISSUE_OK = 14    # 出票成功
