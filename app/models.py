@@ -12,6 +12,29 @@ from app.constans import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app import db
 
 
+class Starting(db.Document):
+    id = db.StringField(unique=True)
+    city_id = db.StringField()
+    city_name = db.StringField()
+    station_id = db.StringField()
+    station_name = db.StringField()
+    city_pinyin = db.StringField()
+    city_pinyin_prefix = db.StringField()
+    station_pinyin = db.StringField()
+    station_pinyin_prefix = db.StringField()
+    crawl_source = db.StringField()
+
+
+class Destination(db.Document):
+    starting = db.ReferenceField(Starting)
+    id = db.StringField(unique=True)
+    end_city_id = db.StringField()
+    end_city_name = db.StringField()
+    end_sta_id = db.StringField()
+    end_sta_name = db.StringField()
+    crawl_source = db.StringField()
+
+
 class Line(db.Document):
     """
     线路表
@@ -19,25 +42,18 @@ class Line(db.Document):
     """
 
     line_id = db.StringField(required=True)  # 路线id
-    crawl_source = db.StringField(required=True, unique_with="line_id")       # 爬取来源
-
-    start_city_id = db.StringField()
-    start_city_name = db.StringField()
-    start_sta_id = db.StringField()
-    start_sta_name = db.StringField()
-    end_city_id = db.StringField()
-    end_city_name = db.StringField()
-    end_sta_id = db.StringField()
-    end_sta_name = db.StringField()
+    crawl_source = db.StringField(required=True, unique_with="line_id")     # 爬取来源
+    starting = db.ReferenceField(Starting)
+    destination = db.ReferenceField(Destination)
     drv_date_time = db.DateTimeField(required=True)  # 开车时间
     distance = db.StringField()
     vehicle_type = db.StringField()  # 车型
     seat_type = db.StringField()     # 座位类型
-    bus_num = db.StringField()       # 车次
+    bus_num = db.StringField()       # 车次/班次
     full_price = db.StringField()
     half_price = db.FloatField()
     crawl_datetime = db.DateTimeField()   # 爬取的时间
-    extra_info = db.DictField()  # 额外信息字段
+    extra_info = db.DictField()           # 额外信息字段
 
 
 class Rider(db.Document):

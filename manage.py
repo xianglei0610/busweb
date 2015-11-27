@@ -33,6 +33,8 @@ def migrate_from_crawl(site):
     c_cnt, u_cnt = 0, 0
     if site == "scqcp":
         for d in crawl_db["line"].find({}):
+            pass
+        for d in crawl_db["line"].find({}):
             line_id = str(d["line_id"])
             crawl_source = "scqcp"
             attrs = {

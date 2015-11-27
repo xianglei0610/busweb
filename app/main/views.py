@@ -21,3 +21,8 @@ def query_starting():
         pass
     else:
         pass
+
+
+@main.route('/destinations', methods=['POST'])
+def query_destination():
+    pass
