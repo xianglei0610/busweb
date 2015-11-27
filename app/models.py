@@ -14,6 +14,7 @@ from app import db
 
 class Starting(db.Document):
     id = db.StringField(unique=True)
+    province_name = db.StringField()
     city_id = db.StringField()
     city_name = db.StringField()
     station_id = db.StringField()
@@ -22,7 +23,18 @@ class Starting(db.Document):
     city_pinyin_prefix = db.StringField()
     station_pinyin = db.StringField()
     station_pinyin_prefix = db.StringField()
+    is_pre_sell = db.BooleanField(default=True)   # 是否预售
     crawl_source = db.StringField()
+
+    def pre_sell_days(self):
+        """
+        预售期
+        """
+        if not self.is_pre_sell:
+            return 0
+        if self.province_name == "四川" and self.crawl_source == "scqcp":
+            return 10
+        return 0
 
 
 class Destination(db.Document):
