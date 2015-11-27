@@ -2,6 +2,6 @@
 
 from flask import Blueprint
 
-scqcp = Blueprint('scqcp', __name__)
+main = Blueprint('main', __name__)
 
 import views, errors

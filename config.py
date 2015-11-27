@@ -29,7 +29,13 @@ class LocalConfig(Config):
 
     DEBUG = True
     MONGODB_SETTINGS = {
-        'db': 'test',
+        'db': 'web12308',
+        'host': 'localhost',
+        'port': 27017,
+    }
+
+    CRAWL_MONGODB_SETTINGS = {
+        'db': 'crawl12308',
         'host': 'localhost',
         'port': 27017,
     }

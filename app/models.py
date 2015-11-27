@@ -13,7 +13,14 @@ from app import db
 
 
 class Line(db.Document):
-    sch_id = db.StringField()  # 路线id
+    """
+    线路表
+    主键由line_id 和 crawl_source联合组成
+    """
+
+    line_id = db.StringField(required=True)  # 路线id
+    crawl_source = db.StringField(required=True, unique_with="line_id")       # 爬取来源
+
     start_city_id = db.StringField()
     start_city_name = db.StringField()
     start_sta_id = db.StringField()
@@ -29,7 +36,6 @@ class Line(db.Document):
     bus_num = db.StringField()       # 车次
     full_price = db.StringField()
     half_price = db.FloatField()
-    crawl_source = db.StringField()       # 爬取来源
     crawl_datetime = db.DateTimeField()   # 爬取的时间
     extra_info = db.DictField()  # 额外信息字段
 
