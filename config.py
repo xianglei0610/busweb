@@ -21,17 +21,28 @@ class DevelopmentConfig(Config):
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
 
-class TestingConfig(Config):
-    TESTING = True
-
-
 class ProductionConfig(Config):
     pass
 
 
+class LocalConfig(Config):
+
+    DEBUG = True
+    MONGODB_SETTINGS = {
+        'db': 'web12308',
+        'host': 'localhost',
+        'port': 27017,
+    }
+
+    CRAWL_MONGODB_SETTINGS = {
+        'db': 'crawl12308',
+        'host': 'localhost',
+        'port': 27017,
+    }
+
 config = {
+    'local': LocalConfig,
     'dev': DevelopmentConfig,
-    'test': TestingConfig,
     'prod': ProductionConfig,
-    'default': DevelopmentConfig
+    'default': LocalConfig
 }
