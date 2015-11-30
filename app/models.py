@@ -2,7 +2,6 @@
 import urllib2
 import urllib
 import random
-import copy
 
 from app.constants import *
 from datetime import datetime
@@ -14,6 +13,10 @@ from app import db
 
 
 class Starting(db.Document):
+    """
+    出发地
+    """
+
     starting_id = db.StringField(unique=True)
     province_name = db.StringField()
     city_id = db.StringField()
@@ -52,6 +55,10 @@ class Starting(db.Document):
 
 
 class Destination(db.Document):
+    """
+    目的地
+    """
+
     destination_id = db.StringField(unique=True)
     starting = db.ReferenceField(Starting)
     city_id = db.StringField()
@@ -89,12 +96,15 @@ class Line(db.Document):
     def can_order(self):
         return 1
 
+
 class Order(db.Document):
     """
     一个订单只对应一条线路
     """
     # 订单信息
     order_no = db.StringField(unique=True)
+    out_order_no = db.StringField()
+    raw_order_no = db.StringField()
     status = db.IntField()
     order_price = db.FloatField()  # 订单金额
     create_date_time = db.DateTimeField()
@@ -102,10 +112,10 @@ class Order(db.Document):
     # 车票信息
     line = db.ReferenceField(Line)
     seat_no_list = db.ListField()
-    ticket_price = db.FloatField()
+    ticket_price = db.FloatField()          # 车票单价
     ticket_amount = db.IntField()
-    ticket_fee = db.FloatField()   # 手续费
-    discount = db.FloatField(default=0)     # 优惠金额
+    ticket_fee = db.FloatField()            # 单张车票手续费
+    discount = db.FloatField(default=0)     # 单张车票优惠金额
 
     # 支付信息
     pay_no = db.StringField()      # 支付号
@@ -126,32 +136,24 @@ class Order(db.Document):
     lock_info = db.DictField()
 
     # 其他
-    crawl_source = db.StringField()   # 源网站
-    extra_info = db.DictField()       # 额外信息
+    crawl_source = db.StringField()     # 源网站
+    extra_info = db.DictField()         # 额外信息
+    locked_return_url = db.URLField()   # 锁票成功回调
+    issued_return_url = db.URLField()   # 出票成功回调
 
     @classmethod
     def generate_order_no(cls):
         import time
         return str(time.time()*10000000)
 
-
-class ScqcpOrder(db.Document):
-    """
-    scqcp.com下订单时的返回信息
-    """
-    expire_time = db.DateTimeField()
-    code = db.StringField()
-    ticket_code = db.StringField()
-    pay_order_id = db.LongField()
-    ticket_list = db.ListField()
-    ticket_lines = db.DictField()
-    ticket_ids = db.ListField()
-    order_ids = db.ListField()
-    ticket_price_list = db.ListField()
-    ticket_type = db.ListField()
-    web_order_id = db.ListField()
-    seat_number_list = db.ListField()
-    lock_data = db.StringField()
+    @property
+    def pay_url(self):
+        if self.crawl_source == "scqcp":
+            if "pay_order_id" not in self.lock_info:
+                return ""
+            url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s"
+            return url % self.lock_info["pay_order_id"]
+        return ""
 
 
 class ScqcpRebot(db.Document):
@@ -240,22 +242,6 @@ class ScqcpRebot(db.Document):
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
-
-    def add_rider(self, name, id_card, birthday):
-        uri = "/scqcp/api/v2/ticket/add_rider"
-        data = {
-            "open_id": self.open_id,
-            "rider_name": name,
-            "id_type": 0,
-            "id_number": id_card,
-            "birthday": birthday,
-        }
-        ret = self.http_post(uri, data)
-        if ret["status"] == 1:
-            current_app.logger.info("[%s] add rider(%s,%s) success!", self.telephone, name, id_card)
-        else:
-            current_app.logger.error("[%s] add rider(%s,%s) fail! %s", self.telephone, name, id_card, ret.get("msg", ""))
-
     def http_post(self, uri, data, user_agent=None, token=None):
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         request = urllib2.Request(url)
@@ -263,14 +249,14 @@ class ScqcpRebot(db.Document):
         request.add_header('Authorization', token or self.token)
         request.add_header('Content-type', "application/json; charset=UTF-8")
         qstr = urllib.urlencode(data)
-        print "http_post",url
+        print "http_post", url
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
         return ret
 
-    def request_lock_ticket2(self, line, riders, contacter):
+    def request_lock_ticket(self, line, riders, contacter):
         """
-        下订单
+        请求锁票
         """
         uri = "/api/v1/telecom/lock"
         tickets = []
@@ -290,24 +276,6 @@ class ScqcpRebot(db.Document):
         ret = self.http_post(uri, data)
         return ret
 
-    def request_lock_ticket(self, order):
-        """
-        请求锁票
-        """
-        line = dict(
-            carry_sta_id=order.line.starting.station_id,
-            stop_name=order.line.destination.station_name,
-            str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
-            sign_id=order.line.extra_info["sign_id"],
-            )
-        contacter = order.contacter_phone
-        riders = map(lambda d: {"id_number": d["idcard"], "real_name": str(d["name"])}, order.riders)
-        ret = self.request_lock_ticket2(line, riders, contacter)
-        if ret["status"] == 1:
-            order.updat(status=STATUS_LOCK, lock_info=ret)
-        else:
-            order.updat(status=STATUS_LOCK_FAIL, lock_info=ret)
-
     def test_order(self):
         """
         临时测试方法，后期将移到单元测试模块
@@ -326,4 +294,3 @@ class ScqcpRebot(db.Document):
             },
         ]
         self.request_lock_ticket2(line, riders, contacter)
-

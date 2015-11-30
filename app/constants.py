@@ -50,3 +50,14 @@ STATUS_COMMIT = 4       # 提交订单(初始状态)
 STATUS_LOCK_FAIL = 5    # 锁票失败
 STATUS_ISSUE_FAIL = 13  # 出票失败
 STATUS_ISSUE_OK = 14    # 出票成功
+
+
+# 通用状态码
+RET_OK = 1
+RET_PARAM_ERROR = 2     # 参数错误
+
+# 订单错误1xx
+RET_ORDER_404 = 101     # 订单不存在
+
+# 线路错误2xx
+RET_LINE_404 = 201      # 线路不存在
