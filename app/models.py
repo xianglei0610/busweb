@@ -220,9 +220,9 @@ class ScqcpRebot(db.Document):
             bot.update(password=pwd, is_encrypt=is_encrypt)
 
             # 近5天之内登陆的先不管
-            if bot.is_active and (bot.last_login_time-now).seconds < 5*24*3600:
-                valid_cnt += 1
-                continue
+            #if bot.is_active and (bot.last_login_time-now).seconds < 5*24*3600:
+            #    valid_cnt += 1
+            #    continue
 
             if bot.relogin() == "OK":
                 valid_cnt += 1
@@ -262,11 +262,12 @@ class ScqcpRebot(db.Document):
         request.add_header('Authorization', token or self.token)
         request.add_header('Content-type', "application/json; charset=UTF-8")
         qstr = urllib.urlencode(data)
-        response = urllib2.urlopen(request, qstr, timeout=5)
+        print "http_post",url
+        response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
         return ret
 
-    def order(self, line, riders, contacter):
+    def request_lock_ticket2(self, line, riders, contacter):
         """
         下订单
         """
@@ -274,6 +275,7 @@ class ScqcpRebot(db.Document):
         tickets = []
         for r in riders:
             lst = [r["id_number"], r["real_name"], contacter, "0", "0"]
+            tickets.append("|".join(lst))
 
         data = {
             "carry_sta_id": line["carry_sta_id"],
@@ -284,43 +286,30 @@ class ScqcpRebot(db.Document):
             "buy_ticket_info": "$".join(tickets),
             "open_id": self.open_id,
         }
+        print data
         ret = self.http_post(uri, data)
         if ret["status"] == 1:
-            current_app.logger.info("order succ! %s", str(ret))
             attrs = copy.copy(ret)
             del attrs["status"]
             del attrs["msg"]
             ScqcpOrder(**attrs).save()
             return ""
-        current_app.logger.info("order fail! %s", ret["msg"])
         return ret["msg"]
 
     def request_lock_ticket(self, order):
         """
         请求锁票
         """
-        uri = "/api/v1/telecom/lock"
-        tickets = []
-        for r in order.riders:
-            lst = [r["idcard"], r["name"], r["telephone"], "0", "0"]
-            tickets.append("|".join(lst))
-
-        data = {
-            "carry_sta_id": order.line.starting.station_id,
-            "stop_name": order.line.destination.station_name,
-            "str_date": u"%s %s" % (order.line.drv_date, order.line.drv_time),
-            "sign_id": order.line.extra_info["sign_id"],
-            "phone_num": order.contacter_phone,
-            "buy_ticket_info": "$".join(tickets),
-            "open_id": self.open_id,
-        }
-        print data
-        ret = self.http_post(uri, data)
-        if ret["status"] == 1:
-            current_app.logger.info("order succ! %s", str(ret))
-            order.update(status=STATUS_LOCK, lock_info=ret)
-            return ""
-        return ret["msg"]
+        line = dict(
+            carry_sta_id=order.line.starting.station_id,
+            #stop_name=order.line.destination.station_name,
+            stop_name="八一",
+            str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
+            sign_id=order.line.extra_info["sign_id"],
+            )
+        contacter = order.contacter_phone
+        riders = map(lambda d: {"id_number": d["idcard"], "real_name": str(d["name"])}, order.riders)
+        return self.request_lock_ticket2(line, riders, contacter)
 
     def test_order(self):
         """
@@ -329,8 +318,8 @@ class ScqcpRebot(db.Document):
         line = dict(
             carry_sta_id="zjcz",
             stop_name="八一",
-            str_date="2015-12-01 18:40",
-            sign_id="273d96c5817743b5ada282ce63d152d0"
+            str_date="2015-11-30 18:40",
+            sign_id="cb31ec0dd90f4518892d82ce63d152d0"
             )
         contacter = "15575101324"
         riders = [
@@ -339,5 +328,5 @@ class ScqcpRebot(db.Document):
                 "real_name": "罗军平",
             },
         ]
-        self.order(line, riders, contacter)
+        self.request_lock_ticket2(line, riders, contacter)
 
