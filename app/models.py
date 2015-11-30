@@ -4,11 +4,12 @@ import urllib
 import random
 import copy
 
+from app.constants import *
 from datetime import datetime
 from flask import json, current_app
 
-from app.constans import SCQCP_ACCOUNTS
-from app.constans import SCQCP_DOMAIN, MOBILE_USER_AGENG
+from app.constants import SCQCP_ACCOUNTS
+from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app import db
 
 
@@ -286,15 +287,8 @@ class ScqcpRebot(db.Document):
             "buy_ticket_info": "$".join(tickets),
             "open_id": self.open_id,
         }
-        print data
         ret = self.http_post(uri, data)
-        if ret["status"] == 1:
-            attrs = copy.copy(ret)
-            del attrs["status"]
-            del attrs["msg"]
-            ScqcpOrder(**attrs).save()
-            return ""
-        return ret["msg"]
+        return ret
 
     def request_lock_ticket(self, order):
         """
@@ -302,14 +296,17 @@ class ScqcpRebot(db.Document):
         """
         line = dict(
             carry_sta_id=order.line.starting.station_id,
-            #stop_name=order.line.destination.station_name,
-            stop_name="八一",
+            stop_name=order.line.destination.station_name,
             str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
             sign_id=order.line.extra_info["sign_id"],
             )
         contacter = order.contacter_phone
         riders = map(lambda d: {"id_number": d["idcard"], "real_name": str(d["name"])}, order.riders)
-        return self.request_lock_ticket2(line, riders, contacter)
+        ret = self.request_lock_ticket2(line, riders, contacter)
+        if ret["status"] == 1:
+            order.updat(status=STATUS_LOCK, lock_info=ret)
+        else:
+            order.updat(status=STATUS_LOCK_FAIL, lock_info=ret)
 
     def test_order(self):
         """

@@ -3,7 +3,7 @@ import threading
 import urllib2
 
 from app import app
-from app.constans import *
+from app.constants import *
 from datetime import datetime
 from flask import request, jsonify, current_app
 from mongoengine import Q
@@ -220,9 +220,9 @@ def async_lock_ticket(order_no, notify_url):
                 "expire_time": order.lock_info["expire_time"],
                 "total_price": total_price,
             }
-            json_str = json.dumps({"code":1, "message": "OK", "data": data})
+            json_str = json.dumps({"code": 1, "message": "OK", "data": data})
         else:
-            json_str = json.dumps({"code":0, "message": msg, "data": data})
+            json_str = json.dumps({"code": 0, "message": msg, "data": data})
         print 111111, msg
         response = urllib2.urlopen(notify_url, json_str, timeout=5)
         print response, "async_lock_ticket"
