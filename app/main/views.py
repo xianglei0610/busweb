@@ -16,7 +16,7 @@ def query_starting():
     """
     出发地查询
 
-    返回:
+    Return:
     {
         "code": 1,
         "message": "ok"
@@ -30,6 +30,7 @@ def query_starting():
                 "end_time": "23:00:00",     # 结束售票时间
                 "is_pre_sell": 0,           # 是否可预订
                 "advance_order_time": 120,  # 至少提前多久订票，单位(分钟)
+                "max_ticket_per_order": 5,  # 一个订单最多可购买车票的数量
             }]
         },]
     }
@@ -54,6 +55,7 @@ def query_starting():
             "open_time": obj.open_time,
             "end_time": obj.end_time,
             "advance_order_time": obj.advance_order_time,
+            "max_ticket_per_order": obj.max_ticket_per_order,
         }
         province_data[obj.province_name]["city_list"].append(item)
     return jsonify({"code": RET_OK, "message": "OK", "data": province_data.values()})
@@ -63,7 +65,9 @@ def query_starting():
 def query_destination():
     """
     Input:
-        - starting_name: 出发地名字
+        {
+            "starting_name": "成都",  # 出发地名字
+        }
 
     Return:
         {
@@ -74,8 +78,12 @@ def query_destination():
             ],
         }
     """
-    starting_name = request.form.get("starting_name", "")
-    if not starting_name:
+    try:
+        post = json.loads(request.get_data())
+        starting_name = post["starting_name"]
+        if not starting_name:
+            raise Exception("starting_name is null")
+    except:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": data})
@@ -91,9 +99,11 @@ def query_destination():
 def query_line():
     """
     Input:
-        - starting_name: 出发地名字
-        - destination_name: 目的地名字
-        - start_date: 出发日期
+    {
+        "starting_name":"成都",             # 出发地
+        "destination_name": "广州",         # 目的地
+        "start_date": "2015-11-11"          # 出发日期,
+    }
 
     Return:
         {
@@ -109,19 +119,22 @@ def query_line():
                 "drv_date": "2015-11-11",           # 开车日期
                 "drv_time": "12:00",                # 开车时间
                 "vehicle_type": "普快",             # 车型
-                "full_price": 10,                 # 全价
-                "half_price": 5,                  # 半价
+                "full_price": 10,                   # 全价
+                "half_price": 5,                    # 半价
                 "can_order": 1,                     # 是否可预订
                 "fee": "1",                         # 手续费
-                ""
+                "distance": "11",
             ]
         }
     """
-
-    starting_name = request.form.get("starting_name", "")
-    dest_name = request.form.get("destination_name", "")
-    start_date = request.form.get("start_date", "")
-    if not (starting_name and dest_name and start_date):
+    try:
+        post = json.loads(request.get_data())
+        starting_name = post.get("starting_name" )
+        dest_name = post.get("destination_name")
+        start_date = post.get("start_date")
+        if not (starting_name and dest_name and start_date):
+            raise Exception()
+    except:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": data})
@@ -149,6 +162,7 @@ def query_line():
             "half_price": obj.half_price,
             "can_order": obj.can_order,
             "fee": obj.fee,
+            "distance": obj.distance,
         }
     data = map(lambda obj: _extract_data(obj), qs_line)
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
@@ -158,44 +172,62 @@ def query_line():
 def submit_order():
     """
     提交订单
+
     Input:
-        - line_id: "111"                        # 线路ID
-        - out_order_no
-        - order_price: 11                       # 订单金额(总票价)
-        - contacter: "名字|手机号|身份证号"     # 联系人
-        - riders: 名字|手机号|证件号$名字2|手机号2|证件号2
-        - locked_return_url: "http://xxx"            # 锁票成功回调地址
-        - issued_return_url: "http://xxx"            # 出票成功回调地址
+    {
+        "line_id: "111"                                     # 线路ID
+        "out_order_no": "222"                               # 商户订单号
+        "order_price: 11                                    # 订单金额(总票价)
+        "contact_info:{                                     # 联系人信息
+            "name": "张三",                                 # 名字
+            "telephone": "15111111111",                     # 手机
+            "id_type": 1,                                   # 证件类型
+            "id_number": 421032211990232535,                # 证件号
+            "age_level": 1,                                 # 大人 or 小孩
+        },
+        rider_info: [{                                      # 乘客信息
+            "name": "张三",                                 # 名字
+            "telephone": "15111111111",                     # 手机
+            "id_type": 1,                                   # 证件类型
+            "id_number": 421032211990232535,                # 证件号
+            "age_level": 1,                                 # 大人 or 小孩
+        }],
+        "locked_return_url: "http://xxx"                    # 锁票成功回调地址
+        "issued_return_url: "http://xxx"                    # 出票成功回调地址
+    }
 
     Return:
         {
            "code": 1,
            "message": "submit order success!"
            "data":{
-               "order_no": xxxxxx,
+               "sys_order_no": xxxxxx,
             }
         }
     """
     try:
-        line = Line.objects.get(line_id=request.form.get("line_id"))
+        post = json.loads(request.get_data())
+        line_id = post["line_id"]
+        contact_info = post["contact_info"]
+        rider_list = post["rider_info"]
+        for info in [contact_info]+rider_list:
+            for key in ["name", "telephone", "id_type", "id_number", "age_level"]:
+                if key not in info:
+                    raise Exception("contact or rider lack of %s" % key)
+        order_price = float(post.get("order_price"))
+    except:
+        return jsonify({"code": RET_PARAM_ERROR,
+                        "message": "parameter error",
+                        "data": data})
+
+    try:
+        line = Line.objects.get(line_id=line_id)
     except Line.DoesNotExist:
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
-    ctr_name, ctr_phone, ctr_idcard = request.form.get("contacter").split("|")
-    order_price = float(request.form.get("order_price"))
 
-    rider_list = []
-    for s in request.form.get("riders").split("$"):
-        name, tele, idcard = s.split("|")
-        rider_list.append({"name": name, "telephone": tele, "idcard": idcard})
-
-    if not rider_list:
-        abort(400)
     ticket_amount = len(rider_list)
     locked_return_url = request.form.get("callback_url", "")
     issued_return_url = request.form.get("issued_return_url", "")
-
-    # 核对票价
-    pass
 
     order = Order()
     order.order_no = Order.generate_order_no()
@@ -206,9 +238,7 @@ def submit_order():
     order.ticket_price = line.full_price
     order.ticket_amount = ticket_amount
     order.ticket_fee = line.fee
-    order.contacter_phone = ctr_phone
-    order.contacter_name = ctr_name
-    order.contacter_idcard = ctr_idcard
+    order.contact_info = contact_info
     order.riders = rider_list
     order.crawl_source = line.crawl_source
     order.locked_return_url = locked_return_url
@@ -217,7 +247,7 @@ def submit_order():
 
     t = threading.Thread(target=async_lock_ticket, args=(order,))
     t.start()
-    return jsonify({"code": 1, "message": "submit order success!", "data": {"order_no": order.order_no}})
+    return jsonify({"code": 1, "message": "submit order success!", "data": {"sys_order_no": order.order_no}})
 
 
 @main.route('/orders/detail', methods=['POST'])
@@ -226,7 +256,9 @@ def query_order_detail():
     订单详情接口
 
     Input:
-        - sys_order_no  系统订单号
+        {
+            "sys_order_no": "1111"          # 系统订单号
+        }
 
 
     Return:
@@ -238,8 +270,20 @@ def query_order_detail():
                 "raw_order_no": "222",      # 源站订单号
                 "sys_order_no": "333",      # 系统订单号
                 "status": 14,               # 订单状态
-                "rider_info":[{"name":"", "telephone": xx, "idcard": yy}],     # 乘客信息
-                "contacter_info": {"name":"", "telephone": xx, "idcard": yy},  # 取票人信息
+                "rider_info":[{             # 乘客信息
+                    "name":"",
+                    "telephone": xx,
+                    "id_type":1,
+                    "id_number": yy,
+                    "agen_level": 1,
+                }],
+                "contacter_info": {
+                    "name":"",
+                    "telephone": xx,
+                    "id_type":1,
+                    "id_number": yy,
+                    "agen_level": 1,
+                }
                 "ticket_info": {                # 车票信息
                     "start_city": "",
                     "start_station": "",
@@ -253,21 +297,25 @@ def query_order_detail():
         }
     """
     try:
+        post = json.loads(request.get_data())
+        sys_order_no = post["sys_order_no"]
+    except:
+        return jsonify({"code": RET_PARAM_ERROR,
+                        "message": "parameter error",
+                        "data": data})
+    try:
         order = Order.objects.get(order_no=sys_order_no)
     except Order.DoesNotExist:
-        return jsonify({"code": RET_ORDER_404, "message": "订单不存在", "data": ""})
+        return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
+
     if order.status == STATUS_SUCC:
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
             "sys_order_no": order.sys_order_no,
             "status": order.status,
-            "contacter_info": {
-                "name": contacter_name,
-                "telephone": contacter_phone,
-                "idcard": contacter_idcard,
-            },
-            "rider_info": map(lambda d: {d["name"], d["telephone"], d["idcard"]}, order.riders),
+            "contacter_info": order.get_contact_info(),
+            "rider_info": order.get_rider_info(),
             "ticket_info": {
                 "start_city": order.line.starting.city_name,
                 "start_station": order.line.starting.station_name,
@@ -309,8 +357,8 @@ def async_lock_ticket(order):
             str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
             sign_id=order.line.extra_info["sign_id"],
             )
-        contacter = order.contacter_phone
-        riders = map(lambda d: {"id_number": d["idcard"], "real_name": str(d["name"])}, order.riders)
+        contacter = order.contact_info["telephone"]
+        riders = map(lambda d: {"id_number": d["id_number"], "real_name": str(d["name"])}, order.riders)
         ret = rebot.request_lock_ticket(line, riders, contacter)
 
         data = []

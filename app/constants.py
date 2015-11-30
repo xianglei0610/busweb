@@ -51,13 +51,19 @@ STATUS_LOCK_FAIL = 5    # 锁票失败
 STATUS_ISSUE_FAIL = 13  # 出票失败
 STATUS_ISSUE_OK = 14    # 出票成功
 
+# 证件类型
+IDTYPE_IDCARD = 1   # 身份证
+
+# 乘客类型
+RIDER_ADULT = 1     # 成人
+RIDER_CHILD = 0     # 儿童
 
 # 通用状态码
 RET_OK = 1
 RET_PARAM_ERROR = 2     # 参数错误
-
 # 订单错误1xx
 RET_ORDER_404 = 101     # 订单不存在
-
 # 线路错误2xx
 RET_LINE_404 = 201      # 线路不存在
+
+

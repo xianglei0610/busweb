@@ -53,6 +53,10 @@ class Starting(db.Document):
     def advance_order_time(self):
         return 120  # 2hour
 
+    def max_ticket_per_order(self):
+        if self.crawl_source == "scqcp":
+            return 5
+        return 3
 
 class Destination(db.Document):
     """
@@ -88,7 +92,7 @@ class Line(db.Document):
     bus_num = db.StringField()       # 车次/班次
     full_price = db.FloatField()
     half_price = db.FloatField()
-    fee = db.FloatField()           # 手续费
+    fee = db.FloatField()                 # 手续费
     crawl_datetime = db.DateTimeField()   # 爬取的时间
     extra_info = db.DictField()           # 额外信息字段
 
@@ -124,12 +128,9 @@ class Order(db.Document):
     pay_account = db.StringField()
     pay_datetime = db.DateTimeField()
 
-    # 联系人信息
-    contacter_phone = db.StringField()
-    contacter_name = db.StringField()
-    contacter_idcard = db.StringField()
-
-    # 乘客信息
+    # 乘客和联系人信息
+    # 包含字段: name, telephone, id_type,id_number,age_level
+    contact_info = db.DictField()
     riders = db.ListField()
 
     # 锁票信息: 源网站在锁票这步返回的数据
@@ -140,6 +141,34 @@ class Order(db.Document):
     extra_info = db.DictField()         # 额外信息
     locked_return_url = db.URLField()   # 锁票成功回调
     issued_return_url = db.URLField()   # 出票成功回调
+
+    def get_contact_info(self):
+        """
+        返回给client的数据和格式， 不要轻易修改!
+        """
+        info = self.contact_info
+        return {
+            "name": info["name"],
+            "telephone": info["telephone"],
+            "id_type": info.get("idtype", IDTYPE_IDCARD),
+            "id_number": info.get("id_number", ""),
+            "age_level": info.get('age_level', RIDER_ADULT),
+        }
+
+    def get_rider_info(self):
+        """
+        返回给client的数据和格式， 不要轻易修改!
+        """
+        lst = []
+        for info in self.riders:
+            list.append({
+                "name": info["name"],
+                "telephone": info["telephone"],
+                "id_type": info.get("idtype", IDTYPE_IDCARD),
+                "id_number": info.get("id_number", ""),
+                "age_level": info.get('age_level', RIDER_ADULT),
+            })
+        return lst
 
     @classmethod
     def generate_order_no(cls):
@@ -293,4 +322,4 @@ class ScqcpRebot(db.Document):
                 "real_name": "罗军平",
             },
         ]
-        self.request_lock_ticket2(line, riders, contacter)
+        self.request_lock_ticket(line, riders, contacter)
