@@ -46,5 +46,6 @@ STATUS_FAIL = 0         # 失败
 STATUS_SUCC = 1         # 支付成功
 STATUS_ISSUE_DOING = 2  # 正在出票
 STATUS_LOCK = 3         # 锁票成功
+STATUS_COMMIT = 4       # 提交订单(初始状态)
 STATUS_ISSUE_FAIL = 13  # 出票失败
 STATUS_ISSUE_OK = 14    # 出票成功

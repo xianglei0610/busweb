@@ -40,6 +40,10 @@ class LocalConfig(Config):
         'port': 27017,
     }
 
+    CELERY_BROKER_URL='redis://localhost:6379',
+    CELERY_RESULT_BACKEND='redis://localhost:6379'
+
+
 config = {
     'local': LocalConfig,
     'dev': DevelopmentConfig,

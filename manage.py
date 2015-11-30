@@ -3,12 +3,12 @@
 import os
 import pymongo
 
-from app import create_app, db
+from datetime import datetime
+from app import setup_app, db, app
 from flask.ext.script import Manager, Shell
 
-app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+setup_app(os.getenv('FLASK_CONFIG') or 'default')
 manager = Manager(app)
-
 
 def make_shell_context():
     return dict(app=app, db=db)
@@ -24,31 +24,75 @@ def deploy():
 
 @manager.command
 def migrate_from_crawl(site):
-    from app.models import Line
+    from app.models import Line, Starting, Destination
     settings = app.config["CRAWL_MONGODB_SETTINGS"]
     crawl_mongo = pymongo.MongoClient("mongodb://%s:%s" % (settings["host"], settings["port"]))
     crawl_db = crawl_mongo[settings["db"]]
 
-    app.logger.info("start migrate data from crawldb to webdb:%s", site)
-    c_cnt, u_cnt = 0, 0
-    if site == "scqcp":
-        for d in crawl_db["line"].find({}):
-            pass
-        for d in crawl_db["line"].find({}):
-            line_id = str(d["line_id"])
+    def migrate_scqcp():
+        for d in crawl_db.scqcp_line.find({}):
             crawl_source = "scqcp"
+
+            # migrate Starting
+            city_id = str(d["city_id"])
+            starting_id = str(hash("%s-%s-%s-%s-%s" % \
+                    (city_id, d["city"], d["carry_sta_id"], d["carry_sta_name"], crawl_source)))
+            start_city = crawl_db.scqcp_start_city.find_one({"city_id": d["city_id"]})
+            starting_attrs = {
+                "starting_id": starting_id,
+                "province_name": "四川",
+                "city_id": city_id,
+                "city_name": d["city"],
+                "station_id": d["carry_sta_id"],
+                "station_name": d["carry_sta_name"],
+                "city_pinyin": start_city["en_name"],
+                "city_pinyin_prefix": start_city["short_name"],
+                "station_pinyin": "",
+                "station_pinyin_prefix": "",
+                "is_pre_sell": start_city["is_pre_sell"],
+                "crawl_source": crawl_source,
+            }
+            try:
+                starting_obj = Starting.objects.get(starting_id=starting_id)
+                starting_obj.update(**starting_attrs)
+            except Starting.DoesNotExist:
+                starting_obj = Starting(**starting_attrs)
+                starting_obj.save()
+
+            # migrate destination
+            dest_id  = str(hash("%s-%s-%s-%s-%s-%s" % \
+                    (starting_obj.starting_id, "", "", d["stop_code"], d["stop_name"], crawl_source)))
+            target_city = crawl_db.scqcp_target_city.find_one({"starting_city_id": d["city_id"], "stop_name": d["stop_name"]})
+            dest_attrs = {
+                "destination_id": dest_id,
+                "starting": starting_obj,
+                "city_id": "",
+                "city_name": "",
+                "city_pinyin": "",
+                "city_pinyin_prefix": "",
+                "station_id": "",
+                "station_name": target_city["stop_name"],
+                "station_pinyin": target_city["en_name"],
+                "station_pinyin_prefix": target_city["short_name"],
+                "crawl_source": "scqcp",
+            }
+            try:
+                dest_obj = Destination.objects.get(destination_id=dest_id)
+                dest_obj.update(**dest_attrs)
+            except Destination.DoesNotExist:
+                dest_obj = Destination(**dest_attrs)
+                dest_obj.save()
+
+            # migrate Line
+            line_id = str(d["line_id"])
+            drv_date, drv_time = d["drv_date_time"].split(" ")
             attrs = {
                 "line_id": line_id,
                 "crawl_source": crawl_source,
-                "start_city_id": str(d["city_id"]),
-                "start_city_name": d["city"],
-                "start_sta_id": d["carry_sta_id"],
-                "start_sta_name": d["carry_sta_name"],
-                "end_city_id": "",
-                "end_city_name": "",
-                "end_sta_id": "",
-                "end_sta_name": d["stop_name"],
-                "drv_date_time": d["drv_date_time"],
+                "starting": starting_obj,
+                "destination": dest_obj,
+                "drv_date": drv_date,
+                "drv_time": drv_time,
                 "distance": str(d["mile"]),
                 "vehicle_type": d["bus_type_name"],
                 "seat_type": "",
@@ -56,16 +100,21 @@ def migrate_from_crawl(site):
                 "full_price": str(d["full_price"]),
                 "half_price": d["half_price"],
                 "crawl_datetime": d["create_datetime"],
-                "extra_info": {},
+                "fee": d["service_price"],
+                "extra_info": {"left_ticket": d["amount"], "sign_id": d["sign_id"]},
             }
-            obj = Line.objects(line_id=line_id, crawl_source=crawl_source)
-            if obj:
-                u_cnt += 1
-                obj.update(**attrs)
-            else:
-                c_cnt += 1
-                Line(**attrs).save()
-    app.logger.info("end migrate %s, update %s, create %s", site, u_cnt, c_cnt)
+            try:
+                line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)
+                line_obj.update(**attrs)
+            except Line.DoesNotExist:
+                line_obj = Line(**attrs)
+                line_obj.save()
+
+    app.logger.info("start migrate data from crawldb to webdb:%s", site)
+    if site == "scqcp":
+        migrate_scqcp()
+    app.logger.info("end migrate %s" % site)
+
 
 if __name__ == '__main__':
     manager.run()
