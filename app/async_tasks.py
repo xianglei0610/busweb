@@ -2,7 +2,6 @@
 import urllib2
 
 from app.constants import *
-from app.models import ScqcpRebot
 from app.decorators import async
 
 
@@ -17,6 +16,7 @@ def async_lock_ticket(order):
     """
     notify_url = order.locked_return_url
     if order.crawl_source == "scqcp":
+        from app.models import ScqcpRebot
         rebot = ScqcpRebot.objects.first()
         line = dict(
             carry_sta_id=order.line.starting.station_id,
@@ -64,21 +64,27 @@ def async_issued_callback(order):
             "pick_info":[{
                 "pick_code": "1",
                 "pck_msg": "2"
-            }],
+            },],
         }
     }
     """
     cb_url = order.issued_return_url
     if cb_url:
+        pick_info = []
+        for i in range(order.pick_code_list):
+            pick_info.append({
+                "pick_code": order.pick_code_list[i],
+                "pick_msg": order.pick_msg_list[i]
+                })
         ret = {
             "code": RET_OK,
             "message": "OK",
-            "data": [
-                {
-                    "pick_code": 1,
-                    "pick_msg": "",
-                }
-            ]
+            "data": {
+                "sys_order_no": order.order_no,
+                "out_order_no": order.out_order_no,
+                "raw_order_no": order.raw_order_no,
+                "pick_info": pick_info,
+            }
         }
-        response = urllib2.urlopen(notify_url, json_str, timeout=10)
+        response = urllib2.urlopen(notify_url, json.dumps(ret), timeout=10)
         print response, "async_issued_callback"
