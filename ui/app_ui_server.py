@@ -9,7 +9,7 @@ from flask.ext.mongoengine import MongoEngine
 from flask.ext.admin.form import rules
 from flask.ext.admin.contrib.mongoengine import ModelView
 
-from app.models import Line, Order, ScqcpOrder 
+from app.models import Line, Order 
 
 # Create application
 app = Flask(__name__)
@@ -119,7 +119,7 @@ class PostView(ModelView):
 
 
 class OrderView(ModelView):
-    column_list = ('order_no', 'status')
+#     column_list = ('order_no', 'status')
     column_labels = dict(name='order_no', status=u'状态')
     list_template = 'list.html'
     pass
