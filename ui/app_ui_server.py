@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 *-*
 import datetime
 
 from flask import Flask
@@ -7,7 +9,7 @@ from flask.ext.mongoengine import MongoEngine
 from flask.ext.admin.form import rules
 from flask.ext.admin.contrib.mongoengine import ModelView
 
-from app.models import Line, Order, ScqcpOrder ,Rider
+from app.models import Line, Order, ScqcpOrder 
 
 # Create application
 app = Flask(__name__)
@@ -117,6 +119,9 @@ class PostView(ModelView):
 
 
 class OrderView(ModelView):
+    column_list = ('order_no', 'status')
+    column_labels = dict(name='order_no', status=u'状态')
+    list_template = 'list.html'
     pass
 #     column_filters = ['order_no', 'status', 'order_from', 'order_price', 'create_date_time']
 # 
@@ -127,6 +132,11 @@ class OrderView(ModelView):
 #             'fields': ['name']
 #         }
 #     }
+
+
+
+
+
 
 
 class ScqcpOrderView(ModelView):

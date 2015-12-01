@@ -100,7 +100,7 @@ class Order(db.Document):
 
     # 车票信息
     line = db.ReferenceField(Line)
-    seat_no_list = db.ListField()
+    seat_no_list = db.ListField(db.StringField(max_length=10))
     ticket_price = db.FloatField()
     ticket_amount = db.IntField()
     ticket_fee = db.FloatField()   # 手续费
@@ -119,7 +119,7 @@ class Order(db.Document):
     contacter_idcard = db.StringField()
 
     # 乘客信息
-    riders = db.ListField()
+    riders = db.ListField(db.StringField(max_length=50))
 
     # 锁票信息: 源网站在锁票这步返回的数据
     lock_info = db.DictField()
@@ -132,7 +132,18 @@ class Order(db.Document):
     def generate_order_no(cls):
         import time
         return str(time.time()*10000000)
+    
+    
+    def verify_log(self):
 
+        html_str = u'''<a href="%s" target="_blank" class="thumbnail"><img height=100 width=100 src="%s" alt="Bootstrap缩略图样式"></a>
+        <a href="%s" target="_blank">查看相册</a>
+        '''
+        if not self.status:
+            return ""
+        
+        pic_url="/admin/user_images/?fo_uid=0&fv_uid=%s" %self.name
+        return pic_url
 
 class ScqcpOrder(db.Document):
     """
