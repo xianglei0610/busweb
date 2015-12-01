@@ -31,6 +31,17 @@ class Starting(db.Document):
     is_pre_sell = db.BooleanField(default=True)   # 是否预售
     crawl_source = db.StringField()
 
+    meta = {
+        "indexes": [
+            "starting_id",
+            "city_name",
+            "station_name",
+            "city_pinyin_prefix",
+            "station_pinyin_prefix",
+            "crawl_source",
+            ],
+    }
+
     @property
     def pre_sell_days(self):
         """
@@ -78,6 +89,17 @@ class Destination(db.Document):
     station_pinyin_prefix = db.StringField()
     crawl_source = db.StringField()
 
+    meta = {
+        "indexes": [
+            "destination_id",
+            "city_name",
+            "station_name",
+            "city_pinyin_prefix",
+            "station_pinyin_prefix",
+            "crawl_source",
+            ],
+    }
+
 
 class Line(db.Document):
     """
@@ -98,6 +120,16 @@ class Line(db.Document):
     fee = db.FloatField()                 # 手续费
     crawl_datetime = db.DateTimeField()   # 爬取的时间
     extra_info = db.DictField()           # 额外信息字段
+
+    meta = {
+        "indexes": [
+            "line_id",
+            "crawl_source",
+            "drv_date",
+            "drv_time",
+            "crawl_datetime",
+            ],
+    }
 
     @property
     def can_order(self):
@@ -155,6 +187,17 @@ class Order(db.Document):
     # 下单时使用的源网站账号
     source_account = db.StringField()
 
+    meta = {
+        "indexes": [
+            "order_no",
+            "out_order_no",
+            "raw_order_no",
+            "status",
+            "crawl_source",
+            "create_date_time",
+            ],
+    }
+
     def refresh_status(self):
         """
         刷新订单状态
@@ -164,7 +207,7 @@ class Order(db.Document):
             if not rebot.is_active:
                 return False
             tickets = rebot.request_order(self)
-            code_list,msg_list = [], []
+            code_list, msg_list = [], []
             if tickets and tickets.values()[0]["state"] == "preprint":
                 # 出票成功
                 for tid in self.lock_info["ticket_ids"]:
@@ -215,36 +258,6 @@ class Order(db.Document):
         return "%s%s%s" % (sdate, micro, srand)
 
 
-class ScqcpOrder(db.Document):
-    """
-    scqcp.com下订单时的返回信息
-    """
-    expire_time = db.DateTimeField()
-    code = db.StringField()
-    ticket_code = db.StringField()
-    pay_order_id = db.LongField()
-    ticket_list = db.ListField()
-    ticket_lines = db.DictField()
-    ticket_ids = db.ListField()
-    order_ids = db.ListField()
-    ticket_price_list = db.ListField()
-    ticket_type = db.ListField()
-    web_order_id = db.ListField()
-    seat_number_list = db.ListField()
-    lock_data = db.StringField()
-
-
-    @property
-    def pay_url(self):
-        if self.crawl_source == "scqcp":
-            if "pay_order_id" not in self.lock_info:
-                return ""
-            url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s"
-            return url % self.lock_info["pay_order_id"]
-        return ""
-
-
-
 class ScqcpRebot(db.Document):
     """
     机器人: 对被爬网站用户的抽象
@@ -259,7 +272,7 @@ class ScqcpRebot(db.Document):
     last_login_time = db.DateTimeField(default=datetime.now)
 
     meta = {
-        "indexes": ["telephone", ],
+        "indexes": ["telephone", "is_active"],
     }
 
     def relogin(self):
@@ -299,7 +312,6 @@ class ScqcpRebot(db.Document):
     @classmethod
     def check_upsert_all(cls):
         """登陆所有预设账号"""
-        now = datetime.now()
         current_app.logger.info(">>>> start to login scqcp.com:")
         valid_cnt = 0
         has_checked = {}

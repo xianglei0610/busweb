@@ -193,7 +193,7 @@ def migrate_from_crawl(site):
             except Line.DoesNotExist:
                 line_obj = Line(**attrs)
                 line_obj.save()
-                
+
     app.logger.info("start migrate data from crawldb to webdb:%s", site)
     if site == "scqcp":
         migrate_scqcp()
