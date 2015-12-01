@@ -71,7 +71,7 @@ def migrate_from_crawl(site):
                 "city_pinyin": "",
                 "city_pinyin_prefix": "",
                 "station_id": "",
-                "station_name": target_city["stop_name"],
+                "station_name": d["stop_name"],
                 "station_pinyin": target_city["en_name"],
                 "station_pinyin_prefix": target_city["short_name"],
                 "crawl_source": "scqcp",
