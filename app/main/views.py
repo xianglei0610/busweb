@@ -1,11 +1,12 @@
 # -*- coding:utf-8 -*-
-import threading
 import json
 
-from app.constants import *
 from datetime import datetime
-from flask import request, jsonify
 from mongoengine import Q
+
+from app.constants import *
+from flask import request, jsonify
+from app.async_tasks import async_lock_ticket
 from app.main import main
 from app.models import Line, Starting, Destination, Order
 
@@ -244,8 +245,7 @@ def submit_order():
     order.issued_return_url = issued_return_url
     order.save()
 
-    t = threading.Thread(target=async_lock_ticket, args=(order,))
-    t.start()
+    async_lock_ticket(order)
     return jsonify({"code": 1, "message": "submit order success!", "data": {"sys_order_no": order.order_no}})
 
 
@@ -365,6 +365,5 @@ def refresh_order():
         order = Order.objects.get(order_no=sys_order_no)
     except Order.DoesNotExist:
         return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
-
     order.refresh_status()
-    return jsonify({})
+    return jsonify({"code": RET_OK, "message": "refresh success", "data": {"status": order.status}})

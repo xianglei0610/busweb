@@ -4,6 +4,7 @@ import urllib
 import random
 
 from app.constants import *
+from app.async_tasks import async_issued_callback
 from datetime import datetime
 from flask import json, current_app
 
@@ -138,6 +139,7 @@ class Order(db.Document):
 
     # 取票信息
     pick_code_list = db.ListField()     # 取票密码
+    pick_msg_list = db.ListField()      # 取票说明
 
     # 其他
     crawl_source = db.StringField()     # 源网站
@@ -159,9 +161,11 @@ class Order(db.Document):
             tickets = rebot.request_order(self)
             code_list = []
             if tickets and tickets.values()[0]["state"] == "success":
+                # 出票成功
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
                 self.update(status=STATUS_SUCC, pick_code_list=code_list)
+                async_issued_callback(order)
         return True
 
     def get_contact_info(self):

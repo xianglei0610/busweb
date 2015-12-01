@@ -3,11 +3,13 @@ import urllib2
 
 from app.constants import *
 from app.models import ScqcpRebot
+from app.decorators import async
 
 
+@async
 def async_lock_ticket(order):
     """
-    请求源网站锁票
+    请求源网站锁票 + 锁票成功回调
 
     Return:
         expire_time: 122112121,     # 订单过期时间戳
@@ -42,5 +44,41 @@ def async_lock_ticket(order):
             json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
 
         if notify_url:
-            response = urllib2.urlopen(notify_url, json_str, timeout=5)
+            response = urllib2.urlopen(notify_url, json_str, timeout=10)
             print response, "async_lock_ticket"
+
+
+@async
+def async_issued_callback(order):
+    """
+    出票回调
+
+    Return:
+    {
+        "code": RET_OK,
+        "message": "OK"
+        "data":{
+            "sys_order_no": "",
+            "out_order_no": "",
+            "raw_order_no"; "",
+            "pick_info":[{
+                "pick_code": "1",
+                "pck_msg": "2"
+            }],
+        }
+    }
+    """
+    cb_url = order.issued_return_url
+    if cb_url:
+        ret = {
+            "code": RET_OK,
+            "message": "OK",
+            "data": [
+                {
+                    "pick_code": 1,
+                    "pick_msg": "",
+                }
+            ]
+        }
+        response = urllib2.urlopen(notify_url, json_str, timeout=10)
+        print response, "async_issued_callback"
