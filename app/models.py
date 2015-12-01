@@ -101,6 +101,8 @@ class Line(db.Document):
 
     @property
     def can_order(self):
+        if not self.extra_info.get('flag',''):
+            return 0
         return 1
 
 
@@ -118,8 +120,9 @@ class Order(db.Document):
 
     # 车票信息
     line = db.ReferenceField(Line)
-    seat_no_list = db.ListField()
-    ticket_price = db.FloatField()          # 车票单价
+
+    seat_no_list = db.ListField(db.StringField(max_length=10))
+    ticket_price = db.FloatField()
     ticket_amount = db.IntField()
     ticket_fee = db.FloatField()            # 单张车票手续费
     discount = db.FloatField(default=0)     # 单张车票优惠金额
@@ -134,7 +137,7 @@ class Order(db.Document):
     # 乘客和联系人信息
     # 包含字段: name, telephone, id_type,id_number,age_level
     contact_info = db.DictField()
-    riders = db.ListField()
+    riders = db.ListField(db.StringField(max_length=50))
 
     # 锁票信息: 源网站在锁票这步返回的数据
     lock_info = db.DictField()
@@ -211,6 +214,26 @@ class Order(db.Document):
         srand = "%02d" % random.randrange(10, 100)
         return "%s%s%s" % (sdate, micro, srand)
 
+
+class ScqcpOrder(db.Document):
+    """
+    scqcp.com下订单时的返回信息
+    """
+    expire_time = db.DateTimeField()
+    code = db.StringField()
+    ticket_code = db.StringField()
+    pay_order_id = db.LongField()
+    ticket_list = db.ListField()
+    ticket_lines = db.DictField()
+    ticket_ids = db.ListField()
+    order_ids = db.ListField()
+    ticket_price_list = db.ListField()
+    ticket_type = db.ListField()
+    web_order_id = db.ListField()
+    seat_number_list = db.ListField()
+    lock_data = db.StringField()
+
+
     @property
     def pay_url(self):
         if self.crawl_source == "scqcp":
@@ -219,6 +242,7 @@ class Order(db.Document):
             url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s"
             return url % self.lock_info["pay_order_id"]
         return ""
+
 
 
 class ScqcpRebot(db.Document):
