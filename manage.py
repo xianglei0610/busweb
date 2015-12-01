@@ -3,7 +3,6 @@
 import os
 import pymongo
 
-from datetime import datetime
 from app import setup_app, db, app
 from flask.ext.script import Manager, Shell
 
@@ -60,7 +59,7 @@ def migrate_from_crawl(site):
                 starting_obj.save()
 
             # migrate destination
-            dest_id  = str(hash("%s-%s-%s-%s-%s-%s" % \
+            dest_id = str(hash("%s-%s-%s-%s-%s-%s" % \
                     (starting_obj.starting_id, "", "", d["stop_code"], d["stop_name"], crawl_source)))
             target_city = crawl_db.scqcp_target_city.find_one({"starting_city_id": d["city_id"], "stop_name": d["stop_name"]})
             dest_attrs = {
@@ -71,7 +70,7 @@ def migrate_from_crawl(site):
                 "city_pinyin": "",
                 "city_pinyin_prefix": "",
                 "station_id": "",
-                "station_name": d["stop_name"],
+                "station_name": d["stop_name"],     # 一定要拿line上的stop_name
                 "station_pinyin": target_city["en_name"],
                 "station_pinyin_prefix": target_city["short_name"],
                 "crawl_source": "scqcp",

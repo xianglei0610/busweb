@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 import urllib2
+import json
 
 from app.constants import *
 from app.decorators import async
@@ -30,7 +31,7 @@ def async_lock_ticket(order):
 
         data = []
         if ret["status"] == 1:
-            order.updat(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone)
+            order.update(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone)
             total_price = 0
             for ticket in order.lock_info["ticket_list"]:
                 total_price += (ticket["server_price"], ticket["real_price"])
@@ -40,7 +41,7 @@ def async_lock_ticket(order):
             }
             json_str = json.dumps({"code": 1, "message": "OK", "data": data})
         else:
-            order.updat(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
+            order.update(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
             json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
 
         if notify_url:

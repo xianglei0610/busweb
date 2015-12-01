@@ -61,6 +61,9 @@ RIDER_CHILD = 0     # 儿童
 # 通用状态码
 RET_OK = 1
 RET_PARAM_ERROR = 2     # 参数错误
+RET_SERVER_ERROR = 3    # 服务器异常
+RET_PAGE_404 = 4        # 404
+
 # 订单错误1xx
 RET_ORDER_404 = 101     # 订单不存在
 # 线路错误2xx
