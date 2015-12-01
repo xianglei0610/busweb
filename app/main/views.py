@@ -1,14 +1,13 @@
 # -*- coding:utf-8 -*-
 import threading
-import urllib2
+import json
 
 from app.constants import *
 from datetime import datetime
 from flask import request, jsonify
 from mongoengine import Q
 from app.main import main
-from app.models import Line, Starting, Destination, ScqcpRebot, Order
-import json
+from app.models import Line, Starting, Destination, Order
 
 
 @main.route('/startings/query', methods=['POST'])
@@ -340,42 +339,32 @@ def query_order_detail():
         return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
-def async_lock_ticket(order):
+@main.route('/orders/refresh', methods=['POST'])
+def refresh_order():
     """
-    请求源网站锁票
+    刷新订单状态
+
+    Input:
+        {
+            "sys_order_no": "1111"   # 订单号
+        }
 
     Return:
-        expire_time: 122112121,     # 订单过期时间戳
-        total_price: 322，          # 车票价格
+    {
+        "status": 14,
+    }
     """
-    notify_url = order.locked_return_url
-    if order.crawl_source == "scqcp":
-        rebot = ScqcpRebot.objects.first()
-        line = dict(
-            carry_sta_id=order.line.starting.station_id,
-            stop_name=order.line.destination.station_name,
-            str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
-            sign_id=order.line.extra_info["sign_id"],
-            )
-        contacter = order.contact_info["telephone"]
-        riders = map(lambda d: {"id_number": d["id_number"], "real_name": str(d["name"])}, order.riders)
-        ret = rebot.request_lock_ticket(line, riders, contacter)
+    try:
+        post = json.loads(request.get_data())
+        sys_order_no = post["sys_order_no"]
+    except:
+        return jsonify({"code": RET_PARAM_ERROR,
+                        "message": "parameter error",
+                        "data": data})
+    try:
+        order = Order.objects.get(order_no=sys_order_no)
+    except Order.DoesNotExist:
+        return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
 
-        data = []
-        if ret["status"] == 1:
-            order.updat(status=STATUS_LOCK, lock_info=ret)
-            total_price = 0
-            for ticket in order.lock_info["ticket_list"]:
-                total_price += (ticket["server_price"], ticket["real_price"])
-            data = {
-                "expire_time": order.lock_info["expire_time"],
-                "total_price": total_price,
-            }
-            json_str = json.dumps({"code": 1, "message": "OK", "data": data})
-        else:
-            order.updat(status=STATUS_LOCK_FAIL, lock_info=ret)
-            json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
-
-        if notify_url:
-            response = urllib2.urlopen(notify_url, json_str, timeout=5)
-            print response, "async_lock_ticket"
+    order.refresh_status()
+    return jsonify({})

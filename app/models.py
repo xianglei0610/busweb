@@ -136,11 +136,33 @@ class Order(db.Document):
     # 锁票信息: 源网站在锁票这步返回的数据
     lock_info = db.DictField()
 
+    # 取票信息
+    pick_code_list = db.ListField()     # 取票密码
+
     # 其他
     crawl_source = db.StringField()     # 源网站
     extra_info = db.DictField()         # 额外信息
     locked_return_url = db.URLField()   # 锁票成功回调
     issued_return_url = db.URLField()   # 出票成功回调
+
+    # 下单时使用的源网站账号
+    source_account = db.StringField()
+
+    def refresh_status(self):
+        """
+        刷新订单状态
+        """
+        if self.crawl_source == "scqcp" and self.status in [STATUS_ISSUE_DOING, STATUS_LOCK]:
+            rebot = ScqcpRebot.objects.get(telephone=self.source_account)
+            if not rebot.is_active:
+                return False
+            tickets = rebot.request_order(self)
+            code_list = []
+            if tickets and tickets.values()[0]["state"] == "success":
+                for tid in self.lock_info["ticket_ids"]:
+                    code_list.append(tickets[tid]["code"])
+                self.update(status=STATUS_SUCC, pick_code_list=code_list)
+        return True
 
     def get_contact_info(self):
         """
@@ -278,7 +300,6 @@ class ScqcpRebot(db.Document):
         request.add_header('Authorization', token or self.token)
         request.add_header('Content-type', "application/json; charset=UTF-8")
         qstr = urllib.urlencode(data)
-        print "http_post", url
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
         return ret
@@ -304,6 +325,19 @@ class ScqcpRebot(db.Document):
         }
         ret = self.http_post(uri, data)
         return ret
+
+    def request_order(order):
+        uri = "/api/v1/ticket_lines/query_order"
+        ret = self.http_post(uri, {})
+        ticket_ids = order.lock_info["ticket_ids"]
+        amount = len(ticket_ids)
+        data = {}
+        for d in ret["ticket_list"]:
+            if d["ticket_id"] in ticket_ids:
+                data[d["ticket_id"]] = d
+            if len(data) >= amount:
+                break
+        return data
 
     def test_order(self):
         """
