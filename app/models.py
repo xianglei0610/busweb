@@ -54,10 +54,12 @@ class Starting(db.Document):
     def advance_order_time(self):
         return 120  # 2hour
 
+    @property
     def max_ticket_per_order(self):
         if self.crawl_source == "scqcp":
             return 5
         return 3
+
 
 class Destination(db.Document):
     """
@@ -142,7 +144,7 @@ class Order(db.Document):
 
     # 取票信息
     pick_code_list = db.ListField()     # 取票密码
-    pick_msg_list = db.ListField()      # 取票说明
+    pick_msg_list = db.ListField()      # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
 
     # 其他
     crawl_source = db.StringField()     # 源网站
@@ -162,12 +164,13 @@ class Order(db.Document):
             if not rebot.is_active:
                 return False
             tickets = rebot.request_order(self)
-            code_list = []
-            if tickets and tickets.values()[0]["state"] == "success":
+            code_list,msg_list = [], []
+            if tickets and tickets.values()[0]["state"] == "preprint":
                 # 出票成功
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
-                self.update(status=STATUS_SUCC, pick_code_list=code_list)
+                    msg_list.append("")
+                self.update(status=STATUS_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 async_issued_callback(order)
         return True
 
@@ -201,8 +204,15 @@ class Order(db.Document):
 
     @classmethod
     def generate_order_no(cls):
-        import time
-        return str(time.time()*10000000)
+        """
+        组成：
+        年(4)+月(2)+日(2)+毫秒(6)+随机数(2)
+        """
+        now = datetime.now()
+        sdate = now.strftime("%Y%m%d")
+        micro = "%06d" % now.microsecond
+        srand = "%02d" % random.randrange(10, 100)
+        return "%s%s%s" % (sdate, micro, srand)
 
 
 class ScqcpOrder(db.Document):
