@@ -86,6 +86,8 @@ class Line(db.Document):
 
     @property
     def can_order(self):
+        if not self.extra_info.get('flag',''):
+            return 0
         return 1
 
 class Order(db.Document):
