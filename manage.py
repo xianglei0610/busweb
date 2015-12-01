@@ -4,6 +4,7 @@ import os
 import pymongo
 
 from app import setup_app, db, app
+from app.utils import md5
 from flask.ext.script import Manager, Shell
 
 setup_app(os.getenv('FLASK_CONFIG') or 'default')
@@ -34,8 +35,8 @@ def migrate_from_crawl(site):
 
             # migrate Starting
             city_id = str(d["city_id"])
-            starting_id = str(hash("%s-%s-%s-%s-%s" % \
-                    (city_id, d["city"], d["carry_sta_id"], d["carry_sta_name"], crawl_source)))
+            starting_id = md5("%s-%s-%s-%s-%s" % \
+                    (city_id, d["city"], d["carry_sta_id"], d["carry_sta_name"], crawl_source))
             start_city = crawl_db.scqcp_start_city.find_one({"city_id": d["city_id"]})
             starting_attrs = {
                 "starting_id": starting_id,
@@ -59,8 +60,8 @@ def migrate_from_crawl(site):
                 starting_obj.save()
 
             # migrate destination
-            dest_id = str(hash("%s-%s-%s-%s-%s-%s" % \
-                    (starting_obj.starting_id, "", "", d["stop_code"], d["stop_name"], crawl_source)))
+            dest_id = md5("%s-%s-%s-%s-%s-%s" % \
+                    (starting_obj.starting_id, "", "", d["stop_code"], d["stop_name"], crawl_source))
             target_city = crawl_db.scqcp_target_city.find_one({"starting_city_id": d["city_id"], "stop_name": d["stop_name"]})
             dest_attrs = {
                 "destination_id": dest_id,
@@ -116,8 +117,8 @@ def migrate_from_crawl(site):
 
             # migrate Starting
             city_id = str(d["city_id"])
-            starting_id = str(hash("%s-%s-%s-%s-%s" % \
-                    (city_id, d["city_name"], d["start_city_id"], d["start_city_name"], crawl_source)))
+            starting_id = md5("%s-%s-%s-%s-%s" % \
+                    (city_id, d["city_name"], d["start_city_id"], d["start_city_name"], crawl_source))
             start_city = crawl_db.start_city_gx84100.find_one({"city_id": d["city_id"]})
             starting_attrs = {
                 "starting_id": starting_id,
@@ -141,8 +142,8 @@ def migrate_from_crawl(site):
                 starting_obj.save()
 
             # migrate destination
-            dest_id  = str(hash("%s-%s-%s-%s-%s-%s" % \
-                    (starting_obj.starting_id, "", "", "", d["target_city_name"], crawl_source)))
+            dest_id  = md5("%s-%s-%s-%s-%s-%s" % \
+                    (starting_obj.starting_id, "", "", "", d["target_city_name"], crawl_source))
             print d["start_city_id"],d["target_city_name"]
             target_city = crawl_db.target_city_gx84100.find_one({"starting_id": d["start_city_id"], "target_name": d["target_city_name"]})
             print target_city
