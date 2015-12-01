@@ -62,7 +62,8 @@ def migrate_from_crawl(site):
             # migrate destination
             dest_id = md5("%s-%s-%s-%s-%s-%s" % \
                     (starting_obj.starting_id, "", "", d["stop_code"], d["stop_name"], crawl_source))
-            target_city = crawl_db.scqcp_target_city.find_one({"starting_city_id": d["city_id"], "stop_name": d["stop_name"]})
+            target_city = crawl_db.scqcp_target_city.find_one({"starting_city_id": d["city_id"], "stop_name":
+                d["stop_alias_name"]})
             dest_attrs = {
                 "destination_id": dest_id,
                 "starting": starting_obj,
@@ -71,7 +72,7 @@ def migrate_from_crawl(site):
                 "city_pinyin": "",
                 "city_pinyin_prefix": "",
                 "station_id": "",
-                "station_name": d["stop_name"],     # 一定要拿line上的stop_name
+                "station_name": target_city["stop_name"],
                 "station_pinyin": target_city["en_name"],
                 "station_pinyin_prefix": target_city["short_name"],
                 "crawl_source": "scqcp",
@@ -101,7 +102,7 @@ def migrate_from_crawl(site):
                 "half_price": d["half_price"],
                 "crawl_datetime": d["create_datetime"],
                 "fee": d["service_price"],
-                "extra_info": {"left_ticket": d["amount"], "sign_id": d["sign_id"]},
+                "extra_info": {"left_ticket": d["amount"], "sign_id": d["sign_id"], "stop_name_short": d["stop_name"]},
             }
             try:
                 line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)

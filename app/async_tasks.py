@@ -21,7 +21,7 @@ def async_lock_ticket(order):
         rebot = ScqcpRebot.objects.first()
         line = dict(
             carry_sta_id=order.line.starting.station_id,
-            stop_name=order.line.destination.station_name,
+            stop_name=order.line.extra_info["stop_name_short"],
             str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
             sign_id=order.line.extra_info["sign_id"],
             )
@@ -33,10 +33,11 @@ def async_lock_ticket(order):
         if ret["status"] == 1:
             order.update(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone)
             total_price = 0
-            for ticket in order.lock_info["ticket_list"]:
-                total_price += (ticket["server_price"], ticket["real_price"])
+            for ticket in ret["ticket_list"]:
+                total_price += ticket["server_price"]
+                total_price += ticket["real_price"]
             data = {
-                "expire_time": order.lock_info["expire_time"],
+                "expire_time": ret["expire_time"],
                 "total_price": total_price,
             }
             json_str = json.dumps({"code": 1, "message": "OK", "data": data})

@@ -169,7 +169,7 @@ class Order(db.Document):
     # 乘客和联系人信息
     # 包含字段: name, telephone, id_type,id_number,age_level
     contact_info = db.DictField()
-    riders = db.ListField(db.StringField(max_length=50))
+    riders = db.ListField(db.DictField())
 
     # 锁票信息: 源网站在锁票这步返回的数据
     lock_info = db.DictField()
