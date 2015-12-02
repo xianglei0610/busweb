@@ -18,8 +18,9 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 @manager.command
 def deploy():
-    from app.models import ScqcpRebot
+    from app.models import ScqcpRebot, Gx84100Rebot
     ScqcpRebot.check_upsert_all()
+    Gx84100Rebot.check_upsert_all()
 
 
 @manager.command

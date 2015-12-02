@@ -2,13 +2,15 @@
 import urllib2
 import urllib
 import random
+import requests
+from lxml import etree
 
 from app.constants import *
 from app.async_tasks import async_issued_callback
 from datetime import datetime
 from flask import json, current_app
 
-from app.constants import SCQCP_ACCOUNTS
+from app.constants import SCQCP_ACCOUNTS, GX84100_ACCOUNTS
 from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app import db
 
@@ -54,10 +56,12 @@ class Starting(db.Document):
     def advance_order_time(self):
         return 120  # 2hour
 
+    @property
     def max_ticket_per_order(self):
         if self.crawl_source == "scqcp":
             return 5
         return 3
+
 
 class Destination(db.Document):
     """
@@ -99,8 +103,9 @@ class Line(db.Document):
 
     @property
     def can_order(self):
-        if not self.extra_info.get('flag',''):
-            return 0
+        if self.crawl_source == 'gx84100':
+            if not self.extra_info.get('flag', ''):
+                return 0
         return 1
 
 
@@ -126,6 +131,7 @@ class Order(db.Document):
     discount = db.FloatField(default=0)     # 单张车票优惠金额
 
     # 支付信息
+    pay_url = db.StringField()      # 支付链接
     pay_no = db.StringField()      # 支付号
     pay_status = db.IntField()
     pay_channel = db.StringField()     # 支付方式
@@ -141,8 +147,8 @@ class Order(db.Document):
     lock_info = db.DictField()
 
     # 取票信息
-    pick_code_list = db.ListField()     # 取票密码
-    pick_msg_list = db.ListField()      # 取票说明
+    pick_code_list = db.ListField(db.StringField(max_length=30))     # 取票密码
+    pick_msg_list = db.ListField(db.StringField(max_length=50))      # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
 
     # 其他
     crawl_source = db.StringField()     # 源网站
@@ -162,13 +168,24 @@ class Order(db.Document):
             if not rebot.is_active:
                 return False
             tickets = rebot.request_order(self)
-            code_list = []
-            if tickets and tickets.values()[0]["state"] == "success":
+            code_list, msg_list = [], []
+            if tickets and tickets.values()[0]["state"] == "preprint":
                 # 出票成功
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
-                self.update(status=STATUS_SUCC, pick_code_list=code_list)
+                    msg_list.append("")
+                self.update(status=STATUS_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 async_issued_callback(order)
+        elif self.crawl_source == "gx84100" and self.status in [STATUS_ISSUE_DOING, STATUS_LOCK]:
+            rebot = Gx84100Rebot.objects.get(telephone=self.source_account)
+            if not rebot.is_active:
+                return False
+            tickets = rebot.request_order(self)
+            code_list, msg_list = [], []
+            if tickets and tickets['status'] == '4':
+                self.update(status=STATUS_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
+                async_issued_callback(order)
+        
         return True
 
     def get_contact_info(self):
@@ -201,8 +218,15 @@ class Order(db.Document):
 
     @classmethod
     def generate_order_no(cls):
-        import time
-        return str(time.time()*10000000)
+        """
+        组成：
+        年(4)+月(2)+日(2)+毫秒(6)+随机数(2)
+        """
+        now = datetime.now()
+        sdate = now.strftime("%Y%m%d")
+        micro = "%06d" % now.microsecond
+        srand = "%02d" % random.randrange(10, 100)
+        return "%s%s%s" % (sdate, micro, srand)
 
 
 class ScqcpOrder(db.Document):
@@ -385,3 +409,201 @@ class ScqcpRebot(db.Document):
             },
         ]
         self.request_lock_ticket(line, riders, contacter)
+
+
+class Gx84100Rebot(db.Document):
+    """
+    机器人: 对被爬网站用户的抽象
+    """
+    telephone = db.StringField(required=True, unique=True)
+    password = db.StringField()
+    is_encrypt = db.IntField(choices=(0, 1))
+    user_agent = db.StringField()
+    token = db.StringField()
+    open_id = db.StringField()
+    is_active = db.BooleanField(default=True)  # 是否已被删除
+    last_login_time = db.DateTimeField(default=datetime.now)
+
+    meta = {
+        "indexes": ["telephone", ],
+    }
+
+    def relogin(self):
+        """
+        返回OK表示登陆成功
+        """
+        ua = random.choice(MOBILE_USER_AGENG)
+        device = "android" if "android" in ua else "ios"
+
+#         # 获取token
+#         uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
+#         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+#         request = urllib2.Request(url)
+#         request.add_header('User-Agent', ua)
+#         response = urllib2.urlopen(request, timeout=5)
+#         ret = json.loads(response.read())
+#         token = ret["token"]
+
+        # 登陆
+        uri = "/wap/login/ajaxLogin.do"
+        data = {
+            "mobile": self.telephone,
+            "password": self.password,
+            "phone": '',
+            "code": ''
+        }
+        ret = self.http_post(uri, data, user_agent=ua)
+        if ret['returnCode']!= "0000":
+            # 登陆失败
+            current_app.logger.error("%s %s login failed! %s", self.telephone, self.password, ret.get("returnMsg", ""))
+            self.update(is_active=False)
+            return ret.get("returnMsg", "fail")
+
+
+        self.update(is_active=True, last_login_time=datetime.now(), user_agent=ua)
+        return "OK"
+
+    @classmethod
+    def check_upsert_all(cls):
+        """登陆所有预设账号"""
+        now = datetime.now()
+        current_app.logger.info(">>>> start to login 84100.com:")
+        valid_cnt = 0
+        has_checked = {}
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in GX84100_ACCOUNTS:
+                bot.update(is_active=False)
+                continue
+            pwd, openid = GX84100_ACCOUNTS[bot.telephone]
+            bot.update(password=pwd, openid=openid)
+
+            # 近5天之内登陆的先不管
+            #if bot.is_active and (bot.last_login_time-now).seconds < 5*24*3600:
+            #    valid_cnt += 1
+            #    continue
+
+            if bot.relogin() == "OK":
+                valid_cnt += 1
+
+        for tele, (pwd, openid) in GX84100_ACCOUNTS.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=False,
+                      telephone=tele,
+                      password=pwd,
+                      openid=openid)
+            bot .save()
+            if bot.relogin() == "OK":
+                valid_cnt += 1
+        current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
+
+    def http_post(self, uri, data, user_agent=None, token=None):
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        request = urllib2.Request(url)
+        request.add_header('User-Agent', user_agent or self.user_agent)
+        request.add_header('Authorization', token or self.token)
+        request.add_header('Content-type', "application/json; charset=UTF-8")
+        qstr = urllib.urlencode(data)
+        response = urllib2.urlopen(request, qstr, timeout=10)
+        ret = json.loads(response.read())
+        return ret
+
+    def request_lock_ticket(self, line, riders, contacter):
+        """
+        请求锁票
+        """
+#         startId    43100003
+#         planId    2380625
+#         name    向磊磊
+#         mobile    13267109876
+#         password    
+#         terminalType    3
+#         passengerList    [{idType:"1",idNo:"429006199012280042",name:"李梦蝶",mobile:"",ticketType:"全"},{idType:"1",idNo:"429006198906100034",name:"向磊磊",mobile:"",ticketType:"全"}]
+#         openId    7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894
+#         isWeixin    1
+
+        uri = "/wap/ticketSales/ajaxMakeOrder.do"
+        passengerList = []
+        for r in riders:
+            tmp = {}
+            tmp['idType'] = r["id_type"]
+            tmp['idNo'] = r["id_number"]
+            tmp['name'] = r["name"]
+            tmp['mobile'] = r["telephone"]
+            tmp['ticketType'] = u"全"
+            passengerList.append(tmp)
+
+        data = {
+            "startId": line["carry_sta_id"],
+            "planId": line["bus_num"],
+            "name": contacter['name'],
+            "mobile": contacter['telephone'],
+            "password": '',
+            "terminalType": 3,
+            "passengerList": passengerList,
+            "openId": self.openid or 1,
+            "isWeixin": 1,
+        }
+        ret = self.http_post(uri, data)
+        pay_url = ret.get('redirectPage', '')
+        if pay_url:
+            ua = random.choice(MOBILE_USER_AGENG)
+            #url = "https://pay.84100.com/payment/P/P011.do?orderId=ed61e28a28df43a3905567ec48398285&hid=null&produceType=null"
+    #         uri = "wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1" % (orderNo,self.openId)
+            headers = {"User-Agent": ua}
+            r = requests.get(pay_url, verify=False,  headers=headers)
+            print r.content
+            sel = etree.HTML(r.content)
+            orderNoObj = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderNo"]/@value')
+            orderAmtObj = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderAmt"]/@value')
+            if orderNoObj and orderAmtObj:
+                orderNo = orderNoObj[0]
+                orderAmt = orderAmtObj[0]
+                ret['orderNo'] = orderNo
+                ret['orderAmt'] = orderAmt
+        return ret
+
+    def request_order(self, order):
+        #query_order_list_url ='http://wap.84100.com/wap/userCenter/orderDetails.do?orderNo=151201174710046683&openId=12122&isWeixin=0'
+        uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
+        url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+
+        request = urllib2.Request(url)
+        request.add_header('User-Agent', self.user_agent)
+        response = urllib2.urlopen(request, timeout=10)
+        print response.read()
+
+        sel = etree.HTML(response.read())
+        
+        orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
+        orderDetail=json.loads(orderDetailObj)
+
+        
+        data = {}
+        for d in ret["ticket_list"]:
+            if d["ticket_id"] in ticket_ids:
+                data[d["ticket_id"]] = d
+            if len(data) >= amount:
+                break
+        return data
+
+    def test_order(self):
+        """
+        临时测试方法，后期将移到单元测试模块
+        """
+        line = dict(
+            carry_sta_id="zjcz",
+            stop_name="八一",
+            str_date="2015-11-30 18:40",
+            sign_id="cb31ec0dd90f4518892d82ce63d152d0"
+            )
+        contacter = "15575101324"
+        riders = [
+            {
+                "id_number": "431021199004165616",
+                "real_name": "罗军平",
+            },
+        ]
+        self.request_lock_ticket(line, riders, contacter)
+

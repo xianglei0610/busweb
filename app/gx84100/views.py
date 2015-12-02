@@ -141,10 +141,13 @@ def queryOrderStatusFromPC():
     for  i in  a:
         print i.xpath('li')[1].xpath('em/text()')[0].replace('\r\n','').replace(' ','') 
     
-queryOrderStatusFromPC()
+# queryOrderStatusFromPC()
 
 
-
+import urllib2
+import urllib
+import random
+from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 
 
 def LoginFromWap():
@@ -157,25 +160,76 @@ def LoginFromWap():
           "phone" :   '' ,
           "code"  :  '' 
     }
+    ua = random.choice(MOBILE_USER_AGENG)
     
-    r = requests.post(url, data=data)  
+    headers = {"User-Agent": ua}
+    r = requests.post(url, data=data,   headers=headers)
+    print r.text
     _cookies = r.cookies
 
     status = {
     "1":"未支付",
     "2":'出票中',
     "3":"订票成功",
-    "4":"交易关闭"
+
+    "5":"交易关闭"
      }
     
-    query_order_list_url ='http://wap.84100.com/wap/userCenter/ticketOrders.do'
+    query_order_list_url ='http://wap.84100.com/wap/userCenter/orderDetails.do?orderNo=151201152338046120&openId=12122&isWeixin=0'
     
-    r = requests.get(query_order_list_url, cookies=_cookies) 
+    #pay_url ='https://pay.84100.com/payment/P/P011.do?orderId=7334fe973e574145809a96e889d612b9&hid=null&produceType=null'
     
+    r = requests.get(query_order_list_url,cookies=_cookies)
+    print r.content
     sel = etree.HTML(r.content)
-    a = sel.xpath('//div[@id="orderJson"]/text()')[0]
+    
+#     a = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderNo"]/@value')
+#     print a
+
+    
+    a = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
     
     b=json.loads(a)
+    print b
+    for i in b:
+        print i['paySeconds'] 
     order_list = b['pageData']
+#     print order_list
+    for i in order_list:
+        print i
+        if  i['orderNo'] =='15120100000000304675':
+            print  '111111111',i
     
-#LoginFromWap()
+LoginFromWap()
+
+
+
+
+
+
+
+
+
+yupiao_url = 'http://wap.84100.com/wap/ticketSales/bookTicket.do?shiftId=2375968&startId=43100003&openId=o82gDszqOaOk1_tdc54xQo4oGaLQ&isWeixin=1'
+
+import urllib2
+import urllib
+import random
+from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
+
+def test() :       
+    ua = random.choice(MOBILE_USER_AGENG)
+    
+    url = "https://pay.84100.com/payment/P/P011.do?orderId=08f271e7d37e44f1ab9ccb661dc66614&hid=null&produceType=null"
+#         uri = "wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1" % (orderNo,self.openId)
+    request = urllib2.Request(url)
+    request.add_header('User-Agent', ua)
+    response = urllib2.urlopen(request, timeout=5)
+    print response.read()
+    
+    
+    sel = etree.HTML(response.read())
+    
+    a = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderNo"]/@value')
+    print a
+# test()
