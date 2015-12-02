@@ -3,12 +3,14 @@
 import os
 import pymongo
 
-from app import setup_app, db, app
+from app import setup_app, db
 from app.utils import md5
 from flask.ext.script import Manager, Shell
 
-setup_app(os.getenv('FLASK_CONFIG') or 'default')
+app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
+                os.getenv('FLASK_SERVER') or 'api')
 manager = Manager(app)
+
 
 def make_shell_context():
     return dict(app=app, db=db)
@@ -32,7 +34,6 @@ def migrate_from_crawl(site):
     def migrate_scqcp():
         for d in crawl_db.scqcp_line.find({}):
             crawl_source = "scqcp"
-
             # migrate Starting
             city_id = str(d["city_id"])
             starting_id = md5("%s-%s-%s-%s-%s" % \

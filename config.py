@@ -4,15 +4,14 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
+    DEBUG = False
 
     @staticmethod
     def init_app(app):
         pass
 
 
-class DevelopmentConfig(Config):
-    DEBUG = True
+class ApiDevConfig(Config):
 
     MAIL_SERVER = 'smtp.googlemail.com'
     MAIL_PORT = 587
@@ -21,11 +20,11 @@ class DevelopmentConfig(Config):
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
 
-class ProductionConfig(Config):
+class ApiProdConfig(Config):
     pass
 
 
-class LocalConfig(Config):
+class ApiLocalConfig(Config):
 
     DEBUG = True
     MONGODB_SETTINGS = {
@@ -40,13 +39,41 @@ class LocalConfig(Config):
         'port': 27017,
     }
 
-    CELERY_BROKER_URL='redis://localhost:6379',
-    CELERY_RESULT_BACKEND='redis://localhost:6379'
 
+class AdminDevConfig(Config):
+
+    MAIL_SERVER = 'smtp.googlemail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+
+
+class AdminProdConfig(Config):
+    pass
+
+
+class AdminLocalConfig(Config):
+
+    DEBUG = True
+    MONGODB_SETTINGS = {
+        'db': 'web12308',
+        'host': 'localhost',
+        'port': 27017,
+    }
+
+    CRAWL_MONGODB_SETTINGS = {
+        'db': 'crawl12308',
+        'host': 'localhost',
+        'port': 27017,
+    }
 
 config = {
-    'local': LocalConfig,
-    'dev': DevelopmentConfig,
-    'prod': ProductionConfig,
-    'default': LocalConfig
+    'api_local': ApiLocalConfig,
+    'api_dev': ApiDevConfig,
+    'api_prod': ApiProdConfig,
+
+    'admin_local': AdminLocalConfig,
+    'admin_dev': AdminDevConfig,
+    'admin_prod': AdminProdConfig,
 }
