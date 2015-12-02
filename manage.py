@@ -113,7 +113,6 @@ def migrate_from_crawl(site):
 
     def migrate_gx84100():
         for d in crawl_db.line_gx84100.find({}):
-            print 333333333333333333
             crawl_source = "gx84100"
 
             # migrate Starting

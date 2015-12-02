@@ -155,8 +155,8 @@ def LoginFromWap():
     url= 'http://wap.84100.com/wap/login/ajaxLogin.do'
     
     data={
-          "mobile" :  13267109876,
-          "password" : 123456,
+          "mobile" :  u'13267109876',
+          "password" : u'123456',
           "phone" :   '' ,
           "code"  :  '' 
     }

@@ -185,7 +185,6 @@ class Order(db.Document):
             if tickets and tickets['status'] == '4':
                 self.update(status=STATUS_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 async_issued_callback(order)
-        
         return True
 
     def get_contact_info(self):
@@ -452,7 +451,9 @@ class Gx84100Rebot(db.Document):
             "phone": '',
             "code": ''
         }
+        print data
         ret = self.http_post(uri, data, user_agent=ua)
+        print ret
         if ret['returnCode']!= "0000":
             # 登陆失败
             current_app.logger.error("%s %s login failed! %s", self.telephone, self.password, ret.get("returnMsg", ""))
@@ -467,7 +468,7 @@ class Gx84100Rebot(db.Document):
     def check_upsert_all(cls):
         """登陆所有预设账号"""
         now = datetime.now()
-        current_app.logger.info(">>>> start to login 84100.com:")
+        current_app.logger.info(">>>> start to login wap.84100.com:")
         valid_cnt = 0
         has_checked = {}
         for bot in cls.objects:
@@ -476,7 +477,7 @@ class Gx84100Rebot(db.Document):
                 bot.update(is_active=False)
                 continue
             pwd, openid = GX84100_ACCOUNTS[bot.telephone]
-            bot.update(password=pwd, openid=openid)
+            bot.update(password=pwd, open_id=openid)
 
             # 近5天之内登陆的先不管
             #if bot.is_active and (bot.last_login_time-now).seconds < 5*24*3600:
@@ -492,18 +493,18 @@ class Gx84100Rebot(db.Document):
             bot = cls(is_active=False,
                       telephone=tele,
                       password=pwd,
-                      openid=openid)
+                      open_id=openid)
             bot .save()
             if bot.relogin() == "OK":
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
     def http_post(self, uri, data, user_agent=None, token=None):
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+        print url
         request = urllib2.Request(url)
         request.add_header('User-Agent', user_agent or self.user_agent)
-        request.add_header('Authorization', token or self.token)
-        request.add_header('Content-type', "application/json; charset=UTF-8")
+# #         request.add_header('Authorization', token or self.token)
         qstr = urllib.urlencode(data)
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
@@ -542,7 +543,7 @@ class Gx84100Rebot(db.Document):
             "password": '',
             "terminalType": 3,
             "passengerList": passengerList,
-            "openId": self.openid or 1,
+            "openId": self.open_id or 1,
             "isWeixin": 1,
         }
         ret = self.http_post(uri, data)
@@ -550,7 +551,7 @@ class Gx84100Rebot(db.Document):
         if pay_url:
             ua = random.choice(MOBILE_USER_AGENG)
             #url = "https://pay.84100.com/payment/P/P011.do?orderId=ed61e28a28df43a3905567ec48398285&hid=null&produceType=null"
-    #         uri = "wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1" % (orderNo,self.openId)
+    #         uri = "wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1" % (orderNo,self.open_id)
             headers = {"User-Agent": ua}
             r = requests.get(pay_url, verify=False,  headers=headers)
             print r.content
@@ -565,6 +566,32 @@ class Gx84100Rebot(db.Document):
         return ret
 
     def request_order(self, order):
+        """{u'status': u'4', u'updateTime': u'2015-12-01 15:41:45',
+         u'totalPrice': u'8', u'suffix': u'1512', u'terminalType': u'3',
+          u'isMessage': u'1', u'ticketFrom': u'1007', u'takeTicketTime': None, 
+          u'lineName': None, u'payResult': u'\u652f\u4ed8\u6210\u529f', u'sendStationName': u'\u6842\u9633\u8f66\u7ad9',
+           u'endPortId': u'1052', u'billNumber': u'1', u'sendDate': u'2015-12-05', u'isLockTicket': u'1',
+            u'browserType': None, u'busType': u'\u4e2d\u578b\u4e2d\u7ea7', 
+            u'detailList': [{u'discountPrice': u'800', u'suffix': u'1512', u'insurNumber': u'0', u'ticketOperFee': None, 
+                             u'ticketStationFee': None, u'id': u'3365', u'insurStationFee': None, u'seatNo': u'1', 
+                             u'orderId': u'151201152338046120', u'orderChangeTicket': None, u'insurCompFee': None, 
+                             u'insurId': None, u'status': u'0', u'payFee': None, u'price': u'8', u'discount': u'100', 
+                     u'insurFee': None, u'isRefund': None, u'insurCode': None, u'remarks': None, u'insurOperFee': None,
+                      u'idcardNo': u'429006198906100034', u'idcardType': u'1', u'name': u'\u5411\u78ca\u78ca', 
+                      u'refundFee': None, u'mobile': u'', u'ticketNo': None, u'idCard': None, u'chargeFee': u'0', 
+                      u'isTakeTicket': u'0', u'seatStr': None, u'ticketType': u'\u5168'}],
+           u'startId': u'43100003', u'suborderId': u'15120100000000304675', 
+           u'ticketPassword': u'', u'deliverAddress': None, u'settleAmount': u'8', 
+           u'orderId': u'151201152338046120', u'orderTime': u'2015-12-01 15:23:39', u'isDeliver': u'0',
+            u'substationId': u'1501', u'payType': u'4', u'stationId': u'4310000105',
+             u'startName': u'\u6842\u9633\u53bf', u'sendTime': u'15:00', u'remarks': None, 
+             u'payTime': u'2015-12-01 15:41:43', u'lineId': None, u'endPortName': u'\u6556\u6cc9',
+              u'paySerialNo': u'1020151201510419', u'name': u'\u5411\u78ca\u78ca', u'usePoint': u'0',
+               u'mobile': u'13267109876', u'ipAddress': None, u'delFlag': u'0', u'isAddPoint': u'1', 
+               u'isAllowRefund': u'0', u'isPick': u'0', u'paySeconds': u'0', u'ticketNo': None, 
+               u'payNo': u'56c79f81f34d46adab012be74c850944', u'discountAmount': u'0', u'shiftNumber': u'15010014',
+                u'customerId': u'558260296', u'pickAddress': None}"""
+        
         #query_order_list_url ='http://wap.84100.com/wap/userCenter/orderDetails.do?orderNo=151201174710046683&openId=12122&isWeixin=0'
         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
@@ -575,18 +602,10 @@ class Gx84100Rebot(db.Document):
         print response.read()
 
         sel = etree.HTML(response.read())
-        
         orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
-        orderDetail=json.loads(orderDetailObj)
-
-        
-        data = {}
-        for d in ret["ticket_list"]:
-            if d["ticket_id"] in ticket_ids:
-                data[d["ticket_id"]] = d
-            if len(data) >= amount:
-                break
-        return data
+        orderDetail = json.loads(orderDetailObj)
+        orderDetail = orderDetail[0]
+        return orderDetail
 
     def test_order(self):
         """
