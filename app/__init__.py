@@ -1,43 +1,52 @@
 # -*- coding:utf-8 *-*
 import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 from flask import Flask
 from flask.ext.mail import Mail
 from flask.ext.mongoengine import MongoEngine
 from config import config
-from celery import Celery
 
-app = Flask(__name__)
 mail = Mail()
 db = MongoEngine()
 
 
-reload(sys)
-sys.setdefaultencoding("utf-8")
+def setup_app(config_name, server_type="api"):
+    servers = {
+        "api": setup_api_app,
+        "admin": setup_admin_app,
+    }
+    return servers[server_type](config_name)
 
 
-def make_celery(app):
-    celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
-    celery.conf.update(app.config)
-    TaskBase = celery.Task
-    class ContextTask(TaskBase):
-        abstract = True
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-    celery.Task = ContextTask
-    return celery
-
-def setup_app(config_name):
-    print "runser server in %s mode" % config_name
+def setup_api_app(config_name):
+    print "run api server"
+    app = Flask(__name__)
+    config_name = "api_%s" % config_name
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
+    print "use config", config[config_name].__name__
 
     mail.init_app(app)
     db.init_app(app)
-    celery = make_celery(app)
 
-
-    # attach routes and custom error pages here
     from main import main as main_blueprint
     app.register_blueprint(main_blueprint)
+    return app
+
+
+def setup_admin_app(config_name):
+    print "run admin server"
+    config_name = "admin_%s" % config_name
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
+    print "use config", config[config_name].__name__
+
+    mail.init_app(app)
+    db.init_app(app)
+
+    from admin import admin as admin_blueprint
+    app.register_blueprint(admin_blueprint)
+    return app

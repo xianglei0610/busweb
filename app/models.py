@@ -1,18 +1,18 @@
 # -*- coding:utf-8 -*-
-import urllib2
-import urllib
-import random
-import requests
-from lxml import etree
-
-from app.constants import *
-from app.async_tasks import async_issued_callback
 from datetime import datetime
 from flask import json, current_app
+from lxml import etree
+import random
+import requests
+import urllib
+import urllib2
+import re
 
+from app import db
+from app.async_tasks import async_issued_callback
+from app.constants import *
 from app.constants import SCQCP_ACCOUNTS, GX84100_ACCOUNTS
 from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
-from app import db
 
 
 class Starting(db.Document):
@@ -32,6 +32,17 @@ class Starting(db.Document):
     station_pinyin_prefix = db.StringField()
     is_pre_sell = db.BooleanField(default=True)   # 是否预售
     crawl_source = db.StringField()
+
+    meta = {
+        "indexes": [
+            "starting_id",
+            "city_name",
+            "station_name",
+            "city_pinyin_prefix",
+            "station_pinyin_prefix",
+            "crawl_source",
+            ],
+    }
 
     @property
     def pre_sell_days(self):
@@ -80,6 +91,17 @@ class Destination(db.Document):
     station_pinyin_prefix = db.StringField()
     crawl_source = db.StringField()
 
+    meta = {
+        "indexes": [
+            "destination_id",
+            "city_name",
+            "station_name",
+            "city_pinyin_prefix",
+            "station_pinyin_prefix",
+            "crawl_source",
+            ],
+    }
+
 
 class Line(db.Document):
     """
@@ -100,6 +122,16 @@ class Line(db.Document):
     fee = db.FloatField()                 # 手续费
     crawl_datetime = db.DateTimeField()   # 爬取的时间
     extra_info = db.DictField()           # 额外信息字段
+
+    meta = {
+        "indexes": [
+            "line_id",
+            "crawl_source",
+            "drv_date",
+            "drv_time",
+            "crawl_datetime",
+            ],
+    }
 
     @property
     def can_order(self):
@@ -141,14 +173,16 @@ class Order(db.Document):
     # 乘客和联系人信息
     # 包含字段: name, telephone, id_type,id_number,age_level
     contact_info = db.DictField()
-    riders = db.ListField(db.StringField(max_length=50))
+    riders = db.ListField(db.DictField())
 
     # 锁票信息: 源网站在锁票这步返回的数据
     lock_info = db.DictField()
 
     # 取票信息
+
     pick_code_list = db.ListField(db.StringField(max_length=30))     # 取票密码
     pick_msg_list = db.ListField(db.StringField(max_length=50))      # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
+
 
     # 其他
     crawl_source = db.StringField()     # 源网站
@@ -158,6 +192,17 @@ class Order(db.Document):
 
     # 下单时使用的源网站账号
     source_account = db.StringField()
+
+    meta = {
+        "indexes": [
+            "order_no",
+            "out_order_no",
+            "raw_order_no",
+            "status",
+            "crawl_source",
+            "create_date_time",
+            ],
+    }
 
     def refresh_status(self):
         """
@@ -185,6 +230,9 @@ class Order(db.Document):
             if tickets and tickets['status'] == '4':
                 self.update(status=STATUS_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 async_issued_callback(order)
+            elif tickets['status'] == '5':
+                self.update(status=STATUS_FAIL)
+
         return True
 
     def get_contact_info(self):
@@ -228,35 +276,6 @@ class Order(db.Document):
         return "%s%s%s" % (sdate, micro, srand)
 
 
-class ScqcpOrder(db.Document):
-    """
-    scqcp.com下订单时的返回信息
-    """
-    expire_time = db.DateTimeField()
-    code = db.StringField()
-    ticket_code = db.StringField()
-    pay_order_id = db.LongField()
-    ticket_list = db.ListField()
-    ticket_lines = db.DictField()
-    ticket_ids = db.ListField()
-    order_ids = db.ListField()
-    ticket_price_list = db.ListField()
-    ticket_type = db.ListField()
-    web_order_id = db.ListField()
-    seat_number_list = db.ListField()
-    lock_data = db.StringField()
-
-
-    @property
-    def pay_url(self):
-        if self.crawl_source == "scqcp":
-            if "pay_order_id" not in self.lock_info:
-                return ""
-            url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s"
-            return url % self.lock_info["pay_order_id"]
-        return ""
-
-
 
 class ScqcpRebot(db.Document):
     """
@@ -272,7 +291,7 @@ class ScqcpRebot(db.Document):
     last_login_time = db.DateTimeField(default=datetime.now)
 
     meta = {
-        "indexes": ["telephone", ],
+        "indexes": ["telephone", "is_active"],
     }
 
     def relogin(self):
@@ -312,7 +331,6 @@ class ScqcpRebot(db.Document):
     @classmethod
     def check_upsert_all(cls):
         """登陆所有预设账号"""
-        now = datetime.now()
         current_app.logger.info(">>>> start to login scqcp.com:")
         valid_cnt = 0
         has_checked = {}
@@ -505,11 +523,94 @@ class Gx84100Rebot(db.Document):
         request = urllib2.Request(url)
         request.add_header('User-Agent', user_agent or self.user_agent)
 # #         request.add_header('Authorization', token or self.token)
+        print data
         qstr = urllib.urlencode(data)
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
+        print ret
         return ret
 
+    def recrawl_shiftid(self, line):
+        """
+        重新获取线路ID
+        """
+        queryline_url = 'http://www.84100.com/getTrainList/ajax'
+        start_city_id = line.starting.station_id
+        start_city_name = line.starting.station_name
+        target_city_name = line.destination.station_name
+        sdate = line.drv_date
+        drv_time = line.drv_time
+        if drv_time > '00:00' and drv_time <= '12:00':
+            sendTimes = "00:00-12:00"
+        elif drv_time > '12:00' and drv_time <= '18:00':
+            sendTimes = "12:00-18:00"
+        elif drv_time > '18:00' and drv_time <= '24:00':
+            sendTimes = "18:00-24:00"
+        else:
+            sendTimes = ''
+        payload = {
+            'companyNames': '',
+            'endName': target_city_name,
+            "isExpressway": '',
+            "sendDate": sdate,
+            "sendTimes": sendTimes,
+            "showRemainOnly": '',
+            "sort": "1",
+            "startId": start_city_id,
+            'startName': start_city_name,
+            'stationIds': '',
+            'ttsId': ''
+            }
+        res = requests.post(queryline_url, data=payload)
+        trainListInfo = res.json()
+        if trainListInfo:
+#             nextPage = int(trainListInfo['nextPage'])
+#             pageNo = int(trainListInfo['pageNo'])
+#             print trainListInfo['msg']
+            sel = etree.HTML(trainListInfo['msg'])
+            trains = sel.xpath('//div[@class="trainList"]')
+            for n in trains:
+                item = {}
+                time = n.xpath('ul/li[@class="time"]/p/strong/text()')
+                item['drv_time'] = time[0]
+                departure_time = sdate+' '+time[0]
+    #             print 'time->',time[0]
+                banci = n.xpath('ul/li[@class="time"]/p[@class="banci"]/text()')
+    #             print 'banci->',banci[0]
+                banci = banci[0]
+                price = n.xpath('ul/li[@class="price"]/strong/text()')
+                print 'price->',price[0]
+                item["full_price"] = float(str(price[0]).split('￥')[-1])
+                infor = n.xpath('ul/li[@class="infor"]/p/text()')
+                distance = infor[1].replace('\r\n', '').replace(' ',  '')
+    #             print 'distance->',distance
+                item['distance'] = distance
+                buyInfo = n.xpath('ul/li[@class="buy"]')
+                flag = 0
+                shiftid = '0'
+                for buy in buyInfo:
+                    flag = buy.xpath('a[@class="btn"]/text()')   #判断可以买票
+                    if flag:
+                        flag = 1
+                        shiftInfo = buy.xpath('a[@class="btn"]/@onclick')
+                        if shiftInfo:
+                            shift = re.findall("('(.*)')", shiftInfo[0])
+                            if shift:
+                                shiftid = shift[0][1]
+                    else:
+                        flag = '0'
+                item['extra_info'] = {"flag": flag}
+                item['bus_num'] = str(shiftid)
+                line_id = str(hash("%s-%s-%s-%s-%s-%s" % \
+                    (start_city_name, start_city_id, target_city_name, departure_time,banci, 'gx84100')))
+                item['line_id'] = line_id
+
+                try:
+                    line_obj = Line.objects.get(line_id=line_id, crawl_source='gx84100')
+                    line_obj.update(**item)
+                except Line.DoesNotExist:
+                    continue
+    
     def request_lock_ticket(self, line, riders, contacter):
         """
         请求锁票
@@ -532,7 +633,7 @@ class Gx84100Rebot(db.Document):
             tmp['idNo'] = r["id_number"]
             tmp['name'] = r["name"]
             tmp['mobile'] = r["telephone"]
-            tmp['ticketType'] = u"全"
+            tmp['ticketType'] = "全票"
             passengerList.append(tmp)
 
         data = {
@@ -542,12 +643,15 @@ class Gx84100Rebot(db.Document):
             "mobile": contacter['telephone'],
             "password": '',
             "terminalType": 3,
-            "passengerList": passengerList,
+            #"passengerList": '[{idType:"1",idNo:"429006199012280042",name:"李梦蝶1",mobile:"",ticketType:"全票"},{idType:"1",idNo:"429006198906100034",name:"向磊磊1",mobile:"",ticketType:"全票"}]',
+            "passengerList":json.dumps(passengerList),
             "openId": self.open_id or 1,
             "isWeixin": 1,
         }
         ret = self.http_post(uri, data)
         pay_url = ret.get('redirectPage', '')
+        returnMsg = ret.get('returnMsg', '')
+        print pay_url
         if pay_url:
             ua = random.choice(MOBILE_USER_AGENG)
             #url = "https://pay.84100.com/payment/P/P011.do?orderId=ed61e28a28df43a3905567ec48398285&hid=null&produceType=null"
@@ -563,6 +667,7 @@ class Gx84100Rebot(db.Document):
                 orderAmt = orderAmtObj[0]
                 ret['orderNo'] = orderNo
                 ret['orderAmt'] = orderAmt
+        ret['returnMsg'] = returnMsg
         return ret
 
     def request_order(self, order):

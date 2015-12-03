@@ -177,25 +177,25 @@ def submit_order():
 
     Input:
     {
-        "line_id: "111"                                     # 线路ID
+        "line_id: "2891249051391980105"                     # 线路ID
         "out_order_no": "222"                               # 商户订单号
         "order_price: 11                                    # 订单金额(总票价)
         "contact_info:{                                     # 联系人信息
-            "name": "张三",                                 # 名字
-            "telephone": "15111111111",                     # 手机
+            "name": "罗军平",                               # 名字
+            "telephone": "15575101324",                     # 手机
             "id_type": 1,                                   # 证件类型
-            "id_number": 421032211990232535,                # 证件号
+            "id_number": 431021199004165616,                # 证件号
             "age_level": 1,                                 # 大人 or 小孩
         },
         rider_info: [{                                      # 乘客信息
-            "name": "张三",                                 # 名字
-            "telephone": "15111111111",                     # 手机
+            "name": "罗军平",                               # 名字
+            "telephone": "15575101324",                     # 手机
             "id_type": 1,                                   # 证件类型
-            "id_number": 421032211990232535,                # 证件号
+            "id_number": 431021199004165616,                # 证件号
             "age_level": 1,                                 # 大人 or 小孩
         }],
-        "locked_return_url: "http://xxx"                    # 锁票成功回调地址
-        "issued_return_url: "http://xxx"                    # 出票成功回调地址
+        "locked_return_url: ""                    # 锁票成功回调地址
+        "issued_return_url: ""                    # 出票成功回调地址
     }
 
     Return:
@@ -217,10 +217,10 @@ def submit_order():
                 if key not in info:
                     raise Exception("contact or rider lack of %s" % key)
         order_price = float(post.get("order_price"))
-    except:
+    except Exception, e:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
-                        "data": data})
+                        "data": ""})
 
     try:
         line = Line.objects.get(line_id=line_id)
@@ -228,8 +228,8 @@ def submit_order():
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
 
     ticket_amount = len(rider_list)
-    locked_return_url = request.form.get("callback_url", "")
-    issued_return_url = request.form.get("issued_return_url", "")
+    locked_return_url = post.get("callback_url", None) or None
+    issued_return_url = post.get("issued_return_url", None) or None
 
     order = Order()
     order.order_no = Order.generate_order_no()

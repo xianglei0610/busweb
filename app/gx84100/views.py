@@ -200,7 +200,7 @@ def LoginFromWap():
         if  i['orderNo'] =='15120100000000304675':
             print  '111111111',i
     
-LoginFromWap()
+# LoginFromWap()
 
 
 
@@ -233,3 +233,66 @@ def test() :
     a = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderNo"]/@value')
     print a
 # test()
+
+
+
+
+
+
+
+
+
+
+def test1():
+    
+    
+    url= 'http://wap.84100.com/wap/login/ajaxLogin.do'
+    
+    data={
+          "mobile" :  u'13267109876',
+          "password" : u'123456',
+          "phone" :   '' ,
+          "code"  :  '' 
+    }
+    ua = random.choice(MOBILE_USER_AGENG)
+    
+    headers = {"User-Agent": ua}
+    r = requests.post(url, data=data,   headers=headers)
+    print r.text
+    _cookies = r.cookies
+    
+
+    
+    data ={'openId': u'o82gDszqOaOk1_tdc54xQo4oGaLQ', 'name': u'\u5f20\u4e08',
+            'terminalType': 3, 'mobile': u'15111111111', 'planId': u'2509053', 'password': '', 
+            'startId': u'43100003', 'passengerList':
+     '[{idType:"1",idNo:"429006198906100034",name:"\xe5\x90\x91\xe7\xa3\x8a\xe7\xa3\x8a",mobile:"",ticketType:"\xe5\x85\xa8"}]', 'isWeixin': 1}
+
+
+    data ={'openId': u'o82gDszqOaOk1_tdc54xQo4oGaLQ', 'name': u'\u5f20\u4e09', 
+           'terminalType': 3, 'mobile': u'15111111111', 'planId': u'101650244', 'password': '', 
+    'startId': u'45010000','passengerList': 
+    '[{idType:"1",idNo:"429006198906100034",name:"\xe5\x90\x91\xe7\xa3\x8a\xe7\xa3\x8a",mobile:"",ticketType:"\xe5\x85\xa8\xe7\xa5\xa8"}]', 'isWeixin': 1}
+
+    data ={'openId': u'o82gDszqOaOk1_tdc54xQo4oGaLQ', 'name': u'\u5f20\u4e09', 'terminalType': 3, 'mobile': u'15111111111', 'planId': u'11702833', 'password': '', 'startId': u'45100010', 'passengerList': '[{idType:"1",idNo:"429006198906100034",name:"\xe5\x90\x91\xe7\xa3\x8a\xe7\xa3\x8a",mobile:"",ticketType:"\xe5\x85\xa8\xe7\xa5\xa8"}]', 'isWeixin': 1}
+
+
+    print data
+    
+    
+    proxies = {
+        'http': 'http://192.168.1.49:8888',
+        'https': 'http://192.168.1.49:8888',
+        }
+    
+    
+    Ua = "Mozilla/5.0 (Linux; U; Android 4.4.2; zh-cn; H60-L02 Build/HDH60-L02) AppleWebKit/533.1 (KHTML, like Gecko)Version/4.0 MQQBrowser/5.4 TBS/025483 Mobile Safari/533.1 MicroMessenger/6.3.7.51_rbb7fa12.660 NetType/WIFI Language/zh_CN"
+    headers = {"User-Agent": Ua}
+    
+    url = 'http://wap.84100.com/wap/ticketSales/ajaxMakeOrder.do'
+    ret = requests.post(url, data=data, headers=headers,proxies=proxies)
+    print ret.json()
+test1()    
+    
+    
+    
