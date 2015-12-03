@@ -1,21 +1,21 @@
-{% extends 'base.html' %}
+{% extends 'admin/base.html' %}
 
 {% block static_top %}
     <!-- Bootstrap -->
-    <link href="{{static_url('css/styles.css')}}" rel="stylesheet">
-    <link href="{{static_url('bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='css/styles.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
     <!-- jQuery UI -->
-    <link href="{{static_url('css/jquery-ui.css')}}" rel="stylesheet" media="screen">
+    <link href="{{url_for('static',filename='css/jquery-ui.css')}}" rel="stylesheet" media="screen">
     <!-- styles -->
-    <link href="{{static_url('css/font-awesome.css')}}" rel="stylesheet">
-    <link href="{{static_url('vendors/form-helpers/css/bootstrap-formhelpers.min.css')}}" rel="stylesheet">
-    <link href="{{static_url('vendors/select/bootstrap-select.min.css')}}" rel="stylesheet">
-    <link href="{{static_url('vendors/tags/css/bootstrap-tags.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='css/font-awesome.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='vendors/form-helpers/css/bootstrap-formhelpers.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='vendors/select/bootstrap-select.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='vendors/tags/css/bootstrap-tags.css')}}" rel="stylesheet">
 
-    <link href="{{static_url('css/forms.css')}}" rel="stylesheet">
-	<link href="{{static_url('css/fileinput.min.css')}}" media="all" rel="stylesheet" type="text/css" />
+    <link href="{{url_for('static',filename='css/forms.css')}}" rel="stylesheet">
+	<link href="{{url_for('static',filename='css/fileinput.min.css')}}" media="all" rel="stylesheet" type="text/css" />
 
-{%end%}
+{%endblock%}
 
 {%block body%}
 <div class="row">
@@ -30,10 +30,10 @@
 		</div>
 	</div>
 	<div class="panel-body">
-		<form class="form-horizontal" role="form" action="/{{to_lower(item.__class__.__name__)}}s{%if item.id%}/{{item.id}}{%end%}" method="post" enctype='multipart/form-data'>
+		<form class="form-horizontal" role="form" action="#" method="post" enctype='multipart/form-data'>
 
 		{%block form%}
-		{%end%}
+		{%endblock%}
 
 		<div class="row">
 			<div class="form-group col-md-12">
@@ -50,32 +50,32 @@
 </div>
 </div>
 {%block otherpanel%}
-{%end%}
+{%endblock%}
 
-{%end%}
+{%endblock%}
 
 {% block static_bottom%}
 	
-    <script src="{{static_url('js/jquery.js')}}"></script>
-	<script src="{{static_url('js/fileinput.min.js')}}"></script>
+    <script src="{{url_for('static',filename='js/jquery.js')}}"></script>
+	<script src="{{url_for('static',filename='js/fileinput.min.js')}}"></script>
     <!-- jQuery UI -->
-    <script src="{{static_url('js/jquery-ui.js')}}"></script>
+    <script src="{{url_for('static',filename='js/jquery-ui.js')}}"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="{{ static_url('bootstrap/js/bootstrap.min.js')}}"></script>
-    <script src="{{static_url('vendors/form-helpers/js/bootstrap-formhelpers.min.js')}}"></script>
-    <script src="{{static_url('vendors/select/bootstrap-select.min.js')}}"></script>
-    <script src="{{static_url('vendors/tags/js/bootstrap-tags.min.js')}}"></script>
-    <script src="{{static_url('vendors/mask/jquery.maskedinput.min.js')}}"></script>
-    <script src="{{static_url('vendors/moment/moment.min.js')}}"></script>
-    <script src="{{static_url('vendors/wizard/jquery.bootstrap.wizard.min.js')}}"></script>
-     <link href="{{static_url('vendors/bootstrap-datetimepicker/datetimepicker.css')}}" rel="stylesheet">
-     <script src="{{ static_url('vendors/bootstrap-datetimepicker/bootstrap-datetimepicker.js')}}"></script> 
-    <link href="{{static_url('css/bootstrap-editable.css')}}" rel="stylesheet"/>
-	<script src="{{static_url('js/bootstrap-editable.min.js')}}"></script>
+    <script src="{{ url_for('static',filename='bootstrap/js/bootstrap.min.js')}}"></script>
+    <script src="{{url_for('static',filename='vendors/form-helpers/js/bootstrap-formhelpers.min.js')}}"></script>
+    <script src="{{url_for('static',filename='vendors/select/bootstrap-select.min.js')}}"></script>
+    <script src="{{url_for('static',filename='vendors/tags/js/bootstrap-tags.min.js')}}"></script>
+    <script src="{{url_for('static',filename='vendors/mask/jquery.maskedinput.min.js')}}"></script>
+    <script src="{{url_for('static',filename='vendors/moment/moment.min.js')}}"></script>
+    <script src="{{url_for('static',filename='vendors/wizard/jquery.bootstrap.wizard.min.js')}}"></script>
+     <link href="{{url_for('static',filename='vendors/bootstrap-datetimepicker/datetimepicker.css')}}" rel="stylesheet">
+     <script src="{{ url_for('static',filename='vendors/bootstrap-datetimepicker/bootstrap-datetimepicker.js')}}"></script> 
+    <link href="{{url_for('static',filename='css/bootstrap-editable.css')}}" rel="stylesheet"/>
+	<script src="{{url_for('static',filename='js/bootstrap-editable.min.js')}}"></script>
 
-    <script src="{{static_url('js/forms.js')}}"></script>
-{%end%}
+    <script src="{{url_for('static',filename='js/forms.js')}}"></script>
+{%endblock%}
 
 {% block script %}
-{%end%}
+{%endblock%}
 

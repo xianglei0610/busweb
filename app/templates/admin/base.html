@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>数字猫后台管理系统</title>
+    <title>12308后台管理系统</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	{% block static_top %}
     <!-- Bootstrap -->
-    <link href="{{static_url('bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static', 'bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
     <!-- styles -->
-    <link href="{{static_url('css/styles.css')}}" rel="stylesheet">
+    <link href="{{url_for('static', 'css/styles.css')}}" rel="stylesheet">
 	{% endblock %}
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -23,7 +23,7 @@
 	           <div class="col-md-5">
 	              <!-- Logo -->
 	              <div class="logo">
-	                 <h1><a href="/">DigiCat Admin</a></h1>
+	                 <h1><a href="/">12308 Admin</a></h1>
 	              </div>
 	           </div>
 	           <div class="col-md-5">
@@ -68,72 +68,25 @@
 
                     <li class="submenu open">
                          <a href="#">
-                            <i class="glyphicon glyphicon-list"></i> 用户管理
+                            <i class="glyphicon glyphicon-list"></i> 订单管理
                             <span class="caret pull-right"></span>
                          </a>
                          <!-- Sub menu -->
                          <ul>
-                            <li><a href="/users"><i class="glyphicon glyphicon-record"></i> 用户</a></li>
-                        </ul>
-                         <ul>
-                            <li><a href="/artists"><i class="glyphicon glyphicon-record"></i> 艺人</a></li>
-                        </ul>
-                         <ul>
-                            <li><a href="/admins"><i class="glyphicon glyphicon-record"></i> 管理员</a></li>
+                            <li><a href="/orders"><i class="glyphicon glyphicon-record"></i> 订单</a></li>
+                            <li><a href="/submit_order"><i class="glyphicon glyphicon-record"></i> 下订单(测试之用)</a></li>
                         </ul>
                     </li>
 
                     <li class="submenu open">
                          <a href="#">
-                            <i class="glyphicon glyphicon-list"></i> 专辑管理
+                            <i class="glyphicon glyphicon-list"></i> 线路管理
                             <span class="caret pull-right"></span>
                          </a>
                          <!-- Sub menu -->
                          <ul>
-                            <li><a href="/albums"><i class="glyphicon glyphicon-record"></i> 专辑</a></li>
+                            <li><a href="/lines"><i class="glyphicon glyphicon-record"></i> 线路</a></li>
                         </ul>
-                         <ul>
-                            <li><a href="/tags"><i class="glyphicon glyphicon-record"></i> 标签</a></li>
-                        </ul>
-                         <ul>
-                            <li><a href="/hotalbums"><i class="glyphicon glyphicon-record"></i> 热门专辑</a></li>
-                        </ul>
-                         <ul>
-                            <li><a href="/latestalbums"><i class="glyphicon glyphicon-record"></i> 最近专辑</a></li>
-                        </ul>
-                         <ul>
-                            <li><a href="/musics"><i class="glyphicon glyphicon-record"></i> 歌曲</a></li>
-                        </ul>
-                         <ul>
-                            <li><a href="/topics"><i class="glyphicon glyphicon-record"></i> 专题</a></li>
-                        </ul>
-                    </li>
-
-                    <li class="submenu open">
-                         <a href="#">
-                            <i class="glyphicon glyphicon-list"></i> 商店
-                            <span class="caret pull-right"></span>
-                         </a>
-                         <!-- Sub menu -->
-                         <ul>
-                            <li><a href="/androidapps"><i class="glyphicon glyphicon-record"></i> Android应用</a></li>
-                        </ul>
-                         <ul>
-                            <li><a href="/pays"><i class="glyphicon glyphicon-record"></i> 支付记录</a></li>
-                        </ul>
-                    </li>
-                    <li class="submenu open">
-                         <a href="#">
-                            <i class="glyphicon glyphicon-list"></i> 反馈&推广
-                            <span class="caret pull-right"></span>
-                         </a>
-                         <!-- Sub menu -->
-                         <ul>
-                            <li><a href="/banners"><i class="glyphicon glyphicon-record"></i> 推广</a></li>
-                        </ul>
-						<ul>
-                            <li><a href="/feedbacks"><i class="glyphicon glyphicon-record"></i> 反馈</a></li>
-						</ul>
                     </li>
                 </ul>
              </div>
@@ -148,11 +101,9 @@
 
     <footer>
          <div class="container">
-         
             <div class="copy text-center">
                Copyright 2014 <a href='#'>Website</a>
             </div>
-            
          </div>
       </footer>
 
@@ -160,8 +111,8 @@
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://code.jquery.com/jquery.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="{{ static_url('bootstrap/js/bootstrap.min.js')}}"></script>
-    <script src="{{ static_url('js/custom.js')}}"></script>
+    <script src="{{ url_for('static', 'bootstrap/js/bootstrap.min.js')}}"></script>
+    <script src="{{ url_for('static', 'js/custom.js')}}"></script>
 	{%endblock%}
 	{% block script %}
 	{%endblock%}
