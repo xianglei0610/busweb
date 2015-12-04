@@ -8,6 +8,19 @@ SCQCP_ACCOUNTS = {
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
 
+
+GX84100_DOMAIN = "http://wap.84100.com"
+
+# 广西84100登陆账号
+GX84100_ACCOUNTS = {
+    # telephone: {password, opendid)
+    "13267109876": ("123456", 'o82gDszqOaOk1_tdc54xQo4oGaLQ'),
+}
+
+
+
+
+
 BROWSER_USER_AGENT = [
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",

@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import urllib2
 import json
+import datetime
 
 from app.constants import *
 from app.decorators import async
@@ -26,7 +27,8 @@ def async_lock_ticket(order):
             sign_id=order.line.extra_info["sign_id"],
             )
         contacter = order.contact_info["telephone"]
-        riders = map(lambda d: {"id_number": d["id_number"], "real_name": str(d["name"])}, order.riders)
+        riders = order.riders
+#         riders = map(lambda d: {"id_number": d["id_number"], "real_name": str(d["name"])}, order.riders)
         ret = rebot.request_lock_ticket(line, riders, contacter)
 
         data = []
@@ -49,6 +51,47 @@ def async_lock_ticket(order):
             response = urllib2.urlopen(notify_url, json_str, timeout=10)
             print response, "async_lock_ticket"
 
+    elif order.crawl_source == "gx84100":
+        from app.models import Gx84100Rebot,Line
+        rebot = Gx84100Rebot.objects.first()
+
+        ret = rebot.recrawl_shiftid(order.line)
+        line = Line.objects.get(line_id=order.line.line_id)
+        order.line = line
+        order.ticket_price = line.full_price
+        order.save()
+        
+        line = dict(
+            carry_sta_id=order.line.starting.station_id,
+            stop_name=order.line.destination.station_name,
+            str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
+            bus_num=order.line.bus_num,
+            flag=order.line.extra_info.get("flag",0)
+            )
+        contacter = order.contact_info
+        riders = order.riders
+        if line['bus_num'] ==0 or not line['flag']:
+            ret = {"returnCode": -1, "msg": "该条线路无法购买"}
+        else:
+            ret = rebot.request_lock_ticket(line, riders, contacter)
+
+        data = []
+        if ret["returnCode"] == "0000" and ret.get('redirectPage',''):
+            order.update(status=STATUS_LOCK, lock_info=ret, pay_url=ret['redirectPage'],raw_order_no=ret['orderNo'], source_account=rebot.telephone)
+            expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)
+            expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
+            data = {
+                "expire_time": expire_time,
+                "total_price": ret['orderAmt'],
+            }
+            json_str = json.dumps({"code": 1, "message": "OK", "data": data})
+        else:
+            order.update(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
+            json_str = json.dumps({"code": 0, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
+
+        if notify_url:
+            response = urllib2.urlopen(notify_url, json_str, timeout=10)
+            print response, "async_lock_ticket"
 
 @async
 def async_issued_callback(order):

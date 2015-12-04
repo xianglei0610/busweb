@@ -20,8 +20,9 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 @manager.command
 def deploy():
-    from app.models import ScqcpRebot
+    from app.models import ScqcpRebot, Gx84100Rebot
     ScqcpRebot.check_upsert_all()
+    Gx84100Rebot.check_upsert_all()
 
 
 @manager.command
@@ -114,14 +115,14 @@ def migrate_from_crawl(site):
 
     def migrate_gx84100():
         for d in crawl_db.line_gx84100.find({}):
-            print 333333333333333333
             crawl_source = "gx84100"
 
             # migrate Starting
             city_id = str(d["city_id"])
             starting_id = md5("%s-%s-%s-%s-%s" % \
                     (city_id, d["city_name"], d["start_city_id"], d["start_city_name"], crawl_source))
-            start_city = crawl_db.start_city_gx84100.find_one({"city_id": d["city_id"]})
+            start_city = crawl_db.start_city_gx84100.find_one({"start_city_id": d["start_city_id"]})
+
             starting_attrs = {
                 "starting_id": starting_id,
                 "province_name": u"广西",
@@ -136,6 +137,7 @@ def migrate_from_crawl(site):
                 "is_pre_sell": True,
                 "crawl_source": crawl_source,
             }
+            print starting_attrs
             try:
                 starting_obj = Starting.objects.get(starting_id=starting_id)
                 starting_obj.update(**starting_attrs)
@@ -146,9 +148,7 @@ def migrate_from_crawl(site):
             # migrate destination
             dest_id  = md5("%s-%s-%s-%s-%s-%s" % \
                     (starting_obj.starting_id, "", "", "", d["target_city_name"], crawl_source))
-            print d["start_city_id"],d["target_city_name"]
             target_city = crawl_db.target_city_gx84100.find_one({"starting_id": d["start_city_id"], "target_name": d["target_city_name"]})
-            print target_city
             dest_attrs = {
                 "destination_id": dest_id,
                 "starting": starting_obj,
@@ -168,7 +168,7 @@ def migrate_from_crawl(site):
             except Destination.DoesNotExist:
                 dest_obj = Destination(**dest_attrs)
                 dest_obj.save()
-
+ 
             # migrate Line
             line_id = str(d["line_id"])
             drv_date, drv_time = d["departure_time"].split(" ")
