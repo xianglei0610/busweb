@@ -1,0 +1,96 @@
+{% extends 'admin/base.html'%}
+
+{% block static_top %}
+    <!-- jQuery UI -->
+    <link href="{{url_for('static', filename='css/jquery-ui.css')}}" rel="stylesheet" media="screen">
+    <!-- Bootstrap -->
+    <link href="{{url_for('static', filename='bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
+    <!-- styles -->
+    <link href="{{url_for('static', filename='css/styles.css')}}" rel="stylesheet">
+{% endblock %}
+
+{%block body %}
+<div class="content-box-large">
+	<div class="panel-heading">
+		<div class="panel-title">{{sub_title}}</div>
+	</div>
+	<div class="panel-body">
+  		<div id="example_wrapper" class="dataTables_wrapper form-inline" role="grid">
+			<!--row 1 -->
+			<div class="row">
+				<div class="col-xs-5">
+					<div id="example_length" class="dataTables_length"><label>
+						<select size="1" name="example_length" onchange="changePageCount(value)">
+							{% for n in [10,25,50,100]%}
+								{% if n == page.pageCount %}
+								<option value="{{n}}" selected="selected">{{n}}</option>
+								{%else%}
+								<option value="{{n}}">{{n}}</option>
+								{%endif%}
+							{%endfor%}
+						</select>records per page</label>
+					</div>
+				</div>
+				<div class="col-xs-5">
+					<div class="dataTables_filter" id="example_filter">
+						<label>Search: <input type="text" value="{{q}}" onchange="search(value)"></label>
+					</div>
+				</div>
+				<div class="col-xs-2">
+					<div class="dataTables_filter" id="example_filter" style="float:right;">
+						<a class="btn btn-success btn-sm" href="{{add_url}}"><i class="glyphicon glyphicon-plus"></i> 增加</a>
+					</div>
+				</div>
+			</div>
+			<!--row 1 end-->
+			{%block content %}
+			{%endblock%}
+			<!--row 2-->
+			<div class="row">
+				<div class="col-xs-10"></div>
+				<div class="col-xs-10">
+					<div class="dataTables_paginate paging_bootstrap">
+						<ul class="pagination">
+							{%if page.page <= 1 %}
+							<li class="prev disabled"><a href="#">← Previous</a></li>
+							{%else%}
+							<li class="prev"><a href="{{base_url}}&page={{page.previous}}">← Previous</a></li>
+							{%endif%}
+							{%for n in page.range %}
+							<li class="{%if n == page.page %} active {%endif%}"><a href="{{base_url}}&page={{n}}">{{n}}</a></li>
+							{%endfor%}
+							{%if page.page >= page.pageNum %}
+							<li class="next disabled"><a href="#">Next → </a></li>
+							{%else%}
+							<li class="next"><a href="{{base_url}}&page={{page.next}}">Next → </a></li>
+							{%endif%}
+						</ul>
+					</div>
+				</div>
+			</div>
+			<!--row 2 end-->
+		</div>
+  	</div>
+</div>
+{%endblock%}
+
+{%block static_bottom%}
+<link href="{{url_for('static', filename='vendors/datatables/dataTables.bootstrap.css')}}" rel="stylesheet" media="screen">
+<script src="{{url_for('static', filename='js/jquery.js')}}"></script>
+<!-- jQuery UI -->
+<script src="{{url_for('static', filename='js/jquery-ui.js')}}"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="{{ url_for('static',filename='bootstrap/js/bootstrap.min.js')}}"></script>
+<script src="{{url_for('static', filename='vendors/datatables/js/jquery.dataTables.min.js')}}"></script>
+<script src="{{url_for('static', filename='vendors/datatables/dataTables.bootstrap.js')}}"></script>
+<script src="{{url_for('static', filename='js/custom.js')}}"></script>
+<script languge="javascript">
+function changePageCount(val){
+	 window.location.href = "/{{model_name}}s?page=1&pageCount="+val;
+};
+function search(val){
+	 window.location.href = "/{{model_name}}s?q="+val;
+};
+</script>
+ {%endblock%}
+
