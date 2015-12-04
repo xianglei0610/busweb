@@ -51,8 +51,13 @@ MOBILE_USER_AGENG = [
 ]
 
 # 爬取来源
-SOURCE_SCQCP = 1
-SOURCE_BUS100 = 2
+SOURCE_SCQCP = "scqcp"
+SOURCE_BUS100 = "bus100"
+
+SOURCE_MSG = {
+    SOURCE_SCQCP: "四川汽车票务网",
+    SOURCE_BUS100: "巴士壹佰",
+}
 
 # 订单状态
 STATUS_FAIL = 0         # 失败

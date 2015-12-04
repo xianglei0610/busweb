@@ -25,7 +25,7 @@
       <td class="center">{{line.drv_date}} {{line.drv_time}}</td>
       <td class="center">{{line.vehicle_type}}/{{line.bus_num}}</td>
       <td class="center">票价:{{line.full_price}}元, 手续费{{line.fee}}元</td>
-      <td class="center">{{line.crawl_source}}/{{line.crawl_datetime}}</td>
+      <td class="center">{{line.crawl_source}}/{{line.crawl_datetime|format_datetime}}</td>
 			<td class="">
 				<a class="btn btn-primary btn-xs" href="lines/{{line.id}}"><i class="glyphicon glyphicon-pencil"></i> 编辑</a>
 				<a class="btn btn-danger btn-xs" href="lines/{{line.id}}?method=delete"><i class="glyphicon glyphicon-remove"></i> 删除</a>

@@ -164,7 +164,7 @@ class Order(db.Document):
 
     # 支付信息
     pay_url = db.StringField()      # 支付链接
-    pay_no = db.StringField()      # 支付号
+    pay_no = db.StringField()      # 支付交易号
     pay_status = db.IntField()
     pay_channel = db.StringField()     # 支付方式
     pay_account = db.StringField()
@@ -179,10 +179,8 @@ class Order(db.Document):
     lock_info = db.DictField()
 
     # 取票信息
-
     pick_code_list = db.ListField(db.StringField(max_length=30))     # 取票密码
     pick_msg_list = db.ListField(db.StringField(max_length=50))      # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
-
 
     # 其他
     crawl_source = db.StringField()     # 源网站
@@ -200,7 +198,7 @@ class Order(db.Document):
             "raw_order_no",
             "status",
             "crawl_source",
-            "create_date_time",
+            "-create_date_time",
             ],
     }
 

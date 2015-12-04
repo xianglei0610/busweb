@@ -1,43 +1,73 @@
 # -*- coding:utf-8 -*-
 import math
 import urllib2
+import urllib
 import requests
 import json
 
-from app.constants import STATUS_MSG
-from flask import render_template, request
+from app.constants import STATUS_MSG, SOURCE_MSG
+from flask import render_template, request, redirect, url_for
 from flask.views import MethodView
 from app.admin import admin
 from app.models import Order, Line
 
+
 def parse_page_data(qs):
     total = qs.count()
     page = int(request.args.get("page", default=1))
-    pageCount=int(request.args.get("pageCount", default=10))
-    pageNum=int(math.ceil(total*1.0/pageCount))
+    pageCount = int(request.args.get("pageCount", default=10))
+    pageNum = int(math.ceil(total*1.0/pageCount))
     skip = (page-1)*pageCount
     range_min = max(1, page-5)
     range_max = min(range_min+10, pageNum)
+
+    query_dict = dict(request.args)
+    if "page" in query_dict:
+        del query_dict["page"]
+    query_string = urllib.urlencode(query_dict)
+
     return {
-        "total":total,
-        "pageCount":pageCount,
-        "pageNum":pageNum,
-        "page":page,
+        "total": total,
+        "pageCount": pageCount,
+        "pageNum": pageNum,
+        "page": page,
         "skip": skip,
-        "previous":page-1,
-        "next":page+1,
+        "previous": page-1,
+        "next": page+1,
         "range": range(range_min, range_max),
-        "items": qs[skip: skip+pageCount]
-        }
+        "items": qs[skip: skip+pageCount],
+        "req_path": "%s?%s" % (request.path, query_string),
+    }
+
 
 @admin.route('/', methods=['GET'])
 @admin.route('/orders', methods=['GET'])
 def order_list():
-    return render_template('admin/order_list.html', page=parse_page_data(Order.objects), status_msg=STATUS_MSG)
+    return render_template('admin/order_list.html',
+                           page=parse_page_data(Order.objects.order_by("-create_date_time")),
+                           status_msg=STATUS_MSG,
+                           source_msg=SOURCE_MSG,
+                           )
+
 
 @admin.route('/lines', methods=['GET'])
 def line_list():
     return render_template('admin/line_list.html', page=parse_page_data(Line.objects))
+
+
+@admin.route('/orders/<order_no>/pay', methods=['GET'])
+def order_pay(order_no):
+    order = Order.objects.get(order_no=order_no)
+    if order.pay_url:
+        pay_url = order.pay_url
+    else:
+        pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % order.lock_info["pay_order_id"]
+    return redirect(pay_url)
+
+
+@admin.route('/orders/<order_no>/refresh', methods=['GET'])
+def order_refresh(order_no):
+    pass
 
 
 class SubmitOrder(MethodView):
@@ -55,13 +85,13 @@ class SubmitOrder(MethodView):
 
         line = Line.objects.first()
         kwargs = dict(
-                item=None,
-                contact=contact,
-                rider1=rider1,
-                api_url="http://localhost:8000",
-                line_id=line.line_id,
-                order_price=line.full_price+line.fee,
-            )
+            item=None,
+            contact=contact,
+            rider1=rider1,
+            api_url="http://localhost:8000",
+            line_id=line.line_id,
+            order_price=line.full_price+line.fee,
+        )
         return render_template('admin/submit_order.html', **kwargs)
 
     def post(self):
@@ -105,7 +135,7 @@ class SubmitOrder(MethodView):
         api_url = urllib2.urlparse.urljoin(fd.get("api_url"), "/orders/submit")
         res = requests.post(api_url, data=json.dumps(data))
         print "submit order", res
-        return "OK"
+        return redirect(url_for('admin.order_list'))
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))

@@ -6,9 +6,10 @@
 <thead>
 	<tr role="row">
 	<th class="sorting_asc" role="columnheader" tabindex="0" rowspan="1" colspan="1" style="width: 137px;">订单号</th>
-	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 150px;">联系人</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">联系人</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">源网站/支付账号</th>
 	<th class="sorting" role="columnheader" tabindex="0" rowspan="1" colspan="1" style="width: 210px;">下单时间/出发时间</th>
-	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">车次/线路</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 150px;">车次/线路</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 100px;">订单状态</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 100px;">订票数</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 100px;">订单金额(元)</th>
@@ -21,14 +22,15 @@
 		<tr class="gradeA {{i}}">
 			<td class="sorting_1">{{order.order_no}}</td>
       <td class="center">{{order.contact_info.name}} {{order.contact_info.telephone}}</td>
-      <td class="center">{{order.create_date_time}}/{{order.line.drv_date}} {{order.line.drv_time}}</td>
+      <td class="center">{{source_msg[order.crawl_source]}}({{order.source_account}})</td>
+      <td class="center">{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}/{{order.line.drv_date}} {{order.line.drv_time}}</td>
       <td class="center">{{order.line.bus_num}}/{{order.line.starting.city_name}} --> {{order.line.destination.station_name}}</td>
       <td class="center">{{status_msg[order.status]}}</td>
       <td class="center">{{order.ticket_amount}}</td>
       <td class="center">{{order.order_price}}</td>
 			<td class="">
-				<a class="btn btn-primary btn-xs" href="orders/{{order.id}}"><i class="glyphicon glyphicon-pencil"></i> 支付</a>
-				<a class="btn btn-danger btn-xs" href="orders/{{order.id}}?method=delete"><i class="glyphicon glyphicon-refresh"></i> 刷新</a>
+				<a class="btn btn-primary btn-xs" href="orders/{{order.order_no}}/pay"><i class="glyphicon glyphicon-pencil"></i> 支付</a>
+				<a class="btn btn-danger btn-xs" href="orders/{{order.order_no}}/refresh"><i class="glyphicon glyphicon-refresh"></i> 刷新</a>
 			</td>
 		</tr>
 	{%endfor%}
