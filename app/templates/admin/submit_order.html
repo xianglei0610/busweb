@@ -1,105 +1,133 @@
 {% extends 'admin/edit.html' %}
 
-{%block form%}
+{%block body%}
 <div class="row">
-  <div class="form-group col-sm-6">
-	<label class="col-sm-2 control-label">ID</label>
-	<div class="col-sm-10">
-	  <input type="text" name="id" value="{{item.id}}" class="form-control" readonly="true">
-	</div>
-  </div>
-  <div class="form-group col-sm-6">
-	<label class="col-sm-2 control-label">电话号码</label>
-	<div class="col-sm-10">
-	  <input type="text" name="telephone" value="{{item.telephone}}" class="form-control" placeholder="Telephone" autocomplete="off">
-	</div>
-  </div>
- </div>
-
- <div class="row">
-  <div class="form-group col-sm-6">
-	<label for="inputPassword3" class="col-sm-2 control-label">密码</label>
-	<div class="col-sm-10">
-	  <input type="password" name="password" value="{{item.password}}" class="form-control" id="inputPassword3" placeholder="Password" autocomplete="off">
-	</div>
-  </div>
-  <div class="form-group col-sm-6">
-	<label class="col-sm-2 control-label">昵称</label>
-	<div class="col-sm-10">
-	  <input type="text" name="nickName" value="{{item.nickName}}" class="form-control" placeholder="">
-	</div>
-  </div>
-  </div>
-
-	<div class="row">
-	<div class="form-group col-sm-6">
-		<label class="col-md-2 control-label" for="select-1">性别</label>
-		<div class="col-md-10">
-			<select name="sex" value="{{item.sex}}" class="form-control" id="select-1">
-				<option value="xx" selected >男</option>
-			</select> 
+<div class="col-md-12">
+<div class="content-box-large">
+	<div class="panel-heading">
+		<div class="panel-title">下订单表单</div>
+		<div class="panel-options">
+		  <a href="#" data-rel="collapse"><i class="glyphicon glyphicon-refresh"></i></a>
+		  <a href="#" data-rel="reload"><i class="glyphicon glyphicon-cog"></i></a>
 		</div>
 	</div>
-  <div class="form-group col-sm-6">
-	<label class="col-sm-2 control-label">星座</label>
-	<div class="col-sm-10">
-	  <input type="text" name="constel" value="{{item.constel}}" class="form-control" placeholder="">
-	</div>
-  </div>
-  </div>
-  
-  <div class="row">
-  <div class="form-group col-sm-6">
-	<label class="col-md-2 control-label">生日</label>
-	<div class="bfh-datepicker" data-format="y-m-d" data-date="'today'" data-name="birthday"></div>
-  </div>
-  <div class="form-group col-sm-6">
-	<label class="col-sm-2 control-label">地区</label>
-	<div class="col-sm-10">
-	  <input type="text" name="location" value="{{item.location}}" class="form-control" placeholder="">
-	</div>
-  </div>
-  </div>
+	<div class="panel-body">
+		<form class="form-horizontal" role="form" action="/submit_order" method="post" enctype='multipart/form-data'>
 
-<div class="row">
-  <div class="form-group col-sm-6">
-	<label class="col-md-2 control-label">头像</label>
-	<div class="col-md-10">
-		<input type="hidden" name="photo" value="{{item.photo}}"/>
-		<input id="photo_file" name="photo_file" type="file" class="file" maxFileSize=100 data-show-upload="false">
+    <div class="row">
+      <div class="form-group col-sm-6">
+        <label class="col-sm-2 control-label">线路ID</label>
+      <div class="col-sm-10">
+        <input type="text" name="line_id" value="{{line_id}}" class="form-control" placeholder="" autocomplete="off">
+      </div>
+      </div>
+      <div class="form-group col-sm-6">
+        <label class="col-sm-2 control-label">订单金额</label>
+      <div class="col-sm-10">
+        <input type="text" name="order_price" value="{{order_price}}" class="form-control" placeholder="" autocomplete="off">
+      </div>
+      </div>
+     </div>
+
+     <div class="row">
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">联系人名字</label>
+        <div class="col-sm-9">
+          <input type="text" name="contact_name" value="{{contact.name}}" class="form-control" placeholder="">
+        </div>
+      </div>
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">联系人电话</label>
+        <div class="col-sm-9">
+          <input type="text" name="contact_phone" value="{{contact.phone}}" class="form-control" placeholder="">
+        </div>
+      </div>
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">联系人身份证</label>
+        <div class="col-sm-9">
+          <input type="text" name="contact_idcard" value="{{contact.idcard}}" class="form-control" placeholder="">
+        </div>
+      </div>
+      </div>
+
+     <div class="row">
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">乘客1名字</label>
+        <div class="col-sm-9">
+          <input type="text" name="rider1_name" value="{{rider1.name}}" class="form-control" placeholder="">
+        </div>
+      </div>
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">乘客1电话</label>
+        <div class="col-sm-9">
+          <input type="text" name="rider1_phone" value="{{rider1.phone}}" class="form-control" placeholder="">
+        </div>
+      </div>
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">乘客1身份证</label>
+        <div class="col-sm-9">
+          <input type="text" name="rider1_idcard" value="{{rider1.idcard}}" class="form-control" placeholder="">
+        </div>
+      </div>
+      </div>
+
+     <div class="row">
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">乘客2名字</label>
+        <div class="col-sm-9">
+          <input type="text" name="rider2_name" class="form-control" placeholder="">
+        </div>
+      </div>
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">乘客2电话</label>
+        <div class="col-sm-9">
+          <input type="text" name="rider2_phone"  class="form-control" placeholder="">
+        </div>
+      </div>
+      <div class="form-group col-sm-4">
+      <label class="col-sm-3 control-label">乘客2身份证</label>
+        <div class="col-sm-9">
+          <input type="text" name="rider2_idcard"  class="form-control" placeholder="">
+        </div>
+      </div>
+      </div>
+
+    <div class="row">
+      <div class="form-group col-sm-4">
+        <label class="col-sm-3 control-label">锁票回调</label>
+      <div class="col-sm-9">
+        <input type="text" name="lock_url" class="form-control" placeholder="http://" autocomplete="off">
+      </div>
+      </div>
+      <div class="form-group col-sm-4">
+        <label class="col-sm-3 control-label">出票回调</label>
+      <div class="col-sm-9">
+        <input type="text" name="issue_url" class="form-control" placeholder="http://" autocomplete="off">
+      </div>
+      </div>
+      <div class="form-group col-sm-4">
+        <label class="col-sm-3 control-label">接口服务器</label>
+      <div class="col-sm-9">
+        <input type="text" name="api_url" class="form-control" value="{{api_url}}", placeholder="http://" autocomplete="off">
+      </div>
+      </div>
+     </div>
+		<div class="row">
+			<div class="form-group col-md-12">
+				<div class="col-sm-offset-5" >
+				<!-- <button class="btn btn-default" type="submit">Cancel</button> -->
+				  <button type="submit" class="btn btn-primary"><i class="glyphicon glyphicon-floppy-saved"></i> 提交订单</button>
+				</div>
+			</div>
+		</div>
+		</form>
 	</div>
 </div>
-  <div class="form-group col-sm-6">
-	<label class="col-md-2 control-label">头像模糊</label>
-	<div class="col-md-10">
-		<input type="hidden" name="photoBlur" value="{{item.photoBlur}}"/>
-		<input id="photoBlur_file" name="photoBlur_file" type="file" class="file" data-show-upload="false" readonly="true">
-		<p class="help-block">
-		</p>
-	</div>
- </div>
- </div>
-
+</div>
+</div>
 {%endblock%}
 
 {% block script %}
 <script>
-$("#photo_file").fileinput({
-	"initialPreview": [
-		{% if item.photo %}
-        "<img src='{{media_url(item.photo)}}' class='file-preview-image'>",
-		{% endif %}
-
-    ],
-	"maxFileSize": 500,
-	'allowedFileExtensions' : ['jpg', 'png','gif'],
-});
-$("#photoBlur_file").fileinput({
-	"initialPreview": [
-		{% if item.photo %}
-        "<img src='{{media_url(item.photoBlur)}}' class='file-preview-image'>",
-		{% endif %}
-    ],
-});
 </script>
 {%endblock%}

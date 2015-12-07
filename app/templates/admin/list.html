@@ -17,6 +17,7 @@
 	<div class="panel-body">
   		<div id="example_wrapper" class="dataTables_wrapper form-inline" role="grid">
 			<!--row 1 -->
+      <!--
 			<div class="row">
 				<div class="col-xs-5">
 					<div id="example_length" class="dataTables_length"><label>
@@ -42,6 +43,7 @@
 					</div>
 				</div>
 			</div>
+      -->
 			<!--row 1 end-->
 			{%block content %}
 			{%endblock%}
@@ -54,15 +56,15 @@
 							{%if page.page <= 1 %}
 							<li class="prev disabled"><a href="#">← Previous</a></li>
 							{%else%}
-							<li class="prev"><a href="{{base_url}}&page={{page.previous}}">← Previous</a></li>
+							<li class="prev"><a href="{{page.req_path}}&page={{page.previous}}">← Previous</a></li>
 							{%endif%}
 							{%for n in page.range %}
-							<li class="{%if n == page.page %} active {%endif%}"><a href="{{base_url}}&page={{n}}">{{n}}</a></li>
+							<li class="{%if n == page.page %} active {%endif%}"><a href="{{page.req_path}}&page={{n}}">{{n}}</a></li>
 							{%endfor%}
 							{%if page.page >= page.pageNum %}
 							<li class="next disabled"><a href="#">Next → </a></li>
 							{%else%}
-							<li class="next"><a href="{{base_url}}&page={{page.next}}">Next → </a></li>
+							<li class="next"><a href="{{page.req_path}}&page={{page.next}}">Next → </a></li>
 							{%endif%}
 						</ul>
 					</div>
@@ -86,10 +88,10 @@
 <script src="{{url_for('static', filename='js/custom.js')}}"></script>
 <script languge="javascript">
 function changePageCount(val){
-	 window.location.href = "/{{model_name}}s?page=1&pageCount="+val;
+  window.location.href = "{{page.req_path}}?page=1&pageCount="+val;
 };
 function search(val){
-	 window.location.href = "/{{model_name}}s?q="+val;
+  window.location.href = "{{page.req_path}}?q="+val;
 };
 </script>
  {%endblock%}

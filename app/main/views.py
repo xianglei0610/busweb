@@ -79,13 +79,11 @@ def query_destination():
         }
     """
     try:
-        import pdb; pdb.set_trace()
         post = json.loads(request.get_data())
         starting_name = post["starting_name"]
         if not starting_name:
             raise Exception("starting_name is null")
     except Exception, e:
-        print e
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": ""})

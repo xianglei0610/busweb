@@ -18,44 +18,9 @@
 {%endblock%}
 
 {%block body%}
-<div class="row">
-<div class="col-md-12">
-<div class="content-box-large">
-	<div class="panel-heading">
-		<div class="panel-title">Form</div>
-	  
-		<div class="panel-options">
-		  <a href="#" data-rel="collapse"><i class="glyphicon glyphicon-refresh"></i></a>
-		  <a href="#" data-rel="reload"><i class="glyphicon glyphicon-cog"></i></a>
-		</div>
-	</div>
-	<div class="panel-body">
-		<form class="form-horizontal" role="form" action="#" method="post" enctype='multipart/form-data'>
-
-		{%block form%}
-		{%endblock%}
-
-		<div class="row">
-			<div class="form-group col-md-12">
-				<div class="col-sm-offset-5" >
-				<!-- <button class="btn btn-default" type="submit">Cancel</button> -->
-				  <button type="submit" class="btn btn-primary"><i class="glyphicon glyphicon-floppy-saved"></i> 保存</button>
-				</div>
-			</div>
-		</div>
-		
-		</form>
-	</div>
-</div>
-</div>
-</div>
-{%block otherpanel%}
-{%endblock%}
-
 {%endblock%}
 
 {% block static_bottom%}
-	
     <script src="{{url_for('static',filename='js/jquery.js')}}"></script>
 	<script src="{{url_for('static',filename='js/fileinput.min.js')}}"></script>
     <!-- jQuery UI -->
