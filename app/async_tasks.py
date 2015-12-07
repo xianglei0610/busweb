@@ -33,7 +33,8 @@ def async_lock_ticket(order):
 
         data = []
         if ret["status"] == 1:
-            order.update(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone)
+            pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
+            order.update(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone, pay_url=pay_url)
             total_price = 0
             for ticket in ret["ticket_list"]:
                 total_price += ticket["server_price"]
