@@ -570,19 +570,21 @@ class Gx84100Rebot(db.Document):
             'stationIds': '',
             'ttsId': ''
             }
+        self.recrawl_func(queryline_url, payload)
+
+    def recrawl_func(self, queryline_url, payload):
         res = requests.post(queryline_url, data=payload)
         trainListInfo = res.json()
         if trainListInfo:
-#             nextPage = int(trainListInfo['nextPage'])
-#             pageNo = int(trainListInfo['pageNo'])
-#             print trainListInfo['msg']
+            nextPage = int(trainListInfo['nextPage'])
+            pageNo = int(trainListInfo['pageNo'])
             sel = etree.HTML(trainListInfo['msg'])
             trains = sel.xpath('//div[@class="trainList"]')
             for n in trains:
                 item = {}
                 time = n.xpath('ul/li[@class="time"]/p/strong/text()')
                 item['drv_time'] = time[0]
-                departure_time = sdate+' '+time[0]
+                departure_time = payload['sendDate']+' '+time[0]
     #             print 'time->',time[0]
                 banci = n.xpath('ul/li[@class="time"]/p[@class="banci"]/text()')
     #             print 'banci->',banci[0]
@@ -611,7 +613,7 @@ class Gx84100Rebot(db.Document):
                 item['extra_info'] = {"flag": flag}
                 item['bus_num'] = str(shiftid)
                 line_id = md5("%s-%s-%s-%s-%s-%s" % \
-                    (start_city_name, start_city_id, target_city_name, departure_time, banci, 'gx84100'))
+                    (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'gx84100'))
                 item['line_id'] = line_id
 
                 try:
@@ -619,7 +621,12 @@ class Gx84100Rebot(db.Document):
                     line_obj.update(**item)
                 except Line.DoesNotExist:
                     continue
-    
+            if nextPage > pageNo:
+                url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
+                self.recrawl_func(url, payload)
+      
+            
+                
     def request_lock_ticket(self, line, riders, contacter):
         """
         请求锁票
