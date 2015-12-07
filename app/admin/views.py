@@ -97,10 +97,11 @@ def line_list():
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     if order.crawl_source == "scqcp":
-        pay_url = order.pay_url
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
         }
+        pay_url = order.pay_url
+
         login_form_url = "http://scqcp.com/login/index.html"
         r = requests.get(login_form_url, headers=headers)
         sel = etree.HTML(r.content)
@@ -140,16 +141,35 @@ def order_pay(order_no):
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             r = requests.post(info_url, data=data, headers=headers, cookies=cookies)
             return r.content
-            sel = etree.HTML(r.content)
-            data = {}
-            for s in sel.xpath("//input"):
-                data[s.get("name")] = s.get("value")
-            alipay_url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
-            r = requests.post(alipay_url, data=data, headers=headers)
-            return r.content
+
         elif ret["msg"] == "验证码不正确":
             print('登录失败, 验证码错误.')
             print r.status_code, r.content, 111111111111
+    elif order.crawl_source == "gx84100":
+        pay_url = order.pay_url
+        print pay_url
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",
+        }
+        r = requests.get(pay_url, headers=headers, verify=False)
+        cookies = dict(r.cookies)
+
+
+        sel = etree.HTML(r.content)
+        data = dict(
+            orderId=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderId"]/@value')[0],
+            orderAmt=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderAmt"]/@value')[0],
+            orderNo='',
+            orderInfo=sel.xpath('//form[@id="alipayForm"]/input[@name="orderInfo"]/@value')[0],
+            count=sel.xpath('//form[@id="alipayForm"]/input[@name="count"]/@value')[0],
+            isMobile=sel.xpath('//form[@id="alipayForm"]/input[@name="isMobile"]/@value')[0],
+        )
+
+        info_url = "https://pay.84100.com/payment/page/alipayapi.jsp"
+        r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
+        print r.content
+        return r.content
+
     return redirect(url_for('admin.order_list'))
 
 
