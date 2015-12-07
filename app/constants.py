@@ -3,7 +3,8 @@
 # 四川汽车票务网登陆账号
 SCQCP_ACCOUNTS = {
     # telephone: {password, is_encrypt)
-    "15575101324": ("sha1$dae47$3702fcfa2d29e01350e98f0fe4057b8921c9d3d4", 1),
+    #"15575101324": ("sha1$dae47$3702fcfa2d29e01350e98f0fe4057b8921c9d3d4", 1),
+    "15575101324": ("cibRpL", 0),
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
@@ -16,9 +17,6 @@ GX84100_ACCOUNTS = {
     # telephone: {password, opendid)
     "13267109876": ("123456", 'o82gDszqOaOk1_tdc54xQo4oGaLQ'),
 }
-
-
-
 
 
 BROWSER_USER_AGENT = [
@@ -66,6 +64,7 @@ STATUS_ISSUE_DOING = 2  # 正在出票
 STATUS_LOCK = 3         # 锁票成功
 STATUS_COMMIT = 4       # 提交订单(初始状态)
 STATUS_LOCK_FAIL = 5    # 锁票失败
+STATUS_GIVE_BACK = 6    # 以退票
 STATUS_ISSUE_FAIL = 13  # 出票失败
 STATUS_ISSUE_OK = 14    # 出票成功
 
@@ -78,6 +77,7 @@ STATUS_MSG = {
     STATUS_LOCK_FAIL: "锁票失败",
     STATUS_ISSUE_FAIL: "出票失败",
     STATUS_ISSUE_OK: "出票成功",
+    STATUS_GIVE_BACK: "已退票",
 }
 
 # 证件类型

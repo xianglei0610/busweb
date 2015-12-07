@@ -206,19 +206,26 @@ class Order(db.Document):
         """
         刷新订单状态
         """
-        if self.crawl_source == "scqcp" and self.status in [STATUS_ISSUE_DOING, STATUS_LOCK]:
+        if self.crawl_source == "scqcp":
+            if self.status in [STATUS_LOCK_FAIL, STATUS_COMMIT]:
+                return False
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             if not rebot.is_active:
                 return False
             tickets = rebot.request_order(self)
+            if not tickets:
+                return False
             code_list, msg_list = [], []
-            if tickets and tickets.values()[0]["state"] == "preprint":
+            status = tickets.values()[0]["order_status"]
+            if status == "sell_succeeded":
                 # 出票成功
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
                     msg_list.append("")
-                self.update(status=STATUS_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
-                async_issued_callback(order)
+                self.update(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+            elif status == "give_back_ticket":
+                self.update(status=STATUS_GIVE_BACK)
+
         elif self.crawl_source == "gx84100" and self.status in [STATUS_ISSUE_DOING, STATUS_LOCK]:
             rebot = Gx84100Rebot.objects.get(telephone=self.source_account)
             if not rebot.is_active:
@@ -226,11 +233,10 @@ class Order(db.Document):
             tickets = rebot.request_order(self)
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
-                self.update(status=STATUS_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.update(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
                 async_issued_callback(order)
             elif tickets['status'] == '5':
                 self.update(status=STATUS_FAIL)
-
         return True
 
     def get_contact_info(self):
@@ -369,6 +375,8 @@ class ScqcpRebot(db.Document):
         qstr = urllib.urlencode(data)
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
+        # current_app.logger.debug("http post %s %s" % (url, str(data)))
+        # current_app.logger.debug("return msg %s" % ret["msg"])
         return ret
 
     def request_lock_ticket(self, line, riders, contacter):
@@ -378,7 +386,7 @@ class ScqcpRebot(db.Document):
         uri = "/api/v1/telecom/lock"
         tickets = []
         for r in riders:
-            lst = [r["id_number"], r["real_name"], contacter, "0", "0"]
+            lst = [r["id_number"], r["name"], contacter, "0", "0"]
             tickets.append("|".join(lst))
 
         data = {
@@ -393,9 +401,12 @@ class ScqcpRebot(db.Document):
         ret = self.http_post(uri, data)
         return ret
 
-    def request_order(order):
+    def request_order(self, order):
+        if order.status in [STATUS_LOCK_FAIL, STATUS_COMMIT]:
+            return
         uri = "/api/v1/ticket_lines/query_order"
-        ret = self.http_post(uri, {})
+        data = {"open_id": self.open_id}
+        ret = self.http_post(uri, data=data)
         ticket_ids = order.lock_info["ticket_ids"]
         amount = len(ticket_ids)
         data = {}

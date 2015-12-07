@@ -60,7 +60,7 @@ def async_lock_ticket(order):
         order.line = line
         order.ticket_price = line.full_price
         order.save()
-        
+
         line = dict(
             carry_sta_id=order.line.starting.station_id,
             stop_name=order.line.destination.station_name,
