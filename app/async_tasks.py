@@ -77,9 +77,11 @@ def async_lock_ticket(order):
 
         data = []
         if ret["returnCode"] == "0000" and ret.get('redirectPage',''):
-            order.update(status=STATUS_LOCK, lock_info=ret, pay_url=ret['redirectPage'],raw_order_no=ret['orderNo'], source_account=rebot.telephone)
             expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)
             expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
+            ret['expire_time'] = expire_time
+            order.update(status=STATUS_LOCK, lock_info=ret, pay_url=ret['redirectPage'],raw_order_no=ret['orderNo'], source_account=rebot.telephone)
+
             data = {
                 "expire_time": expire_time,
                 "total_price": ret['orderAmt'],

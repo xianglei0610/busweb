@@ -21,6 +21,7 @@
 	<th class="sorting" role="columnheader" tabindex="0" rowspan="1" colspan="1" style="width: 210px;">下单时间/出发时间</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 150px;">车次/线路</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 100px;">订单状态</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 100px;">订单锁票信息</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 100px;">订票数</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 100px;">订单金额(元)</th>
 	<th class="sorting" role="columnheader" tabindex="0" rowspan="1" colspan="1" style="width: 160px;">操作</th>
@@ -36,6 +37,18 @@
       <td class="center">{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}/{{order.line.drv_date}} {{order.line.drv_time}}</td>
       <td class="center">{{order.line.bus_num}}/{{order.line.starting.city_name}} --> {{order.line.destination.station_name}}</td>
       <td class="center">{{status_msg[order.status]}}</td>
+      
+      <td class="center">
+      {% if order.status ==3 %}
+      	{{order.lock_info.get('expire_time','')}} 过期
+      {%elif order.status ==5 %}
+      	{{order.lock_info.get('returnMsg','') or order.lock_info.get('msg','')   }}
+      {%elif order.status == 0%}
+      	{% if order.lock_info.get('expire_time','')  %}
+      		订单支付超时
+      	{%endif %}	
+      {%endif %}
+      </td>
       <td class="center">{{order.ticket_amount}}</td>
       <td class="center">{{order.order_price}}</td>
 			<td class="">

@@ -200,7 +200,7 @@ def LoginFromWap():
         if  i['orderNo'] =='15120100000000304675':
             print  '111111111',i
     
-# LoginFromWap()
+LoginFromWap()
 
 
 
@@ -276,13 +276,17 @@ def test1():
 
     data ={'openId': u'o82gDszqOaOk1_tdc54xQo4oGaLQ', 'name': u'\u5f20\u4e09', 'terminalType': 3, 'mobile': u'15111111111', 'planId': u'11702833', 'password': '', 'startId': u'45100010', 'passengerList': '[{idType:"1",idNo:"429006198906100034",name:"\xe5\x90\x91\xe7\xa3\x8a\xe7\xa3\x8a",mobile:"",ticketType:"\xe5\x85\xa8\xe7\xa5\xa8"}]', 'isWeixin': 1}
 
-
+    data = {'openId': u'o82gDszqOaOk1_tdc54xQo4oGaLQ', 'name': u'\u7f57\u519b\u5e73', 'terminalType': 3, 'mobile': u'15575101324', 'planId': u'12488149', 'password': '', 'startId': u'45100000', 
+            'passengerList': 
+    '[{idType:"1",idNo:"429006198906100034",name:"\xe5\x90\x91\xe7\xa3\x8a\xe7\xa3\x8a",mobile:"",ticketType:"\xe5\x85\xa8\xe7\xa5\xa8"}]', 
+            
+            'isWeixin': 1}
     print data
     
     
     proxies = {
-        'http': 'http://192.168.1.49:8888',
-        'https': 'http://192.168.1.49:8888',
+        'http': 'http://192.168.1.45:8888',
+        'https': 'http://192.168.1.45:8888',
         }
     
     
@@ -292,7 +296,7 @@ def test1():
     url = 'http://wap.84100.com/wap/ticketSales/ajaxMakeOrder.do'
     ret = requests.post(url, data=data, headers=headers,proxies=proxies)
     print ret.json()
-test1()    
+# test1()    
     
     
     
