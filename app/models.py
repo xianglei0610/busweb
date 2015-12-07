@@ -13,7 +13,7 @@ from app.async_tasks import async_issued_callback
 from app.constants import *
 from app.constants import SCQCP_ACCOUNTS, GX84100_ACCOUNTS
 from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
-
+from app.utils import md5
 
 class Starting(db.Document):
     """
@@ -610,8 +610,8 @@ class Gx84100Rebot(db.Document):
                         flag = '0'
                 item['extra_info'] = {"flag": flag}
                 item['bus_num'] = str(shiftid)
-                line_id = str(hash("%s-%s-%s-%s-%s-%s" % \
-                    (start_city_name, start_city_id, target_city_name, departure_time,banci, 'gx84100')))
+                line_id = md5("%s-%s-%s-%s-%s-%s" % \
+                    (start_city_name, start_city_id, target_city_name, departure_time, banci, 'gx84100'))
                 item['line_id'] = line_id
 
                 try:
