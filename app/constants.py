@@ -50,7 +50,7 @@ MOBILE_USER_AGENG = [
 
 # 爬取来源
 SOURCE_SCQCP = "scqcp"
-SOURCE_BUS100 = "bus100"
+SOURCE_BUS100 = "gx84100"
 
 SOURCE_MSG = {
     SOURCE_SCQCP: "四川汽车票务网",

@@ -13,7 +13,7 @@ from app.async_tasks import async_issued_callback
 from app.constants import *
 from app.constants import SCQCP_ACCOUNTS, GX84100_ACCOUNTS
 from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
-
+from app.utils import md5
 
 class Starting(db.Document):
     """
@@ -610,8 +610,8 @@ class Gx84100Rebot(db.Document):
                         flag = '0'
                 item['extra_info'] = {"flag": flag}
                 item['bus_num'] = str(shiftid)
-                line_id = str(hash("%s-%s-%s-%s-%s-%s" % \
-                    (start_city_name, start_city_id, target_city_name, departure_time,banci, 'gx84100')))
+                line_id = md5("%s-%s-%s-%s-%s-%s" % \
+                    (start_city_name, start_city_id, target_city_name, departure_time, banci, 'gx84100'))
                 item['line_id'] = line_id
 
                 try:
@@ -660,14 +660,12 @@ class Gx84100Rebot(db.Document):
         ret = self.http_post(uri, data)
         pay_url = ret.get('redirectPage', '')
         returnMsg = ret.get('returnMsg', '')
-        print pay_url
         if pay_url:
             ua = random.choice(MOBILE_USER_AGENG)
             #url = "https://pay.84100.com/payment/P/P011.do?orderId=ed61e28a28df43a3905567ec48398285&hid=null&produceType=null"
     #         uri = "wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1" % (orderNo,self.open_id)
             headers = {"User-Agent": ua}
             r = requests.get(pay_url, verify=False,  headers=headers)
-            print r.content
             sel = etree.HTML(r.content)
             orderNoObj = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderNo"]/@value')
             orderAmtObj = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderAmt"]/@value')
@@ -705,17 +703,28 @@ class Gx84100Rebot(db.Document):
                u'isAllowRefund': u'0', u'isPick': u'0', u'paySeconds': u'0', u'ticketNo': None, 
                u'payNo': u'56c79f81f34d46adab012be74c850944', u'discountAmount': u'0', u'shiftNumber': u'15010014',
                 u'customerId': u'558260296', u'pickAddress': None}"""
-        
+
+        url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
+
+        data = {
+              "mobile": self.telephone,
+              "password": self.password,
+              "phone":   '',
+              "code":  ''
+        }
+        ua = random.choice(MOBILE_USER_AGENG)
+
+        headers = {"User-Agent": ua}
+        r = requests.post(url, data=data, headers=headers)
+
+        _cookies = r.cookies
+
         #query_order_list_url ='http://wap.84100.com/wap/userCenter/orderDetails.do?orderNo=151201174710046683&openId=12122&isWeixin=0'
         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
 
-        request = urllib2.Request(url)
-        request.add_header('User-Agent', self.user_agent)
-        response = urllib2.urlopen(request, timeout=10)
-        print response.read()
-
-        sel = etree.HTML(response.read())
+        r = requests.get(url, cookies=_cookies)
+        sel = etree.HTML(r.content)
         orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
         orderDetail = json.loads(orderDetailObj)
         orderDetail = orderDetail[0]
