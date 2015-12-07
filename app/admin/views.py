@@ -96,62 +96,61 @@ def line_list():
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
-    if order.pay_url:
+    if order.crawl_source == "scqcp":
         pay_url = order.pay_url
-    else:
-        pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % order.lock_info["pay_order_id"]
-    return redirect(pay_url)
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+        }
+        login_form_url = "http://scqcp.com/login/index.html"
+        r = requests.get(login_form_url, headers=headers)
+        sel = etree.HTML(r.content)
+        cookies = dict(r.cookies)
+        code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+        token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
 
-    #if order.crawl_source == "scqcp":
-    #    # 自动登陆
-    #    headers = {
-    #        'User-Agent': random.choice(BROWSER_USER_AGENT)
-    #    }
-    #    login_form_url = "http://scqcp.com/login/index.html"
-    #    r = requests.get(login_form_url, headers=headers)
-    #    sel = etree.HTML(r.content)
-    #    cookies = dict(r.cookies)
-    #    code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
-    #    token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+        r = requests.get(code_url, headers=headers, cookies=cookies)
+        cookies.update(dict(r.cookies))
+        tmpIm = cStringIO.StringIO(r.content)
+        im = Image.open(tmpIm)
+        code = pytesseract.image_to_string(im)
+        passwd, _ = SCQCP_ACCOUNTS[order.source_account]
 
-    #    r = requests.get(code_url, headers=headers, cookies=cookies)
-    #    cookies.update(dict(r.cookies))
-    #    tmpIm = cStringIO.StringIO(r.content)
-    #    im = Image.open(tmpIm)
-    #    code = pytesseract.image_to_string(im)
-    #    passwd, _= SCQCP_ACCOUNTS[order.source_account]
+        data = {
+            "uname": order.source_account,
+            "passwd": passwd,
+            "code": code,
+            "token": token,
+        }
+        r = requests.post("http://scqcp.com/login/check.json", data=data, headers=headers, cookies=cookies)
+        cookies.update(dict(r.cookies))
+        ret = r.json()
+        if ret["success"] == True:
+            print('登录成功')
+            r = requests.get(pay_url, headers=headers, cookies=cookies)
+            sel = etree.HTML(r.content)
+            data = dict(
+                payid=sel.xpath("//input[@name='payid']/@value")[0],
+                bank=sel.xpath("//input[@id='s_bank']/@value")[0],
+                plate=sel.xpath("//input[@id='s_plate']/@value")[0],
+                plateform="alipay",
+                qr_pay_mode=0,
+                discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
+            )
 
-    #    import time
-    #    for i in range(1):
-    #        if i:
-    #            time.sleep(2)
-    #        print "第%d次尝试自动登陆..." % (i+1)
-    #        data = {
-    #            "uname": order.source_account,
-    #            "passwd": passwd,
-    #            "code": code,
-    #            "token": token,
-    #        }
-    #        r = requests.post("http://scqcp.com/login/check.json", data=data, headers=headers, cookies=cookies)
-    #        cookies.update(dict(r.cookies))
-    #        ret = r.json()
-    #        if ret["success"] == True:
-    #            current_app.logger.debug('登录成功')
-    #            red = redirect(pay_url)
-    #            for k,v in cookies.items():
-    #                red.set_cookie(k, v, domain="www.scqcp.com")
-    #            return red
-    #            #return redirect(pay_url)
-    #            #response = make_response(order_list())
-    #            #for k,v in cookies.items():
-    #            #    print "cookie", k, v
-    #            #    response.set_cookie(k, v, domain=".scqcp.com")
-    #            #response.set_cookie("testtest", "11111111111", domain=".scqcp.com")
-    #            #return response
-    #        elif ret["msg"] == "验证码不正确":
-    #            current_app.logger.debug('登录失败, 验证码错误.')
-    #            print r.status_code, r.content, 111111111111
-    #return redirect(pay_url)
+            info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
+            r = requests.post(info_url, data=data, headers=headers, cookies=cookies)
+            return r.content
+            sel = etree.HTML(r.content)
+            data = {}
+            for s in sel.xpath("//input"):
+                data[s.get("name")] = s.get("value")
+            alipay_url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
+            r = requests.post(alipay_url, data=data, headers=headers)
+            return r.content
+        elif ret["msg"] == "验证码不正确":
+            print('登录失败, 验证码错误.')
+            print r.status_code, r.content, 111111111111
+    return redirect(url_for('admin.order_list'))
 
 
 @admin.route('/orders/<order_no>/refresh', methods=['GET'])
