@@ -200,7 +200,7 @@ def LoginFromWap():
         if  i['orderNo'] =='15120100000000304675':
             print  '111111111',i
     
-LoginFromWap()
+# LoginFromWap()
 
 
 
@@ -297,6 +297,27 @@ def test1():
     ret = requests.post(url, data=data, headers=headers,proxies=proxies)
     print ret.json()
 # test1()    
+
+
+
+def  test2():
+
+    url= 'https://pay.84100.com/payment/page/alipayapi.jsp'
     
+    data={
+          "orderId" :  '924cdd8c65e44210ae3c4f865c6aef6f',
+          "orderAmt" : 62.00,
+          "orderNo" :   '' ,
+          "orderInfo":'',
+          "count"  :  '1',
+          'isMobile':'N' 
+    }
+    ua = random.choice(MOBILE_USER_AGENG)
+    
+    headers = {"User-Agent": ua}
+    r = requests.post(url, data=data,   headers=headers, verify=False)
+    print r.text
+    
+test2()    
     
     
