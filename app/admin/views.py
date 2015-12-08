@@ -147,19 +147,29 @@ def order_pay(order_no):
             print r.status_code, r.content, 111111111111
     elif order.crawl_source == "gx84100":
         pay_url = order.pay_url
-        print pay_url
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",
         }
         r = requests.get(pay_url, headers=headers, verify=False)
         cookies = dict(r.cookies)
 
-
         sel = etree.HTML(r.content)
+        try:
+            data = dict(
+                orderId=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderId"]/@value')[0],
+                orderAmt=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderAmt"]/@value')[0],
+            )
+        except:
+            return redirect(pay_url)
+        check_url = 'https://pay.84100.com/payment/alipay/orderCheck.do'
+
+        r = requests.post(check_url, data=data, headers=headers, cookies=cookies, verify=False)
+        checkInfo = r.json()
+        orderNo = checkInfo['request_so']
         data = dict(
             orderId=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderId"]/@value')[0],
             orderAmt=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderAmt"]/@value')[0],
-            orderNo='',
+            orderNo=orderNo,
             orderInfo=sel.xpath('//form[@id="alipayForm"]/input[@name="orderInfo"]/@value')[0],
             count=sel.xpath('//form[@id="alipayForm"]/input[@name="count"]/@value')[0],
             isMobile=sel.xpath('//form[@id="alipayForm"]/input[@name="isMobile"]/@value')[0],
@@ -167,7 +177,6 @@ def order_pay(order_no):
 
         info_url = "https://pay.84100.com/payment/page/alipayapi.jsp"
         r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
-        print r.content
         return r.content
 
     return redirect(url_for('admin.order_list'))
