@@ -528,11 +528,9 @@ class Gx84100Rebot(db.Document):
 
     def http_post(self, uri, data, user_agent=None, token=None):
         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
-        print url
         request = urllib2.Request(url)
         request.add_header('User-Agent', user_agent or self.user_agent)
 # #         request.add_header('Authorization', token or self.token)
-        print data
         qstr = urllib.urlencode(data)
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())

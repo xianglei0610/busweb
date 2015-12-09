@@ -5,6 +5,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     DEBUG = False
+    PRESERVE_CONTEXT_ON_EXCEPTION = False
 
     @staticmethod
     def init_app(app):
