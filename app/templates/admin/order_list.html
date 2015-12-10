@@ -53,7 +53,10 @@
       <td class="center">{{order.order_price}}</td>
 			<td class="">
         <a class="btn btn-primary btn-xs" href="orders/{{order.order_no}}/pay" target="_blank"><i class="glyphicon glyphicon-pencil"></i> 支付</a>
+        <a class="btn btn-primary btn-xs" href="#" onclick="pay({{order.order_no}}, '')"><i class="glyphicon glyphicon-pencil"></i> 支付</a>
 				<a class="btn btn-danger btn-xs" href="orders/{{order.order_no}}/refresh"><i class="glyphicon glyphicon-refresh"></i> 刷新</a>
+        <div id="id_code">
+        </div>
 			</td>
 		</tr>
 	{%endfor%}
@@ -72,6 +75,24 @@ function search(){
   }
   window.location.href = url;
 };
+
+function pay(order_no, code){
+  $.ajax({
+      type: "get",
+      url: "/orders/"+order_no+"/pay?valid_code="+code,
+      dataType: "json",
+      success: function (data) {
+        if(data.status=="OK"){
+          document.write(data.data)
+        }else if(data.status=="code_error"){
+          window.open("/inputCode?code_url="+data.data,"dialogWidth:300px;dialogHeight:300px;,toolbar=no, menubar=no, scrollbars=no, resizable=no,location=no, status=no,alwaysRaised=yes,depended=yes");
+        }
+      },
+      error: function (XMLHttpRequest, textStatus, errorThrown) {
+        alert(errorThrown);
+      }
+  });
+}
 </script>
  {%endblock%}
 

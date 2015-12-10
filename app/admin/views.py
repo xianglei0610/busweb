@@ -4,15 +4,14 @@ import urllib2
 import urllib
 import requests
 import json
-import random
 import pytesseract
 import cStringIO
 
 from PIL import Image
 from lxml import etree
 from mongoengine import Q
-from app.constants import STATUS_MSG, SOURCE_MSG, BROWSER_USER_AGENT, SCQCP_ACCOUNTS
-from flask import render_template, request, redirect, url_for, current_app, make_response
+from app.constants import STATUS_MSG, SOURCE_MSG, SCQCP_ACCOUNTS
+from flask import render_template, request, redirect, url_for, current_app, jsonify
 from flask.views import MethodView
 from app.admin import admin
 from app.models import Order, Line, Starting, Destination
@@ -28,7 +27,7 @@ def parse_page_data(qs):
     range_max = min(range_min+10, pageNum)
 
     query_dict = {}
-    for k in  request.args.keys():
+    for k in request.args.keys():
         if k == "page":
             continue
         query_dict[k] = request.args.get(k)
@@ -84,7 +83,7 @@ def line_list():
         qs_dest = Destination.objects(Q(city_name__startswith=dest_name) |
                                       Q(station_name__startswith=dest_name))
         query.update(destination__in=qs_dest)
-    queryset = Line.objects(**query)
+    queryset = Line.objects(**query).order_by("-crawl_datetime")
     return render_template('admin/line_list.html',
                            page=parse_page_data(queryset),
                            starting=starting_name,
@@ -96,6 +95,7 @@ def line_list():
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
+    code = request.args.get("valid_code", "")
     if order.crawl_source == "scqcp":
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
@@ -109,11 +109,12 @@ def order_pay(order_no):
         code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
         token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
 
-        r = requests.get(code_url, headers=headers, cookies=cookies)
-        cookies.update(dict(r.cookies))
-        tmpIm = cStringIO.StringIO(r.content)
-        im = Image.open(tmpIm)
-        code = pytesseract.image_to_string(im)
+        if not code:
+            r = requests.get(code_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            tmpIm = cStringIO.StringIO(r.content)
+            im = Image.open(tmpIm)
+            code = pytesseract.image_to_string(im)
         passwd, _ = SCQCP_ACCOUNTS[order.source_account]
 
         data = {
@@ -125,7 +126,7 @@ def order_pay(order_no):
         r = requests.post("http://scqcp.com/login/check.json", data=data, headers=headers, cookies=cookies)
         cookies.update(dict(r.cookies))
         ret = r.json()
-        if ret["success"] == True:
+        if ret["success"]:
             print('登录成功')
             r = requests.get(pay_url, headers=headers, cookies=cookies)
             sel = etree.HTML(r.content)
@@ -140,11 +141,10 @@ def order_pay(order_no):
 
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             r = requests.post(info_url, data=data, headers=headers, cookies=cookies)
-            return r.content
+            return jsonify({"status": "OK", "msg": "登陆成功", "data": r.content})
 
         elif ret["msg"] == "验证码不正确":
-            print('登录失败, 验证码错误.')
-            print r.status_code, r.content, 111111111111
+            return jsonify({"status": "code_error", "msg": "验证码错误", "data": code_url})
     elif order.crawl_source == "gx84100":
         pay_url = order.pay_url
         headers = {
@@ -259,5 +259,12 @@ class SubmitOrder(MethodView):
         print "submit order", res
         return redirect(url_for('admin.order_list'))
 
+
+@admin.route('/inputCode', methods=['GET'])
+def input_code():
+    code_url = request.args.get("code_url")
+    return """
+        <img src="%s" alt="code" />
+    """ % code_url
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
