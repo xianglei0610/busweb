@@ -7,11 +7,11 @@ import json
 import pytesseract
 import cStringIO
 
+from app.constants import *
 from PIL import Image
 from lxml import etree
 from mongoengine import Q
-from app.constants import STATUS_MSG, SOURCE_MSG, SCQCP_ACCOUNTS
-from flask import render_template, request, redirect, url_for, current_app, jsonify
+from flask import render_template, request, redirect, url_for, current_app, jsonify, session
 from flask.views import MethodView
 from app.admin import admin
 from app.models import Order, Line, Starting, Destination
@@ -91,11 +91,27 @@ def line_list():
                            line_id=lineid,
                            )
 
+@admin.route('/orders/<order_no>/login_code', methods=['GET'])
+def login_code(order_no):
+    order = Order.objects.get(order_no=order_no)
+    if order.crawl_source == "scqcp":
+        code_url = session.get("pay_valid_url")
+        headers = session.get("pay_headers")
+        cookies = session.get("pay_cookie")
+        r = requests.get(code_url, headers=headers, cookies=cookies)
+        return r.content
 
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
+    order.check_expire()
+    if order.status != STATUS_LOCK:
+        return jsonify({"status": "status_error", "msg": "不是支付的时候", "data": ""})
     code = request.args.get("valid_code", "")
+    code_url = session.get("pay_valid_url")
+    headers = session.get("pay_headers")
+    cookies = session.get("pay_cookie")
+    print 1111111111111, "order_pay", order_no, code
     if order.crawl_source == "scqcp":
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
@@ -115,6 +131,8 @@ def order_pay(order_no):
             tmpIm = cStringIO.StringIO(r.content)
             im = Image.open(tmpIm)
             code = pytesseract.image_to_string(im)
+            print "code:", code
+            code = "1111"
         passwd, _ = SCQCP_ACCOUNTS[order.source_account]
 
         data = {
@@ -144,7 +162,11 @@ def order_pay(order_no):
             return jsonify({"status": "OK", "msg": "登陆成功", "data": r.content})
 
         elif ret["msg"] == "验证码不正确":
-            return jsonify({"status": "code_error", "msg": "验证码错误", "data": code_url})
+            print("验证码错误")
+            session["pay_cookie"] = cookies
+            session["pay_headers"] = headers
+            session["pay_valid_url"] = code_url
+            return jsonify({"status": "code_error", "msg": "验证码错误", "data": "/orders/%s/login_code" % order_no})
     elif order.crawl_source == "gx84100":
         pay_url = order.pay_url
         headers = {

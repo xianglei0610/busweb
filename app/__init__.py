@@ -33,6 +33,7 @@ def setup_api_app(config_name):
 
     from main import main as main_blueprint
     app.register_blueprint(main_blueprint)
+    app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
     return app
 
 
@@ -49,4 +50,5 @@ def setup_admin_app(config_name):
 
     from admin import admin as admin_blueprint
     app.register_blueprint(admin_blueprint)
+    app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
     return app

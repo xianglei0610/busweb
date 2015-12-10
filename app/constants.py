@@ -65,6 +65,7 @@ STATUS_LOCK = 3         # 锁票成功
 STATUS_COMMIT = 4       # 提交订单(初始状态)
 STATUS_LOCK_FAIL = 5    # 锁票失败
 STATUS_GIVE_BACK = 6    # 以退票
+STATUS_TIMEOUT = 8     # 订单过期
 STATUS_ISSUE_FAIL = 13  # 出票失败
 STATUS_ISSUE_OK = 14    # 出票成功
 
@@ -78,6 +79,7 @@ STATUS_MSG = {
     STATUS_ISSUE_FAIL: "出票失败",
     STATUS_ISSUE_OK: "出票成功",
     STATUS_GIVE_BACK: "已退票",
+    STATUS_TIMEOUT: "订单过期",
 }
 
 # 证件类型
