@@ -91,6 +91,7 @@ def line_list():
                            line_id=lineid,
                            )
 
+
 @admin.route('/orders/<order_no>/login_code', methods=['GET'])
 def login_code(order_no):
     order = Order.objects.get(order_no=order_no)
@@ -101,6 +102,7 @@ def login_code(order_no):
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
 
+
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
@@ -108,33 +110,32 @@ def order_pay(order_no):
     if order.status != STATUS_LOCK:
         return jsonify({"status": "status_error", "msg": "不是支付的时候", "data": ""})
     code = request.args.get("valid_code", "")
-    code_url = session.get("pay_valid_url")
-    headers = session.get("pay_headers")
-    cookies = session.get("pay_cookie")
-    print 1111111111111, "order_pay", order_no, code
     if order.crawl_source == "scqcp":
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
         }
         pay_url = order.pay_url
 
-        login_form_url = "http://scqcp.com/login/index.html"
-        r = requests.get(login_form_url, headers=headers)
-        sel = etree.HTML(r.content)
-        cookies = dict(r.cookies)
-        code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
-        token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
-
-        if not code:
+        # 验证码处理
+        if code:
+            code_url = session.get("pay_valid_url", "")
+            headers = session.get("pay_headers", "")
+            cookies = session.get("pay_cookie", "")
+            token = session.get("pay_token", "")
+        else:
+            login_form_url = "http://scqcp.com/login/index.html"
+            r = requests.get(login_form_url, headers=headers)
+            sel = etree.HTML(r.content)
+            cookies = dict(r.cookies)
+            code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+            token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
             r = requests.get(code_url, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             tmpIm = cStringIO.StringIO(r.content)
             im = Image.open(tmpIm)
             code = pytesseract.image_to_string(im)
-            print "code:", code
-            code = "1111"
-        passwd, _ = SCQCP_ACCOUNTS[order.source_account]
 
+        passwd, _ = SCQCP_ACCOUNTS[order.source_account]
         data = {
             "uname": order.source_account,
             "passwd": passwd,
@@ -147,6 +148,10 @@ def order_pay(order_no):
         if ret["success"]:
             print('登录成功')
             r = requests.get(pay_url, headers=headers, cookies=cookies)
+            r_url = urllib2.urlparse.urlparse(r.url)
+            if r_url.path in ["/error.html", "/error.htm"]:
+                order.update(status=STATUS_TIMEOUT)
+                return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
             sel = etree.HTML(r.content)
             data = dict(
                 payid=sel.xpath("//input[@name='payid']/@value")[0],
@@ -166,6 +171,7 @@ def order_pay(order_no):
             session["pay_cookie"] = cookies
             session["pay_headers"] = headers
             session["pay_valid_url"] = code_url
+            session["pay_token"] = token
             return jsonify({"status": "code_error", "msg": "验证码错误", "data": "/orders/%s/login_code" % order_no})
     elif order.crawl_source == "gx84100":
         pay_url = order.pay_url

@@ -46,13 +46,12 @@
       {%elif order.status == 0%}
       	{% if order.lock_info.get('expire_time','')  %}
       		订单支付超时
-      	{%endif %}	
+      	{%endif %}
       {%endif %}
       </td>
       <td class="center">{{order.ticket_amount}}</td>
       <td class="center">{{order.order_price}}</td>
 			<td class="">
-        <a class="btn btn-primary btn-xs" href="orders/{{order.order_no}}/pay" target="_blank"><i class="glyphicon glyphicon-pencil"></i> 支付</a>
         <a class="btn btn-primary btn-xs" href="#" onclick="pay({{order.order_no}}, '')"><i class="glyphicon glyphicon-pencil"></i> 支付</a>
 				<a class="btn btn-danger btn-xs" href="orders/{{order.order_no}}/refresh"><i class="glyphicon glyphicon-refresh"></i> 刷新</a>
         <div id="id_code">
@@ -114,12 +113,11 @@ function pay(order_no, code){
       url: "/orders/"+order_no+"/pay"+query,
       dataType: "json",
       success: function (data) {
-        alert("success"+data.status);
         if(data.status=="OK"){
           document.write(data.data);
         }else if(data.status=="code_error"){
           $("#img-code").attr("src", data.data)
-          $("#id-order").val(order_no)
+          $("#id-order").val(order_no);
           $('#myModal').modal('show');
         }else{
           alert(data.msg);
