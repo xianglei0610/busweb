@@ -115,6 +115,7 @@ class Line(db.Document):
     destination = db.ReferenceField(Destination)
     drv_date = db.StringField(required=True)  # 开车日期 yyyy-MM-dd
     drv_time = db.StringField(required=True)  # 开车时间 hh:mm
+    drv_datetime = db.DateTimeField()         # DateTime类型的开车时间
     distance = db.StringField()
     vehicle_type = db.StringField()  # 车型
     seat_type = db.StringField()     # 座位类型
@@ -124,6 +125,8 @@ class Line(db.Document):
     fee = db.FloatField()                 # 手续费
     crawl_datetime = db.DateTimeField()   # 爬取的时间
     extra_info = db.DictField()           # 额外信息字段
+    left_tickets = db.IntField()          # 剩余票数
+    update_datetime = db.DateTimeField()  # 更新时间
 
     meta = {
         "indexes": [
@@ -135,13 +138,52 @@ class Line(db.Document):
             ],
     }
 
-    @property
-    def can_order(self):
-        if self.crawl_source == 'gx84100':
-            if not self.extra_info.get('flag', ''):
-                return 0
-        return 1
+    def get_json(self):
+        """
+        传给客户端的格式和数据，不能轻易修改！
+        """
+        return {
+            "line_id": self.line_id,
+            "starting_city": self.starting.city_name,
+            "starting_station": self.starting.station_name,
+            "destination_city": self.destination.city_name,
+            "destination_station": self.destination.station_name,
+            "bus_num": self.bus_num,
+            "drv_date": self.drv_date,
+            "drv_time": self.drv_time,
+            "vehicle_type": self.vehicle_type,
+            "full_price": self.full_price,
+            "half_price": self.half_price,
+            "left_tickets": self.left_tickets,
+            "fee": self.fee,
+            "distance": self.distance,
+        }
 
+    def refresh(self):
+        """
+        刷新
+        """
+        if self.crawl_source == SOURCE_SCQCP:
+            params = dict(
+                carry_sta_id=self.starting.station_id,
+                stop_name=self.extra_info["stop_name_short"],
+                drv_date="%s %s" % (self.drv_date, self.drv_time),
+                sign_id=self.extra_info["sign_id"],
+            )
+            ua = random.choice(MOBILE_USER_AGENG)
+            ret = ScqcpRebot.choose_one().http_post("/scqcp/api/v2/ticket/query_plan_info", params, user_agent=ua)
+            now = datetime.now()
+            if ret["status"] == 1:
+                if ret["plan_info"]:
+                    raw = ret["plan_info"][0]
+                    self.modify(full_price=raw["full_price"],
+                                fee=raw["service_price"],
+                                left_tickets=raw["amount"],
+                                update_datetime=now)
+                else:  # 线路信息没查到
+                    self.modify(left_tickets=0, update_datetime=now)
+            else:
+                self.modify(left_tickets=0, update_datetime=now)
 
 class Order(db.Document):
     """
@@ -211,7 +253,7 @@ class Order(db.Document):
             return
         #dt = datetime.strptime(self.lock_info["expire_time"], "%Y-%m-%d %H:%M:%S")
         #if datetime.now()>dt:
-        #    self.update(status=STATUS_TIMEOUT)
+        #    self.modify(status=STATUS_TIMEOUT)
 
     def refresh_status(self):
         """
@@ -233,9 +275,9 @@ class Order(db.Document):
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
                     msg_list.append("")
-                self.update(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
             elif status == "give_back_ticket":
-                self.update(status=STATUS_GIVE_BACK)
+                self.modify(status=STATUS_GIVE_BACK)
 
         elif self.crawl_source == "gx84100" and self.status in [STATUS_ISSUE_DOING, STATUS_LOCK]:
             rebot = Gx84100Rebot.objects.get(telephone=self.source_account)
@@ -245,10 +287,10 @@ class Order(db.Document):
             print tickets
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
-                self.update(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
                 async_issued_callback(order)
             elif tickets['status'] == '5':
-                self.update(status=STATUS_FAIL)
+                self.modify(status=STATUS_FAIL)
         return True
 
     def get_contact_info(self):
@@ -292,7 +334,6 @@ class Order(db.Document):
         return "%s%s%s" % (sdate, micro, srand)
 
 
-
 class ScqcpRebot(db.Document):
     """
     机器人: 对被爬网站用户的抽象
@@ -309,6 +350,21 @@ class ScqcpRebot(db.Document):
     meta = {
         "indexes": ["telephone", "is_active"],
     }
+
+    @classmethod
+    def choose_one(cls):
+        lst = SCQCP_ACCOUNTS.keys()
+        random.shuffle(lst)
+        for i in lst:
+            try:
+                obj = cls.objects.get(telephone=i, is_active=True)
+            except cls.DoesNotExist:
+                continue
+            return obj
+
+    @classmethod
+    def choose_and_lock_one(cls):
+        pass
 
     def relogin(self):
         """
@@ -337,11 +393,11 @@ class ScqcpRebot(db.Document):
         if "open_id" not in ret:
             # 登陆失败
             current_app.logger.error("%s %s login failed! %s", self.telephone, self.password, ret.get("msg", ""))
-            self.update(is_active=False)
+            self.modify(is_active=False)
             return ret.get("msg", "fail")
         open_id = ret["open_id"]
 
-        self.update(is_active=True, last_login_time=datetime.now(), user_agent=ua, token=token, open_id=open_id)
+        self.modify(is_active=True, last_login_time=datetime.now(), user_agent=ua, token=token, open_id=open_id)
         return "OK"
 
     @classmethod
@@ -353,10 +409,10 @@ class ScqcpRebot(db.Document):
         for bot in cls.objects:
             has_checked[bot.telephone] = 1
             if bot.telephone not in SCQCP_ACCOUNTS:
-                bot.update(is_active=False)
+                bot.modify(is_active=False)
                 continue
             pwd, is_encrypt = SCQCP_ACCOUNTS[bot.telephone]
-            bot.update(password=pwd, is_encrypt=is_encrypt)
+            bot.modify(password=pwd, is_encrypt=is_encrypt)
 
             # 近5天之内登陆的先不管
             #if bot.is_active and (bot.last_login_time-now).seconds < 5*24*3600:
@@ -490,17 +546,15 @@ class Gx84100Rebot(db.Document):
             "phone": '',
             "code": ''
         }
-        print data
         ret = self.http_post(uri, data, user_agent=ua)
-        print ret
         if ret['returnCode']!= "0000":
             # 登陆失败
             current_app.logger.error("%s %s login failed! %s", self.telephone, self.password, ret.get("returnMsg", ""))
-            self.update(is_active=False)
+            self.modify(is_active=False)
             return ret.get("returnMsg", "fail")
 
 
-        self.update(is_active=True, last_login_time=datetime.now(), user_agent=ua)
+        self.modify(is_active=True, last_login_time=datetime.now(), user_agent=ua)
         return "OK"
 
     @classmethod
@@ -513,10 +567,10 @@ class Gx84100Rebot(db.Document):
         for bot in cls.objects:
             has_checked[bot.telephone] = 1
             if bot.telephone not in GX84100_ACCOUNTS:
-                bot.update(is_active=False)
+                bot.modify(is_active=False)
                 continue
             pwd, openid = GX84100_ACCOUNTS[bot.telephone]
-            bot.update(password=pwd, open_id=openid)
+            bot.modify(password=pwd, open_id=openid)
 
             # 近5天之内登陆的先不管
             #if bot.is_active and (bot.last_login_time-now).seconds < 5*24*3600:
@@ -543,12 +597,9 @@ class Gx84100Rebot(db.Document):
         request = urllib2.Request(url)
         request.add_header('User-Agent', user_agent or self.user_agent)
 # #         request.add_header('Authorization', token or self.token)
-        print 'data',data
-        
         qstr = urllib.urlencode(data)
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
-        print ret
         return ret
 
     def recrawl_shiftid(self, line):
@@ -597,16 +648,12 @@ class Gx84100Rebot(db.Document):
                 time = n.xpath('ul/li[@class="time"]/p/strong/text()')
                 item['drv_time'] = time[0]
                 departure_time = payload['sendDate']+' '+time[0]
-    #             print 'time->',time[0]
                 banci = n.xpath('ul/li[@class="time"]/p[@class="banci"]/text()')
-    #             print 'banci->',banci[0]
                 banci = banci[0]
                 price = n.xpath('ul/li[@class="price"]/strong/text()')
-                print 'price->',price[0]
                 item["full_price"] = float(str(price[0]).split('￥')[-1])
                 infor = n.xpath('ul/li[@class="infor"]/p/text()')
                 distance = infor[1].replace('\r\n', '').replace(' ',  '')
-    #             print 'distance->',distance
                 item['distance'] = distance
                 buyInfo = n.xpath('ul/li[@class="buy"]')
                 flag = 0
@@ -630,7 +677,7 @@ class Gx84100Rebot(db.Document):
 
                 try:
                     line_obj = Line.objects.get(line_id=line_id, crawl_source='gx84100')
-                    line_obj.update(**item)
+                    line_obj.modify(**item)
                 except Line.DoesNotExist:
                     continue
             if nextPage > pageNo:

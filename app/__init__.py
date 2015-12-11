@@ -31,7 +31,7 @@ def setup_api_app(config_name):
     mail.init_app(app)
     db.init_app(app)
 
-    from main import main as main_blueprint
+    from api import api as main_blueprint
     app.register_blueprint(main_blueprint)
     app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
     return app

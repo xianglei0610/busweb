@@ -150,7 +150,7 @@ def order_pay(order_no):
             r = requests.get(pay_url, headers=headers, cookies=cookies)
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
-                order.update(status=STATUS_TIMEOUT)
+                order.modify(status=STATUS_TIMEOUT)
                 return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
             sel = etree.HTML(r.content)
             data = dict(
