@@ -63,6 +63,17 @@ class APITestCase(TestCase):
             self.assertTrue(response.status_code == 200)
             self.assertTrue(result['data'] != [])
 
+    def test_query_line_detail(self):
+
+        response = self.client.post('/lines/query/detail',
+            data=json.dumps({
+             "line_id": "641811fffd76c0934f0a2eef261f5bf2"  ,
+                    })
+            )
+        result = json.loads(response.data)
+        self.assertTrue(response.status_code == 200)
+        self.assertTrue(result['data'] != [])
+
     def test_order_submit(self):
         now = datetime.datetime.now()
         drv_date = datetime.datetime.strftime(now, "%Y-%m-%d")

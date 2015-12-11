@@ -184,6 +184,32 @@ class Line(db.Document):
                     self.modify(left_tickets=0, update_datetime=now)
             else:
                 self.modify(left_tickets=0, update_datetime=now)
+        elif self.crawl_source == SOURCE_BUS100:
+            rebot = Gx84100Rebot.objects.first()
+            ret = rebot.recrawl_shiftid(self)
+            line = Line.objects.get(line_id=self.line_id)
+            url = 'http://www.84100.com/getTrainInfo/ajax'
+            payload = {
+                "shiftId": line.bus_num,
+                "startId": line.starting.station_id,
+                "startName": line.starting.station_name,
+                "ttsId": ''
+                     }
+            print payload
+            try:
+                trainInfo = requests.post(url, data=payload)
+                trainInfo = trainInfo.json()
+                left_tickets = 0
+                if str(trainInfo['flag']) == '0':
+                    sel = etree.HTML(trainInfo['msg'])
+                    left_tickets = sel.xpath('//div[@class="ticketPrice"]/ul/li/strong[@id="leftSeatNum"]/text()')
+                    if left_tickets:
+                        left_tickets = int(left_tickets[0])
+            except:
+                left_tickets = 0
+            now = datetime.now()
+            self.modify(left_tickets=left_tickets, update_datetime=now)
+
 
 class Order(db.Document):
     """

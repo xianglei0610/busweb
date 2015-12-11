@@ -114,7 +114,7 @@ def migrate_from_crawl(site):
                 "half_price": d["half_price"],
                 "crawl_datetime": d["create_datetime"],
                 "fee": d["service_price"],
-                "left_ticket": d["amount"],
+                "left_tickets": d["amount"],
                 "extra_info": {"sign_id": d["sign_id"], "stop_name_short": d["stop_name"]},
             }
             try:
@@ -126,7 +126,7 @@ def migrate_from_crawl(site):
             print line_obj.line_id
 
     def migrate_gx84100():
-        for d in crawl_db.line_gx84100.find({"departure_time": {"$gte": datetime.now()}}):
+        for d in crawl_db.line_gx84100.find({"departure_time": {"$gte": str(datetime.now())}}):
             crawl_source = "gx84100"
 
             # migrate Starting
@@ -199,7 +199,7 @@ def migrate_from_crawl(site):
                 "half_price": 0,
                 "crawl_datetime": d["crawl_time"],
                 "fee": 0,
-                "left_ticket": 50 if d["flag"] else 0,
+                "left_tickets": 50 if d["flag"] else 0,
                 "extra_info": {"flag": d["flag"]},
             }
             try:
