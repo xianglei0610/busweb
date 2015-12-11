@@ -46,19 +46,43 @@
       {%elif order.status == 0%}
       	{% if order.lock_info.get('expire_time','')  %}
       		订单支付超时
-      	{%endif %}	
+      	{%endif %}
       {%endif %}
       </td>
       <td class="center">{{order.ticket_amount}}</td>
       <td class="center">{{order.order_price}}</td>
 			<td class="">
-        <a class="btn btn-primary btn-xs" href="orders/{{order.order_no}}/pay" target="_blank"><i class="glyphicon glyphicon-pencil"></i> 支付</a>
+        <a class="btn btn-primary btn-xs" href="#" onclick="pay({{order.order_no}}, '')"><i class="glyphicon glyphicon-pencil"></i> 支付</a>
 				<a class="btn btn-danger btn-xs" href="orders/{{order.order_no}}/refresh"><i class="glyphicon glyphicon-refresh"></i> 刷新</a>
+        <div id="id_code">
+        </div>
 			</td>
 		</tr>
 	{%endfor%}
 </tbody>
 </table>
+
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="exampleModalLabel">New message</h4>
+      </div>
+      <div class="modal-body">
+          <img src="#" alt="validCode"/ id="img-code">
+          <div class="form-group">
+            <label for="recipient-name" class="control-label">输入验证码:</label>
+            <input type="text" class="form-control" id="id-code">
+            <input type="hidden" class="form-control" id="id-order">
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="pay2()">确认</button>
+      </div>
+    </div>
+  </div>
+</div>
 {%endblock%}
 
 
@@ -72,6 +96,36 @@ function search(){
   }
   window.location.href = url;
 };
+
+function pay2(){
+ $('#myModal').modal('hide');
+  pay($("#id-order").val(), $("#id-code").val());
+}
+
+function pay(order_no, code){
+  var query=""
+  if(code){
+      query = "?valid_code="+code
+  }
+  var base_url= "/orders/"+order_no+"/pay";
+  $.ajax({
+      type: "get",
+      url: "/orders/"+order_no+"/pay"+query,
+      dataType: "json",
+      success: function (data) {
+        if(data.status=="OK"){
+          document.write(data.data);
+        }else if(data.status=="code_error"){
+          $("#img-code").attr("src", data.data)
+          $("#id-order").val(order_no);
+          $('#myModal').modal('show');
+        }else{
+          alert(data.msg);
+        }
+      }, error: function (XMLHttpRequest, textStatus, errorThrown) { alert(errorThrown);
+      }
+  });
+}
 </script>
  {%endblock%}
 

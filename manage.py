@@ -2,7 +2,9 @@
 # -*- coding:utf-8 *-*
 import os
 import pymongo
+import multiprocessing
 
+from datetime import datetime
 from app import setup_app, db
 from app.utils import md5
 from flask.ext.script import Manager, Shell
@@ -33,7 +35,7 @@ def migrate_from_crawl(site):
     crawl_db = crawl_mongo[settings["db"]]
 
     def migrate_scqcp():
-        for d in crawl_db.scqcp_line.find({}):
+        for d in crawl_db.scqcp_line.find({"drv_date_time": {"$gte": datetime.now()}}):
             crawl_source = "scqcp"
             # migrate Starting
             city_id = str(d["city_id"])
@@ -88,7 +90,8 @@ def migrate_from_crawl(site):
 
             # migrate Line
             line_id = str(d["line_id"])
-            drv_date, drv_time = d["drv_date_time"].split(" ")
+            drv_date = d["drv_date_time"].strftime("%Y-%m-%d")
+            drv_time = d["drv_date_time"].strftime("%H:%M")
             attrs = {
                 "line_id": line_id,
                 "crawl_source": crawl_source,
@@ -112,6 +115,7 @@ def migrate_from_crawl(site):
             except Line.DoesNotExist:
                 line_obj = Line(**attrs)
                 line_obj.save()
+            print line_obj.line_id
 
     def migrate_gx84100():
         for d in crawl_db.line_gx84100.find({}):

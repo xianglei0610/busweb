@@ -4,15 +4,14 @@ import urllib2
 import urllib
 import requests
 import json
-import random
 import pytesseract
 import cStringIO
 
+from app.constants import *
 from PIL import Image
 from lxml import etree
 from mongoengine import Q
-from app.constants import STATUS_MSG, SOURCE_MSG, BROWSER_USER_AGENT, SCQCP_ACCOUNTS
-from flask import render_template, request, redirect, url_for, current_app, make_response
+from flask import render_template, request, redirect, url_for, current_app, jsonify, session
 from flask.views import MethodView
 from app.admin import admin
 from app.models import Order, Line, Starting, Destination
@@ -28,7 +27,7 @@ def parse_page_data(qs):
     range_max = min(range_min+10, pageNum)
 
     query_dict = {}
-    for k in  request.args.keys():
+    for k in request.args.keys():
         if k == "page":
             continue
         query_dict[k] = request.args.get(k)
@@ -84,7 +83,7 @@ def line_list():
         qs_dest = Destination.objects(Q(city_name__startswith=dest_name) |
                                       Q(station_name__startswith=dest_name))
         query.update(destination__in=qs_dest)
-    queryset = Line.objects(**query)
+    queryset = Line.objects(**query).order_by("-crawl_datetime")
     return render_template('admin/line_list.html',
                            page=parse_page_data(queryset),
                            starting=starting_name,
@@ -93,29 +92,50 @@ def line_list():
                            )
 
 
+@admin.route('/orders/<order_no>/login_code', methods=['GET'])
+def login_code(order_no):
+    order = Order.objects.get(order_no=order_no)
+    if order.crawl_source == "scqcp":
+        code_url = session.get("pay_valid_url")
+        headers = session.get("pay_headers")
+        cookies = session.get("pay_cookie")
+        r = requests.get(code_url, headers=headers, cookies=cookies)
+        return r.content
+
+
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
+    order.check_expire()
+    if order.status != STATUS_LOCK:
+        return jsonify({"status": "status_error", "msg": "不是支付的时候", "data": ""})
+    code = request.args.get("valid_code", "")
     if order.crawl_source == "scqcp":
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
         }
         pay_url = order.pay_url
 
-        login_form_url = "http://scqcp.com/login/index.html"
-        r = requests.get(login_form_url, headers=headers)
-        sel = etree.HTML(r.content)
-        cookies = dict(r.cookies)
-        code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
-        token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+        # 验证码处理
+        if code:
+            code_url = session.get("pay_valid_url", "")
+            headers = session.get("pay_headers", "")
+            cookies = session.get("pay_cookie", "")
+            token = session.get("pay_token", "")
+        else:
+            login_form_url = "http://scqcp.com/login/index.html"
+            r = requests.get(login_form_url, headers=headers)
+            sel = etree.HTML(r.content)
+            cookies = dict(r.cookies)
+            code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+            token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+            r = requests.get(code_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            tmpIm = cStringIO.StringIO(r.content)
+            im = Image.open(tmpIm)
+            code = pytesseract.image_to_string(im)
 
-        r = requests.get(code_url, headers=headers, cookies=cookies)
-        cookies.update(dict(r.cookies))
-        tmpIm = cStringIO.StringIO(r.content)
-        im = Image.open(tmpIm)
-        code = pytesseract.image_to_string(im)
         passwd, _ = SCQCP_ACCOUNTS[order.source_account]
-
         data = {
             "uname": order.source_account,
             "passwd": passwd,
@@ -125,9 +145,13 @@ def order_pay(order_no):
         r = requests.post("http://scqcp.com/login/check.json", data=data, headers=headers, cookies=cookies)
         cookies.update(dict(r.cookies))
         ret = r.json()
-        if ret["success"] == True:
+        if ret["success"]:
             print('登录成功')
             r = requests.get(pay_url, headers=headers, cookies=cookies)
+            r_url = urllib2.urlparse.urlparse(r.url)
+            if r_url.path in ["/error.html", "/error.htm"]:
+                order.update(status=STATUS_TIMEOUT)
+                return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
             sel = etree.HTML(r.content)
             data = dict(
                 payid=sel.xpath("//input[@name='payid']/@value")[0],
@@ -140,11 +164,15 @@ def order_pay(order_no):
 
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             r = requests.post(info_url, data=data, headers=headers, cookies=cookies)
-            return r.content
+            return jsonify({"status": "OK", "msg": "登陆成功", "data": r.content})
 
         elif ret["msg"] == "验证码不正确":
-            print('登录失败, 验证码错误.')
-            print r.status_code, r.content, 111111111111
+            print("验证码错误")
+            session["pay_cookie"] = cookies
+            session["pay_headers"] = headers
+            session["pay_valid_url"] = code_url
+            session["pay_token"] = token
+            return jsonify({"status": "code_error", "msg": "验证码错误", "data": "/orders/%s/login_code" % order_no})
     elif order.crawl_source == "gx84100":
         pay_url = order.pay_url
         headers = {
@@ -259,5 +287,12 @@ class SubmitOrder(MethodView):
         print "submit order", res
         return redirect(url_for('admin.order_list'))
 
+
+@admin.route('/inputCode', methods=['GET'])
+def input_code():
+    code_url = request.args.get("code_url")
+    return """
+        <img src="%s" alt="code" />
+    """ % code_url
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))

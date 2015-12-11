@@ -7,6 +7,7 @@ import requests
 import urllib
 import urllib2
 import re
+import time
 
 from app import db
 from app.async_tasks import async_issued_callback
@@ -201,6 +202,15 @@ class Order(db.Document):
             "-create_date_time",
             ],
     }
+
+    def check_expire(self):
+        if self.status == STATUS_TIMEOUT:
+            return
+        if "expire_time" not in self.lock_info:
+            return
+        #dt = datetime.strptime(self.lock_info["expire_time"], "%Y-%m-%d %H:%M:%S")
+        #if datetime.now()>dt:
+        #    self.update(status=STATUS_TIMEOUT)
 
     def refresh_status(self):
         """
