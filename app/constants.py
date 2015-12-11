@@ -15,9 +15,12 @@ GX84100_DOMAIN = "http://wap.84100.com"
 # 广西84100登陆账号
 GX84100_ACCOUNTS = {
     # telephone: {password, opendid)
-    "13267109876": ("123456", 'o82gDszqOaOk1_tdc54xQo4oGaLQ'),
+    "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
+    "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
 }
 
+
+ADMINS = ['xiangleilei@12308.com','luojunping@12308.com']
 
 BROWSER_USER_AGENT = [
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",

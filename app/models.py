@@ -284,6 +284,7 @@ class Order(db.Document):
             if not rebot.is_active:
                 return False
             tickets = rebot.request_order(self)
+            print tickets
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
                 self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
@@ -719,7 +720,7 @@ class Gx84100Rebot(db.Document):
             "terminalType": 3,
             #"passengerList": '[{idType:"1",idNo:"429006199012280042",name:"李梦蝶1",mobile:"",ticketType:"全票"},{idType:"1",idNo:"429006198906100034",name:"向磊磊1",mobile:"",ticketType:"全票"}]',
             "passengerList":json.dumps(passengerList),
-            "openId": self.open_id or 1,
+            "openId": '4YTEb2DZhDPtoDlHyvVry25srLmN1448590410584' or 1,
             "isWeixin": 1,
         }
         ret = self.http_post(uri, data)
@@ -787,7 +788,7 @@ class Gx84100Rebot(db.Document):
         #query_order_list_url ='http://wap.84100.com/wap/userCenter/orderDetails.do?orderNo=151201174710046683&openId=12122&isWeixin=0'
         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
-
+        print url
         r = requests.get(url, cookies=_cookies)
         sel = etree.HTML(r.content)
         orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
