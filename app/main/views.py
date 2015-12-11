@@ -296,6 +296,7 @@ def query_order_detail():
         }
     """
     try:
+        data = {}
         post = json.loads(request.get_data())
         sys_order_no = post["sys_order_no"]
     except:
@@ -311,7 +312,7 @@ def query_order_detail():
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
-            "sys_order_no": order.sys_order_no,
+            "sys_order_no": order.order_no,
             "status": order.status,
             "contacter_info": order.get_contact_info(),
             "rider_info": order.get_rider_info(),
@@ -330,7 +331,7 @@ def query_order_detail():
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
-            "sys_order_no": order.sys_order_no,
+            "sys_order_no": order.order_no,
             "status": order.status,
             "contacter_info": {},
             "rider_info": [],
@@ -355,6 +356,7 @@ def refresh_order():
     }
     """
     try:
+        data = {}
         post = json.loads(request.get_data())
         sys_order_no = post["sys_order_no"]
     except:
