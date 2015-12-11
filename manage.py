@@ -99,6 +99,7 @@ def migrate_from_crawl(site):
                 "destination": dest_obj,
                 "drv_date": drv_date,
                 "drv_time": drv_time,
+                "drv_datetime": d["drv_datetime"],
                 "distance": str(d["mile"]),
                 "vehicle_type": d["bus_type_name"],
                 "seat_type": "",
@@ -107,7 +108,8 @@ def migrate_from_crawl(site):
                 "half_price": d["half_price"],
                 "crawl_datetime": d["create_datetime"],
                 "fee": d["service_price"],
-                "extra_info": {"left_ticket": d["amount"], "sign_id": d["sign_id"], "stop_name_short": d["stop_name"]},
+                "left_ticket": d["amount"],
+                "extra_info": {"sign_id": d["sign_id"], "stop_name_short": d["stop_name"]},
             }
             try:
                 line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)
@@ -172,7 +174,7 @@ def migrate_from_crawl(site):
             except Destination.DoesNotExist:
                 dest_obj = Destination(**dest_attrs)
                 dest_obj.save()
- 
+
             # migrate Line
             line_id = str(d["line_id"])
             drv_date, drv_time = d["departure_time"].split(" ")
@@ -183,6 +185,7 @@ def migrate_from_crawl(site):
                 "destination": dest_obj,
                 "drv_date": drv_date,
                 "drv_time": drv_time,
+                "drv_datetime": datetime.strptime(d["departure_time"], "%Y-%m-%d %H:%M"),
                 "distance": str(d["distance"]),
                 "vehicle_type": '',
                 "seat_type": "",
@@ -191,6 +194,7 @@ def migrate_from_crawl(site):
                 "half_price": 0,
                 "crawl_datetime": d["crawl_time"],
                 "fee": 0,
+                "left_ticket": 50 if d["flag"] else 0,
                 "extra_info": {"flag": d["flag"]},
             }
             print attrs

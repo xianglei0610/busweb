@@ -34,7 +34,7 @@ def async_lock_ticket(order):
         data = []
         if ret["status"] == 1:
             pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
-            order.update(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone, pay_url=pay_url)
+            order.modify(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone, pay_url=pay_url)
             total_price = 0
             for ticket in ret["ticket_list"]:
                 total_price += ticket["server_price"]
@@ -45,7 +45,7 @@ def async_lock_ticket(order):
             }
             json_str = json.dumps({"code": 1, "message": "OK", "data": data})
         else:
-            order.update(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
+            order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
             json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
 
         if notify_url:
@@ -81,7 +81,7 @@ def async_lock_ticket(order):
             expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)
             expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
             ret['expire_time'] = expire_time
-            order.update(status=STATUS_LOCK, lock_info=ret, pay_url=ret['redirectPage'],raw_order_no=ret['orderNo'], source_account=rebot.telephone)
+            order.modify(status=STATUS_LOCK, lock_info=ret, pay_url=ret['redirectPage'],raw_order_no=ret['orderNo'], source_account=rebot.telephone)
 
             data = {
                 "expire_time": expire_time,
@@ -89,7 +89,7 @@ def async_lock_ticket(order):
             }
             json_str = json.dumps({"code": 1, "message": "OK", "data": data})
         else:
-            order.update(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
+            order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
             json_str = json.dumps({"code": 0, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
 
         if notify_url:
