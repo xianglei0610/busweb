@@ -185,6 +185,7 @@ class Line(db.Document):
             else:
                 self.modify(left_tickets=0, update_datetime=now)
 
+
 class Order(db.Document):
     """
     一个订单只对应一条线路
