@@ -124,7 +124,7 @@ def migrate_from_crawl(site):
             print line_obj.line_id
 
     def migrate_gx84100():
-        for d in crawl_db.line_gx84100.find({}):
+        for d in crawl_db.line_gx84100.find({"departure_time": {"$gte": datetime.now()}}):
             crawl_source = "gx84100"
 
             # migrate Starting

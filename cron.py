@@ -96,5 +96,8 @@ def main():
     sched.add_cron_job(sync_crawl_to_api, hour=15, minute=8, args=['scqcp'])
     sched.add_cron_job(sync_crawl_to_api, hour=15, minute=9, args=['gx84100'])
     sched.start()
-main()    
+
+
+if __name__ == '__main__':
+    main()
 # bus_crawl('gx84100')
