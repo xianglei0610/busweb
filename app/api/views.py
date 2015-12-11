@@ -7,11 +7,11 @@ from mongoengine import Q
 from app.constants import *
 from flask import request, jsonify
 from app.async_tasks import async_lock_ticket
-from app.main import main
+from app.api import api
 from app.models import Line, Starting, Destination, Order
 
 
-@main.route('/startings/query', methods=['POST'])
+@api.route('/startings/query', methods=['POST'])
 def query_starting():
     """
     出发地查询
@@ -61,7 +61,7 @@ def query_starting():
     return jsonify({"code": RET_OK, "message": "OK", "data": province_data.values()})
 
 
-@main.route('/destinations/query', methods=['POST'])
+@api.route('/destinations/query', methods=['POST'])
 def query_destination():
     """
     Input:
@@ -95,7 +95,7 @@ def query_destination():
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
-@main.route('/lines/query', methods=['POST'])
+@api.route('/lines/query', methods=['POST'])
 def query_line():
     """
     Input:
@@ -168,7 +168,7 @@ def query_line():
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
-@main.route('/orders/submit', methods=['POST'])
+@api.route('/orders/submit', methods=['POST'])
 def submit_order():
     """
     提交订单
@@ -249,7 +249,7 @@ def submit_order():
     return jsonify({"code": 1, "message": "submit order success!", "data": {"sys_order_no": order.order_no}})
 
 
-@main.route('/orders/detail', methods=['POST'])
+@api.route('/orders/detail', methods=['POST'])
 def query_order_detail():
     """
     订单详情接口
@@ -339,7 +339,7 @@ def query_order_detail():
         return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
-@main.route('/orders/refresh', methods=['POST'])
+@api.route('/orders/refresh', methods=['POST'])
 def refresh_order():
     """
     刷新订单状态
