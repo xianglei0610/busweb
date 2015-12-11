@@ -7,11 +7,11 @@ from mongoengine import Q
 from app.constants import *
 from flask import request, jsonify
 from app.async_tasks import async_lock_ticket
-from app.main import main
+from app.api import api
 from app.models import Line, Starting, Destination, Order
 
 
-@main.route('/startings/query', methods=['POST'])
+@api.route('/startings/query', methods=['POST'])
 def query_starting():
     """
     出发地查询
@@ -61,7 +61,7 @@ def query_starting():
     return jsonify({"code": RET_OK, "message": "OK", "data": province_data.values()})
 
 
-@main.route('/destinations/query', methods=['POST'])
+@api.route('/destinations/query', methods=['POST'])
 def query_destination():
     """
     Input:
@@ -95,7 +95,7 @@ def query_destination():
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
-@main.route('/lines/query', methods=['POST'])
+@api.route('/lines/query', methods=['POST'])
 def query_line():
     """
     Input:
@@ -121,7 +121,6 @@ def query_line():
                 "vehicle_type": "普快",             # 车型
                 "full_price": 10,                   # 全价
                 "half_price": 5,                    # 半价
-                "can_order": 1,                     # 是否可预订
                 "fee": "1",                         # 手续费
                 "distance": "11",
             ]
@@ -129,7 +128,7 @@ def query_line():
     """
     try:
         post = json.loads(request.get_data())
-        starting_name = post.get("starting_name" )
+        starting_name = post.get("starting_name")
         dest_name = post.get("destination_name")
         start_date = post.get("start_date")
         if not (starting_name and dest_name and start_date):
@@ -147,28 +146,30 @@ def query_line():
                            destination__in=qs_dest,
                            drv_date=start_date)
 
-    def _extract_data(obj):
-        return {
-            "line_id": obj.line_id,
-            "starting_city": obj.starting.city_name,
-            "starting_station": obj.starting.station_name,
-            "destination_city": obj.destination.city_name,
-            "destination_station": obj.destination.station_name,
-            "bus_num": obj.bus_num,
-            "drv_date": obj.drv_date,
-            "drv_time": obj.drv_time,
-            "vehicle_type": obj.vehicle_type,
-            "full_price": obj.full_price,
-            "half_price": obj.half_price,
-            "can_order": obj.can_order,
-            "fee": obj.fee,
-            "distance": obj.distance,
-        }
-    data = map(lambda obj: _extract_data(obj), qs_line)
+    data = map(lambda obj: obj.get_json(), qs_line)
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
-@main.route('/orders/submit', methods=['POST'])
+@api.route('/lines/query/detail', methods=['POST'])
+def query_line_detail():
+    """
+    查询线路详细信息， 此接口会从源网站拿最新数据。
+    Input:
+        {
+            "line_id": "1111"          # 线路ID
+        }
+
+    """
+    post = json.loads(request.get_data())
+    try:
+        line = Line.objects.get(line_id=post["line_id"])
+    except Line.DoesNotExist:
+        return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
+    line.refresh()
+    return jsonify({"code": RET_OK, "message": "OK", "data": line.get_json()})
+
+
+@api.route('/orders/submit', methods=['POST'])
 def submit_order():
     """
     提交订单
@@ -249,7 +250,7 @@ def submit_order():
     return jsonify({"code": 1, "message": "submit order success!", "data": {"sys_order_no": order.order_no}})
 
 
-@main.route('/orders/detail', methods=['POST'])
+@api.route('/orders/detail', methods=['POST'])
 def query_order_detail():
     """
     订单详情接口
@@ -339,7 +340,7 @@ def query_order_detail():
         return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
-@main.route('/orders/refresh', methods=['POST'])
+@api.route('/orders/refresh', methods=['POST'])
 def refresh_order():
     """
     刷新订单状态
