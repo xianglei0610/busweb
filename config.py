@@ -7,6 +7,12 @@ class Config:
     DEBUG = False
     PRESERVE_CONTEXT_ON_EXCEPTION = False
 
+    MAIL_SERVER = 'smtp.exmail.qq.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = 'xiangleilei@12308.com'
+    MAIL_PASSWORD = 'Lei710920610'
+
     @staticmethod
     def init_app(app):
         pass

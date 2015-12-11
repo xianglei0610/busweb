@@ -26,6 +26,12 @@ def deploy():
 
 
 @manager.command
+def cron():
+    from cron import main
+    main()
+
+
+@manager.command
 def migrate_from_crawl(site):
     from app.models import Line, Starting, Destination
     settings = app.config["CRAWL_MONGODB_SETTINGS"]
@@ -137,7 +143,6 @@ def migrate_from_crawl(site):
                 "is_pre_sell": True,
                 "crawl_source": crawl_source,
             }
-            print starting_attrs
             try:
                 starting_obj = Starting.objects.get(starting_id=starting_id)
                 starting_obj.update(**starting_attrs)
@@ -189,7 +194,6 @@ def migrate_from_crawl(site):
                 "fee": 0,
                 "extra_info": {"flag": d["flag"]},
             }
-            print attrs
             try:
                 line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)
                 line_obj.update(**attrs)
