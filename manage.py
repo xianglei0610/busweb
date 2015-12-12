@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 *-*
 import os
+import sys
 import pymongo
 import multiprocessing
 
@@ -9,6 +10,7 @@ from app import setup_app, db
 from app.utils import md5
 from flask.ext.script import Manager, Shell
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
                 os.getenv('FLASK_SERVER') or 'api')
 manager = Manager(app)
@@ -31,6 +33,27 @@ def deploy():
 def cron():
     from cron import main
     main()
+
+
+@manager.command
+def test(coverage=False):
+    cov = None
+    if coverage:
+        import coverage
+        cov = coverage.coverage(branch=True, include="app/*")
+        cov.start()
+    import unittest
+    tests = unittest.TestLoader().discover("tests")
+    unittest.TextTestRunner(verbosity=2).run(tests)
+    if cov:
+        cov.stop()
+        cov.save()
+        print "coverage test result:"
+        cov.report()
+        covdir = os.path.join(BASE_DIR, 'tmp/covrage')
+        cov.html_report(directory=covdir)
+        print "Html version: file://%s/index.html" % covdir
+        cov.erase()
 
 
 @manager.command

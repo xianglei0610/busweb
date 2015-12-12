@@ -1,6 +1,7 @@
 Flask==0.10.1
 Flask-Mail==0.9.1
 Flask-Script==2.0.5
+Flask-Testing==0.4.2
 Jinja2==2.8
 Pillow==2.3.0
 Scrapy==1.0.3
@@ -13,4 +14,4 @@ flask-mongoengine==0.7.4
 gunicorn==19.4.1
 pypinyin==0.9.4
 apscheduler==2.1.2
-
+coverage==4.0.3
