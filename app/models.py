@@ -709,9 +709,7 @@ class Gx84100Rebot(db.Document):
             if nextPage > pageNo:
                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
                 self.recrawl_func(url, payload)
-      
-            
-                
+
     def request_lock_ticket(self, line, riders, contacter):
         """
         请求锁票
@@ -725,6 +723,18 @@ class Gx84100Rebot(db.Document):
 #         passengerList    [{idType:"1",idNo:"429006199012280042",name:"李梦蝶",mobile:"",ticketType:"全"},{idType:"1",idNo:"429006198906100034",name:"向磊磊",mobile:"",ticketType:"全"}]
 #         openId    7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894
 #         isWeixin    1
+
+        url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
+        data = {
+              "mobile": self.telephone,
+              "password": self.password,
+              "phone":   '',
+              "code":  ''
+        }
+        ua = random.choice(MOBILE_USER_AGENG)
+        headers = {"User-Agent": ua}
+        r = requests.post(url, data=data, headers=headers)
+        _cookies = r.cookies
 
         uri = "/wap/ticketSales/ajaxMakeOrder.do"
         passengerList = []
@@ -745,11 +755,16 @@ class Gx84100Rebot(db.Document):
             "password": '',
             "terminalType": 3,
             #"passengerList": '[{idType:"1",idNo:"429006199012280042",name:"李梦蝶1",mobile:"",ticketType:"全票"},{idType:"1",idNo:"429006198906100034",name:"向磊磊1",mobile:"",ticketType:"全票"}]',
-            "passengerList":json.dumps(passengerList),
-            "openId": '4YTEb2DZhDPtoDlHyvVry25srLmN1448590410584' or 1,
+            "passengerList": json.dumps(passengerList),
+            "openId": self.open_id or 1,
             "isWeixin": 1,
         }
-        ret = self.http_post(uri, data)
+        url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+        print url
+        ret = requests.post(url, data=data, cookies=_cookies)
+        ret=ret.json()
+        print ret
+#         ret = self.http_post(uri, data)
         pay_url = ret.get('redirectPage', '')
         returnMsg = ret.get('returnMsg', '')
         if pay_url:
