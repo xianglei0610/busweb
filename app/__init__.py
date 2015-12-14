@@ -7,7 +7,8 @@ from flask import Flask
 from flask.ext.mail import Mail
 from flask.ext.mongoengine import MongoEngine
 from config import config
-from celery import Celery
+from celery import Celery, platforms
+platforms.C_FORCE_ROOT = True
 
 mail = Mail()
 db = MongoEngine()

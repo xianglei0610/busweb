@@ -119,8 +119,7 @@ def migrate_from_crawl(site):
 
             # migrate Line
             line_id = str(d["line_id"])
-            drv_date = d["drv_date_time"].strftime("%Y-%m-%d")
-            drv_time = d["drv_date_time"].strftime("%H:%M")
+            drv_date, drv_time = d["drv_date_time"].split(" ")
             attrs = {
                 "line_id": line_id,
                 "crawl_source": crawl_source,
@@ -128,7 +127,7 @@ def migrate_from_crawl(site):
                 "destination": dest_obj,
                 "drv_date": drv_date,
                 "drv_time": drv_time,
-                "drv_datetime": d["drv_datetime"],
+                "drv_datetime": datetime.strptime(d["drv_date_time"], "%Y-%m-%d %H:%M"),
                 "distance": str(d["mile"]),
                 "vehicle_type": d["bus_type_name"],
                 "seat_type": "",

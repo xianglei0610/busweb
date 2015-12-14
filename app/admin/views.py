@@ -7,6 +7,7 @@ import json
 import pytesseract
 import cStringIO
 
+from datetime import datetime as dte
 from app.constants import *
 from PIL import Image
 from lxml import etree
@@ -72,7 +73,7 @@ def line_list():
     starting_name = request.args.get("starting", "")
     dest_name = request.args.get("destination", "")
     queryset = Line.objects
-    query = {}
+    query = {"drv_datetime__gt": dte.now()}
     if lineid:
         query.update(line_id=lineid)
     if starting_name:

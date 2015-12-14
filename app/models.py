@@ -133,6 +133,7 @@ class Line(db.Document):
             "crawl_source",
             "drv_date",
             "drv_time",
+            "drv_datetime",
             "crawl_datetime",
             ],
     }
