@@ -1,14 +1,17 @@
 # -*- coding:utf-8 -*-
+"""
+异步锁票任务
+"""
 import urllib2
 import json
 import datetime
 
 from app.constants import *
-from app.decorators import async
+from app import celery
 
 
-@async
-def async_lock_ticket(order):
+@celery.task
+def lock_ticket(order):
     """
     请求源网站锁票 + 锁票成功回调
 
@@ -96,8 +99,9 @@ def async_lock_ticket(order):
             response = urllib2.urlopen(notify_url, json_str, timeout=10)
             print response, "async_lock_ticket"
 
-@async
-def async_issued_callback(order):
+
+@celery.task
+def issued_callback(order):
     """
     出票回调
 

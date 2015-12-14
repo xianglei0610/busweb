@@ -64,7 +64,7 @@ def migrate_from_crawl(site):
     crawl_db = crawl_mongo[settings["db"]]
 
     def migrate_scqcp():
-        for d in crawl_db.scqcp_line.find({"drv_date_time": {"$gte": datetime.now()}}):
+        for d in crawl_db.scqcp_line.find({"drv_date_time": {"$gte": datetime.now().strftime("%Y-%m-%d %H:%M")}}):
             crawl_source = "scqcp"
             # migrate Starting
             city_id = str(d["city_id"])

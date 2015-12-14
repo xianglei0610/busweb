@@ -7,9 +7,24 @@ from flask import Flask
 from flask.ext.mail import Mail
 from flask.ext.mongoengine import MongoEngine
 from config import config
+from celery import Celery
 
 mail = Mail()
 db = MongoEngine()
+celery = Celery(__name__, broker="redis://localhost:6379/10")
+
+
+def init_celery(app):
+    TaskBase = celery.Task
+    celery.conf.update(app.config)
+
+    class ContextTask(TaskBase):
+        abstract = True
+
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return TaskBase.__call__(self, *args, **kwargs)
+    celery.Task = ContextTask
 
 
 def setup_app(config_name, server_type="api"):
@@ -30,6 +45,7 @@ def setup_api_app(config_name):
 
     mail.init_app(app)
     db.init_app(app)
+    init_celery(app)
 
     from api import api as main_blueprint
     app.register_blueprint(main_blueprint)
@@ -47,6 +63,7 @@ def setup_admin_app(config_name):
 
     mail.init_app(app)
     db.init_app(app)
+    init_celery(app)
 
     from admin import admin as admin_blueprint
     app.register_blueprint(admin_blueprint)

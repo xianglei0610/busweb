@@ -15,3 +15,4 @@ gunicorn==19.4.1
 pypinyin==0.9.4
 apscheduler==2.1.2
 coverage==4.0.3
+celery==3.1.19

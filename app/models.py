@@ -7,11 +7,10 @@ import requests
 import urllib
 import urllib2
 import re
-import time
 
-from app import db
-from app.async_tasks import async_issued_callback
 from app.constants import *
+from app import db
+from tasks import issued_callback
 from app.constants import SCQCP_ACCOUNTS, GX84100_ACCOUNTS
 from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app.utils import md5
@@ -302,6 +301,7 @@ class Order(db.Document):
                     code_list.append(tickets[tid]["code"])
                     msg_list.append("")
                 self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                issued_callback.delay(order)
             elif status == "give_back_ticket":
                 self.modify(status=STATUS_GIVE_BACK)
 
@@ -313,7 +313,7 @@ class Order(db.Document):
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
                 self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
-                async_issued_callback(order)
+                issued_callback.delay(order)
             elif tickets['status'] == '5':
                 self.modify(status=STATUS_FAIL)
         return True
@@ -480,6 +480,7 @@ class ScqcpRebot(Rebot):
             if tele in has_checked:
                 continue
             bot = cls(is_active=False,
+                      is_locked=False,
                       telephone=tele,
                       password=pwd,
                       is_encrypt=is_encrypt)
@@ -553,7 +554,6 @@ class Gx84100Rebot(Rebot):
         返回OK表示登陆成功
         """
         ua = random.choice(MOBILE_USER_AGENG)
-        device = "android" if "android" in ua else "ios"
 
         # 登陆
         uri = "/wap/login/ajaxLogin.do"
@@ -576,7 +576,6 @@ class Gx84100Rebot(Rebot):
     @classmethod
     def login_all(cls):
         """登陆所有预设账号"""
-        now = datetime.now()
         current_app.logger.info(">>>> start to login wap.84100.com:")
         valid_cnt = 0
         has_checked = {}
@@ -588,18 +587,19 @@ class Gx84100Rebot(Rebot):
             pwd, openid = GX84100_ACCOUNTS[bot.telephone]
             bot.modify(password=pwd, open_id=openid)
 
-            if bot.relogin() == "OK":
+            if bot.login() == "OK":
                 valid_cnt += 1
 
         for tele, (pwd, openid) in GX84100_ACCOUNTS.items():
             if tele in has_checked:
                 continue
             bot = cls(is_active=False,
+                      is_locked=False,
                       telephone=tele,
                       password=pwd,
                       open_id=openid)
             bot .save()
-            if bot.relogin() == "OK":
+            if bot.login() == "OK":
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 

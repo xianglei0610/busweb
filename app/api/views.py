@@ -6,7 +6,7 @@ from mongoengine import Q
 
 from app.constants import *
 from flask import request, jsonify
-from app.async_tasks import async_lock_ticket
+from tasks import lock_ticket
 from app.api import api
 from app.models import Line, Starting, Destination, Order
 
@@ -246,8 +246,10 @@ def submit_order():
     order.issued_return_url = issued_return_url
     order.save()
 
-    async_lock_ticket(order)
-    return jsonify({"code": 1, "message": "submit order success!", "data": {"sys_order_no": order.order_no}})
+    lock_ticket.delay(order)
+    return jsonify({"code": RET_OK,
+                    "message": "submit order success!",
+                    "data": {"sys_order_no": order.order_no}})
 
 
 @api.route('/orders/detail', methods=['POST'])
