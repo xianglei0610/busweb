@@ -22,7 +22,7 @@ def lock_ticket(order):
     notify_url = order.locked_return_url
     if order.crawl_source == "scqcp":
         from app.models import ScqcpRebot
-        rebot = ScqcpRebot.get_and_lock()
+        from tasks import check_order_expire
         line = dict(
             carry_sta_id=order.line.starting.station_id,
             stop_name=order.line.extra_info["stop_name_short"],
@@ -31,29 +31,30 @@ def lock_ticket(order):
         )
         contacter = order.contact_info["telephone"]
         riders = order.riders
-        ret = rebot.request_lock_ticket(line, riders, contacter)
 
-        data = []
-        if ret["status"] == 1:
-            pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
-            order.modify(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone, pay_url=pay_url)
-            total_price = 0
-            for ticket in ret["ticket_list"]:
-                total_price += ticket["server_price"]
-                total_price += ticket["real_price"]
-            data = {
-                "expire_time": ret["expire_time"],
-                "total_price": total_price,
-            }
-            json_str = json.dumps({"code": 1, "message": "OK", "data": data})
-        else:
-            rebot.free()
-            order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
-            json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
-
-        if notify_url:
-            response = urllib2.urlopen(notify_url, json_str, timeout=10)
-            print response, "async_lock_ticket"
+        with ScqcpRebot.get_and_lock() as rebot:
+            ret = rebot.request_lock_ticket(line, riders, contacter)
+            data = []
+            if ret["status"] == 1:
+                pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
+                order.modify(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone, pay_url=pay_url)
+                total_price = 0
+                for ticket in ret["ticket_list"]:
+                    total_price += ticket["server_price"]
+                    total_price += ticket["real_price"]
+                data = {
+                    "expire_time": ret["expire_time"],
+                    "total_price": total_price,
+                }
+                json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
+            else:
+                rebot.remove_doing_order(order)
+                order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
+                json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
+            if notify_url:
+                check_order_expire.apply_async((order.order_no,), countdown=8*60+5)  # 8分钟后执行
+                response = urllib2.urlopen(notify_url, json_str, timeout=10)
+                print response, "async_lock_ticket"
 
     elif order.crawl_source == "gx84100":
         from app.models import Gx84100Rebot,Line

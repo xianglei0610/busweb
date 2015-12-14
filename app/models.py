@@ -1,13 +1,14 @@
 # -*- coding:utf-8 -*-
-from datetime import datetime
-from flask import json, current_app
-from lxml import etree
 import random
 import requests
 import urllib
 import urllib2
 import re
 
+from datetime import datetime
+from flask import json, current_app
+from lxml import etree
+from contextlib import contextmanager
 from app.constants import *
 from app import db
 from tasks import issued_callback
@@ -367,9 +368,10 @@ class Rebot(db.Document):
 
     telephone = db.StringField(required=True, unique=True)
     password = db.StringField()
-    is_active = db.BooleanField(default=True)  # 是否有效
-    is_locked = db.BooleanField(default=False) # 是否被锁
-    last_login_time = db.DateTimeField(default=datetime.now) # 最近一次登录时间
+    is_active = db.BooleanField(default=True)   # 是否有效
+    is_locked = db.BooleanField(default=False)  # 是否被锁
+    last_login_time = db.DateTimeField(default=datetime.now)  # 最近一次登录时间
+    doing_orders = db.DictField()   # 正在处理的订单
 
     meta = {
         "abstract": True,
@@ -384,13 +386,39 @@ class Rebot(db.Document):
         rd = random.randint(0, size-1)
         return qs[rd]
 
+    @contextmanager
     @classmethod
-    def get_and_lock(cls):
+    def get_and_lock(cls, order):
         obj = cls.get_one()
-        if not obj:
+        if obj:
+            obj.add_doing_order(order)
+        try:
+            yield obj
+        except Exception, e:
+            if obj:
+                obj.remove_doing_order(order)
+            raise e
+
+    def add_doing_order(self, order):
+        d = self.doing_orders[order.order_no]
+        if order.order_no in d:
             return
-        obj.lock()
-        return obj
+        d[order.order_no] = 1
+        self.modify(doing_orders=d)
+        self.on_add_doing_order(order)
+
+    def remove_doing_order(self, order):
+        d = self.doing_orders[order.order_no]
+        if order.order_no in d:
+            del d[order.order_no]
+            self.modify(doing_orders=d)
+            self.on_remove_doing_order(order)
+
+    def on_add_doing_order(self, order):
+        pass
+
+    def on_remove_doing_order(self, order):
+        pass
 
     def valid(self):
         """
@@ -404,18 +432,6 @@ class Rebot(db.Document):
         """
         raise Exception("Not Implemented")
 
-    def lock(self):
-        """
-        锁住账号，使之不被使用
-        """
-        self.modify(is_locked=True)
-
-    def free(self):
-        """
-        释放锁
-        """
-        self.modify(is_locked=False)
-
 
 class ScqcpRebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
@@ -426,6 +442,12 @@ class ScqcpRebot(Rebot):
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
     }
+
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
 
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
@@ -550,6 +572,12 @@ class Gx84100Rebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
     }
 
+    def on_add_doing_order(self, order):
+        pass
+
+    def on_remove_doing_order(self, order):
+        pass
+
     def login(self):
         """
         返回OK表示登陆成功
@@ -565,7 +593,7 @@ class Gx84100Rebot(Rebot):
             "code": ''
         }
         ret = self.http_post(uri, data, user_agent=ua)
-        if ret['returnCode']!= "0000":
+        if ret['returnCode'] != "0000":
             # 登陆失败
             current_app.logger.error("%s %s login failed! %s", self.telephone, self.password, ret.get("returnMsg", ""))
             self.modify(is_active=False)
@@ -709,6 +737,18 @@ class Gx84100Rebot(Rebot):
         isWeixin    1
         """
 
+        url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
+        data = {
+              "mobile": self.telephone,
+              "password": self.password,
+              "phone":   '',
+              "code":  ''
+        }
+        ua = random.choice(MOBILE_USER_AGENG)
+        headers = {"User-Agent": ua}
+        r = requests.post(url, data=data, headers=headers)
+        _cookies = r.cookies
+
         uri = "/wap/ticketSales/ajaxMakeOrder.do"
         passengerList = []
         for r in riders:
@@ -727,11 +767,17 @@ class Gx84100Rebot(Rebot):
             "mobile": contacter['telephone'],
             "password": '',
             "terminalType": 3,
-            "passengerList":json.dumps(passengerList),
-            "openId": '4YTEb2DZhDPtoDlHyvVry25srLmN1448590410584' or 1,
+            #"passengerList": '[{idType:"1",idNo:"429006199012280042",name:"李梦蝶1",mobile:"",ticketType:"全票"},{idType:"1",idNo:"429006198906100034",name:"向磊磊1",mobile:"",ticketType:"全票"}]',
+            "passengerList": json.dumps(passengerList),
+            "openId": self.open_id or 1,
             "isWeixin": 1,
         }
-        ret = self.http_post(uri, data)
+        url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+        print url
+        ret = requests.post(url, data=data, cookies=_cookies)
+        ret=ret.json()
+        print ret
+#         ret = self.http_post(uri, data)
         pay_url = ret.get('redirectPage', '')
         returnMsg = ret.get('returnMsg', '')
         if pay_url:
@@ -750,39 +796,12 @@ class Gx84100Rebot(Rebot):
         return ret
 
     def request_order(self, order):
-        """{u'status': u'4', u'updateTime': u'2015-12-01 15:41:45',
-         u'totalPrice': u'8', u'suffix': u'1512', u'terminalType': u'3',
-          u'isMessage': u'1', u'ticketFrom': u'1007', u'takeTicketTime': None, 
-          u'lineName': None, u'payResult': u'\u652f\u4ed8\u6210\u529f', u'sendStationName': u'\u6842\u9633\u8f66\u7ad9',
-           u'endPortId': u'1052', u'billNumber': u'1', u'sendDate': u'2015-12-05', u'isLockTicket': u'1',
-            u'browserType': None, u'busType': u'\u4e2d\u578b\u4e2d\u7ea7', 
-            u'detailList': [{u'discountPrice': u'800', u'suffix': u'1512', u'insurNumber': u'0', u'ticketOperFee': None, 
-                             u'ticketStationFee': None, u'id': u'3365', u'insurStationFee': None, u'seatNo': u'1', 
-                             u'orderId': u'151201152338046120', u'orderChangeTicket': None, u'insurCompFee': None, 
-                             u'insurId': None, u'status': u'0', u'payFee': None, u'price': u'8', u'discount': u'100', 
-                     u'insurFee': None, u'isRefund': None, u'insurCode': None, u'remarks': None, u'insurOperFee': None,
-                      u'idcardNo': u'429006198906100034', u'idcardType': u'1', u'name': u'\u5411\u78ca\u78ca', 
-                      u'refundFee': None, u'mobile': u'', u'ticketNo': None, u'idCard': None, u'chargeFee': u'0', 
-                      u'isTakeTicket': u'0', u'seatStr': None, u'ticketType': u'\u5168'}],
-           u'startId': u'43100003', u'suborderId': u'15120100000000304675', 
-           u'ticketPassword': u'', u'deliverAddress': None, u'settleAmount': u'8', 
-           u'orderId': u'151201152338046120', u'orderTime': u'2015-12-01 15:23:39', u'isDeliver': u'0',
-            u'substationId': u'1501', u'payType': u'4', u'stationId': u'4310000105',
-             u'startName': u'\u6842\u9633\u53bf', u'sendTime': u'15:00', u'remarks': None, 
-             u'payTime': u'2015-12-01 15:41:43', u'lineId': None, u'endPortName': u'\u6556\u6cc9',
-              u'paySerialNo': u'1020151201510419', u'name': u'\u5411\u78ca\u78ca', u'usePoint': u'0',
-               u'mobile': u'13267109876', u'ipAddress': None, u'delFlag': u'0', u'isAddPoint': u'1', 
-               u'isAllowRefund': u'0', u'isPick': u'0', u'paySeconds': u'0', u'ticketNo': None, 
-               u'payNo': u'56c79f81f34d46adab012be74c850944', u'discountAmount': u'0', u'shiftNumber': u'15010014',
-                u'customerId': u'558260296', u'pickAddress': None}"""
-
         url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
-
         data = {
-              "mobile": self.telephone,
-              "password": self.password,
-              "phone":   '',
-              "code":  ''
+            "mobile": self.telephone,
+            "password": self.password,
+            "phone":   '',
+            "code":  ''
         }
         ua = random.choice(MOBILE_USER_AGENG)
 
@@ -791,7 +810,6 @@ class Gx84100Rebot(Rebot):
 
         _cookies = r.cookies
 
-        #query_order_list_url ='http://wap.84100.com/wap/userCenter/orderDetails.do?orderNo=151201174710046683&openId=12122&isWeixin=0'
         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
         r = requests.get(url, cookies=_cookies)

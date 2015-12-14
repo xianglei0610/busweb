@@ -206,7 +206,7 @@ def order_pay(order_no):
 
         info_url = "https://pay.84100.com/payment/page/alipayapi.jsp"
         r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
-        return r.content
+        return jsonify({"status": "OK", "msg": "登陆成功", "data": r.content})
 
     return redirect(url_for('admin.order_list'))
 
