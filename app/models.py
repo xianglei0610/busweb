@@ -171,7 +171,7 @@ class Line(db.Document):
                 sign_id=self.extra_info["sign_id"],
             )
             ua = random.choice(MOBILE_USER_AGENG)
-            ret = ScqcpRebot.choose_one().http_post("/scqcp/api/v2/ticket/query_plan_info", params, user_agent=ua)
+            ret = ScqcpRebot.get_one().http_post("/scqcp/api/v2/ticket/query_plan_info", params, user_agent=ua)
             now = datetime.now()
             if ret["status"] == 1:
                 if ret["plan_info"]:
@@ -184,6 +184,31 @@ class Line(db.Document):
                     self.modify(left_tickets=0, update_datetime=now)
             else:
                 self.modify(left_tickets=0, update_datetime=now)
+        elif self.crawl_source == SOURCE_BUS100:
+            rebot = Gx84100Rebot.objects.first()
+            ret = rebot.recrawl_shiftid(self)
+            line = Line.objects.get(line_id=self.line_id)
+            url = 'http://www.84100.com/getTrainInfo/ajax'
+            payload = {
+                "shiftId": line.bus_num,
+                "startId": line.starting.station_id,
+                "startName": line.starting.station_name,
+                "ttsId": ''
+                     }
+            try:
+                trainInfo = requests.post(url, data=payload)
+                trainInfo = trainInfo.json()
+                left_tickets = 0
+                if str(trainInfo['flag']) == '0':
+                    sel = etree.HTML(trainInfo['msg'])
+                    left_tickets = sel.xpath('//div[@class="ticketPrice"]/ul/li/strong[@id="leftSeatNum"]/text()')
+                    if left_tickets:
+                        left_tickets = int(left_tickets[0])
+            except:
+                left_tickets = 0
+            now = datetime.now()
+            self.modify(left_tickets=left_tickets, update_datetime=now)
+
 
 
 class Order(db.Document):
@@ -285,7 +310,6 @@ class Order(db.Document):
             if not rebot.is_active:
                 return False
             tickets = rebot.request_order(self)
-            print tickets
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
                 self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
@@ -335,53 +359,83 @@ class Order(db.Document):
         return "%s%s%s" % (sdate, micro, srand)
 
 
-class ScqcpRebot(db.Document):
+class Rebot(db.Document):
     """
     机器人: 对被爬网站用户的抽象
     """
+
     telephone = db.StringField(required=True, unique=True)
     password = db.StringField()
+    is_active = db.BooleanField(default=True)  # 是否有效
+    is_locked = db.BooleanField(default=False) # 是否被锁
+    last_login_time = db.DateTimeField(default=datetime.now) # 最近一次登录时间
+
+    meta = {
+        "abstract": True,
+    }
+
+    @classmethod
+    def get_one(cls):
+        qs = cls.objects.filter(is_active=True, is_locked=False)
+        if not qs:
+            return
+        size = qs.count()
+        rd = random.randint(0, size-1)
+        return qs[rd]
+
+    @classmethod
+    def get_and_lock(cls):
+        obj = cls.get_one()
+        if not obj:
+            return
+        obj.lock()
+        return obj
+
+    def valid(self):
+        """
+        验证此账号是否有效
+        """
+        return True
+
+    def login(self):
+        """
+        登录成功返回"OK", 失败返回其他字符串。
+        """
+        raise Exception("Not Implemented")
+
+    def lock(self):
+        """
+        锁住账号，使之不被使用
+        """
+        self.modify(is_locked=True)
+
+    def free(self):
+        """
+        释放锁
+        """
+        self.modify(is_locked=False)
+
+
+class ScqcpRebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
     token = db.StringField()
     open_id = db.StringField()
-    is_active = db.BooleanField(default=True)  # 是否已被删除
-    last_login_time = db.DateTimeField(default=datetime.now)
 
     meta = {
-        "indexes": ["telephone", "is_active"],
+        "indexes": ["telephone", "is_active", "is_locked"],
     }
 
-    @classmethod
-    def choose_one(cls):
-        lst = SCQCP_ACCOUNTS.keys()
-        random.shuffle(lst)
-        for i in lst:
-            try:
-                obj = cls.objects.get(telephone=i, is_active=True)
-            except cls.DoesNotExist:
-                continue
-            return obj
-
-    @classmethod
-    def choose_and_lock_one(cls):
-        pass
-
-    def relogin(self):
-        """
-        返回OK表示登陆成功
-        """
+    def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
         device = "android" if "android" in ua else "ios"
 
         # 获取token
         uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
-        request = urllib2.Request(url)
-        request.add_header('User-Agent', ua)
-        response = urllib2.urlopen(request, timeout=5)
-        ret = json.loads(response.read())
+        ret = self.http_post(uri, "")
         token = ret["token"]
+        self.user_agent = ua
+        self.token = token
 
         # 登陆
         uri = "/api/v1/user/login_phone"
@@ -390,20 +444,24 @@ class ScqcpRebot(db.Document):
             "password": self.password,
             "is_encrypt": self.is_encrypt,
         }
-        ret = self.http_post(uri, data, user_agent=ua, token=token)
+        ret = self.http_post(uri, data)
         if "open_id" not in ret:
             # 登陆失败
-            current_app.logger.error("%s %s login failed! %s", self.telephone, self.password, ret.get("msg", ""))
-            self.modify(is_active=False)
+            self.is_active = False
+            self.last_login_time = datetime.now()
+            self.save()
             return ret.get("msg", "fail")
-        open_id = ret["open_id"]
-
-        self.modify(is_active=True, last_login_time=datetime.now(), user_agent=ua, token=token, open_id=open_id)
-        return "OK"
+        else:
+            # 登陆成功
+            self.is_active = True
+            self.last_login_time = datetime.now()
+            self.open_id = ret["open_id"]
+            self.save()
+            return "OK"
 
     @classmethod
-    def check_upsert_all(cls):
-        """登陆所有预设账号"""
+    def login_all(cls):
+        # 登陆所有预设账号
         current_app.logger.info(">>>> start to login scqcp.com:")
         valid_cnt = 0
         has_checked = {}
@@ -415,12 +473,7 @@ class ScqcpRebot(db.Document):
             pwd, is_encrypt = SCQCP_ACCOUNTS[bot.telephone]
             bot.modify(password=pwd, is_encrypt=is_encrypt)
 
-            # 近5天之内登陆的先不管
-            #if bot.is_active and (bot.last_login_time-now).seconds < 5*24*3600:
-            #    valid_cnt += 1
-            #    continue
-
-            if bot.relogin() == "OK":
+            if bot.login() == "OK":
                 valid_cnt += 1
 
         for tele, (pwd, is_encrypt) in SCQCP_ACCOUNTS.items():
@@ -431,11 +484,11 @@ class ScqcpRebot(db.Document):
                       password=pwd,
                       is_encrypt=is_encrypt)
             bot .save()
-            if bot.relogin() == "OK":
+            if bot.login() == "OK":
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
-    def http_post(self, uri, data, user_agent=None, token=None):
+    def http_post(self, uri, data, user_agent="", token=""):
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         request = urllib2.Request(url)
         request.add_header('User-Agent', user_agent or self.user_agent)
@@ -444,8 +497,6 @@ class ScqcpRebot(db.Document):
         qstr = urllib.urlencode(data)
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
-        # current_app.logger.debug("http post %s %s" % (url, str(data)))
-        # current_app.logger.debug("return msg %s" % ret["msg"])
         return ret
 
     def request_lock_ticket(self, line, riders, contacter):
@@ -486,58 +537,23 @@ class ScqcpRebot(db.Document):
                 break
         return data
 
-    def test_order(self):
-        """
-        临时测试方法，后期将移到单元测试模块
-        """
-        line = dict(
-            carry_sta_id="zjcz",
-            stop_name="八一",
-            str_date="2015-11-30 18:40",
-            sign_id="cb31ec0dd90f4518892d82ce63d152d0"
-            )
-        contacter = "15575101324"
-        riders = [
-            {
-                "id_number": "431021199004165616",
-                "real_name": "罗军平",
-            },
-        ]
-        self.request_lock_ticket(line, riders, contacter)
 
-
-class Gx84100Rebot(db.Document):
-    """
-    机器人: 对被爬网站用户的抽象
-    """
-    telephone = db.StringField(required=True, unique=True)
-    password = db.StringField()
+class Gx84100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
     token = db.StringField()
     open_id = db.StringField()
-    is_active = db.BooleanField(default=True)  # 是否已被删除
-    last_login_time = db.DateTimeField(default=datetime.now)
 
     meta = {
-        "indexes": ["telephone", ],
+        "indexes": ["telephone", "is_active", "is_locked"],
     }
 
-    def relogin(self):
+    def login(self):
         """
         返回OK表示登陆成功
         """
         ua = random.choice(MOBILE_USER_AGENG)
         device = "android" if "android" in ua else "ios"
-
-#         # 获取token
-#         uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
-#         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
-#         request = urllib2.Request(url)
-#         request.add_header('User-Agent', ua)
-#         response = urllib2.urlopen(request, timeout=5)
-#         ret = json.loads(response.read())
-#         token = ret["token"]
 
         # 登陆
         uri = "/wap/login/ajaxLogin.do"
@@ -554,12 +570,11 @@ class Gx84100Rebot(db.Document):
             self.modify(is_active=False)
             return ret.get("returnMsg", "fail")
 
-
         self.modify(is_active=True, last_login_time=datetime.now(), user_agent=ua)
         return "OK"
 
     @classmethod
-    def check_upsert_all(cls):
+    def login_all(cls):
         """登陆所有预设账号"""
         now = datetime.now()
         current_app.logger.info(">>>> start to login wap.84100.com:")
@@ -572,11 +587,6 @@ class Gx84100Rebot(db.Document):
                 continue
             pwd, openid = GX84100_ACCOUNTS[bot.telephone]
             bot.modify(password=pwd, open_id=openid)
-
-            # 近5天之内登陆的先不管
-            #if bot.is_active and (bot.last_login_time-now).seconds < 5*24*3600:
-            #    valid_cnt += 1
-            #    continue
 
             if bot.relogin() == "OK":
                 valid_cnt += 1
@@ -597,7 +607,6 @@ class Gx84100Rebot(db.Document):
         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
         request = urllib2.Request(url)
         request.add_header('User-Agent', user_agent or self.user_agent)
-# #         request.add_header('Authorization', token or self.token)
         qstr = urllib.urlencode(data)
         response = urllib2.urlopen(request, qstr, timeout=10)
         ret = json.loads(response.read())
@@ -684,22 +693,20 @@ class Gx84100Rebot(db.Document):
             if nextPage > pageNo:
                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
                 self.recrawl_func(url, payload)
-      
-            
-                
+
     def request_lock_ticket(self, line, riders, contacter):
         """
         请求锁票
+        startId    43100003
+        planId    2380625
+        name    向磊磊
+        mobile    13267109876
+        password
+        terminalType    3
+        passengerList    [{idType:"1",idNo:"429006199012280042",name:"李梦蝶",mobile:"",ticketType:"全"},{idType:"1",idNo:"429006198906100034",name:"向磊磊",mobile:"",ticketType:"全"}]
+        openId    7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894
+        isWeixin    1
         """
-#         startId    43100003
-#         planId    2380625
-#         name    向磊磊
-#         mobile    13267109876
-#         password    
-#         terminalType    3
-#         passengerList    [{idType:"1",idNo:"429006199012280042",name:"李梦蝶",mobile:"",ticketType:"全"},{idType:"1",idNo:"429006198906100034",name:"向磊磊",mobile:"",ticketType:"全"}]
-#         openId    7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894
-#         isWeixin    1
 
         uri = "/wap/ticketSales/ajaxMakeOrder.do"
         passengerList = []
@@ -719,7 +726,6 @@ class Gx84100Rebot(db.Document):
             "mobile": contacter['telephone'],
             "password": '',
             "terminalType": 3,
-            #"passengerList": '[{idType:"1",idNo:"429006199012280042",name:"李梦蝶1",mobile:"",ticketType:"全票"},{idType:"1",idNo:"429006198906100034",name:"向磊磊1",mobile:"",ticketType:"全票"}]',
             "passengerList":json.dumps(passengerList),
             "openId": '4YTEb2DZhDPtoDlHyvVry25srLmN1448590410584' or 1,
             "isWeixin": 1,
@@ -729,8 +735,6 @@ class Gx84100Rebot(db.Document):
         returnMsg = ret.get('returnMsg', '')
         if pay_url:
             ua = random.choice(MOBILE_USER_AGENG)
-            #url = "https://pay.84100.com/payment/P/P011.do?orderId=ed61e28a28df43a3905567ec48398285&hid=null&produceType=null"
-    #         uri = "wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1" % (orderNo,self.open_id)
             headers = {"User-Agent": ua}
             r = requests.get(pay_url, verify=False,  headers=headers)
             sel = etree.HTML(r.content)
@@ -789,30 +793,9 @@ class Gx84100Rebot(db.Document):
         #query_order_list_url ='http://wap.84100.com/wap/userCenter/orderDetails.do?orderNo=151201174710046683&openId=12122&isWeixin=0'
         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
-        print url
         r = requests.get(url, cookies=_cookies)
         sel = etree.HTML(r.content)
         orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
         orderDetail = json.loads(orderDetailObj)
         orderDetail = orderDetail[0]
         return orderDetail
-
-    def test_order(self):
-        """
-        临时测试方法，后期将移到单元测试模块
-        """
-        line = dict(
-            carry_sta_id="zjcz",
-            stop_name="八一",
-            str_date="2015-11-30 18:40",
-            sign_id="cb31ec0dd90f4518892d82ce63d152d0"
-            )
-        contacter = "15575101324"
-        riders = [
-            {
-                "id_number": "431021199004165616",
-                "real_name": "罗军平",
-            },
-        ]
-        self.request_lock_ticket(line, riders, contacter)
-

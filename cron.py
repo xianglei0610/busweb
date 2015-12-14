@@ -90,11 +90,11 @@ def main():
     """ 定时任务处理 """
 
     sched = Scheduler(daemonic=False)
-    sched.add_cron_job(bus_crawl, hour=15, minute=6, args=['scqcp'])
-    sched.add_cron_job(bus_crawl, hour=15, minute=7, args=['gx84100'])
+    sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['scqcp'])
+    sched.add_cron_job(bus_crawl, hour=2, minute=30, args=['gx84100'])
 
-    sched.add_cron_job(sync_crawl_to_api, hour=15, minute=8, args=['scqcp'])
-    sched.add_cron_job(sync_crawl_to_api, hour=15, minute=9, args=['gx84100'])
+    sched.add_cron_job(sync_crawl_to_api, hour=4, minute=30, args=['scqcp'])
+    sched.add_cron_job(sync_crawl_to_api, hour=6, minute=30, args=['gx84100'])
     sched.start()
 
 

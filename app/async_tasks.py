@@ -19,16 +19,15 @@ def async_lock_ticket(order):
     notify_url = order.locked_return_url
     if order.crawl_source == "scqcp":
         from app.models import ScqcpRebot
-        rebot = ScqcpRebot.objects.first()
+        rebot = ScqcpRebot.get_and_lock()
         line = dict(
             carry_sta_id=order.line.starting.station_id,
             stop_name=order.line.extra_info["stop_name_short"],
             str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
             sign_id=order.line.extra_info["sign_id"],
-            )
+        )
         contacter = order.contact_info["telephone"]
         riders = order.riders
-#         riders = map(lambda d: {"id_number": d["id_number"], "real_name": str(d["name"])}, order.riders)
         ret = rebot.request_lock_ticket(line, riders, contacter)
 
         data = []
@@ -45,6 +44,7 @@ def async_lock_ticket(order):
             }
             json_str = json.dumps({"code": 1, "message": "OK", "data": data})
         else:
+            rebot.free()
             order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
             json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
 
