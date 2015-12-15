@@ -62,7 +62,6 @@ SOURCE_MSG = {
 
 # 订单状态
 STATUS_CLOSED = 0         # 订单失效； 订单过期等
-STATUS_SUCC = 1         # 成功
 STATUS_LOCK = 3         # 锁票成功
 STATUS_COMMIT = 4       # 提交订单(初始状态)
 STATUS_LOCK_FAIL = 5    # 锁票失败
@@ -72,7 +71,6 @@ STATUS_ISSUE_OK = 14    # 出票成功
 
 STATUS_MSG = {
     STATUS_CLOSED:  "订单失效",
-    STATUS_SUCC:  "订单完成",
     STATUS_LOCK: "锁票成功",
     STATUS_COMMIT: "订单提交",
     STATUS_LOCK_FAIL: "锁票失败",

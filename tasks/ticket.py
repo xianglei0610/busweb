@@ -20,6 +20,11 @@ def lock_ticket(order):
         total_price: 322，          # 车票价格
     """
     notify_url = order.locked_return_url
+    data = {
+        "sys_order_no": order.order_no,
+        "out_order_no": order.out_order_no,
+        "raw_order_no": order.raw_order_no,
+    }
     if order.crawl_source == "scqcp":
         from app.models import ScqcpRebot
         from tasks import check_order_expire
@@ -43,10 +48,10 @@ def lock_ticket(order):
                 for ticket in ret["ticket_list"]:
                     total_price += ticket["server_price"]
                     total_price += ticket["real_price"]
-                data = {
+                data.update({
                     "expire_time": ret["expire_time"],
                     "total_price": total_price,
-                }
+                })
                 json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
             else:
                 rebot.remove_doing_order(order)
@@ -87,10 +92,10 @@ def lock_ticket(order):
             ret['expire_time'] = expire_time
             order.modify(status=STATUS_LOCK, lock_info=ret, pay_url=ret['redirectPage'],raw_order_no=ret['orderNo'], source_account=rebot.telephone)
 
-            data = {
+            data.update({
                 "expire_time": expire_time,
                 "total_price": ret['orderAmt'],
-            }
+            })
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
         else:
             order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
