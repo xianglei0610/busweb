@@ -17,6 +17,28 @@ from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app.utils import md5
 
 
+class AdminUser(db.Document):
+    """
+    后台管理员/客服
+    """
+    username = db.StringField()
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.username
+
+
 class Starting(db.Document):
     """
     出发地
