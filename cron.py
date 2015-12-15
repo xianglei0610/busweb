@@ -15,9 +15,9 @@ from apscheduler.scheduler import Scheduler
 
 from manage import migrate_from_crawl
 from app.email import send_email
-from app.constants import ADMINS
-from flask import json
+from app.constants import ADMINS, STATUS_LOCK
 from app import setup_app
+from app.models import Order
 
 
 app = setup_app('local', 'api')
@@ -29,7 +29,11 @@ sys.path.append(os.path.join(path, ".."))
 
 def check(func):
     def temp(*args, **kwargs):
-        key = str(args[0]) + func.__name__ + str(datetime.datetime.now())[0:10]
+        print args
+        if args == ():
+            key = func.__name__ + str(datetime.datetime.now())[0:10]
+        else:
+            key = str(args[0]) + func.__name__ + str(datetime.datetime.now())[0:10]
         pid = os.path.join(path, key+'.txt')
         print pid
         if os.path.exists(pid):
@@ -86,6 +90,13 @@ def sync_crawl_to_api(crawl_source):
         send_email(subject, sender, recipients, text_body, html_body)
 
 
+@check
+def polling_order_status():
+    orderObj = Order.objects.filter(status=STATUS_LOCK)
+    for order in orderObj:
+        order.refresh_status()
+
+
 def main():
     """ 定时任务处理 """
 
@@ -95,9 +106,13 @@ def main():
 
     sched.add_cron_job(sync_crawl_to_api, hour=4, minute=30, args=['scqcp'])
     sched.add_cron_job(sync_crawl_to_api, hour=6, minute=30, args=['bus100'])
+
+#     sched.add_interval_job(polling_order_status, minutes=1)
+
     sched.start()
 
 
 if __name__ == '__main__':
     main()
+#     polling_order_status()
 # bus_crawl('bus100')
