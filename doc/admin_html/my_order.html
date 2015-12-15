@@ -1,0 +1,132 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>车票订单--已完成订单</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <link href="css/select.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/select-ui.min.js"></script>
+    <script type="text/javascript" src="js/datepicker/WdatePicker.js"></script>
+    <script language="javascript">
+        $(function (){
+			//全选
+			$("#checkall").checkall({ chname: "test[]", callback: function (e) { } });		
+			$(".select3").uedSelect({
+				width : 120
+			});		
+			
+			$(".btsize").click(function(){
+			  $(".tip").fadeIn(200);
+			  });
+        })
+    </script>
+</head>
+<body>
+    <div class="place">
+        <span>位置：</span>
+         <ul class="placeul">
+            <li><a href="#">车票订单</a></li>
+            <li><a href="#">我的订单</a></li>
+        </ul>
+    </div>
+
+    <div class="formbody">
+             <div class="itab">
+                <ul>
+                    <li><a href="#tab1" class="selected">待处理订单</a></li>
+                    <li><a href="#tab2">已处理订单</a></li>                    
+               </ul>
+            </div>
+   <!--查询条件-->
+   <div class="tabson">
+    <ul class="seachform">    
+    <li>
+      <label class="timecount">自动刷新，距离下次刷新还剩<em> 25</em> 秒</label>
+    </li>
+    <li  class="right"><label>&nbsp;</label>
+    <!--<input name="" type="button" class="g_btn" value="暂停刷新"/>-->
+    <input name="" type="button" class="b_btn" value="暂停刷新"/>
+    </li>
+    </ul>    
+   </div>
+   
+   <div>
+    <table class="tablelist">
+    	<thead>
+    	<tr>
+        <th>12308订单号</th>
+        <th>下单/出发时间<i class="sort"><img src="images/px.gif" /></i></th>
+        <th>车次号/行程</th>
+        <th>来自源网站</th>
+        <th>订票数</th>
+        <th>订单金额（元）</th>
+        <th>订单状态</th>
+        <th>操作</th> 		
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+         <td>20130908</td>
+         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
+         <td>FII012<br>如东汽车站 - 无锡</td>
+         <td>四川汽车票务网<br></td>
+         <td>1张</td>
+         <td class="m">￥50.00</td>
+         <td class="color4">等待出票</td>
+         <td>
+          <p><a href="#" class="btsize">立即支付</a></p>
+          <p class="pt"><a href="#" class="tablelink mr10">获取刷新</a><a href="#" class="tablelink" onclick="return confirm('确定已支付?')">已处理</a></p>
+         </td>
+        </tr> 
+        <tr>
+         <td>20130908</td>
+         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
+         <td>FII012<br>如东汽车站 - 无锡</td>
+         <td>2013-09-09 15:05</td>
+         <td>1张</td>
+         <td class="m">￥50.00</td>
+         <td class="color4">等待出票</td>
+           <td>
+          <p><a href="#" class="btsize">立即支付</a></p>
+          <p class="pt"><a href="#" class="tablelink mr10">获取刷新</a><a href="#" class="tablelink" onclick="return confirm('确定已支付?')">已处理</a></p>
+         </td>
+        </tr> 
+        <tr>
+         <td>20130908</td>
+         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
+         <td>FII012<br>如东汽车站 - 无锡</td>
+         <td>2013-09-09 15:05</td>
+         <td>1张</td>
+         <td class="m">￥50.00</td>
+         <td class="color4">等待出票</td>
+         <td>
+          <p><a href="#" class="btsize">立即支付</a></p>
+          <p class="pt"><a href="#" class="tablelink mr10">获取刷新</a><a href="#" class="tablelink" onclick="return confirm('确定已支付?')">已处理</a></p>
+         </td>
+        </tr> 
+        </tbody>
+    </table>
+    </div>
+    </div>
+    
+    
+    <!--弹窗显示-->
+   <!--<div class="tip">
+    	<div class="tiptop"><span>登录提示</span><a></a></div>
+        
+      <div class="tipinfo">
+        <span><img src="images/ticon.png" /></span>
+        <div class="tipright">
+        <p>是否确认对信息的修改 ？</p>
+        <cite>如果是请点击确定按钮 ，否则请点取消。</cite>
+        </div>
+        </div>
+        
+        <div class="tipbtn">
+        <input name="" type="button"  class="sure" value="确定" />&nbsp;
+        <input name="" type="button"  class="cancel" value="取消" />
+        </div>    
+    </div>-->
+</body>
+</html>

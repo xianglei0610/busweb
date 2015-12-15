@@ -1,0 +1,240 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>车票订单--已完成订单</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <link href="css/select.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/select-ui.min.js"></script>
+    <script type="text/javascript" src="js/datepicker/WdatePicker.js"></script>
+    <script language="javascript">
+        $(function (){
+			//全选
+			$("#checkall").checkall({ chname: "test[]", callback: function (e) { } });		
+			$(".select3").uedSelect({
+				width : 120
+			});
+        })
+    </script>
+</head>
+<body>
+    <div class="place">
+        <span>位置：</span>
+         <ul class="placeul">
+            <li><a href="#">车票订单</a></li>
+            <li><a href="#">所有订单</a></li>
+        </ul>
+    </div>
+
+    <div class="formbody">
+             <div class="itab">
+                <ul>
+                    <li><a href="#tab1" class="selected">全部订单</a></li>
+                    <li><a href="#tab2">等待下单</a></li>                    
+                      <li><a href="#tab4">下单失败</a></li>
+                      <li><a href="#tab3">等待出票</a></li>
+                       <li><a href="#tab5">出票成功</a></li>
+                        <li><a href="#tab5">出票失败</a></li>
+                </ul>
+            </div>
+   <!--查询条件-->
+   <div class="tabson">
+    <ul class="seachform">    
+    <li>
+    <div class="vocation">
+    <select class="select3">
+    <option value="">订单状态</option>
+    <option value="19">下单失败</option>
+    <option value="23">等待下单</option>
+    <option value="20">等待出票</option>
+    <option value="21">出票成功</option>
+    <option value="22">出票失败</option>    
+    </select>
+    </div>
+    </li>
+    
+    <li>
+    <div class="vocation">
+    <select class="select3">
+    <option value="0">来自代购网站</option>    
+    <option value="1">四川票务网</option>
+    <option value="2">8684汽车票</option>
+    <option value="3">方便网</option>
+    </select>
+    </div>
+    </li>
+    
+    <li>
+    <div class="vocation">
+    <select class="select3">
+    <option>第三方账户</option>
+    <option>piaokuan01_1534343345</option>
+    <option>piaokuan02_1534343345</option>
+    <option>piaokuan03_1534343345</option>
+    <option>piaokuan04_1534343345</option>
+    <option>piaokuan05_1534343345</option>
+    </select>
+    </div>
+    </li>
+    
+      <li>
+    <div class="vocation">
+    <select class="select3">
+    <option>DG账户</option>
+    <option>piaokuan01</option>
+    <option>piaokuan02</option>
+    <option>piaokuan03</option>
+    <option>piaokuan04</option>
+    <option>piaokuan05</option>
+    </select>
+    </div>
+    </li>
+    
+    <li><label>起时日期</label>
+       <div class="input-date">
+        <input type="text" datatype="/^\s*$|^\d{4}\-\d{1,2}\-\d{1,2}$/" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd'})" class="input" id="txtCreateTime" value="2015-05-06" name="txtCreateTime">
+                        <i>日期</i>
+        </div>
+         - 
+        <div class="input-date">
+        <input type="text" datatype="/^\s*$|^\d{4}\-\d{1,2}\-\d{1,2}$/" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd'})" class="input" id="txtCreateTime" value="2015-05-06" name="txtCreateTime">
+                        <i>日期</i>
+        </div>
+    </li>
+    
+    <li><label>&nbsp;</label><input name="" type="button" class="b_btn" value="查询"/></li>
+    <li><input name="" type="button" class="y_btn" value="导出CSV"/></li>
+    
+    </ul>
+
+    <ul class="seachform">    
+    <li><label>搜索条件</label>    
+    <div class="vocation">
+    <select class="select3">
+                <option value="mobilePhone">取票人手机号</option>
+                <option value="orderNo">12308订单号</option>
+                <option value="orderId">代购网站订单号</option>
+            <option value="certificateNo">身份证</option>
+                <option value="userName">取票人姓名</option>
+    </select>
+    </div>
+    </li>    
+    <li>
+      <input name="" type="text" class="scinput left" />
+      <a onclick="subQueryForm();" href="javascript:void(0)" class="btn-search" id="lbtnSearch">查询</a></li>
+    </ul>
+   </div>
+   
+   <div>
+    <table class="tablelist">
+      <caption>
+       <div class="toolbar">
+       <!--<ul>
+        <li class="click"><span><img src="images/t06.png"></span>发短信</li>
+       <li><span><img src="images/t03.png" /></span>删除</li>
+        </ul>-->
+       </div>
+        <div class="orderinfo">已处理订单：
+            <label id="order_num_tip">314815 个</label>
+            已出票数量：<label id="ticket_num_tip">373413 张</label>
+            总金额：<label id="order_price_tip">29,967,398.41</label>
+          </div>
+        </caption>
+    	<thead>
+    	<tr>
+        <th><input type="checkbox"  name="test[]" class="chkID" value="1" id="checkall"/></th>
+        <th>12308订单号</th>
+        <th>下单人（联系电话）</th>
+        <th>下单/出发时间<i class="sort"><img src="images/px.gif" /></i></th>
+        <th>车次号/行程</th>
+        <th>来自源网站</th>
+        <th>订票数</th>
+        <th>订单金额（元）</th>
+        <th>订单状态</th>
+        <th>操作</th> 		
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+         <td><input type="checkbox"  name="test[]" class="chkID" value="6"/></td>
+         <td>20130908</td>
+         <td>郑云龙<br />15920594853</td>
+         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
+         <td>FII012<br>如东汽车站 - 无锡</td>
+         <td>四川汽车票务网<br></td>
+         <td>1张</td>
+         <td class="m">￥50.00</td>
+         <td class="color4">出票成功</td>
+         <td><a href="datail_order.html" class="tablelink">查看</a></td>
+        </tr> 
+        <tr>
+         <td><input type="checkbox"  name="test[]" class="chkID" value="2"/></td>
+         <td>20130908</td>
+         <td>郑云龙<br />15920594853</td>
+         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
+         <td>FII012<br>如东汽车站 - 无锡</td>
+         <td>四川汽车票务网</td>
+         <td>1张</td>
+         <td class="m">￥50.00</td>
+         <td class="color4">出票成功</td>
+         <td><a href="datail_order.html" class="tablelink">查看</a></td>
+        </tr> 
+        <tr>
+         <td><input type="checkbox"  name="test[]" class="chkID" value="3"/></td>
+         <td>20130908</td>
+         <td>郑云龙<br />15920594853</td>
+         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
+         <td>FII012<br>如东汽车站 - 无锡</td>
+         <td>四川汽车票务网</td>
+         <td>1张</td>
+         <td class="m">￥50.00</td>
+         <td class="color2">等待出票</td>
+         <td><a href="datail_order.html" class="tablelink">查看</a></td>
+        </tr>
+        <tr>
+         <td><input type="checkbox"  name="test[]" class="chkID" value="4"/></td>
+         <td>20130908</td>
+         <td>郑云龙<br />15920594853</td>
+         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
+         <td>FII012<br>如东汽车站 - 无锡</td>
+         <td>四川汽车票务网</td>
+         <td>1张</td>
+         <td class="m">￥50.00</td>
+         <td class="color3">出票失败</td>
+         <td><a href="datail_order.html" class="tablelink">查看</a></td>
+        </tr> 
+        <tr>
+         <td><input type="checkbox"  name="test[]" class="chkID" value="5"/></td>
+         <td>20130908</td>
+         <td>郑云龙<br />15920594853</td>
+         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
+         <td>FII012<br>如东汽车站 - 无锡</td>
+         <td>四川汽车票务网</td>
+         <td>1张</td>
+         <td class="m">￥50.00</td>
+         <td class="m"><span class="color3">出票失败</span></td>
+         <td><a href="datail_order.html" class="tablelink">查看</a></td>
+        </tr> 
+        </tbody>
+    </table>
+    </div>
+    <!--翻页-->
+        <div class="pagin">
+    	<div class="message">共<i class="blue">1256</i>条记录，当前显示第&nbsp;<i class="blue">2&nbsp;</i>页</div>
+        <ul class="paginList">
+        <li class="paginItem"><a href="javascript:;"><span class="pagepre"></span></a></li>
+        <li class="paginItem"><a href="javascript:;">1</a></li>
+        <li class="paginItem current"><a href="javascript:;">2</a></li>
+        <li class="paginItem"><a href="javascript:;">3</a></li>
+        <li class="paginItem"><a href="javascript:;">4</a></li>
+        <li class="paginItem"><a href="javascript:;">5</a></li>
+        <li class="paginItem more"><a href="javascript:;">...</a></li>
+        <li class="paginItem"><a href="javascript:;">10</a></li>
+        <li class="paginItem"><a href="javascript:;"><span class="pagenxt"></span></a></li>
+        </ul>
+    </div> 
+
+    </div>
+</body>
+</html>

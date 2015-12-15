@@ -1,0 +1,199 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>车票订单--订单详情</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+     <link href="css/windialog.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script language="JavaScript" src="js/windialog.js"></script>
+    <script type="text/javascript" src="js/fnplus.js"></script>
+</head>
+<body>
+    <div class="place">
+        <span>位置：</span>
+         <ul class="placeul">
+            <li><a href="#">车票订单</a></li>
+            <li><a href="#">退款订单</a></li>
+            <li><a href="#">订单详情</a></li>
+        </ul>
+    </div>
+
+    <div class="formbody">
+      <div class="formtitle"><span>基本信息</span></div>
+      <!--已对接接口订单详情显示-->
+      <!--<div class="torderinfo">
+        <em><img alt="订单" src="images/t07.png"></em>
+        订单号:<label class="bold">20150607141556172</label><label class="ml15">合作方订单号:<b><a href="#">141556172</a></b></label>
+      </div>
+      <div class="torderinfo">
+        订单状态:<label class="color3">等待付款</label><span class="ml15">所属接口:<label class="color3">深圳接口</label></span><span class="ml15">订单来源:<label class="color3">PC平台</label><a title="获取订单实时状态" class="ml15 ">查看接口</a></span>
+      </div>-->
+      
+      <!--手工代购详情显示-->
+       <div class="torderinfo">
+        12308订单号:<label class="bold">20150607141556172</label>
+      </div>
+      <div class="torderinfo">
+        订单状态:<label class="color4">出票成功</label>
+      </div>
+      
+      
+      <div class="h15"></div>
+      <!--订单信息-->
+      <div>
+      <div class="tableh1"><span>订单信息</span></div>
+      <table class="tablelist">
+        <thead>
+          <tr>
+            <th>售票来源</th>
+            <th>代购订单号</th>
+            <th>12308下单时间</th>
+            <th>代购下单时间</th>
+            <th>取票密码（取票号）</th>
+          </tr>
+        </thead>
+        <tbody>                                                    
+          <tr>
+            <td><a href="#">四川票务网</a><br />              
+              http://www.scqcp.com </td>
+              <td><span class="bold">20151207141556172</span></td>
+            <td>2015-12-05 10:58:14</td>
+            <td>2015-12-06 10:58:14</td>
+            <td>347318<br />
+              123084661620 </td>
+          </tr>
+          
+        </tbody>
+      </table>
+      </div>
+     <div class="h15"></div>
+     <!--车票信息-->
+     <div>
+     <div class="tableh1"><span>车票信息</span></div>
+     <table class="tablelist">
+        <thead>
+          <tr>
+            <th>线路/出发时间</th>
+            <th>车次号/行程</th>
+            <th>车票单价</th>
+            <th>车票张数</th>
+            <th>保险费</th>
+            <th>服务费</th>
+            <th>车票总额</th>
+            <th>订单金额</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="td_c">
+            <td>张家港车站--苏州南站<br>2015-06-07 14:00</td>
+		    <td>FII012<br>如东汽车站 - 无锡</td>
+            <td>￥29.00 /张</td>
+            <td>1 张</td>
+            <td>￥3.00</td>
+            <td>￥5.00</td>
+            <td>￥29.00</td>
+            <td><label class="f14 yellow">￥29.00</label></td>
+          </tr>          
+        </tbody>
+      </table>
+      </div>
+      <div class="h15"></div>
+     <!--支付信息-->
+     <div>
+     <div class="tableh1"><span>支付信息</span></div>
+    <table class="tablelist">
+        <thead>
+          <tr>
+            <th>支付交易号</th>
+            <th>支付状态</th>
+            <th>支付方式</th>
+            <th>支付账号/时间</th>
+            <th>支付金额</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="td_c">
+            <td>
+		    		2015060700001000320061085253
+</td>
+		       <td> 	    	<label class="ordersuccess">支付成功</label>
+</td>
+            <td>
+            <label class="orderspecial">
+		    	  支付宝</label></td>
+		    <td>12308@piaokuan03.com<br>
+		    2015-12-07 10:58:29</td>
+            <td><label class="f14 yellow">￥29.00</label></td>
+          </tr>
+        </tbody>
+      </table>
+     </div>
+     <div class="h15"></div>
+     <!--取票信息-->
+     <div>
+      <div class="tableh1"><span>取票信息</span></div>
+     <table class="tablelist">
+        <thead>
+          <tr>
+            <th>联系人</th>
+            <th>手机号码</th>
+            <th>身份证</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="td_c">
+            <td>聂凌波</td>
+            <td>15062471080</td>
+            <td>320582199412142329</td>
+          </tr>
+        </tbody>
+      </table>
+     </div>
+    <div class="h15"></div> 
+     <!--乘客信息-->
+     <div>
+   <div class="tableh1"><span>乘客信息</span></div>
+   <table class="tablelist">
+        <thead>
+          <tr>
+              <th>序号</th>		  
+		      <th>乘车人</th>
+		      <th>身份证</th>
+	      </tr>
+        </thead>
+        <tbody>
+    <tr class="td_c">
+      <td>1</td>
+      <td>聂凌波</td>
+      <td>320582199412142329</td>
+      </tr>
+        </tbody>
+      </table>
+     </div>
+    <div class="h15"></div> 
+     <!--会员信息-->
+     <div>
+     <div class="tableh1"><span>下单账户</span></div>
+     <table class="tablelist">
+        <tbody><tr>
+          <th width="10%">第三方登录账户</th>
+          <td width="20%">15062471080</td>
+          <th width="10%">账户密码</th>
+          <td width="20%">15062471080</td>
+          <th width="10%">绑定手机</th>
+          <td width="20%">15062471080</td>
+        </tr>
+        <tr>
+          <th>DG账户</th>
+          <td>Kalven775</td>
+          <th>处理时间</th>
+          <td>2015-06-08 11：33：23</td>
+          <th>成功购票</th>
+          <td>112次【50】张</td>
+        </tr>
+      </tbody></table>
+     </div>
+    </div>
+</body>
+</html>
