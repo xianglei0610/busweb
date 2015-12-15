@@ -173,7 +173,7 @@ def order_pay(order_no):
             session["pay_valid_url"] = code_url
             session["pay_token"] = token
             return jsonify({"status": "code_error", "msg": "验证码错误", "data": "/orders/%s/login_code" % order_no})
-    elif order.crawl_source == "gx84100":
+    elif order.crawl_source == "bus100":
         pay_url = order.pay_url
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",

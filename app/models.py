@@ -12,7 +12,7 @@ import time
 from app import db
 from app.async_tasks import async_issued_callback
 from app.constants import *
-from app.constants import SCQCP_ACCOUNTS, GX84100_ACCOUNTS
+from app.constants import SCQCP_ACCOUNTS, Bus100_ACCOUNTS
 from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app.utils import md5
 
@@ -185,7 +185,7 @@ class Line(db.Document):
             else:
                 self.modify(left_tickets=0, update_datetime=now)
         elif self.crawl_source == SOURCE_BUS100:
-            rebot = Gx84100Rebot.objects.first()
+            rebot = Bus100Rebot.objects.first()
             ret = rebot.recrawl_shiftid(self)
             line = Line.objects.get(line_id=self.line_id)
             url = 'http://www.84100.com/getTrainInfo/ajax'
@@ -305,8 +305,8 @@ class Order(db.Document):
             elif status == "give_back_ticket":
                 self.modify(status=STATUS_GIVE_BACK)
 
-        elif self.crawl_source == "gx84100" and self.status in [STATUS_ISSUE_DOING, STATUS_LOCK]:
-            rebot = Gx84100Rebot.objects.get(telephone=self.source_account)
+        elif self.crawl_source == "bus100" and self.status in [STATUS_ISSUE_DOING, STATUS_LOCK]:
+            rebot = Bus100Rebot.objects.get(telephone=self.source_account)
             if not rebot.is_active:
                 return False
             tickets = rebot.request_order(self)
@@ -531,7 +531,7 @@ class ScqcpRebot(db.Document):
         self.request_lock_ticket(line, riders, contacter)
 
 
-class Gx84100Rebot(db.Document):
+class Bus100Rebot(db.Document):
     """
     机器人: 对被爬网站用户的抽象
     """
@@ -557,7 +557,7 @@ class Gx84100Rebot(db.Document):
 
 #         # 获取token
 #         uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
-#         url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+#         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
 #         request = urllib2.Request(url)
 #         request.add_header('User-Agent', ua)
 #         response = urllib2.urlopen(request, timeout=5)
@@ -592,10 +592,10 @@ class Gx84100Rebot(db.Document):
         has_checked = {}
         for bot in cls.objects:
             has_checked[bot.telephone] = 1
-            if bot.telephone not in GX84100_ACCOUNTS:
+            if bot.telephone not in Bus100_ACCOUNTS:
                 bot.modify(is_active=False)
                 continue
-            pwd, openid = GX84100_ACCOUNTS[bot.telephone]
+            pwd, openid = Bus100_ACCOUNTS[bot.telephone]
             bot.modify(password=pwd, open_id=openid)
 
             # 近5天之内登陆的先不管
@@ -606,7 +606,7 @@ class Gx84100Rebot(db.Document):
             if bot.relogin() == "OK":
                 valid_cnt += 1
 
-        for tele, (pwd, openid) in GX84100_ACCOUNTS.items():
+        for tele, (pwd, openid) in Bus100_ACCOUNTS.items():
             if tele in has_checked:
                 continue
             bot = cls(is_active=False,
@@ -619,7 +619,7 @@ class Gx84100Rebot(db.Document):
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
     def http_post(self, uri, data, user_agent=None, token=None):
-        url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+        url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
         request = urllib2.Request(url)
         request.add_header('User-Agent', user_agent or self.user_agent)
 # #         request.add_header('Authorization', token or self.token)
@@ -698,11 +698,11 @@ class Gx84100Rebot(db.Document):
                 item['extra_info'] = {"flag": flag}
                 item['bus_num'] = str(shiftid)
                 line_id = md5("%s-%s-%s-%s-%s-%s" % \
-                    (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'gx84100'))
+                    (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'bus100'))
                 item['line_id'] = line_id
 
                 try:
-                    line_obj = Line.objects.get(line_id=line_id, crawl_source='gx84100')
+                    line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
                     line_obj.modify(**item)
                 except Line.DoesNotExist:
                     continue
@@ -759,7 +759,7 @@ class Gx84100Rebot(db.Document):
             "openId": self.open_id or 1,
             "isWeixin": 1,
         }
-        url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+        url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
         print url
         ret = requests.post(url, data=data, cookies=_cookies)
         ret=ret.json()
@@ -828,7 +828,7 @@ class Gx84100Rebot(db.Document):
 
         #query_order_list_url ='http://wap.84100.com/wap/userCenter/orderDetails.do?orderNo=151201174710046683&openId=12122&isWeixin=0'
         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
-        url = urllib2.urlparse.urljoin(GX84100_DOMAIN, uri)
+        url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
         print url
         r = requests.get(url, cookies=_cookies)
         sel = etree.HTML(r.content)

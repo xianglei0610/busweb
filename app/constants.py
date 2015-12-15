@@ -10,10 +10,10 @@ SCQCP_ACCOUNTS = {
 SCQCP_DOMAIN = "http://java.cdqcp.com"
 
 
-GX84100_DOMAIN = "http://wap.84100.com"
+Bus100_DOMAIN = "http://wap.84100.com"
 
 # 广西84100登陆账号
-GX84100_ACCOUNTS = {
+Bus100_ACCOUNTS = {
     # telephone: {password, opendid)
     "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
     "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
@@ -53,7 +53,7 @@ MOBILE_USER_AGENG = [
 
 # 爬取来源
 SOURCE_SCQCP = "scqcp"
-SOURCE_BUS100 = "gx84100"
+SOURCE_BUS100 = "bus100"
 
 SOURCE_MSG = {
     SOURCE_SCQCP: "四川汽车票务网",

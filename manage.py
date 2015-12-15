@@ -22,9 +22,9 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 @manager.command
 def deploy():
-    from app.models import ScqcpRebot, Gx84100Rebot
+    from app.models import ScqcpRebot, Bus100Rebot
     ScqcpRebot.check_upsert_all()
-    Gx84100Rebot.check_upsert_all()
+    Bus100Rebot.check_upsert_all()
 
 
 @manager.command
@@ -125,19 +125,19 @@ def migrate_from_crawl(site):
                 line_obj.save()
             print line_obj.line_id
 
-    def migrate_gx84100():
-        for d in crawl_db.line_gx84100.find({"departure_time": {"$gte": str(datetime.now())}}):
-            crawl_source = "gx84100"
+    def migrate_bus100():
+        for d in crawl_db.line_bus100.find({"departure_time": {"$gte": str(datetime.now())}}):
+            crawl_source = "bus100"
 
             # migrate Starting
             city_id = str(d["city_id"])
             starting_id = md5("%s-%s-%s-%s-%s" % \
                     (city_id, d["city_name"], d["start_city_id"], d["start_city_name"], crawl_source))
-            start_city = crawl_db.start_city_gx84100.find_one({"start_city_id": d["start_city_id"]})
+            start_city = crawl_db.start_city_bus100.find_one({"start_city_id": d["start_city_id"]})
 
             starting_attrs = {
                 "starting_id": starting_id,
-                "province_name": u"广西",
+                "province_name": d["province_name"],
                 "city_id": city_id,
                 "city_name": d["city_name"],
                 "station_id": d["start_city_id"],
@@ -159,7 +159,7 @@ def migrate_from_crawl(site):
             # migrate destination
             dest_id  = md5("%s-%s-%s-%s-%s-%s" % \
                     (starting_obj.starting_id, "", "", "", d["target_city_name"], crawl_source))
-            target_city = crawl_db.target_city_gx84100.find_one({"starting_id": d["start_city_id"], "target_name": d["target_city_name"]})
+            target_city = crawl_db.target_city_bus100.find_one({"starting_id": d["start_city_id"], "target_name": d["target_city_name"]})
             dest_attrs = {
                 "destination_id": dest_id,
                 "starting": starting_obj,
@@ -212,8 +212,8 @@ def migrate_from_crawl(site):
     app.logger.info("start migrate data from crawldb to webdb:%s", site)
     if site == "scqcp":
         migrate_scqcp()
-    elif site == 'gx84100':
-        migrate_gx84100()
+    elif site == 'bus100':
+        migrate_bus100()
     app.logger.info("end migrate %s" % site)
 
 

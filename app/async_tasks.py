@@ -52,9 +52,9 @@ def async_lock_ticket(order):
             response = urllib2.urlopen(notify_url, json_str, timeout=10)
             print response, "async_lock_ticket"
 
-    elif order.crawl_source == "gx84100":
-        from app.models import Gx84100Rebot,Line
-        rebot = Gx84100Rebot.objects.first()
+    elif order.crawl_source == "bus100":
+        from app.models import Bus100Rebot,Line
+        rebot = Bus100Rebot.objects.first()
 
         ret = rebot.recrawl_shiftid(order.line)
         line = Line.objects.get(line_id=order.line.line_id)

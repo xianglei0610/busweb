@@ -26,11 +26,11 @@ class APITestCase(TestCase):
         self.assertTrue(result['data'] != [])
 
     def test_query_destinations(self):
-        gxStart = Starting.objects.filter(crawl_source= 'gx84100').first()
-        scStart = Starting.objects.filter(crawl_source= 'scqcp').first()
+        busStart = Starting.objects.filter(crawl_source='bus100').first()
+        scStart = Starting.objects.filter(crawl_source='scqcp').first()
         datas = []
-        if gxStart:
-            datas.append({"starting_name": gxStart.city_name})
+        if busStart:
+            datas.append({"starting_name": busStart.city_name})
         if scStart:
             datas.append({"starting_name": scStart.city_name})
         self.assertTrue(datas != [])
@@ -78,12 +78,12 @@ class APITestCase(TestCase):
         now = datetime.datetime.now()
         drv_date = datetime.datetime.strftime(now, "%Y-%m-%d")
         drv_time = datetime.datetime.strftime(now, '%H:%M:%S')
-        gxLine = Line.objects.filter(crawl_source='gx84100', drv_date__gte=drv_date, drv_time__gte=drv_time).order_by('-crawl_datetime').limit(1)
-        print gxLine
+        busLine = Line.objects.filter(crawl_source='bus100', drv_date__gte=drv_date, drv_time__gte=drv_time).order_by('-crawl_datetime').limit(1)
+        print busLine
         scLine = Line.objects.filter(crawl_source='scqcp', drv_date__gte=drv_date, drv_time__gte=drv_time).order_by('-crawl_datetime').limit(1)
         lines = []
-        if gxLine:
-            lines.append(gxLine[0])
+        if busLine:
+            lines.append(busLine[0])
         self.assertTrue(lines != [])
         if scLine:
             lines.append(scLine[0])
