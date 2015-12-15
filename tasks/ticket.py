@@ -51,7 +51,7 @@ def lock_ticket(order):
             else:
                 rebot.remove_doing_order(order)
                 order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
-                json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
+                json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["msg"], "data": data})
             if notify_url:
                 response = urllib2.urlopen(notify_url, json_str, timeout=10)
                 print response, "async_lock_ticket"
@@ -91,10 +91,10 @@ def lock_ticket(order):
                 "expire_time": expire_time,
                 "total_price": ret['orderAmt'],
             }
-            json_str = json.dumps({"code": 1, "message": "OK", "data": data})
+            json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
         else:
             order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
-            json_str = json.dumps({"code": 0, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
+            json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
 
         if notify_url:
             response = urllib2.urlopen(notify_url, json_str, timeout=10)
@@ -102,7 +102,7 @@ def lock_ticket(order):
 
 
 @celery.task
-def issued_callback(order):
+def issued_callback(order_no):
     """
     出票回调
 
@@ -121,8 +121,12 @@ def issued_callback(order):
         }
     }
     """
+    from app.models import Order
+    order = Order.objects.get(order_no=order_no)
     cb_url = order.issued_return_url
-    if cb_url:
+    if not cb_url:
+        return
+    if order.status == STATUS_ISSUE_OK:
         pick_info = []
         for i in range(order.pick_code_list):
             pick_info.append({
@@ -139,5 +143,15 @@ def issued_callback(order):
                 "pick_info": pick_info,
             }
         }
-        response = urllib2.urlopen(notify_url, json.dumps(ret), timeout=10)
-        print response, "async_issued_callback"
+    else:
+        ret = {
+            "code": RET_ISSUED_FAIL,
+            "message": "fail",
+            "data": {
+                "sys_order_no": order.order_no,
+                "out_order_no": order.out_order_no,
+                "raw_order_no": order.raw_order_no,
+            }
+        }
+    response = urllib2.urlopen(notify_url, json.dumps(ret), timeout=10)
+    print "issued callback", response

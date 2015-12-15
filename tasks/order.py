@@ -13,6 +13,6 @@ def check_order_expire(self, order_no):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_LOCK:
         return
-    order.refresh_status()
+    order.refresh_issued()
     if order.status == STATUS_LOCK:
         self.retry(countdown=10)

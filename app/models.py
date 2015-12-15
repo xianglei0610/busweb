@@ -272,20 +272,26 @@ class Order(db.Document):
             ],
     }
 
-    def refresh_status(self):
-        """
-        刷新订单状态, 返回是否刷新成功
-        """
+    def get_rebot(type="app"):  # type: app or wap or web
         if self.crawl_source == "scqcp":
-            if self.status in [STATUS_LOCK_FAIL, STATUS_COMMIT]:
-                return
+            if type == "app":
+                rebot = ScqcpRebot.objects.get(telephone=self.source_account)
+                return rebot
+        return None
+
+    def refresh_issued(self):
+        """
+        刷新出票情况
+        """
+        if self.status != STATUS_LOCK:
+            return
+        if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
-            if not rebot.is_active:
-                return
             tickets = rebot.request_order(self)
             if not tickets:
                 self.modify(status=STATUS_CLOSED)
                 rebot.remove_doing_order(self)
+                issued_callback.delay(self.order_no)
                 return
             code_list, msg_list = [], []
             status = tickets.values()[0]["order_status"]
@@ -295,21 +301,20 @@ class Order(db.Document):
                     code_list.append(tickets[tid]["code"])
                     msg_list.append("")
                 self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
-                issued_callback.delay(order)
                 rebot.remove_doing_order(self)
+                issued_callback.delay(self.order_no)
             elif status == "give_back_ticket":
                 self.modify(status=STATUS_GIVE_BACK)
+                issued_callback.delay(self.order_no)
 
-        elif self.crawl_source == "gx84100" and self.status in [STATUS_ISSUE_DOING, STATUS_LOCK]:
+        elif self.crawl_source == "gx84100":
             rebot = Gx84100Rebot.objects.get(telephone=self.source_account)
-            if not rebot.is_active:
-                return
             tickets = rebot.request_order(self)
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
                 self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
-                issued_callback.delay(order)
                 rebot.remove_doing_order(self)
+                issued_callback.delay(self.order_no)
             elif tickets['status'] == '5':
                 self.modify(status=STATUS_CLOSED)
                 rebot.remove_doing_order(self)

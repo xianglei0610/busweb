@@ -151,6 +151,9 @@ def order_pay(order_no):
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
                 order.modify(status=STATUS_CLOSED)
+                rebot = order.get_rebot()
+                if rebot:
+                    rebot.remove_doing_order(order)
                 return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
             sel = etree.HTML(r.content)
             data = dict(
@@ -213,7 +216,7 @@ def order_pay(order_no):
 @admin.route('/orders/<order_no>/refresh', methods=['GET'])
 def order_refresh(order_no):
     order = Order.objects.get(order_no=order_no)
-    order.refresh_status()
+    order.refresh_issued()
     return redirect(url_for('admin.order_list'))
 
 
