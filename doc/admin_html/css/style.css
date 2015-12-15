@@ -328,6 +328,10 @@ z-index: 100;bottom:-2px;padding: 0 3px;height: 30px;line-height: 30px;left:0px;
 .seachform .timecount{font-size:20px;} .seachform .timecount em{font-style:normal;font-weight:bold;color:#f30;font-size:28px;}
 a.btsize{padding:8px 18px;font-size:20px;width:120px;height:36px;font-weight:bold;color:#fff;cursor:pointer;behavior:url(js/pie.htc);text-align:center;line-height:36px;background:#f90;border-radius:5px;margin:5px 0px;}
 a.btsize:hover{opacity:0.85;color:#fff;}
+
+.btn_login{ display:inline-block;padding:0 18px;font-size:20px;width:120px;height:50px;line-height:50px;font-weight:bold;color:#fff;cursor:pointer;behavior:url(js/pie.htc);text-align:center;line-height:36px;background:#f90;border-radius:5px;margin:5px 0px;}
+.btn_login:hover{opacity:0.85;color:#fff;}
+
 /*==========以下部分是Validform必须的===========*/
 .Validform_checktip{margin-left:8px;line-height:24px;height:24px;overflow:hidden;color:#999;font-size:12px;}
 .Validform_right{color:#71b83d;padding-left:20px;background:url("img/vid.png") no-repeat 0px -198px;}
@@ -343,3 +347,33 @@ a.btsize:hover{opacity:0.85;color:#fff;}
 #Validform_msg a.Validform_close:hover{color:#575757;}
 #Validform_msg .Validform_info{padding:8px;border:1px solid #fff; border-top:none; text-align:left;}
 #Validform_backdrop{background-color:#000;bottom:0;left:0;position:fixed;right:0;top:0;z-index:99990;filter:alpha(opacity=50);-moz-opacity:0.5;-khtml-opacity:0.5;opacity:0.5;}
+
+
+
+.regbox_bd{ position:relative; margin:0 auto; padding:0 40px;}
+.signup_hd{ padding:35px; text-align:left;}
+.signup_hd h2{ color:#333; font-size:18px; font-weight:normal;}
+.signup_hd span{color:#666;font-size:14px; padding-left:15px}
+.signup_hd a{ color:#06F; padding-left:5px;}
+
+.code_box .i-input{float:left;}
+.code_img {display:inline-block;line-height:0;float:left;}
+.code_img .regimg{ display:inline-block; width:125px; height:44px; }
+.signup_box .reg-form {padding-top:0px; padding-left:0px;font-size:16px;}
+.signup_box .reg-form .fm-li{padding-left: 120px; padding-top:5px; padding-bottom:5px; clear:both; overflow:hidden}
+.signup_box .reg-form .fm-li .i-input{ border:1px solid #ccc;padding:10px 5px 12px 10px; font-size:15px;width: 305px;height: 20px;line-height: 20px; vertical-align:middle;outline: none;display: inline-block; }
+.signup_box .reg-form .fm-li .i-input:focus{border:1px solid #3b8de3;}
+.signup_box .reg-form .hqyzm_btn{margin-top: 0px; border:0}
+.signup_box .reg-form .fm-li .fm-label{text-align:right; display:inline;float:left;width:120px;color:#444;margin-right: 7px;margin-left: -127px;height: 40px;line-height: 40px;}
+.signup_box .reg-form .fm-li label{font-size:14px; }
+.signup_box .reg-form .fm-li .msg-info{ margin-top:8px;margin-left:8px;height:18px;overflow:visible; }
+.signup_box .reg-form .fm-li  input.i-error{border:1px solid #ff0000;outline:0;color:#dd0000;}/*输入框数据有误*/
+.signup_box .reg-form .fm-li  input.i-focus{border:1px solid #00a3e4;outline:0;color:#333;}/*输入框获得焦点*/
+.signup_box .btn_login{width: 240px;}
+.signup_box .reg-form .fm-li .i-input.w220{width: 223px;}
+.signup_bot{font-size:18px; text-align:center; padding:20px 0 30px 0; }
+
+
+.signup_box .uew-select .uew-select-value{height:42px;line-height:42px;}
+.signup_box .uew-select .uew-icon{top:15px;}
+.signup_box .uew-select select{height:38px;}

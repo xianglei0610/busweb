@@ -8,17 +8,26 @@
     <script type="text/javascript" src="js/jquery.js"></script>
     <script type="text/javascript" src="js/select-ui.min.js"></script>
     <script type="text/javascript" src="js/datepicker/WdatePicker.js"></script>
+    <script src="js/layer/layer.js"></script>
     <script language="javascript">
         $(function (){
 			//全选
 			$("#checkall").checkall({ chname: "test[]", callback: function (e) { } });		
-			$(".select3").uedSelect({
-				width : 120
-			});		
-			
-			$(".btsize").click(function(){
-			  $(".tip").fadeIn(200);
-			  });
+
+			$(".single-select").uedSelect({width : 240});
+   
+		//登录手动下单
+			$('.btsize').on('click', function(){
+				layer.open({
+					type: 1,
+					title: '登录手动下单',
+					area: ['580px',''],
+					skin: 'layui-layer-lan',
+					moveType: 1, //拖拽风格，0是默认，1是传统拖动
+					shift: 0, //0-6的动画形式，-1不开启
+					content: "<div>" +$("#btsizebox").html()+"</div>"
+				});
+			});
         })
     </script>
 </head>
@@ -111,8 +120,8 @@
     </div>
     
     
-    <!--弹窗显示-->
-   <!--<div class="tip">
+   <!--登录提示
+   <div class="tip">
     	<div class="tiptop"><span>登录提示</span><a></a></div>
         
       <div class="tipinfo">
@@ -127,6 +136,47 @@
         <input name="" type="button"  class="sure" value="确定" />&nbsp;
         <input name="" type="button"  class="cancel" value="取消" />
         </div>    
-    </div>-->
+    </div>
+   --> 
+   
+   <div id="btsizebox" style=" display:none">
+   
+   <div class="regbox_bd">
+     <div class="signup_hd"><h2>选择登陆账号<span>账号登陆不进，直接<a>登陆官网</a></span></h2></div>
+     <div class="signup_box">
+        <form method="post" action="http://www.baidu.com" id="formPublic">
+		<div class="pub-form reg-form">
+         <div class="fm-li pbot-5">
+          <span class="fm-label"><label for="txt_userName">我的账号：</label></span>
+           <select name="levelName" id="levelName" datatype="*" sucmsg=" " class="single-select">
+                <option value="2">1895545668(牧师)</option>
+                <option value="2">Hn(牧师)</option>
+                <option value="1">*WK(牧师)</option>
+           </select>
+
+        </div>
+        
+        <div class="fm-li pbot-5">
+          <span class="fm-label"><label for="txt_input6">验证码：</label></span>
+             <div class="code_box"><input value="" name="verifyCode" id="verifyCode" class="i-input w220" type="text"></div>
+        </div>
+        
+        <div class="fm-li pbot-5">
+          <span class="fm-label"></span>
+             <span class="code_img"><img alt="" class="regimg" src="images/code.jpg" id="imgVerifyCode"></span>
+        </div>
+        
+        <div class="fm-li">
+          <span class="fm-label"><label for="txt_input6"></label></span>
+          <input name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
+          </div>
+          
+        </div>
+        </form>
+        </div>
+        <p class="signup_bot">正在尝试下单，来着12308汽车票</p> 
+	
+  </div>
+   </div>
 </body>
 </html>
