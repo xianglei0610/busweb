@@ -61,19 +61,18 @@ SOURCE_MSG = {
 }
 
 # 订单状态
-STATUS_FAIL = 0         # 失败
+STATUS_CLOSED = 0         # 订单失效； 订单过期等
 STATUS_SUCC = 1         # 成功
 STATUS_ISSUE_DOING = 2  # 正在出票
 STATUS_LOCK = 3         # 锁票成功
 STATUS_COMMIT = 4       # 提交订单(初始状态)
 STATUS_LOCK_FAIL = 5    # 锁票失败
-STATUS_GIVE_BACK = 6    # 以退票
-STATUS_TIMEOUT = 8     # 订单过期
+STATUS_GIVE_BACK = 6    # 已退票
 STATUS_ISSUE_FAIL = 13  # 出票失败
 STATUS_ISSUE_OK = 14    # 出票成功
 
 STATUS_MSG = {
-    STATUS_FAIL:  "订单失败",
+    STATUS_CLOSED:  "订单失效",
     STATUS_SUCC:  "订单完成",
     STATUS_ISSUE_DOING: "正在出票",
     STATUS_LOCK: "锁票成功",
@@ -82,7 +81,6 @@ STATUS_MSG = {
     STATUS_ISSUE_FAIL: "出票失败",
     STATUS_ISSUE_OK: "出票成功",
     STATUS_GIVE_BACK: "已退票",
-    STATUS_TIMEOUT: "订单过期",
 }
 
 # 证件类型

@@ -32,12 +32,13 @@ def lock_ticket(order):
         contacter = order.contact_info["telephone"]
         riders = order.riders
 
-        with ScqcpRebot.get_and_lock() as rebot:
+        with ScqcpRebot.get_and_lock(order) as rebot:
             ret = rebot.request_lock_ticket(line, riders, contacter)
             data = []
             if ret["status"] == 1:
                 pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
                 order.modify(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone, pay_url=pay_url)
+                check_order_expire.apply_async((order.order_no,), countdown=8*60+5)  # 8分钟后执行
                 total_price = 0
                 for ticket in ret["ticket_list"]:
                     total_price += ticket["server_price"]
@@ -52,7 +53,6 @@ def lock_ticket(order):
                 order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
                 json_str = json.dumps({"code": 0, "message": ret["msg"], "data": data})
             if notify_url:
-                check_order_expire.apply_async((order.order_no,), countdown=8*60+5)  # 8分钟后执行
                 response = urllib2.urlopen(notify_url, json_str, timeout=10)
                 print response, "async_lock_ticket"
 
