@@ -13,6 +13,12 @@ class Config:
     MAIL_USERNAME = 'xiangleilei@12308.com'
     MAIL_PASSWORD = 'Lei710920610'
 
+    # celery config
+    CELERY_BROKER_URL = 'redis://localhost:6379/10'
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/11'
+    CELERY_TASK_SERIALIZER = 'pickle'
+    CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+
     @staticmethod
     def init_app(app):
         pass
