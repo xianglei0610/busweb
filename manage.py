@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 *-*
 import os
+import sys
 import pymongo
 import multiprocessing
 
@@ -9,6 +10,7 @@ from app import setup_app, db
 from app.utils import md5
 from flask.ext.script import Manager, Shell
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
                 os.getenv('FLASK_SERVER') or 'api')
 manager = Manager(app)
@@ -23,14 +25,35 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 @manager.command
 def deploy():
     from app.models import ScqcpRebot, Bus100Rebot
-    ScqcpRebot.check_upsert_all()
-    Bus100Rebot.check_upsert_all()
+    ScqcpRebot.login_all()
+    Bus100Rebot.login_all()
 
 
 @manager.command
 def cron():
     from cron import main
     main()
+
+
+@manager.command
+def test(coverage=False):
+    cov = None
+    if coverage:
+        import coverage
+        cov = coverage.coverage(branch=True, include="app/*")
+        cov.start()
+    import unittest
+    tests = unittest.TestLoader().discover("tests")
+    unittest.TextTestRunner(verbosity=2).run(tests)
+    if cov:
+        cov.stop()
+        cov.save()
+        print "coverage test result:"
+        cov.report()
+        covdir = os.path.join(BASE_DIR, 'tmp/covrage')
+        cov.html_report(directory=covdir)
+        print "Html version: file://%s/index.html" % covdir
+        cov.erase()
 
 
 @manager.command
@@ -41,7 +64,7 @@ def migrate_from_crawl(site):
     crawl_db = crawl_mongo[settings["db"]]
 
     def migrate_scqcp():
-        for d in crawl_db.scqcp_line.find({"drv_date_time": {"$gte": datetime.now()}}):
+        for d in crawl_db.scqcp_line.find({"drv_date_time": {"$gte": datetime.now().strftime("%Y-%m-%d %H:%M")}}):
             crawl_source = "scqcp"
             # migrate Starting
             city_id = str(d["city_id"])
@@ -96,8 +119,7 @@ def migrate_from_crawl(site):
 
             # migrate Line
             line_id = str(d["line_id"])
-            drv_date = d["drv_date_time"].strftime("%Y-%m-%d")
-            drv_time = d["drv_date_time"].strftime("%H:%M")
+            drv_date, drv_time = d["drv_date_time"].split(" ")
             attrs = {
                 "line_id": line_id,
                 "crawl_source": crawl_source,
@@ -105,7 +127,7 @@ def migrate_from_crawl(site):
                 "destination": dest_obj,
                 "drv_date": drv_date,
                 "drv_time": drv_time,
-                "drv_datetime": d["drv_datetime"],
+                "drv_datetime": datetime.strptime(d["drv_date_time"], "%Y-%m-%d %H:%M"),
                 "distance": str(d["mile"]),
                 "vehicle_type": d["bus_type_name"],
                 "seat_type": "",

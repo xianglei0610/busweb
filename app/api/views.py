@@ -6,7 +6,7 @@ from mongoengine import Q
 
 from app.constants import *
 from flask import request, jsonify
-from app.async_tasks import async_lock_ticket
+from tasks import lock_ticket
 from app.api import api
 from app.models import Line, Starting, Destination, Order
 
@@ -150,7 +150,7 @@ def query_line():
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
-@api.route('/lines/query/detail', methods=['POST'])
+@api.route('/lines/detail', methods=['POST'])
 def query_line_detail():
     """
     查询线路详细信息， 此接口会从源网站拿最新数据。
@@ -246,8 +246,10 @@ def submit_order():
     order.issued_return_url = issued_return_url
     order.save()
 
-    async_lock_ticket(order)
-    return jsonify({"code": 1, "message": "submit order success!", "data": {"sys_order_no": order.order_no}})
+    lock_ticket.delay(order)
+    return jsonify({"code": RET_OK,
+                    "message": "submit order success!",
+                    "data": {"sys_order_no": order.order_no}})
 
 
 @api.route('/orders/detail', methods=['POST'])
@@ -368,5 +370,5 @@ def refresh_order():
         order = Order.objects.get(order_no=sys_order_no)
     except Order.DoesNotExist:
         return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
-    order.refresh_status()
+    order.refresh_issued()
     return jsonify({"code": RET_OK, "message": "refresh success", "data": {"status": order.status}})

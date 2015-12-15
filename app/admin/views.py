@@ -7,6 +7,7 @@ import json
 import pytesseract
 import cStringIO
 
+from datetime import datetime as dte
 from app.constants import *
 from PIL import Image
 from lxml import etree
@@ -24,7 +25,7 @@ def parse_page_data(qs):
     pageNum = int(math.ceil(total*1.0/pageCount))
     skip = (page-1)*pageCount
     range_min = max(1, page-5)
-    range_max = min(range_min+10, pageNum)
+    range_max = min(range_min+10, pageNum+1)
 
     query_dict = {}
     for k in request.args.keys():
@@ -72,7 +73,7 @@ def line_list():
     starting_name = request.args.get("starting", "")
     dest_name = request.args.get("destination", "")
     queryset = Line.objects
-    query = {}
+    query = {"drv_datetime__gt": dte.now()}
     if lineid:
         query.update(line_id=lineid)
     if starting_name:
@@ -106,7 +107,6 @@ def login_code(order_no):
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
-    order.check_expire()
     if order.status != STATUS_LOCK:
         return jsonify({"status": "status_error", "msg": "不是支付的时候", "data": ""})
     code = request.args.get("valid_code", "")
@@ -150,7 +150,10 @@ def order_pay(order_no):
             r = requests.get(pay_url, headers=headers, cookies=cookies)
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
-                order.modify(status=STATUS_TIMEOUT)
+                order.modify(status=STATUS_CLOSED)
+                rebot = order.get_rebot()
+                if rebot:
+                    rebot.remove_doing_order(order)
                 return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
             sel = etree.HTML(r.content)
             data = dict(
@@ -213,10 +216,7 @@ def order_pay(order_no):
 @admin.route('/orders/<order_no>/refresh', methods=['GET'])
 def order_refresh(order_no):
     order = Order.objects.get(order_no=order_no)
-    if order.refresh_status():
-        current_app.logger.info("刷新订单成功")
-    else:
-        current_app.logger.info("刷新订单失败")
+    order.refresh_issued()
     return redirect(url_for('admin.order_list'))
 
 
