@@ -6,17 +6,25 @@ import requests
 import json
 import pytesseract
 import cStringIO
+import flask.ext.login as flask_login
 
-from datetime import datetime as dte, date
+
+from datetime import datetime as dte
+from app.utils import md5
+
 from app.constants import *
 from PIL import Image
 from lxml import etree
 from mongoengine import Q
-from flask import render_template, request, redirect, url_for, current_app, jsonify, session
+from flask import render_template, request, redirect, url_for, jsonify, session
 from flask.views import MethodView
+from flask.ext.login import login_required, current_user
 from app.admin import admin
-from app.models import Order, Line, Starting, Destination
+
 from app.utils import getRedisObj
+
+from app.models import Order, Line, Starting, Destination, AdminUser
+
 
 
 def parse_page_data(qs):
@@ -50,10 +58,9 @@ def parse_page_data(qs):
     }
 
 
-@admin.route('/', methods=['GET'])
 @admin.route('/orders', methods=['GET'])
 def order_list():
-    order_no =request.args.get("order_no", "")
+    order_no = request.args.get("order_no", "")
     if order_no:
         qs = Order.objects.filter(order_no=order_no)
     else:
@@ -285,74 +292,128 @@ class SubmitOrder(MethodView):
 
         api_url = urllib2.urlparse.urljoin(fd.get("api_url"), "/orders/submit")
         res = requests.post(api_url, data=json.dumps(data))
-        print "submit order", res
         return redirect(url_for('admin.order_list'))
 
 
-@admin.route('/inputCode', methods=['GET'])
-def input_code():
-    code_url = request.args.get("code_url")
-    return """
-        <img src="%s" alt="code" />
-    """ % code_url
+# ===================================new admin===============================
+class LoginInView(MethodView):
+    def get(self):
+        return render_template('admin-new/login.html')
+
+    def post(self):
+        name = request.form.get("username")
+        pwd = request.form.get("password")
+        try:
+            u = AdminUser.objects.get(username=name, password=md5(pwd))
+            flask_login.login_user(u)
+            print 122222222222222
+            return redirect(url_for('admin.index'))
+        except AdminUser.DoesNotExist:
+            return redirect(url_for('admin.login'))
+
+
+@admin.route('/logout')
+@login_required
+def logout():
+    flask_login.logout_user()
+    return redirect(url_for('admin.login'))
+
+
+@admin.route('/', methods=['GET'])
+@login_required
+def index():
+    return render_template("admin-new/main.html")
+
+
+@admin.route('/top', methods=['GET'])
+@login_required
+def top_page():
+    key = 'lock_order_list'
+    r = getRedisObj()
+    count = r.zcard(key)
+    sum = count
+    userObjs = AdminUser.objects.filter(is_kefu=1)
+    for userObj in userObjs:
+        username = userObj.username
+        kf_key = 'order_list:%s' % username
+        order_ct = r.scard(kf_key)
+        sum += order_ct
+    return render_template("admin-new/top.html", sum=sum)
+
+
+@admin.route('/left', methods=['GET'])
+@login_required
+def left_page():
+    return render_template("admin-new/left.html")
+
+
+@admin.route('/allorder', methods=['GET'])
+@login_required
+def all_order():
+    return render_template("admin-new/allticket_order.html")
+
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
+admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 
 
-@admin.route('/reflesh_order_list/', methods=['GET'])
-def reflesh_order_list():
-    user_id = request.args.get("user_id")
-    switch = request.args.get("switch", 0)
-    r = getRedisObj()
-    key = 'order_list:%s' % user_id
-    if not switch:
-        order_ct = r.scard(key)
-        if order_ct < KF_ORDER_CT:
-            count = KF_ORDER_CT-order_ct
-            lock_order_list = r.zrange('lock_order_list', 0, count-1)
-            for i in lock_order_list:
-                r.sadd(key, i)
-                r.zrem('lock_order_list', i)
-    order_nos = r.smembers(key)
-    print order_nos
-    qs = Order.objects.filter(order_no__in=order_nos)
-    qs = qs.order_by("-create_date_time")
-    return render_template('admin/order_list.html',
-                           page=parse_page_data(qs),
-                           status_msg=STATUS_MSG,
-                           source_msg=SOURCE_MSG,
-                           scqcp_accounts=SCQCP_ACCOUNTS,
-                           )
+@admin.route('/myorder', methods=['GET'])
+@login_required
+def my_order():
+    username = current_user.username
+    userObj = AdminUser.objects.get(username=current_user.username)
+    print userObj.is_kefu
+    if userObj.is_kefu:
+        r = getRedisObj()
+        key = 'order_list:%s' % username
+        if userObj.is_switch:
+            order_ct = r.scard(key)
+            if order_ct < KF_ORDER_CT:
+                count = KF_ORDER_CT-order_ct
+                lock_order_list = r.zrange('lock_order_list', 0, count-1)
+                for i in lock_order_list:
+                    r.sadd(key, i)
+                    r.zrem('lock_order_list', i)
+        order_nos = r.smembers(key)
+        print order_nos
+        qs = Order.objects.filter(order_no__in=order_nos)
+        qs = qs.order_by("-create_date_time")
+        return render_template("admin-new/my_order.html",
+                               page=parse_page_data(qs),
+                               status_msg=STATUS_MSG,
+                               source_msg=SOURCE_MSG,
+                               scqcp_accounts=SCQCP_ACCOUNTS,
+                               userObj=userObj
+                               )
+    else:
+        return render_template("admin-new/my_order.html")
 
 
-@admin.route('/kefu_on_off', methods=['GET'])
+@admin.route('/kefu_on_off', methods=['POST'])
 def kefu_on_off():
-    user_id = request.args.get("user_id")
-    switch = request.args.get("switch", 0)
-    if not user_id:
-        return jsonify({"status": -1, "msg": "参数错误"})
-    
-    
-    return jsonify({"status": 0, "msg": "设置成功"})
+    userObj = AdminUser.objects.get(username=current_user.username)
+    is_switch = int(request.form.get('is_switch', 0))
+
+    userObj.is_switch = is_switch
+    userObj.save()
+    return jsonify({"status": "0", "msg": "设置成功"})
 
 
-@admin.route('/kefu_complete', methods=['GET'])
+@admin.route('/kefu_complete', methods=['POST'])
 def kefu_complete():
-    user_id = request.args.get("user_id")
-    kefu_status = request.args.get("kefu_status", 0)
-    order_no = request.args.get("order_no", '')
-    if not (user_id and order_no):
+    username = current_user.username
+    userObj = AdminUser.objects.get(username=username)
+    order_no = request.form.get("order_no", '')
+    if not (order_no):
         return jsonify({"status": -1, "msg": "参数错误"})
+
+    orderObj = Order.objects.get(order_no=order_no)
+    orderObj.kefu_order_status = 1
+    orderObj.kefu_updatetime = dte.now()
+    orderObj.username = username
+    orderObj.save()
     
     r = getRedisObj()
-    key = 'order_list:%s' % user_id
+    key = 'order_list:%s' % username
     r.srem(key, order_no)
-    orderObj = Order.objects.get(order_no=order_no)
-    orderObj.kefu_status = kefu_status
-    orderObj.kefu_updatetime = dte.now()
-    orderObj.user_id = user_id
-    orderObj.save()
     return jsonify({"status": 0, "msg": "处理完成"})
-
-
-

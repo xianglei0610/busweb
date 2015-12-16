@@ -57,6 +57,47 @@ def test(coverage=False):
 
 
 @manager.command
+def create_user():
+    import getpass
+    from app.models import AdminUser
+    from app.utils import md5
+    username = raw_input("用户名:")
+    try:
+        u = AdminUser.objects.get(username=username)
+        print "已存在用户, 创建失败"
+        return
+    except AdminUser.DoesNotExist:
+        pass
+    pwd1 = getpass.getpass('密码: ')
+    pwd2 = getpass.getpass('确认密码: ')
+    if pwd1 != pwd2:
+        print "两次输入密码不一致, 创建用户失败"
+        return
+    u = AdminUser(username=username, password=md5(pwd1))
+    u.save()
+    print "创建用户成功"
+
+
+@manager.command
+def reset_password():
+    import getpass
+    from app.models import AdminUser
+    from app.utils import md5
+    username = raw_input("用户名:")
+    try:
+        u = AdminUser.objects.get(username=username)
+        pwd1 = getpass.getpass('密码: ')
+        pwd2 = getpass.getpass('确认密码: ')
+        if pwd1 != pwd2:
+            print "两次输入密码不一致, 重设密码失败"
+            return
+        u.modify(password=md5(pwd1))
+        print "重设密码成功"
+    except AdminUser.DoesNotExist:
+        print "不存在用户", username
+
+
+@manager.command
 def migrate_from_crawl(site):
     from app.models import Line, Starting, Destination
     settings = app.config["CRAWL_MONGODB_SETTINGS"]

@@ -69,7 +69,6 @@ def lock_ticket(order):
     elif order.crawl_source == "bus100":
         from app.models import Bus100Rebot,Line
         rebot = Bus100Rebot.objects.first()
-
         ret = rebot.recrawl_shiftid(order.line)
         line = Line.objects.get(line_id=order.line.line_id)
         order.line = line
@@ -81,7 +80,7 @@ def lock_ticket(order):
             stop_name=order.line.destination.station_name,
             str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
             bus_num=order.line.bus_num,
-            flag=order.line.extra_info.get("flag",0)
+            flag=order.line.extra_info.get("flag", 0)
             )
         contacter = order.contact_info
         riders = order.riders
@@ -89,7 +88,6 @@ def lock_ticket(order):
             ret = {"returnCode": -1, "msg": "该条线路无法购买"}
         else:
             ret = rebot.request_lock_ticket(line, riders, contacter)
-
         data = {}
         if ret["returnCode"] == "0000" and ret.get('redirectPage', ''):
             expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)

@@ -6,6 +6,7 @@ sys.setdefaultencoding("utf-8")
 from flask import Flask
 from flask.ext.mail import Mail
 from flask.ext.mongoengine import MongoEngine
+from flask.ext.login import LoginManager
 from config import config
 from celery import Celery, platforms
 platforms.C_FORCE_ROOT = True
@@ -13,6 +14,7 @@ platforms.C_FORCE_ROOT = True
 mail = Mail()
 db = MongoEngine()
 celery = Celery(__name__, broker="redis://localhost:6379/10")
+login_manager = LoginManager()
 
 
 def init_celery(app):
@@ -64,6 +66,7 @@ def setup_admin_app(config_name):
 
     mail.init_app(app)
     db.init_app(app)
+    login_manager.init_app(app)
     init_celery(app)
 
     from admin import admin as admin_blueprint

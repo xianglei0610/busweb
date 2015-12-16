@@ -17,6 +17,38 @@ from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app.utils import md5
 
 
+class AdminUser(db.Document):
+    """
+    后台管理员/客服
+    """
+    username = db.StringField(max_length=30)
+    password = db.StringField(max_length=50)
+    create_datetime = db.DateTimeField(default=datetime.now)
+    is_switch = db.IntField()
+    is_kefu = db.IntField()
+
+    meta = {
+        "indexes": [
+            "username",
+        ],
+    }
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.username
+
+
 class Starting(db.Document):
     """
     出发地
@@ -261,7 +293,7 @@ class Order(db.Document):
     # 下单时使用的源网站账号
     source_account = db.StringField()
 
-    kefu_status = db.StringField()
+    kefu_order_status = db.IntField()
     kefu_updatetime = db.DateTimeField()
 
     meta = {
