@@ -11,5 +11,5 @@ import views, errors, auth
 # =========================filter=====================
 @jinja2.contextfilter
 @admin.app_template_filter()
-def format_datetime(context, value, format="%Y-%m-%d %H:%M"):
+def format_datetime(context, value, format="%Y-%m-%d %H:%M:%S"):
     return value.strftime(format)

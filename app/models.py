@@ -5,6 +5,7 @@ import urllib
 import urllib2
 import re
 
+from app.constants import *
 from datetime import datetime
 from flask import json, current_app
 from lxml import etree
@@ -12,8 +13,6 @@ from contextlib import contextmanager
 from app.constants import *
 from app import db
 from tasks import issued_callback
-from app.constants import SCQCP_ACCOUNTS, Bus100_ACCOUNTS
-from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app.utils import md5
 
 
@@ -517,18 +516,19 @@ class ScqcpRebot(Rebot):
         current_app.logger.info(">>>> start to login scqcp.com:")
         valid_cnt = 0
         has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
         for bot in cls.objects:
             has_checked[bot.telephone] = 1
-            if bot.telephone not in SCQCP_ACCOUNTS:
+            if bot.telephone not in accounts:
                 bot.modify(is_active=False)
                 continue
-            pwd, is_encrypt = SCQCP_ACCOUNTS[bot.telephone]
+            pwd, is_encrypt = accounts[bot.telephone]
             bot.modify(password=pwd, is_encrypt=is_encrypt)
 
             if bot.login() == "OK":
                 valid_cnt += 1
 
-        for tele, (pwd, is_encrypt) in SCQCP_ACCOUNTS.items():
+        for tele, (pwd, is_encrypt) in accounts.items():
             if tele in has_checked:
                 continue
             bot = cls(is_active=False,
@@ -637,18 +637,19 @@ class Bus100Rebot(Rebot):
         current_app.logger.info(">>>> start to login wap.84100.com:")
         valid_cnt = 0
         has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
         for bot in cls.objects:
             has_checked[bot.telephone] = 1
-            if bot.telephone not in Bus100_ACCOUNTS:
+            if bot.telephone not in accounts:
                 bot.modify(is_active=False)
                 continue
-            pwd, openid = Bus100_ACCOUNTS[bot.telephone]
+            pwd, openid = accounts[bot.telephone]
             bot.modify(password=pwd, open_id=openid)
 
             if bot.login() == "OK":
                 valid_cnt += 1
 
-        for tele, (pwd, openid) in Bus100_ACCOUNTS.items():
+        for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
                 continue
             bot = cls(is_active=False,
