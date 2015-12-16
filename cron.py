@@ -96,6 +96,27 @@ def polling_order_status():
     for order in orderObj:
         order.refresh_status()
 
+from app.utils import getRedisObj
+
+def reflesh_order_list():
+#     user_id = request.args.get("user_id")
+#     status = request.args.get("status", 0)
+    user_id = 1
+    status = 0
+    KF_ORDER_CT = 3
+    if not status:
+        r = getRedisObj()
+        key = 'order_list:%s' % user_id
+        order_ct = r.scard(key)
+        print order_ct
+        if order_ct < KF_ORDER_CT:
+            count = KF_ORDER_CT-order_ct
+            lock_order_list = r.zrange('lock_order_list', 0, count-1)
+            for i in lock_order_list:
+                r.sadd(key, i)
+                r.zrem('lock_order_list', i)
+
+
 
 def main():
     """ 定时任务处理 """
@@ -113,6 +134,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    reflesh_order_list()
 #     polling_order_status()
 # bus_crawl('bus100')

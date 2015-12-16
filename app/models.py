@@ -261,6 +261,9 @@ class Order(db.Document):
     # 下单时使用的源网站账号
     source_account = db.StringField()
 
+    kefu_status = db.StringField()
+    kefu_updatetime = db.DateTimeField()
+
     meta = {
         "indexes": [
             "order_no",
@@ -792,6 +795,7 @@ class Bus100Rebot(Rebot):
                 ret['orderNo'] = orderNo
                 ret['orderAmt'] = orderAmt
         ret['returnMsg'] = returnMsg
+        print 11111111111111111111111111111111111111111
         return ret
 
     def request_order(self, order):

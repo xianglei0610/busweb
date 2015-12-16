@@ -19,8 +19,13 @@ Bus100_ACCOUNTS = {
     "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
 }
 
-
 ADMINS = ['xiangleilei@12308.com','luojunping@12308.com']
+
+REDIS_HOST = '127.0.0.1'
+REDIS_PASSWD = ""
+REDIS_PORT = 6379
+KF_ORDER_CT = 3
+
 
 BROWSER_USER_AGENT = [
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",

@@ -7,7 +7,7 @@ import json
 import pytesseract
 import cStringIO
 
-from datetime import datetime as dte
+from datetime import datetime as dte, date
 from app.constants import *
 from PIL import Image
 from lxml import etree
@@ -16,6 +16,7 @@ from flask import render_template, request, redirect, url_for, current_app, json
 from flask.views import MethodView
 from app.admin import admin
 from app.models import Order, Line, Starting, Destination
+from app.utils import getRedisObj
 
 
 def parse_page_data(qs):
@@ -296,3 +297,62 @@ def input_code():
     """ % code_url
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
+
+
+@admin.route('/reflesh_order_list/', methods=['GET'])
+def reflesh_order_list():
+    user_id = request.args.get("user_id")
+    switch = request.args.get("switch", 0)
+    r = getRedisObj()
+    key = 'order_list:%s' % user_id
+    if not switch:
+        order_ct = r.scard(key)
+        if order_ct < KF_ORDER_CT:
+            count = KF_ORDER_CT-order_ct
+            lock_order_list = r.zrange('lock_order_list', 0, count-1)
+            for i in lock_order_list:
+                r.sadd(key, i)
+                r.zrem('lock_order_list', i)
+    order_nos = r.smembers(key)
+    print order_nos
+    qs = Order.objects.filter(order_no__in=order_nos)
+    qs = qs.order_by("-create_date_time")
+    return render_template('admin/order_list.html',
+                           page=parse_page_data(qs),
+                           status_msg=STATUS_MSG,
+                           source_msg=SOURCE_MSG,
+                           scqcp_accounts=SCQCP_ACCOUNTS,
+                           )
+
+
+@admin.route('/kefu_on_off', methods=['GET'])
+def kefu_on_off():
+    user_id = request.args.get("user_id")
+    switch = request.args.get("switch", 0)
+    if not user_id:
+        return jsonify({"status": -1, "msg": "参数错误"})
+    
+    
+    return jsonify({"status": 0, "msg": "设置成功"})
+
+
+@admin.route('/kefu_complete', methods=['GET'])
+def kefu_complete():
+    user_id = request.args.get("user_id")
+    kefu_status = request.args.get("kefu_status", 0)
+    order_no = request.args.get("order_no", '')
+    if not (user_id and order_no):
+        return jsonify({"status": -1, "msg": "参数错误"})
+    
+    r = getRedisObj()
+    key = 'order_list:%s' % user_id
+    r.srem(key, order_no)
+    orderObj = Order.objects.get(order_no=order_no)
+    orderObj.kefu_status = kefu_status
+    orderObj.kefu_updatetime = dte.now()
+    orderObj.user_id = user_id
+    orderObj.save()
+    return jsonify({"status": 0, "msg": "处理完成"})
+
+
+
