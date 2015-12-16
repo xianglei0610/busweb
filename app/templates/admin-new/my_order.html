@@ -3,12 +3,12 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>车票订单--已完成订单</title>
-    <link href="css/style.css" rel="stylesheet" type="text/css" />
-    <link href="css/select.css" rel="stylesheet" type="text/css" />
-    <script type="text/javascript" src="js/jquery.js"></script>
-    <script type="text/javascript" src="js/select-ui.min.js"></script>
-    <script type="text/javascript" src="js/datepicker/WdatePicker.js"></script>
-    <script src="js/layer/layer.js"></script>
+    <link href="{{url_for('static', filename='admin-new/css/style.css')}}" rel="stylesheet" type="text/css" />
+    <link href="{{url_for('static', filename='admin-new/css/select.css')}}" rel="stylesheet" type="text/css" />
+    <script language="JavaScript" src="{{url_for('static', filename='admin-new/js/jquery.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='admin-new/js/select-ui.min.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static',filename='admin-new/js/datepicker/WdatePicker.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static',filename='admin-new/js/layer/layer.js')}}"></script>
     <script language="javascript">
         $(function (){
 			//全选
@@ -65,7 +65,7 @@
     	<thead>
     	<tr>
         <th>12308订单号</th>
-        <th>下单/出发时间<i class="sort"><img src="images/px.gif" /></i></th>
+        <th>下单/出发时间<i class="sort"><img src="{{url_for('static', filename='admin-new/images/px.gif')}}" /></i></th>
         <th>车次号/行程</th>
         <th>来自源网站</th>
         <th>订票数</th>

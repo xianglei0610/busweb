@@ -6,6 +6,7 @@ sys.setdefaultencoding("utf-8")
 from flask import Flask
 from flask.ext.mail import Mail
 from flask.ext.mongoengine import MongoEngine
+from flask.ext.login import LoginManager
 from config import config
 from celery import Celery, platforms
 platforms.C_FORCE_ROOT = True

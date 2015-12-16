@@ -21,14 +21,22 @@ class AdminUser(db.Document):
     """
     后台管理员/客服
     """
-    username = db.StringField()
+    username = db.StringField(max_length=30)
+    password = db.StringField(max_length=50)
+    create_datetime = db.DateTimeField(default=datetime.now)
 
-    @property
-    def is_active(self):
-        return True
+    meta = {
+        "indexes": [
+            "username",
+        ],
+    }
 
     @property
     def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
         return True
 
     @property

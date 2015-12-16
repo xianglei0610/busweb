@@ -6,16 +6,19 @@ import requests
 import json
 import pytesseract
 import cStringIO
+import flask.ext.login as flask_login
 
 from datetime import datetime as dte
+from app.utils import md5
 from app.constants import *
 from PIL import Image
 from lxml import etree
 from mongoengine import Q
-from flask import render_template, request, redirect, url_for, current_app, jsonify, session
+from flask import render_template, request, redirect, url_for, jsonify, session
 from flask.views import MethodView
+from flask.ext.login import login_required
 from app.admin import admin
-from app.models import Order, Line, Starting, Destination
+from app.models import Order, Line, Starting, Destination, AdminUser
 
 
 def parse_page_data(qs):
@@ -49,10 +52,9 @@ def parse_page_data(qs):
     }
 
 
-@admin.route('/', methods=['GET'])
 @admin.route('/orders', methods=['GET'])
 def order_list():
-    order_no =request.args.get("order_no", "")
+    order_no = request.args.get("order_no", "")
     if order_no:
         qs = Order.objects.filter(order_no=order_no)
     else:
@@ -284,15 +286,61 @@ class SubmitOrder(MethodView):
 
         api_url = urllib2.urlparse.urljoin(fd.get("api_url"), "/orders/submit")
         res = requests.post(api_url, data=json.dumps(data))
-        print "submit order", res
         return redirect(url_for('admin.order_list'))
 
 
-@admin.route('/inputCode', methods=['GET'])
-def input_code():
-    code_url = request.args.get("code_url")
-    return """
-        <img src="%s" alt="code" />
-    """ % code_url
+# ===================================new admin===============================
+class LoginInView(MethodView):
+    def get(self):
+        return render_template('admin-new/login.html')
+
+    def post(self):
+        name = request.form.get("username")
+        pwd = request.form.get("password")
+        try:
+            u = AdminUser.objects.get(username=name, password=md5(pwd))
+            flask_login.login_user(u)
+            print 122222222222222
+            return redirect(url_for('admin.index'))
+        except AdminUser.DoesNotExist:
+            return redirect(url_for('admin.login'))
+
+
+@admin.route('/logout')
+@login_required
+def logout():
+    flask_login.logout_user()
+    return redirect(url_for('admin.login'))
+
+
+@admin.route('/', methods=['GET'])
+@login_required
+def index():
+    return render_template("admin-new/main.html")
+
+
+@admin.route('/top', methods=['GET'])
+@login_required
+def top_page():
+    return render_template("admin-new/top.html")
+
+
+@admin.route('/left', methods=['GET'])
+@login_required
+def left_page():
+    return render_template("admin-new/left.html")
+
+
+@admin.route('/allorder', methods=['GET'])
+@login_required
+def all_order():
+    return render_template("admin-new/allticket_order.html")
+
+
+@admin.route('/myorder', methods=['GET'])
+@login_required
+def my_order():
+    return render_template("admin-new/my_order.html")
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
+admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))

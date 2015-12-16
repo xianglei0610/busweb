@@ -5,7 +5,7 @@ from flask import Blueprint
 
 admin = Blueprint('admin', __name__)
 
-import views, errors
+import views, errors, auth
 
 
 # =========================filter=====================

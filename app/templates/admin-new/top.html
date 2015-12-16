@@ -3,8 +3,8 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>无标题文档</title>
-<link href="css/style.css" rel="stylesheet" type="text/css" />
-<script language="JavaScript" src="js/jquery.js"></script>
+<link href="{{url_for('static', filename='admin-new/css/style.css')}}" rel="stylesheet" type="text/css" />
+<script language="JavaScript" src="{{url_for('static', filename='admin-new/js/jquery.js')}}"></script>
 <script type="text/javascript">
 $(function(){	
 	//顶部导航切换
@@ -15,18 +15,18 @@ $(function(){
 })	
 </script>
 </head>
-<body style="background:url(images/topbg.gif) repeat-x;">
+<body style="background:url({{url_for('static', filename='admin-new/images/topbg.gif')}}" repeat-x;">
     <div class="topleft">
-     <a href="main.html" target="_parent"><img src="images/logo.png" title="系统首页" /></a>
+      <a href="main.html" target="_parent"><img src="{{url_for('static', filename='admin-new/images/logo.png')}}" title="系统首页" /></a>
     </div>        
   <div class="topright">    
    <ul>
     <li><a href="#">操作日志</a></li>
-    <li><a href="login.html" target="_parent">退出</a></li>
+    <li><a href="{{url_for('admin.logout')}}" target="_parent">退出</a></li>
    </ul>
      
    <div class="user">
-      <span>Kalven775</span>
+      <span>{{current_user.username}}</span>
       <i>待处理</i>
       <b>5</b>
    </div>  
