@@ -22,7 +22,6 @@ from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser
 
 
-
 def parse_page_data(qs):
     total = qs.count()
     page = int(request.args.get("page", default=1))
@@ -216,11 +215,11 @@ def order_pay(order_no):
     return redirect(url_for('admin.order_list'))
 
 
-@admin.route('/orders/<order_no>/refresh', methods=['GET'])
-def order_refresh(order_no):
-    order = Order.objects.get(order_no=order_no)
-    order.refresh_issued()
-    return redirect(url_for('admin.order_list'))
+# @admin.route('/orders/<order_no>/refresh', methods=['GET'])
+# def order_refresh(order_no):
+#     order = Order.objects.get(order_no=order_no)
+#     order.refresh_issued()
+#     return redirect(url_for('admin.order_list'))
 
 
 class SubmitOrder(MethodView):
@@ -407,6 +406,7 @@ def my_order():
                     r.sadd(key, i)
                     r.zrem('lock_order_list', i)
         order_nos = r.smembers(key)
+
     qs = Order.objects.filter(order_no__in=order_nos)
     qs = qs.order_by("-create_date_time")
     return render_template("admin-new/my_order.html",
@@ -415,6 +415,7 @@ def my_order():
                            source_info=SOURCE_INFO,
                            userObj=userObj
                            )
+
 
 @admin.route('/orders/<order_no>', methods=['GET'])
 @login_required
@@ -452,8 +453,28 @@ def kefu_complete():
     orderObj.kefu_updatetime = dte.now()
     orderObj.username = username
     orderObj.save()
-    
     r = getRedisObj()
     key = 'order_list:%s' % username
     r.srem(key, order_no)
     return jsonify({"status": 0, "msg": "处理完成"})
+
+
+@admin.route('/kefu_reflesh_order', methods=['POST'])
+@login_required
+def kefu_reflesh_order():
+    username = current_user.username
+    userObj = AdminUser.objects.get(username=username)
+    order_no = request.form.get("order_no", '')
+    if not (order_no):
+        return jsonify({"status": -1, "msg": "参数错误"})
+    order = Order.objects.get(order_no=order_no)
+    order.refresh_issued()
+
+    if order.status != STATUS_WAITING_ISSUE:
+        r = getRedisObj()
+        key = 'order_list:%s' % username
+        print key
+        r.srem(key, order_no)
+    return jsonify({"status": 0, "msg": "处理完成"})
+
+
