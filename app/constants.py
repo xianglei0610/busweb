@@ -1,23 +1,31 @@
 # -*- coding:utf-8 -*-
 
-# 四川汽车票务网登陆账号
-SCQCP_ACCOUNTS = {
-    # telephone: {password, is_encrypt)
-    #"15575101324": ("sha1$dae47$3702fcfa2d29e01350e98f0fe4057b8921c9d3d4", 1),
-    "15575101324": ("cibRpL", 0),
+# 爬取来源
+SOURCE_SCQCP = "scqcp"
+SOURCE_BUS100 = "bus100"
+
+SOURCE_INFO = {
+    SOURCE_SCQCP: {
+        "name": "四川汽车票务网",
+        "website": "www.scqcp.com",
+        "accounts": {
+            # telephone: {password, is_encrypt)
+            "15575101324": ("cibRpL", 0),
+        }
+    },
+    SOURCE_BUS100: {
+        "name": "巴士壹佰",
+        "website": "www.84100.com",
+        "accounts": {
+            # telephone: {password, opendid)
+            "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
+            "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
+        }
+    }
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
-
-
 Bus100_DOMAIN = "http://wap.84100.com"
-
-# 广西84100登陆账号
-Bus100_ACCOUNTS = {
-    # telephone: {password, opendid)
-    "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
-    "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
-}
 
 ADMINS = ['xiangleilei@12308.com','luojunping@12308.com']
 
@@ -56,32 +64,19 @@ MOBILE_USER_AGENG = [
     "Dalvik/1.6.0 (Linux; U; Android 4.4.4; MI 4W MIUI/V7.0.5.0.KXDCNCI)",
 ]
 
-# 爬取来源
-SOURCE_SCQCP = "scqcp"
-SOURCE_BUS100 = "bus100"
 
-SOURCE_MSG = {
-    SOURCE_SCQCP: "四川汽车票务网",
-    SOURCE_BUS100: "巴士壹佰",
-}
-
-# 订单状态
-STATUS_CLOSED = 0         # 订单失效； 订单过期等
-STATUS_LOCK = 3         # 锁票成功
-STATUS_COMMIT = 4       # 提交订单(初始状态)
-STATUS_LOCK_FAIL = 5    # 锁票失败
-STATUS_GIVE_BACK = 6    # 已退票
-STATUS_ISSUE_FAIL = 13  # 出票失败
-STATUS_ISSUE_OK = 14    # 出票成功
+STATUS_WAITING_ISSUE = 3    # 等待出票, 在源网站锁票成功
+STATUS_WAITING_LOCK = 4     # 等待下单，12308已提交了订单，但未向源网站提交订单
+STATUS_LOCK_FAIL = 5        # 下单失败，12308已提交了订单，向源网站提交订单失败
+STATUS_ISSUE_FAIL = 13      # 出票失败, 支付完成后，已确认源网站出票失败
+STATUS_ISSUE_SUCC = 14      # 出票成功, 支付完成后，源网站也出票成功
 
 STATUS_MSG = {
-    STATUS_CLOSED:  "订单失效",
-    STATUS_LOCK: "锁票成功",
-    STATUS_COMMIT: "订单提交",
-    STATUS_LOCK_FAIL: "锁票失败",
+    STATUS_WAITING_ISSUE: "等待出票",
+    STATUS_WAITING_LOCK: "等待下单",
     STATUS_ISSUE_FAIL: "出票失败",
-    STATUS_ISSUE_OK: "出票成功",
-    STATUS_GIVE_BACK: "已退票",
+    STATUS_LOCK_FAIL: "下单失败",
+    STATUS_ISSUE_SUCC: "出票成功",
 }
 
 # 证件类型
@@ -104,5 +99,3 @@ RET_ISSUED_FAIL = 103       # 出票失败
 
 # 线路错误2xx
 RET_LINE_404 = 201      # 线路不存在
-
-

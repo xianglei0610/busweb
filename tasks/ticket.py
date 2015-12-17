@@ -7,6 +7,7 @@ import json
 import datetime
 import time
 
+from datetime import datetime as dte
 from app.constants import *
 from app import celery
 from app.utils import getRedisObj
@@ -43,7 +44,11 @@ def lock_ticket(order):
             data = {}
             if ret["status"] == 1:
                 pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
-                order.modify(status=STATUS_LOCK, lock_info=ret, source_account=rebot.telephone, pay_url=pay_url)
+                order.modify(status=STATUS_WAITING_ISSUE,
+                             lock_info=ret,
+                             lock_datetime=dte.now(),
+                             source_account=rebot.telephone,
+                             pay_url=pay_url)
                 check_order_expire.apply_async((order.order_no,), countdown=8*60+5)  # 8分钟后执行
                 total_price = 0
                 for ticket in ret["ticket_list"]:
@@ -56,11 +61,13 @@ def lock_ticket(order):
 
                 r = getRedisObj()
                 r.zadd('lock_order_list', time.time()*1000, order.order_no)
-
                 json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
             else:
                 rebot.remove_doing_order(order)
-                order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
+                order.modify(status=STATUS_LOCK_FAIL,
+                             lock_info=ret,
+                             lock_datetime=dte.now(),
+                             source_account=rebot.telephone)
                 json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["msg"], "data": data})
             if notify_url:
                 response = urllib2.urlopen(notify_url, json_str, timeout=10)
@@ -93,17 +100,24 @@ def lock_ticket(order):
             expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)
             expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
             ret['expire_time'] = expire_time
-            order.modify(status=STATUS_LOCK, lock_info=ret, pay_url=ret['redirectPage'],raw_order_no=ret['orderNo'], source_account=rebot.telephone)
+            order.modify(status=STATUS_WAITING_ISSUE,
+                         lock_info=ret,
+                         lock_datetime=dte.now(),
+                         pay_url=ret['redirectPage'],
+                         raw_order_no=ret['orderNo'],
+                         source_account=rebot.telephone)
             data.update({
                 "expire_time": expire_time,
                 "total_price": ret['orderAmt'],
             })
             r = getRedisObj()
-            print time.time()*1000, order.order_no
             r.zadd('lock_order_list', order.order_no, time.time()*1000)
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
         else:
-            order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
+            order.modify(status=STATUS_LOCK_FAIL,
+                         lock_info=ret,
+                         lock_datetime=dte.now(),
+                         source_account=rebot.telephone)
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
 
         if notify_url:

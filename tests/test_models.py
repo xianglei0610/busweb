@@ -15,7 +15,8 @@ class RebotTestCase(TestCase):
         return app
 
     def test_login(self):
-        tele = random.choice(SCQCP_ACCOUNTS.keys())
+        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
+        tele = random.choice(accounts.keys())
         rebot = ScqcpRebot.objects.get(telephone=tele)
 
         passwd = rebot.password
