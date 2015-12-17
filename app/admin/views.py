@@ -6,9 +6,7 @@ import requests
 import json
 import pytesseract
 import cStringIO
-# import StringIO
 import flask.ext.login as flask_login
-
 
 from datetime import datetime as dte
 from app.utils import md5, create_validate_code
@@ -20,9 +18,7 @@ from flask import render_template, request, redirect, url_for, jsonify, session,
 from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.admin import admin
-
 from app.utils import getRedisObj
-
 from app.models import Order, Line, Starting, Destination, AdminUser
 
 
@@ -304,7 +300,7 @@ def get_code():
     buf_str = buf.getvalue()
     response = make_response(buf_str)
     response.headers['Content-Type'] = 'image/jpeg'
-    print "valid_code is", strs
+    session["img_valid_code"] = strs
     return response
 
 
@@ -315,6 +311,9 @@ class LoginInView(MethodView):
     def post(self):
         name = request.form.get("username")
         pwd = request.form.get("password")
+        code = request.form.get("validcode")
+        if code != session.get("img_valid_code"):
+            return redirect(url_for('admin.login'))
         try:
             u = AdminUser.objects.get(username=name, password=md5(pwd))
             flask_login.login_user(u)
