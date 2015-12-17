@@ -60,7 +60,7 @@ def lock_ticket(order):
                 })
 
                 r = getRedisObj()
-                r.zadd('lock_order_list', time.time()*1000, order.order_no)
+                r.zadd('lock_order_list', order.order_no, time.time()*1000)
                 json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
             else:
                 rebot.remove_doing_order(order)
