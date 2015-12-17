@@ -332,7 +332,7 @@ class Order(db.Document):
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
             if not tickets:
-                self.modify(status=STATUS_CLOSED)
+                self.modify(status=STATUS_WAITING_LOCK)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
                 return
@@ -360,7 +360,7 @@ class Order(db.Document):
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif tickets['status'] == '5':
-                self.modify(status=STATUS_CLOSED)
+                self.modify(status=STATUS_WAITING_LOCK)
                 rebot.remove_doing_order(self)
 
     def get_contact_info(self):
@@ -563,7 +563,7 @@ class ScqcpRebot(Rebot):
         request.add_header('Authorization', token or self.token)
         request.add_header('Content-type', "application/json; charset=UTF-8")
         qstr = urllib.urlencode(data)
-        response = urllib2.urlopen(request, qstr, timeout=10)
+        response = urllib2.urlopen(request, qstr, timeout=30)
         ret = json.loads(response.read())
         return ret
 
@@ -590,7 +590,7 @@ class ScqcpRebot(Rebot):
         return ret
 
     def request_order(self, order):
-        if order.status in [STATUS_LOCK_FAIL, STATUS_COMMIT]:
+        if order.status in [STATUS_LOCK_FAIL]:
             return
         uri = "/api/v1/ticket_lines/query_order"
         data = {"open_id": self.open_id}
@@ -682,7 +682,7 @@ class Bus100Rebot(Rebot):
         request = urllib2.Request(url)
         request.add_header('User-Agent', user_agent or self.user_agent)
         qstr = urllib.urlencode(data)
-        response = urllib2.urlopen(request, qstr, timeout=10)
+        response = urllib2.urlopen(request, qstr, timeout=30)
         ret = json.loads(response.read())
         return ret
 

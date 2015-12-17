@@ -17,7 +17,8 @@ manager = Manager(app)
 
 
 def make_shell_context():
-    return dict(app=app, db=db)
+    import app.models as m
+    return dict(app=app, db=db, m=m)
 
 manager.add_command("shell", Shell(make_context=make_shell_context))
 
@@ -73,7 +74,7 @@ def create_user():
     if pwd1 != pwd2:
         print "两次输入密码不一致, 创建用户失败"
         return
-    u = AdminUser(username=username, password=md5(pwd1))
+    u = AdminUser(username=username, password=md5(pwd1), is_kefu=1, is_switch=1)
     u.save()
     print "创建用户成功"
 

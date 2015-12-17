@@ -1,0 +1,93 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>车票订单--已完成订单</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script src="js/layer/layer.js"></script>
+    <script>
+        $(function () {         
+            $(window).resize(function (){
+                $.fn.ChangeWindow();
+            });
+            $.fn.ChangeWindow();
+            $.fn.CallIframe();
+        })
+        $.fn.extend({
+            ChangeWindow: function(){
+                $("#mainiframe").find("iframe").css({
+                    "height": function () {
+                        var _webHeight = $(window).height();//整体高度              
+                        return _webHeight;
+                    }
+                });
+            },
+            CallIframe: function (o){
+                layer.open({
+                    type: 1,
+                    title:'登录手动下单',
+                    area: ['580px', ''],
+                    //skin: 'layui-layer-lan',
+                    moveType: 1, //拖拽风格，0是默认，1是传统拖动
+                    shift: 0, //0-6的动画形式，-1不开启
+                    content: $("#btsizebox").html()
+                });
+            }
+        })
+        function ShowIframe(o)
+        {
+            alert(o);
+        }
+    </script>
+</head>
+<body id="mainiframe">
+    <iframe src="main.html" width="100%" height="100%" marginwidth="0" frameborder="0" scrolling="no"></iframe>
+    <div id="btsizebox" style="display: none">
+        <div class="regbox_bd">
+            <div class="signup_hd">
+                <h2>选择登陆账号<span>账号登陆不进，直接<a>登陆官网</a></span></h2>
+            </div>
+            <div class="signup_box">
+                <form method="post" action="http://www.baidu.com" id="formPublic">
+                    <div class="pub-form reg-form">
+                        <div class="fm-li pbot-5">
+                            <span class="fm-label">
+                                <label for="txt_userName">我的账号：</label></span>
+                            <select name="levelName" id="levelName" datatype="*" sucmsg=" " class="single-select">
+                                <option value="2">1895545668(牧师)</option>
+                                <option value="2">Hn(牧师)</option>
+                                <option value="1">*WK(牧师)</option>
+                            </select>
+
+                        </div>
+
+                        <div class="fm-li pbot-5">
+                            <span class="fm-label">
+                                <label for="txt_input6">验证码：</label></span>
+                            <div class="code_box">
+                                <input value="" name="verifyCode" id="verifyCode" class="i-input w220" type="text">
+                            </div>
+                        </div>
+
+                        <div class="fm-li pbot-5">
+                            <span class="fm-label"></span>
+                            <span class="code_img">
+                                <img alt="" class="regimg" src="images/code.jpg" id="imgVerifyCode"></span>
+                        </div>
+
+                        <div class="fm-li">
+                            <span class="fm-label">
+                                <label for="txt_input6"></label>
+                            </span>
+                            <input name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+            <p class="signup_bot">正在尝试下单，来着12308汽车票</p>
+        </div>
+    </div>
+</body>
+</html>

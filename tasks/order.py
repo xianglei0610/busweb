@@ -15,4 +15,4 @@ def check_order_expire(self, order_no):
         return
     order.refresh_issued()
     if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=10)
+        self.retry(countdown=20)
