@@ -363,6 +363,7 @@ def my_order():
     username = current_user.username
     userObj = AdminUser.objects.get(username=current_user.username)
     print userObj.is_kefu
+    order_nos = []
     if userObj.is_kefu:
         r = getRedisObj()
         key = 'order_list:%s' % username
@@ -375,18 +376,17 @@ def my_order():
                     r.sadd(key, i)
                     r.zrem('lock_order_list', i)
         order_nos = r.smembers(key)
-        print order_nos
-        qs = Order.objects.filter(order_no__in=order_nos)
-        qs = qs.order_by("-create_date_time")
-        return render_template("admin-new/my_order.html",
-                               page=parse_page_data(qs),
-                               status_msg=STATUS_MSG,
-                               source_msg=SOURCE_MSG,
-                               scqcp_accounts=SCQCP_ACCOUNTS,
-                               userObj=userObj
-                               )
-    else:
-        return render_template("admin-new/my_order.html",userOb=userObj)
+    print order_nos
+    qs = Order.objects.filter(order_no__in=order_nos)
+    qs = qs.order_by("-create_date_time")
+    return render_template("admin-new/my_order.html",
+                           page=parse_page_data(qs),
+                           status_msg=STATUS_MSG,
+                           source_msg=SOURCE_MSG,
+                           scqcp_accounts=SCQCP_ACCOUNTS,
+                           userObj=userObj
+                           )
+
 
 
 @admin.route('/kefu_on_off', methods=['POST'])
