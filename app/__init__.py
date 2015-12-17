@@ -1,4 +1,5 @@
 # -*- coding:utf-8 *-*
+import os
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -15,7 +16,7 @@ mail = Mail()
 db = MongoEngine()
 celery = Celery(__name__, broker="redis://localhost:6379/10")
 login_manager = LoginManager()
-
+BASE_DIR = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 
 def init_celery(app):
     TaskBase = celery.Task

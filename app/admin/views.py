@@ -6,17 +6,17 @@ import requests
 import json
 import pytesseract
 import cStringIO
+# import StringIO
 import flask.ext.login as flask_login
 
 
 from datetime import datetime as dte
-from app.utils import md5
-
+from app.utils import md5, create_validate_code
 from app.constants import *
 from PIL import Image
 from lxml import etree
 from mongoengine import Q
-from flask import render_template, request, redirect, url_for, jsonify, session
+from flask import render_template, request, redirect, url_for, jsonify, session, make_response
 from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.admin import admin
@@ -295,6 +295,19 @@ class SubmitOrder(MethodView):
 
 
 # ===================================new admin===============================
+@admin.route('/code')
+def get_code():
+    # 把strs发给前端,或者在后台使用session保存
+    code_img, strs = create_validate_code()
+    buf = cStringIO.StringIO()
+    code_img.save(buf, 'JPEG', quality=70)
+    buf_str = buf.getvalue()
+    response = make_response(buf_str)
+    response.headers['Content-Type'] = 'image/jpeg'
+    print "valid_code is", strs
+    return response
+
+
 class LoginInView(MethodView):
     def get(self):
         return render_template('admin-new/login.html')
