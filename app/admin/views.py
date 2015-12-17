@@ -8,21 +8,17 @@ import pytesseract
 import cStringIO
 import flask.ext.login as flask_login
 
-
 from datetime import datetime as dte
-from app.utils import md5
-
+from app.utils import md5, create_validate_code
 from app.constants import *
 from PIL import Image
 from lxml import etree
 from mongoengine import Q
-from flask import render_template, request, redirect, url_for, jsonify, session
+from flask import render_template, request, redirect, url_for, jsonify, session, make_response
 from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.admin import admin
-
 from app.utils import getRedisObj
-
 from app.models import Order, Line, Starting, Destination, AdminUser
 
 
@@ -295,6 +291,19 @@ class SubmitOrder(MethodView):
 
 
 # ===================================new admin===============================
+@admin.route('/code')
+def get_code():
+    # 把strs发给前端,或者在后台使用session保存
+    code_img, strs = create_validate_code()
+    buf = cStringIO.StringIO()
+    code_img.save(buf, 'JPEG', quality=70)
+    buf_str = buf.getvalue()
+    response = make_response(buf_str)
+    response.headers['Content-Type'] = 'image/jpeg'
+    session["img_valid_code"] = strs
+    return response
+
+
 class LoginInView(MethodView):
     def get(self):
         return render_template('admin-new/login.html')
@@ -302,6 +311,9 @@ class LoginInView(MethodView):
     def post(self):
         name = request.form.get("username")
         pwd = request.form.get("password")
+        code = request.form.get("validcode")
+        if code != session.get("img_valid_code"):
+            return redirect(url_for('admin.login'))
         try:
             u = AdminUser.objects.get(username=name, password=md5(pwd))
             flask_login.login_user(u)
