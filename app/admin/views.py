@@ -221,11 +221,11 @@ def order_pay(order_no):
     return redirect(url_for('admin.order_list'))
 
 
-@admin.route('/orders/<order_no>/refresh', methods=['GET'])
-def order_refresh(order_no):
-    order = Order.objects.get(order_no=order_no)
-    order.refresh_issued()
-    return redirect(url_for('admin.order_list'))
+# @admin.route('/orders/<order_no>/refresh', methods=['GET'])
+# def order_refresh(order_no):
+#     order = Order.objects.get(order_no=order_no)
+#     order.refresh_issued()
+#     return redirect(url_for('admin.order_list'))
 
 
 class SubmitOrder(MethodView):
@@ -412,8 +412,28 @@ def kefu_complete():
     orderObj.kefu_updatetime = dte.now()
     orderObj.username = username
     orderObj.save()
-    
     r = getRedisObj()
     key = 'order_list:%s' % username
     r.srem(key, order_no)
     return jsonify({"status": 0, "msg": "处理完成"})
+
+
+@admin.route('/kefu_reflesh_order', methods=['POST'])
+def kefu_reflesh_order():
+    username = current_user.username
+    userObj = AdminUser.objects.get(username=username)
+    order_no = request.form.get("order_no", '')
+    if not (order_no):
+        return jsonify({"status": -1, "msg": "参数错误"})
+    order = Order.objects.get(order_no=order_no)
+    order.refresh_issued()
+    print '1111111111111111',order.status,STATUS_LOCK
+    if order.status != STATUS_LOCK:
+        r = getRedisObj()
+        key = 'order_list:%s' % username
+        print key
+        r.srem(key, order_no)
+    
+    return jsonify({"status": 0, "msg": "处理完成"})
+
+

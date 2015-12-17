@@ -342,9 +342,10 @@ class Order(db.Document):
                 self.modify(status=STATUS_GIVE_BACK)
                 issued_callback.delay(self.order_no)
 
-        elif self.crawl_source == "gx84100":
+        elif self.crawl_source == "bus100":
             rebot = Bus100Rebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
+            print '-------------',tickets
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
                 self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
@@ -842,7 +843,7 @@ class Bus100Rebot(Rebot):
 
         headers = {"User-Agent": ua}
         r = requests.post(url, data=data, headers=headers)
-
+        print 33333333333333333333
         _cookies = r.cookies
 
         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
