@@ -258,7 +258,7 @@ class Order(db.Document):
     line = db.ReferenceField(Line)
 
     seat_no_list = db.ListField(db.StringField(max_length=10))
-    ticket_price = db.FloatField()
+    ticket_price = db.FloatField()          # 单张车票价格
     ticket_amount = db.IntField()
     ticket_fee = db.FloatField()            # 单张车票手续费
     discount = db.FloatField(default=0)     # 单张车票优惠金额
@@ -277,6 +277,7 @@ class Order(db.Document):
     riders = db.ListField(db.DictField())
 
     # 锁票信息: 源网站在锁票这步返回的数据
+    lock_datetime = db.DateTimeField()
     lock_info = db.DictField()
 
     # 取票信息
@@ -305,6 +306,14 @@ class Order(db.Document):
             "-create_date_time",
             ],
     }
+
+    @property
+    def source_account_pass(self):
+        accounts = SOURCE_INFO.get(self.crawl_source, {}).get("accounts", {})
+        pass_info = accounts.get(self.source_account, [])
+        if not pass_info:
+            return ""
+        return pass_info[0]
 
     def get_rebot(type="app"):  # type: app or wap or web
         if self.crawl_source == "scqcp":
@@ -828,7 +837,6 @@ class Bus100Rebot(Rebot):
                 ret['orderNo'] = orderNo
                 ret['orderAmt'] = orderAmt
         ret['returnMsg'] = returnMsg
-        print 11111111111111111111111111111111111111111
         return ret
 
     def request_order(self, order):

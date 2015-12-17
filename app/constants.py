@@ -7,13 +7,15 @@ SOURCE_BUS100 = "bus100"
 SOURCE_INFO = {
     SOURCE_SCQCP: {
         "name": "四川汽车票务网",
+        "website": "www.scqcp.com",
         "accounts": {
             # telephone: {password, is_encrypt)
             "15575101324": ("cibRpL", 0),
         }
     },
     SOURCE_BUS100: {
-        "name": "四川汽车票务网",
+        "name": "巴士壹佰",
+        "website": "www.84100.com",
         "accounts": {
             # telephone: {password, opendid)
             "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
@@ -97,4 +99,3 @@ RET_ISSUED_FAIL = 103       # 出票失败
 
 # 线路错误2xx
 RET_LINE_404 = 201      # 线路不存在
-

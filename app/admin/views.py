@@ -354,23 +354,23 @@ def all_order():
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
 
-    condition = {}
+    query = {}
     if status:
-        condition.update(status=int(status))
+        query.update(status=int(status))
     if source:
-        condition.update(crawl_source=source)
+        query.update(crawl_source=source)
         if source_account:
-            condition.update(source_account=source_account)
+            query.update(source_account=source_account)
     if str_date:
-        condition.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
+        query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
     if end_date:
-        condition.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
-    qs = Order.objects.filter(**condition).order_by("-create_date_time")
+        query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
+    qs = Order.objects.filter(**query).order_by("-create_date_time")
     return render_template('admin-new/allticket_order.html',
                            page=parse_page_data(qs),
                            status_msg=STATUS_MSG,
                            source_info=SOURCE_INFO,
-                           condition=condition,)
+                           condition=request.args)
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
@@ -382,7 +382,7 @@ admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 def my_order():
     username = current_user.username
     userObj = AdminUser.objects.get(username=current_user.username)
-    print userObj.is_kefu
+    order_nos = []
     if userObj.is_kefu:
         r = getRedisObj()
         key = 'order_list:%s' % username
@@ -395,21 +395,28 @@ def my_order():
                     r.sadd(key, i)
                     r.zrem('lock_order_list', i)
         order_nos = r.smembers(key)
-        print order_nos
-        qs = Order.objects.filter(order_no__in=order_nos)
-        qs = qs.order_by("-create_date_time")
-        return render_template("admin-new/my_order.html",
-                               page=parse_page_data(qs),
-                               status_msg=STATUS_MSG,
-                               source_msg=SOURCE_MSG,
-                               scqcp_accounts=SCQCP_ACCOUNTS,
-                               userObj=userObj
-                               )
-    else:
-        return render_template("admin-new/my_order.html")
+    qs = Order.objects.filter(order_no__in=order_nos)
+    qs = qs.order_by("-create_date_time")
+    return render_template("admin-new/my_order.html",
+                           page=parse_page_data(qs),
+                           status_msg=STATUS_MSG,
+                           source_info=SOURCE_INFO,
+                           userObj=userObj
+                           )
+
+@admin.route('/orders/<order_no>', methods=['GET'])
+@login_required
+def detail_order(order_no):
+    order = Order.objects.get_or_404(order_no=order_no)
+    return render_template("admin-new/detail_order.html",
+                            order=order,
+                            status_msg=STATUS_MSG,
+                            source_info=SOURCE_INFO,
+                           )
 
 
 @admin.route('/kefu_on_off', methods=['POST'])
+@login_required
 def kefu_on_off():
     userObj = AdminUser.objects.get(username=current_user.username)
     is_switch = int(request.form.get('is_switch', 0))
@@ -420,6 +427,7 @@ def kefu_on_off():
 
 
 @admin.route('/kefu_complete', methods=['POST'])
+@login_required
 def kefu_complete():
     username = current_user.username
     userObj = AdminUser.objects.get(username=username)

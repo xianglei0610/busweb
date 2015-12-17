@@ -3,18 +3,17 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>车票订单--订单详情</title>
-    <link href="css/style.css" rel="stylesheet" type="text/css" />
-     <link href="css/windialog.css" rel="stylesheet" type="text/css" />
-    <script type="text/javascript" src="js/jquery.js"></script>
-    <script language="JavaScript" src="js/windialog.js"></script>
-    <script type="text/javascript" src="js/fnplus.js"></script>
+    <link href="{{url_for('static', filename='admin-new/css/style.css')}}" rel="stylesheet" type="text/css" />
+    <link href="{{url_for('static', filename='admin-new/css/windialog.css')}}" rel="stylesheet" type="text/css" />
+    <script language="JavaScript" src="{{url_for('static', filename='admin-new/js/jquery.js')}}"></script>
+    <script language="JavaScript" src="{{url_for('static', filename='admin-new/js/windialog.js')}}"></script>
+    <script language="JavaScript" src="{{url_for('static', filename='admin-new/js/fnplus.js')}}"></script>
 </head>
 <body>
     <div class="place">
         <span>位置：</span>
          <ul class="placeul">
-            <li><a href="#">车票订单</a></li>
-            <li><a href="#">退款订单</a></li>
+            <li><a href="#">所有订单</a></li>
             <li><a href="#">订单详情</a></li>
         </ul>
     </div>
@@ -32,10 +31,10 @@
       
       <!--手工代购详情显示-->
        <div class="torderinfo">
-        12308订单号:<label class="bold">20150607141556172</label>
+         12308订单号:<label class="bold">{{order.out_order_no}}</label>
       </div>
       <div class="torderinfo">
-        订单状态:<label class="color4">出票成功</label>
+        订单状态:<label class="color4">{{status_msg[order.status]}}</label>
       </div>
       
       
@@ -53,15 +52,19 @@
             <th>取票密码（取票号）</th>
           </tr>
         </thead>
-        <tbody>                                                    
+        <tbody>
           <tr>
-            <td><a href="#">四川票务网</a><br />              
-              http://www.scqcp.com </td>
-              <td><span class="bold">20151207141556172</span></td>
-            <td>2015-12-05 10:58:14</td>
-            <td>2015-12-06 10:58:14</td>
-            <td>347318<br />
-              123084661620 </td>
+            <td><a href="{{source_info[order.crawl_source]['website']}}">{{source_info[order.crawl_source]['name']}}</a><br />              
+              {{source_info[order.crawl_source]['website']}} </td>
+              <td><span class="bold">order.raw_order_no</span></td>
+              <td>{{order.create_date_time|format_datetime}}</td>
+              <td>{{order.lock_datetime|format_datetime}}</td>
+              <td>
+                {% for s in order.pick_msg_list %}
+                {{s}}
+                <br />
+                {% endfor %}
+              </td>
           </tr>
           
         </tbody>
@@ -86,13 +89,18 @@
         </thead>
         <tbody>
           <tr class="td_c">
-            <td>张家港车站--苏州南站<br>2015-06-07 14:00</td>
-		    <td>FII012<br>如东汽车站 - 无锡</td>
-            <td>￥29.00 /张</td>
-            <td>1 张</td>
-            <td>￥3.00</td>
-            <td>￥5.00</td>
-            <td>￥29.00</td>
+            <td>
+              {{order.line.starting.city_name or order.line.starting.station_name}} - {{order.line.destination.city_name or order.line.destination.station_name}}<br>
+              {{order.line.drv_datetime|format_datetime}}
+            </td>
+            <td>{{order.line.bus_num}}<br>
+              {{order.line.starting.city_name or order.line.starting.station_name}} - {{order.line.destination.city_name or order.line.destination.station_name}}<br>
+            </td>
+            <td>￥{{order.ticket_price}} /张</td>
+            <td>{{order.ticket_amount}} 张</td>
+            <td>￥0.00</td>
+            <td>￥{{order.ticket_fee}}</td>
+            <td>￥{{(order.ticket_price+order.ticket_fee)*order.ticket_amount}}</td>
             <td><label class="f14 yellow">￥29.00</label></td>
           </tr>          
         </tbody>
@@ -115,16 +123,16 @@
         <tbody>
           <tr class="td_c">
             <td>
-		    		2015060700001000320061085253
+              {{order.pay_no}}
 </td>
-		       <td> 	    	<label class="ordersuccess">支付成功</label>
+<td> 	    	<label class="ordersuccess">{{order.pay_status}}</label>
 </td>
             <td>
             <label class="orderspecial">
-		    	  支付宝</label></td>
-		    <td>12308@piaokuan03.com<br>
-		    2015-12-07 10:58:29</td>
-            <td><label class="f14 yellow">￥29.00</label></td>
+              {{order.pay_channel}}</label></td>
+          <td>{{order.pay_account}}<br>
+            {{order.pay_datetime|format_datetime}}</td>
+          <td><label class="f14 yellow">￥0</label></td>
           </tr>
         </tbody>
       </table>
@@ -143,9 +151,9 @@
         </thead>
         <tbody>
           <tr class="td_c">
-            <td>聂凌波</td>
-            <td>15062471080</td>
-            <td>320582199412142329</td>
+            <td>{{order.contact_info.name}}</td>
+            <td>{{order.contact_info.telephone}}</td>
+            <td>{{order.contact_info.id_number}}</td>
           </tr>
         </tbody>
       </table>
@@ -163,11 +171,13 @@
 	      </tr>
         </thead>
         <tbody>
+    {% for d in order.riders %}
     <tr class="td_c">
-      <td>1</td>
-      <td>聂凌波</td>
-      <td>320582199412142329</td>
+      <td>{{loop.index}}</td>
+      <td>{{d.name}}</td>
+      <td>{{d.id_number}}</td>
       </tr>
+    {%endfor%}
         </tbody>
       </table>
      </div>
@@ -178,11 +188,11 @@
      <table class="tablelist">
         <tbody><tr>
           <th width="10%">第三方登录账户</th>
-          <td width="20%">15062471080</td>
+          <td width="20%">{{order.source_account}}</td>
           <th width="10%">账户密码</th>
-          <td width="20%">15062471080</td>
+          <td width="20%">{{order.source_account_pass}}</td>
           <th width="10%">绑定手机</th>
-          <td width="20%">15062471080</td>
+          <td width="20%">{{order.source_account}}</td>
         </tr>
         <tr>
           <th>DG账户</th>
