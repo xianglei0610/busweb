@@ -8,17 +8,23 @@ import pytesseract
 import cStringIO
 import flask.ext.login as flask_login
 
+
 from datetime import datetime as dte
 from app.utils import md5
+
 from app.constants import *
 from PIL import Image
 from lxml import etree
 from mongoengine import Q
 from flask import render_template, request, redirect, url_for, jsonify, session
 from flask.views import MethodView
-from flask.ext.login import login_required
+from flask.ext.login import login_required, current_user
 from app.admin import admin
+
+from app.utils import getRedisObj
+
 from app.models import Order, Line, Starting, Destination, AdminUser
+
 
 
 def parse_page_data(qs):
@@ -320,7 +326,17 @@ def index():
 @admin.route('/top', methods=['GET'])
 @login_required
 def top_page():
-    return render_template("admin-new/top.html")
+    key = 'lock_order_list'
+    r = getRedisObj()
+    count = r.zcard(key)
+    sum = count
+    userObjs = AdminUser.objects.filter(is_kefu=1)
+    for userObj in userObjs:
+        username = userObj.username
+        kf_key = 'order_list:%s' % username
+        order_ct = r.scard(kf_key)
+        sum += order_ct
+    return render_template("admin-new/top.html", sum=sum)
 
 
 @admin.route('/left', methods=['GET'])
@@ -357,10 +373,67 @@ def all_order():
                            condition=condition,)
 
 
+admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
+admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
+
+
 @admin.route('/myorder', methods=['GET'])
 @login_required
 def my_order():
-    return render_template("admin-new/my_order.html")
+    username = current_user.username
+    userObj = AdminUser.objects.get(username=current_user.username)
+    print userObj.is_kefu
+    if userObj.is_kefu:
+        r = getRedisObj()
+        key = 'order_list:%s' % username
+        if userObj.is_switch:
+            order_ct = r.scard(key)
+            if order_ct < KF_ORDER_CT:
+                count = KF_ORDER_CT-order_ct
+                lock_order_list = r.zrange('lock_order_list', 0, count-1)
+                for i in lock_order_list:
+                    r.sadd(key, i)
+                    r.zrem('lock_order_list', i)
+        order_nos = r.smembers(key)
+        print order_nos
+        qs = Order.objects.filter(order_no__in=order_nos)
+        qs = qs.order_by("-create_date_time")
+        return render_template("admin-new/my_order.html",
+                               page=parse_page_data(qs),
+                               status_msg=STATUS_MSG,
+                               source_msg=SOURCE_MSG,
+                               scqcp_accounts=SCQCP_ACCOUNTS,
+                               userObj=userObj
+                               )
+    else:
+        return render_template("admin-new/my_order.html")
 
-admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
-admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
+
+@admin.route('/kefu_on_off', methods=['POST'])
+def kefu_on_off():
+    userObj = AdminUser.objects.get(username=current_user.username)
+    is_switch = int(request.form.get('is_switch', 0))
+
+    userObj.is_switch = is_switch
+    userObj.save()
+    return jsonify({"status": "0", "msg": "设置成功"})
+
+
+@admin.route('/kefu_complete', methods=['POST'])
+def kefu_complete():
+    username = current_user.username
+    userObj = AdminUser.objects.get(username=username)
+    order_no = request.form.get("order_no", '')
+    if not (order_no):
+        return jsonify({"status": -1, "msg": "参数错误"})
+
+    orderObj = Order.objects.get(order_no=order_no)
+    orderObj.kefu_order_status = 1
+    orderObj.kefu_updatetime = dte.now()
+    orderObj.username = username
+    orderObj.save()
+    
+    r = getRedisObj()
+    key = 'order_list:%s' % username
+    r.srem(key, order_no)
+    return jsonify({"status": 0, "msg": "处理完成"})

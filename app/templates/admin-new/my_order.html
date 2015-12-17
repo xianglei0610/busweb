@@ -28,7 +28,70 @@
 					content: "<div>" +$("#btsizebox").html()+"</div>"
 				});
 			});
+			
+			$('.J_close').on('click', function(){
+				var is_switch = 0;
+				var	_this = $(this);
+				if(_this.attr('data-status')==0){
+					is_switch = 1;
+				}
+				$.ajax({
+					url : '/kefu_on_off',
+					type : 'post',
+					data : {
+						is_switch : is_switch
+					},
+					success : function(data){
+						if(data.status==0){
+							alert('操作成功！');
+							window.location.reload();
+					    }
+				    }
+				});
+			});
+			
+			
+
+			
+			
+			
         })
+        function disp_confirm(order_no)
+			  {
+			  var r=confirm('确定已支付?')
+			  if (r==true)
+			    {
+			    $.ajax({
+					url : '/kefu_complete',
+					type : 'post',
+					data : {
+						 order_no:order_no
+					},
+					success : function(data){
+						if(data.status==0){
+							parent.location.reload();
+					    }
+				    }
+				});
+			    }
+	
+			  }
+
+
+		function run(){
+			var s = document.getElementById("timeout");
+			if(s.innerHTML == 0){
+			   window.location.href='/myorder';
+			   return false;
+			}
+			s.innerHTML = s.innerHTML * 1 - 1;
+			}
+			
+			window.setInterval("run();", 1000);
+
+
+
+
     </script>
 </head>
 <body>
@@ -51,11 +114,18 @@
    <div class="tabson">
     <ul class="seachform">    
     <li>
-      <label class="timecount">自动刷新，距离下次刷新还剩<em> 25</em> 秒</label>
+      <label class="timecount">自动刷新，距离下次刷新还剩<em id = 'timeout'> 25</em> 秒</label>
     </li>
     <li  class="right"><label>&nbsp;</label>
     <!--<input name="" type="button" class="g_btn" value="暂停刷新"/>-->
-    <input name="" type="button" class="b_btn" value="暂停刷新"/>
+    
+
+	{% if  userObj.is_switch %}	
+		<a href="javascript:;" type="button" class="b_btn J_close"  data-status="{{userObj.is_switch}}">暂停刷新</a>
+	{% else %}	
+		<a href="javascript:;" type="button" class="b_btn J_close"  data-status="{{userObj.is_switch}}" >开启刷新</a>
+	{% endif %}
+
     </li>
     </ul>    
    </div>
@@ -75,45 +145,21 @@
         </tr>
         </thead>
         <tbody>
+        {% for order in page["items"] %}
         <tr>
-         <td>20130908</td>
-         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
-         <td>FII012<br>如东汽车站 - 无锡</td>
-         <td>四川汽车票务网<br></td>
-         <td>1张</td>
-         <td class="m">￥50.00</td>
-         <td class="color4">等待出票</td>
+         <td>{{order.out_order_no}}</td>
+         <td>{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}<br>{{order.line.drv_date}} {{order.line.drv_time}}</td>
+         <td>{{order.line.bus_num}}<br>{{order.line.starting.city_name}} --> {{order.line.destination.station_name}}</td>
+         <td>{{source_msg[order.crawl_source]}}<br></td>
+         <td>{{order.ticket_amount}}</td>
+         <td class="m">{{order.order_price}}</td>
+         <td class="color4">{{status_msg[order.status]}}</td>
          <td>
           <p><a href="#" class="btsize">立即支付</a></p>
-          <p class="pt"><a href="#" class="tablelink mr10">获取刷新</a><a href="#" class="tablelink" onclick="return confirm('确定已支付?')">已处理</a></p>
+          <p class="pt"><a href="#" class="tablelink mr10">获取刷新</a><a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a></p>
          </td>
         </tr> 
-        <tr>
-         <td>20130908</td>
-         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
-         <td>FII012<br>如东汽车站 - 无锡</td>
-         <td>2013-09-09 15:05</td>
-         <td>1张</td>
-         <td class="m">￥50.00</td>
-         <td class="color4">等待出票</td>
-           <td>
-          <p><a href="#" class="btsize">立即支付</a></p>
-          <p class="pt"><a href="#" class="tablelink mr10">获取刷新</a><a href="#" class="tablelink" onclick="return confirm('确定已支付?')">已处理</a></p>
-         </td>
-        </tr> 
-        <tr>
-         <td>20130908</td>
-         <td>2015-06-07 01:21:48<br>2015-06-07 13:38:48</td>
-         <td>FII012<br>如东汽车站 - 无锡</td>
-         <td>2013-09-09 15:05</td>
-         <td>1张</td>
-         <td class="m">￥50.00</td>
-         <td class="color4">等待出票</td>
-         <td>
-          <p><a href="#" class="btsize">立即支付</a></p>
-          <p class="pt"><a href="#" class="tablelink mr10">获取刷新</a><a href="#" class="tablelink" onclick="return confirm('确定已支付?')">已处理</a></p>
-         </td>
-        </tr> 
+        {%endfor%}
         </tbody>
     </table>
     </div>
@@ -179,4 +225,20 @@
   </div>
    </div>
 </body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </html>

@@ -23,6 +23,8 @@ class AdminUser(db.Document):
     username = db.StringField(max_length=30)
     password = db.StringField(max_length=50)
     create_datetime = db.DateTimeField(default=datetime.now)
+    is_switch = db.IntField()
+    is_kefu = db.IntField()
 
     meta = {
         "indexes": [
@@ -289,6 +291,9 @@ class Order(db.Document):
 
     # 下单时使用的源网站账号
     source_account = db.StringField()
+
+    kefu_order_status = db.IntField()
+    kefu_updatetime = db.DateTimeField()
 
     meta = {
         "indexes": [
@@ -823,6 +828,7 @@ class Bus100Rebot(Rebot):
                 ret['orderNo'] = orderNo
                 ret['orderAmt'] = orderAmt
         ret['returnMsg'] = returnMsg
+        print 11111111111111111111111111111111111111111
         return ret
 
     def request_order(self, order):

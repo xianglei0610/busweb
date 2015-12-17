@@ -5,10 +5,11 @@
 import urllib2
 import json
 import datetime
+import time
 
 from app.constants import *
 from app import celery
-
+from app.utils import getRedisObj
 
 @celery.task
 def lock_ticket(order):
@@ -39,7 +40,7 @@ def lock_ticket(order):
 
         with ScqcpRebot.get_and_lock(order) as rebot:
             ret = rebot.request_lock_ticket(line, riders, contacter)
-            data = []
+            data = {}
             if ret["status"] == 1:
                 pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
                 order.modify(status=STATUS_WAITING_ISSUE, lock_info=ret, source_account=rebot.telephone, pay_url=pay_url)
@@ -52,6 +53,10 @@ def lock_ticket(order):
                     "expire_time": ret["expire_time"],
                     "total_price": total_price,
                 })
+
+                r = getRedisObj()
+                r.zadd('lock_order_list', time.time()*1000, order.order_no)
+
                 json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
             else:
                 rebot.remove_doing_order(order)
@@ -64,7 +69,6 @@ def lock_ticket(order):
     elif order.crawl_source == "bus100":
         from app.models import Bus100Rebot,Line
         rebot = Bus100Rebot.objects.first()
-
         ret = rebot.recrawl_shiftid(order.line)
         line = Line.objects.get(line_id=order.line.line_id)
         order.line = line
@@ -76,7 +80,7 @@ def lock_ticket(order):
             stop_name=order.line.destination.station_name,
             str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
             bus_num=order.line.bus_num,
-            flag=order.line.extra_info.get("flag",0)
+            flag=order.line.extra_info.get("flag", 0)
             )
         contacter = order.contact_info
         riders = order.riders
@@ -84,18 +88,19 @@ def lock_ticket(order):
             ret = {"returnCode": -1, "msg": "该条线路无法购买"}
         else:
             ret = rebot.request_lock_ticket(line, riders, contacter)
-
-        data = []
-        if ret["returnCode"] == "0000" and ret.get('redirectPage',''):
+        data = {}
+        if ret["returnCode"] == "0000" and ret.get('redirectPage', ''):
             expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)
             expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
             ret['expire_time'] = expire_time
             order.modify(status=STATUS_WAITING_ISSUE, lock_info=ret, pay_url=ret['redirectPage'],raw_order_no=ret['orderNo'], source_account=rebot.telephone)
-
             data.update({
                 "expire_time": expire_time,
                 "total_price": ret['orderAmt'],
             })
+            r = getRedisObj()
+            print time.time()*1000, order.order_no
+            r.zadd('lock_order_list', order.order_no, time.time()*1000)
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
         else:
             order.modify(status=STATUS_LOCK_FAIL, lock_info=ret, source_account=rebot.telephone)
