@@ -15,7 +15,7 @@ from apscheduler.scheduler import Scheduler
 
 from manage import migrate_from_crawl
 from app.email import send_email
-from app.constants import ADMINS, STATUS_LOCK
+from app.constants import ADMINS, STATUS_WAITING_ISSUE
 from app import setup_app
 from app.models import Order
 
@@ -92,7 +92,7 @@ def sync_crawl_to_api(crawl_source):
 
 @check
 def polling_order_status():
-    orderObj = Order.objects.filter(status=STATUS_LOCK)
+    orderObj = Order.objects.filter(status=STATUS_WAITING_ISSUE)
     for order in orderObj:
         order.refresh_status()
 

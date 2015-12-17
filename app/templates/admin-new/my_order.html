@@ -49,15 +49,10 @@
 				    }
 				});
 			});
-			
-			
-
-			
-			
-			
-        })
-        function disp_confirm(order_no)
-			  {
+          })
+        
+          function disp_confirm(order_no)
+		    {
 			  var r=confirm('确定已支付?')
 			  if (r==true)
 			    {
@@ -74,11 +69,25 @@
 				    }
 				});
 			    }
-	
 			  }
 
+          function kefu_reflesh_order(order_no)
+		    {
+			    $.ajax({
+					url : '/kefu_reflesh_order',
+					type : 'post',
+					data : {
+						 order_no:order_no
+					},
+					success : function(data){
+						if(data.status==0){
+							window.location.href='/myorder';
+					    }
+				    }
+				});
+			  }
 
-		function run(){
+		  function run(){
 			var s = document.getElementById("timeout");
 			if(s.innerHTML == 0){
 			   window.location.href='/myorder';
@@ -90,8 +99,23 @@
 			window.setInterval("run();", 1000);
 
 
-
-
+	 	
+	    window.onload = function ()
+	    {   var index = 0;
+	        var ul = document.getElementById ("itab");
+	        var btns = ul.getElementsByTagName ("li");
+	        for ( var i = 0; i < btns.length; i++)
+	        {	
+	            btns[i].index = i;
+	            btns[i].onclick = function ()
+	            {	
+	                btns[index].getElementsByTagName("a")[0].className = '';
+	                this.getElementsByTagName("a")[0].className = "selected";
+	                index = this.index;
+	            }
+	        }
+	    }
+		
     </script>
 </head>
 <body>
@@ -104,8 +128,8 @@
     </div>
 
     <div class="formbody">
-             <div class="itab">
-                <ul>
+             <div class="itab" >
+                <ul id='itab'>
                     <li><a href="#tab1" class="selected">待处理订单</a></li>
                     <li><a href="#tab2">已处理订单</a></li>                    
                </ul>
@@ -117,13 +141,13 @@
       <label class="timecount">自动刷新，距离下次刷新还剩<em id = 'timeout'> 25</em> 秒</label>
     </li>
     <li  class="right"><label>&nbsp;</label>
-    <!--<input name="" type="button" class="g_btn" value="暂停刷新"/>-->
+
     
 
 	{% if  userObj.is_switch %}	
-		<a href="javascript:;" type="button" class="b_btn J_close"  data-status="{{userObj.is_switch}}">暂停刷新</a>
+	 	<input name="" type="button" class="g_btn J_close" data-status="{{userObj.is_switch}}" value="暂停刷新"/>
 	{% else %}	
-		<a href="javascript:;" type="button" class="b_btn J_close"  data-status="{{userObj.is_switch}}" >开启刷新</a>
+	    <input name="" type="button" class="b_btn J_close" data-status="{{userObj.is_switch}}" value="开启刷新"/>
 	{% endif %}
 
     </li>
@@ -156,7 +180,8 @@
          <td class="color4">{{status_msg[order.status]}}</td>
          <td>
           <p><a href="#" class="btsize">立即支付</a></p>
-          <p class="pt"><a href="#" class="tablelink mr10">获取刷新</a><a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a></p>
+          <p class="pt"><a href="#" class="tablelink mr10" onclick="kefu_reflesh_order({{order.order_no}})" >获取刷新</a>
+          <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a></p>
          </td>
         </tr> 
         {%endfor%}
