@@ -99,10 +99,23 @@
 			window.setInterval("run();", 1000);
 
 
+	 	
+	    window.onload = function ()
+	    {   var index = 0;
+	        var ul = document.getElementById ("itab");
+	        var btns = ul.getElementsByTagName ("li");
+	        for ( var i = 0; i < btns.length; i++)
+	        {	
+	            btns[i].index = i;
+	            btns[i].onclick = function ()
+	            {	
+	                btns[index].getElementsByTagName("a")[0].className = '';
+	                this.getElementsByTagName("a")[0].className = "selected";
+	                index = this.index;
+	            }
+	        }
+	    }
 		
-
-		
-
     </script>
 </head>
 <body>
@@ -115,10 +128,10 @@
     </div>
 
     <div class="formbody">
-             <div class="itab">
-                <ul>
+             <div class="itab" >
+                <ul id='itab'>
                     <li><a href="#tab1" class="selected">待处理订单</a></li>
-                    <li><a href="/myorder?tab=tab2">已处理订单</a></li>                    
+                    <li><a href="#tab2">已处理订单</a></li>                    
                </ul>
             </div>
    <!--查询条件-->
