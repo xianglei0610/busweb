@@ -232,7 +232,7 @@ def submit_order():
 
     order = Order()
     order.order_no = Order.generate_order_no()
-    order.status = STATUS_COMMIT
+    order.status = STATUS_WAITING_LOCK
     order.order_price = order_price
     order.create_date_time = datetime.now()
     order.line = line
@@ -311,7 +311,7 @@ def query_order_detail():
     except Order.DoesNotExist:
         return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
 
-    if order.status == STATUS_SUCC:
+    if order.status == STATUS_ISSUE_SUCC:
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,

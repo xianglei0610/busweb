@@ -26,15 +26,12 @@ from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser
 
 
-
 def parse_page_data(qs):
     total = qs.count()
     page = int(request.args.get("page", default=1))
     pageCount = int(request.args.get("pageCount", default=10))
     pageNum = int(math.ceil(total*1.0/pageCount))
     skip = (page-1)*pageCount
-    range_min = max(1, page-5)
-    range_max = min(range_min+10, pageNum+1)
 
     query_dict = {}
     for k in request.args.keys():
@@ -51,7 +48,6 @@ def parse_page_data(qs):
         "skip": skip,
         "previous": page-1,
         "next": page+1,
-        "range": range(range_min, range_max),
         "items": qs[skip: skip+pageCount],
         "req_path": "%s?%s" % (request.path, query_string),
         "req_path2": "%s?" % request.path,
@@ -66,11 +62,12 @@ def order_list():
     else:
         qs = Order.objects
     qs = qs.order_by("-create_date_time")
+    accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
     return render_template('admin/order_list.html',
                            page=parse_page_data(qs),
                            status_msg=STATUS_MSG,
-                           source_msg=SOURCE_MSG,
-                           scqcp_accounts=SCQCP_ACCOUNTS,
+                           source_info=SOURCE_INFO,
+                           scqcp_accounts=accounts,
                            order_no=order_no,
                            )
 
@@ -115,7 +112,7 @@ def login_code(order_no):
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
-    if order.status != STATUS_LOCK:
+    if order.status != STATUS_WAITING_ISSUE:
         return jsonify({"status": "status_error", "msg": "不是支付的时候", "data": ""})
     code = request.args.get("valid_code", "")
     if order.crawl_source == "scqcp":
@@ -143,7 +140,8 @@ def order_pay(order_no):
             im = Image.open(tmpIm)
             code = pytesseract.image_to_string(im)
 
-        passwd, _ = SCQCP_ACCOUNTS[order.source_account]
+        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
+        passwd, _ = accounts[order.source_account]
         data = {
             "uname": order.source_account,
             "passwd": passwd,
@@ -158,7 +156,7 @@ def order_pay(order_no):
             r = requests.get(pay_url, headers=headers, cookies=cookies)
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
-                order.modify(status=STATUS_CLOSED)
+                order.modify(status=STATUS_LOCK_FAIL)
                 rebot = order.get_rebot()
                 if rebot:
                     rebot.remove_doing_order(order)
@@ -306,7 +304,6 @@ class LoginInView(MethodView):
         try:
             u = AdminUser.objects.get(username=name, password=md5(pwd))
             flask_login.login_user(u)
-            print 122222222222222
             return redirect(url_for('admin.index'))
         except AdminUser.DoesNotExist:
             return redirect(url_for('admin.login'))
@@ -350,7 +347,29 @@ def left_page():
 @admin.route('/allorder', methods=['GET'])
 @login_required
 def all_order():
-    return render_template("admin-new/allticket_order.html")
+    status = request.args.get("status", "")
+    source = request.args.get("source", "")
+    source_account = request.args.get("source_account", "")
+    str_date = request.args.get("str_date", "")
+    end_date = request.args.get("end_date", "")
+
+    query = {}
+    if status:
+        query.update(status=int(status))
+    if source:
+        query.update(crawl_source=source)
+        if source_account:
+            query.update(source_account=source_account)
+    if str_date:
+        query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
+    if end_date:
+        query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
+    qs = Order.objects.filter(**query).order_by("-create_date_time")
+    return render_template('admin-new/allticket_order.html',
+                           page=parse_page_data(qs),
+                           status_msg=STATUS_MSG,
+                           source_info=SOURCE_INFO,
+                           condition=request.args)
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
@@ -362,7 +381,6 @@ admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 def my_order():
     username = current_user.username
     userObj = AdminUser.objects.get(username=current_user.username)
-    print userObj.is_kefu
     order_nos = []
     if userObj.is_kefu:
         r = getRedisObj()
@@ -376,20 +394,30 @@ def my_order():
                     r.sadd(key, i)
                     r.zrem('lock_order_list', i)
         order_nos = r.smembers(key)
-    print order_nos
+
     qs = Order.objects.filter(order_no__in=order_nos)
     qs = qs.order_by("-create_date_time")
     return render_template("admin-new/my_order.html",
                            page=parse_page_data(qs),
                            status_msg=STATUS_MSG,
-                           source_msg=SOURCE_MSG,
-                           scqcp_accounts=SCQCP_ACCOUNTS,
+                           source_info=SOURCE_INFO,
                            userObj=userObj
                            )
 
 
+@admin.route('/orders/<order_no>', methods=['GET'])
+@login_required
+def detail_order(order_no):
+    order = Order.objects.get_or_404(order_no=order_no)
+    return render_template("admin-new/detail_order.html",
+                            order=order,
+                            status_msg=STATUS_MSG,
+                            source_info=SOURCE_INFO,
+                           )
+
 
 @admin.route('/kefu_on_off', methods=['POST'])
+@login_required
 def kefu_on_off():
     userObj = AdminUser.objects.get(username=current_user.username)
     is_switch = int(request.form.get('is_switch', 0))
@@ -400,6 +428,7 @@ def kefu_on_off():
 
 
 @admin.route('/kefu_complete', methods=['POST'])
+@login_required
 def kefu_complete():
     username = current_user.username
     userObj = AdminUser.objects.get(username=username)
@@ -419,6 +448,7 @@ def kefu_complete():
 
 
 @admin.route('/kefu_reflesh_order', methods=['POST'])
+@login_required
 def kefu_reflesh_order():
     username = current_user.username
     userObj = AdminUser.objects.get(username=username)
@@ -427,13 +457,12 @@ def kefu_reflesh_order():
         return jsonify({"status": -1, "msg": "参数错误"})
     order = Order.objects.get(order_no=order_no)
     order.refresh_issued()
-    print '1111111111111111',order.status,STATUS_LOCK
-    if order.status != STATUS_LOCK:
+
+    if order.status != STATUS_WAITING_ISSUE:
         r = getRedisObj()
         key = 'order_list:%s' % username
         print key
         r.srem(key, order_no)
-    
     return jsonify({"status": 0, "msg": "处理完成"})
 
 

@@ -5,6 +5,7 @@ import urllib
 import urllib2
 import re
 
+from app.constants import *
 from datetime import datetime
 from flask import json, current_app
 from lxml import etree
@@ -12,8 +13,6 @@ from contextlib import contextmanager
 from app.constants import *
 from app import db
 from tasks import issued_callback
-from app.constants import SCQCP_ACCOUNTS, Bus100_ACCOUNTS
-from app.constants import SCQCP_DOMAIN, MOBILE_USER_AGENG
 from app.utils import md5
 
 
@@ -259,7 +258,7 @@ class Order(db.Document):
     line = db.ReferenceField(Line)
 
     seat_no_list = db.ListField(db.StringField(max_length=10))
-    ticket_price = db.FloatField()
+    ticket_price = db.FloatField()          # 单张车票价格
     ticket_amount = db.IntField()
     ticket_fee = db.FloatField()            # 单张车票手续费
     discount = db.FloatField(default=0)     # 单张车票优惠金额
@@ -278,6 +277,7 @@ class Order(db.Document):
     riders = db.ListField(db.DictField())
 
     # 锁票信息: 源网站在锁票这步返回的数据
+    lock_datetime = db.DateTimeField()
     lock_info = db.DictField()
 
     # 取票信息
@@ -307,6 +307,14 @@ class Order(db.Document):
             ],
     }
 
+    @property
+    def source_account_pass(self):
+        accounts = SOURCE_INFO.get(self.crawl_source, {}).get("accounts", {})
+        pass_info = accounts.get(self.source_account, [])
+        if not pass_info:
+            return ""
+        return pass_info[0]
+
     def get_rebot(type="app"):  # type: app or wap or web
         if self.crawl_source == "scqcp":
             if type == "app":
@@ -318,7 +326,7 @@ class Order(db.Document):
         """
         刷新出票情况
         """
-        if self.status != STATUS_LOCK:
+        if self.status != STATUS_WAITING_ISSUE:
             return
         if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
@@ -523,18 +531,19 @@ class ScqcpRebot(Rebot):
         current_app.logger.info(">>>> start to login scqcp.com:")
         valid_cnt = 0
         has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
         for bot in cls.objects:
             has_checked[bot.telephone] = 1
-            if bot.telephone not in SCQCP_ACCOUNTS:
+            if bot.telephone not in accounts:
                 bot.modify(is_active=False)
                 continue
-            pwd, is_encrypt = SCQCP_ACCOUNTS[bot.telephone]
+            pwd, is_encrypt = accounts[bot.telephone]
             bot.modify(password=pwd, is_encrypt=is_encrypt)
 
             if bot.login() == "OK":
                 valid_cnt += 1
 
-        for tele, (pwd, is_encrypt) in SCQCP_ACCOUNTS.items():
+        for tele, (pwd, is_encrypt) in accounts.items():
             if tele in has_checked:
                 continue
             bot = cls(is_active=False,
@@ -643,18 +652,19 @@ class Bus100Rebot(Rebot):
         current_app.logger.info(">>>> start to login wap.84100.com:")
         valid_cnt = 0
         has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
         for bot in cls.objects:
             has_checked[bot.telephone] = 1
-            if bot.telephone not in Bus100_ACCOUNTS:
+            if bot.telephone not in accounts:
                 bot.modify(is_active=False)
                 continue
-            pwd, openid = Bus100_ACCOUNTS[bot.telephone]
+            pwd, openid = accounts[bot.telephone]
             bot.modify(password=pwd, open_id=openid)
 
             if bot.login() == "OK":
                 valid_cnt += 1
 
-        for tele, (pwd, openid) in Bus100_ACCOUNTS.items():
+        for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
                 continue
             bot = cls(is_active=False,
@@ -828,7 +838,6 @@ class Bus100Rebot(Rebot):
                 ret['orderNo'] = orderNo
                 ret['orderAmt'] = orderAmt
         ret['returnMsg'] = returnMsg
-        print 11111111111111111111111111111111111111111
         return ret
 
     def request_order(self, order):

@@ -11,8 +11,8 @@ from app import celery
 def check_order_expire(self, order_no):
     from app.models import Order
     order = Order.objects.get(order_no=order_no)
-    if order.status != STATUS_LOCK:
+    if order.status != STATUS_WAITING_ISSUE:
         return
     order.refresh_issued()
-    if order.status == STATUS_LOCK:
+    if order.status == STATUS_WAITING_ISSUE:
         self.retry(countdown=10)

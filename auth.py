@@ -8,7 +8,11 @@ login_manager.login_view = "admin.login"
 
 @login_manager.user_loader
 def load_admin(username):
-    return AdminUser.objects.get(username=username)
+    try:
+        u = AdminUser.objects.get(username=username)
+    except AdminUser.DoesNotExist:
+        return
+    return u
 
 
 @login_manager.request_loader

@@ -9,7 +9,7 @@ from flask.ext.mongoengine import MongoEngine
 from flask.ext.login import LoginManager
 from config import config
 from celery import Celery, platforms
-platforms.C_FORCE_ROOT = True
+platforms.C_FORCE_ROOT = True    # celery需要这样
 
 mail = Mail()
 db = MongoEngine()

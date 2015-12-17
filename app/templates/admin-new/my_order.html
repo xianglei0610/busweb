@@ -174,7 +174,7 @@
          <td>{{order.out_order_no}}</td>
          <td>{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}<br>{{order.line.drv_date}} {{order.line.drv_time}}</td>
          <td>{{order.line.bus_num}}<br>{{order.line.starting.city_name}} --> {{order.line.destination.station_name}}</td>
-         <td>{{source_msg[order.crawl_source]}}<br></td>
+         <td>{{source_info[order.crawl_source]["name"]}}<br></td>
          <td>{{order.ticket_amount}}</td>
          <td class="m">{{order.order_price}}</td>
          <td class="color4">{{status_msg[order.status]}}</td>
