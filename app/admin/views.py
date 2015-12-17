@@ -386,7 +386,7 @@ def my_order():
                                userObj=userObj
                                )
     else:
-        return render_template("admin-new/my_order.html")
+        return render_template("admin-new/my_order.html",userOb=userObj)
 
 
 @admin.route('/kefu_on_off', methods=['POST'])
