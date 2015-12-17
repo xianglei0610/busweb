@@ -394,10 +394,12 @@ def my_order():
     username = current_user.username
     userObj = AdminUser.objects.get(username=current_user.username)
     order_nos = []
+    print 33333333333333333
     if userObj.is_kefu:
         r = getRedisObj()
         key = 'order_list:%s' % username
         if userObj.is_switch:
+            print 111111111111111
             order_ct = r.scard(key)
             if order_ct < KF_ORDER_CT:
                 count = KF_ORDER_CT-order_ct
