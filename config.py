@@ -19,6 +19,18 @@ class Config:
     CELERY_TASK_SERIALIZER = 'pickle'
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
 
+    #PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
+
+    REDIS_HOST = "localhost"
+    REDIS_PORT = 6379
+    REDIS_SETTIGNS = {
+        "SESSION": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 9,
+        },
+    }
+
     @staticmethod
     def init_app(app):
         pass
