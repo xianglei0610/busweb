@@ -3,11 +3,19 @@ import os
 import hashlib
 import redis
 import random
-import Image
-import ImageDraw
-import ImageFont
-import ImageFilter
- 
+
+try:
+    import Image
+    import ImageDraw
+    import ImageFont
+    import ImageFilter
+except ImportError:
+    from PIL import Image
+    from PIL import ImageDraw
+    from PIL import ImageFont
+    from PIL import ImageFilter
+
+
 from app.constants import REDIS_HOST, REDIS_PASSWD
 from app import BASE_DIR
 

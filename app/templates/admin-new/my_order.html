@@ -16,19 +16,6 @@
 
 			$(".single-select").uedSelect({width : 240});
    
-		//登录手动下单
-			$('.btsize').on('click', function(){
-				layer.open({
-					type: 1,
-					title: '登录手动下单',
-					area: ['580px',''],
-					skin: 'layui-layer-lan',
-					moveType: 1, //拖拽风格，0是默认，1是传统拖动
-					shift: 0, //0-6的动画形式，-1不开启
-					content: "<div>" +$("#btsizebox").html()+"</div>"
-				});
-			});
-			
 			$('.J_close').on('click', function(){
 				var is_switch = 0;
 				var	_this = $(this);
@@ -179,7 +166,7 @@
          <td class="m">{{order.order_price}}</td>
          <td class="color4">{{status_msg[order.status]}}</td>
          <td>
-          <p><a href="#" class="btsize">立即支付</a></p>
+          <p><a href="javascript:pay({{order.order_no}}, '');" class="btsize">立即支付</a></p>
           <p class="pt"><a href="#" class="tablelink mr10" onclick="kefu_reflesh_order({{order.order_no}})" >获取刷新</a>
           <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a></p>
          </td>
@@ -190,6 +177,50 @@
     </div>
     </div>
     
+    <div id="btsizebox" style="display: none">
+        <div class="regbox_bd">
+            <div class="signup_hd">
+                <h2>选择登陆账号<span>账号登陆不进，直接<a>登陆官网</a></span></h2>
+            </div>
+            <div class="signup_box">
+                <form method="post" action="http://www.baidu.com" id="formPublic">
+                    <div class="pub-form reg-form">
+                        <div class="fm-li pbot-5">
+                            <span class="fm-label">
+                                <label for="txt_userName">我的账号：</label></span>
+                            <select name="levelName" id="levelName" datatype="*" sucmsg=" " class="single-select">
+                                <option value="2">1895545668(牧师)</option>
+                            </select>
+
+                        </div>
+
+                        <div class="fm-li pbot-5">
+                            <span class="fm-label">
+                                <label for="txt_input6">验证码：</label></span>
+                            <div class="code_box">
+                                <input value="" name="verifyCode" id="verifyCode" class="i-input w220" type="text">
+                            </div>
+                        </div>
+
+                        <div class="fm-li pbot-5">
+                            <span class="fm-label"></span>
+                            <span class="code_img">
+                                <img alt="" class="regimg" src="#" id="imgVerifyCode"></span>
+                        </div>
+
+                        <input value="" id="id-order" type="hidden">
+                        <div class="fm-li">
+                            <span class="fm-label">
+                                <label for="txt_input6"></label>
+                            </span>
+                            <input onclick="javascript:mainfm.rightFrame.pay($('#id-order').val(), $('#verifyCode').val());" name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <p class="signup_bot">正在尝试下单，来着12308汽车票</p>
+        </div>
+    </div>
     
    <!--登录提示
    <div class="tip">
@@ -210,45 +241,53 @@
     </div>
    --> 
    
-   <div id="btsizebox" style=" display:none">
-   
-   <div class="regbox_bd">
-     <div class="signup_hd"><h2>选择登陆账号<span>账号登陆不进，直接<a>登陆官网</a></span></h2></div>
-     <div class="signup_box">
-        <form method="post" action="http://www.baidu.com" id="formPublic">
-		<div class="pub-form reg-form">
-         <div class="fm-li pbot-5">
-          <span class="fm-label"><label for="txt_userName">我的账号：</label></span>
-           <select name="levelName" id="levelName" datatype="*" sucmsg=" " class="single-select">
-                <option value="2">1895545668(牧师)</option>
-                <option value="2">Hn(牧师)</option>
-                <option value="1">*WK(牧师)</option>
-           </select>
+<script languge="javascript">
+function search(){
+  var no = $("#in_orderno").val();
+  var url = "{{page.req_path2}}";
+  if(no){
+    url=url+"order_no="+no;
+  }
+  window.location.href = url;
+};
 
-        </div>
-        
-        <div class="fm-li pbot-5">
-          <span class="fm-label"><label for="txt_input6">验证码：</label></span>
-             <div class="code_box"><input value="" name="verifyCode" id="verifyCode" class="i-input w220" type="text"></div>
-        </div>
-        
-        <div class="fm-li pbot-5">
-          <span class="fm-label"></span>
-             <span class="code_img"><img alt="" class="regimg" src="images/code.jpg" id="imgVerifyCode"></span>
-        </div>
-        
-        <div class="fm-li">
-          <span class="fm-label"><label for="txt_input6"></label></span>
-          <input name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
-          </div>
-          
-        </div>
-        </form>
-        </div>
-        <p class="signup_bot">正在尝试下单，来着12308汽车票</p> 
-	
-  </div>
-   </div>
+function pay(order_no, code){
+  var query=""
+  if(code){
+      query = "?valid_code="+code
+  }
+  var base_url= "/orders/"+order_no+"/pay";
+  $.ajax({
+      type: "get",
+      url: "/orders/"+order_no+"/pay"+query,
+      dataType: "json",
+      success: function (data) {
+        if(data.status=="OK"){
+          parent.parent.layer.closeAll();
+          newWindow = window.open("/404","","");
+          newWindow.document.write(data.data);
+        }else if(data.status=="code_error"){
+          $("#imgVerifyCode").attr("src", data.data)
+          $("#id-order").val(order_no);
+          parent.parent.layer.closeAll();
+          parent.parent.layer.open({
+                type: 1,
+                title:'登录手动下单',
+                area: ['580px', ''],
+                //skin: 'layui-layer-lan',
+                moveType: 1, //拖拽风格，0是默认，1是传统拖动
+                shift: 0, //0-6的动画形式，-1不开启
+                content: $("#btsizebox").html()
+          });
+        }else{
+          parent.parent.layer.closeAll();
+          alert(data.msg);
+        }
+      }, error: function (XMLHttpRequest, textStatus, errorThrown) { alert(errorThrown);
+      }
+  });
+}
+</script>
 </body>
 
 

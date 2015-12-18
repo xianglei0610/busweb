@@ -315,7 +315,7 @@ class Order(db.Document):
             return ""
         return pass_info[0]
 
-    def get_rebot(type="app"):  # type: app or wap or web
+    def get_rebot(self, type="app"):  # type: app or wap or web
         if self.crawl_source == "scqcp":
             if type == "app":
                 rebot = ScqcpRebot.objects.get(telephone=self.source_account)

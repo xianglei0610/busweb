@@ -13,6 +13,9 @@ def check_order_expire(self, order_no):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_ISSUE:
         return
-    order.refresh_issued()
+    try:
+        order.refresh_issued()
+    except Exception, e:
+        print e
     if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=20)
+        self.retry(countdown=30, max_retries=20)
