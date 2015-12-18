@@ -480,14 +480,18 @@ def kefu_reflesh_order():
     order_no = request.form.get("order_no", '')
     if not (order_no):
         return jsonify({"status": -1, "msg": "参数错误"})
-    order = Order.objects.get(order_no=order_no)
-    order.refresh_issued()
+    orderObj = Order.objects.get(order_no=order_no)
+    orderObj.refresh_issued()
 
-    if order.status != STATUS_WAITING_ISSUE:
+    if orderObj.status != STATUS_WAITING_ISSUE:
         r = getRedisObj()
         key = 'order_list:%s' % username
         print key
         r.srem(key, order_no)
+        orderObj.kefu_order_status = 1
+        orderObj.kefu_updatetime = dte.now()
+        orderObj.kefu_username = username
+        orderObj.save()
     return jsonify({"status": 0, "msg": "处理完成"})
 
 
