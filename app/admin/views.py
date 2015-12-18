@@ -389,11 +389,17 @@ def all_order():
     if end_date:
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
+    stat = {
+        "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).count(),
+        "money_total": qs.sum("order_price"),
+        "dealed_total": 0,
+    }
     return render_template('admin-new/allticket_order.html',
                            page=parse_page_data(qs),
                            status_msg=STATUS_MSG,
                            source_info=SOURCE_INFO,
-                           condition=request.args)
+                           condition=request.args,
+                           stat=stat,)
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
