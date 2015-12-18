@@ -150,11 +150,11 @@
         <li class="paginItem"><a href="javascript:;"><span class="pagepre"></span></a></li>
         {% if page.page<6 %}
             {% for i in range(1, page.page+1)%}
-            <li class="paginItem {%if i==page.page %} current {% endif %}"><a href="javascript:search({{i}}, {{condition.status}});">{{i}}</a></li>
+            <li class="paginItem {%if i==page.page %} current {% endif %}"><a href="javascript:search({{i}}, '{{condition.status}}');">{{i}}</a></li>
             {% endfor %}
             {% for i in range(1, 8-page.page) %}
               {% if page.pageNum>i %}
-              <li class="paginItem"><a href="javascript:search({{page.page+i}}, {{condition.status}});">{{page.page+i}}</a></li>
+              <li class="paginItem"><a href="javascript:search({{page.page+i}}, '{{condition.status}}');">{{page.page+i}}</a></li>
               {% endif %}
             {% endfor %}
             {% if page.page>7 %}
@@ -163,12 +163,12 @@
             <li class="paginItem"><a href="javascript:;"><span class="pagenxt"></span></a></li>
         {% else %}
             {% for i in range(1,3)%}
-            <li class="paginItem"><a href="javascript:search({{i}}, {{condition.status}});">{{i}}</a></li>
+            <li class="paginItem"><a href="javascript:search({{i}}, '{{condition.status}}');">{{i}}</a></li>
             {% endfor %}
             <li class="paginItem more"><a href="javascript:;">...</a></li>
             {% for i in range(page.page-2, page.page+3)%}
               {% if page.pageNum>=i %}
-              <li class="paginItem {%if i==page.page %} current {% endif %}"><a href="javascript:search({{i}}, {{condition.status}});">{{i}}</a></li>
+              <li class="paginItem {%if i==page.page %} current {% endif %}"><a href="javascript:search({{i}}, '{{condition.status}}');">{{i}}</a></li>
               {% endif %}
             {% endfor %}
             {% if page.pageNum>=page.page+3 %}

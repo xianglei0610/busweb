@@ -392,7 +392,7 @@ def all_order():
     stat = {
         "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).count(),
         "money_total": qs.sum("order_price"),
-        "dealed_total": 0,
+        "dealed_total": qs.filter(kefu_order_status=1).count(),
     }
     return render_template('admin-new/allticket_order.html',
                            page=parse_page_data(qs),

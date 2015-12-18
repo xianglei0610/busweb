@@ -294,7 +294,7 @@ class Order(db.Document):
     source_account = db.StringField()
 
     kefu_username = db.StringField()
-    kefu_order_status = db.IntField()
+    kefu_order_status = db.IntField()   # 1表示已处理
     kefu_updatetime = db.DateTimeField()
 
     meta = {
