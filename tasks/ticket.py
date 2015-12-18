@@ -70,7 +70,7 @@ def lock_ticket(order):
                              source_account=rebot.telephone)
                 json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["msg"], "data": data})
             if notify_url:
-                response = urllib2.urlopen(notify_url, json_str, timeout=10)
+                response = urllib2.urlopen(notify_url, json_str, timeout=30)
                 print response, "async_lock_ticket"
 
     elif order.crawl_source == "bus100":
@@ -121,7 +121,7 @@ def lock_ticket(order):
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
 
         if notify_url:
-            response = urllib2.urlopen(notify_url, json_str, timeout=10)
+            response = urllib2.urlopen(notify_url, json_str, timeout=30)
             print response, "async_lock_ticket"
 
 

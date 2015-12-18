@@ -94,13 +94,14 @@ def line_list():
                            )
 
 
-@admin.route('/orders/<order_no>/login_code', methods=['GET'])
-def login_code(order_no):
+@admin.route('/orders/<order_no>/srccodeimg', methods=['GET'])
+def src_code_img(order_no):
     order = Order.objects.get(order_no=order_no)
     if order.crawl_source == "scqcp":
-        code_url = session.get("pay_valid_url")
-        headers = session.get("pay_headers")
-        cookies = session.get("pay_cookie")
+        data = json.loads(session["pay_login_info"])
+        code_url = data.get("valid_url")
+        headers = data.get("headers")
+        cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
 
@@ -119,10 +120,11 @@ def order_pay(order_no):
 
         # 验证码处理
         if code:
-            code_url = session.get("pay_valid_url", "")
-            headers = session.get("pay_headers", "")
-            cookies = session.get("pay_cookie", "")
-            token = session.get("pay_token", "")
+            data = json.loads(session["pay_login_info"])
+            code_url = data["valid_url"]
+            headers = data["headers"]
+            cookies = data["cookies"]
+            token = data["token"]
         else:
             login_form_url = "http://scqcp.com/login/index.html"
             r = requests.get(login_form_url, headers=headers)
@@ -173,11 +175,14 @@ def order_pay(order_no):
 
         elif ret["msg"] == "验证码不正确":
             print("验证码错误")
-            session["pay_cookie"] = cookies
-            session["pay_headers"] = headers
-            session["pay_valid_url"] = code_url
-            session["pay_token"] = token
-            return jsonify({"status": "code_error", "msg": "验证码错误", "data": "/orders/%s/login_code" % order_no})
+            data = {
+                "cookies": cookies,
+                "headers": headers,
+                "valid_url": code_url,
+                "token": token,
+            }
+            session["pay_login_info"] = json.dumps(data)
+            return jsonify({"status": "code_error", "msg": "验证码错误", "data": "/orders/%s/srccodeimg" % order_no})
     elif order.crawl_source == "bus100":
         pay_url = order.pay_url
         headers = {
@@ -215,11 +220,11 @@ def order_pay(order_no):
     return redirect(url_for('admin.order_list'))
 
 
-# @admin.route('/orders/<order_no>/refresh', methods=['GET'])
-# def order_refresh(order_no):
-#     order = Order.objects.get(order_no=order_no)
-#     order.refresh_issued()
-#     return redirect(url_for('admin.order_list'))
+@admin.route('/orders/<order_no>/refresh', methods=['GET'])
+def order_refresh(order_no):
+    order = Order.objects.get(order_no=order_no)
+    order.refresh_issued()
+    return redirect(url_for('admin.order_list'))
 
 
 class SubmitOrder(MethodView):
@@ -292,7 +297,6 @@ class SubmitOrder(MethodView):
 # ===================================new admin===============================
 @admin.route('/code')
 def get_code():
-    # 把strs发给前端,或者在后台使用session保存
     code_img, strs = create_validate_code()
     buf = cStringIO.StringIO()
     code_img.save(buf, 'JPEG', quality=70)
@@ -328,11 +332,15 @@ def logout():
     return redirect(url_for('admin.login'))
 
 
+@admin.route('/main', methods=['GET'])
+@login_required
+def main():
+    return render_template("admin-new/main.html")
+
 @admin.route('/', methods=['GET'])
 @login_required
 def index():
-    return render_template("admin-new/main.html")
-
+    return render_template("admin-new/index.html")
 
 @admin.route('/top', methods=['GET'])
 @login_required
@@ -355,6 +363,10 @@ def top_page():
 def left_page():
     return render_template("admin-new/left.html")
 
+@admin.route('/callPage', methods=['GET'])
+@login_required
+def call_page():
+    return render_template("admin-new/call.html")
 
 @admin.route('/allorder', methods=['GET'])
 @login_required
@@ -394,12 +406,10 @@ def my_order():
     username = current_user.username
     userObj = AdminUser.objects.get(username=current_user.username)
     order_nos = []
-    print 33333333333333333
     if userObj.is_kefu:
         r = getRedisObj()
         key = 'order_list:%s' % username
         if userObj.is_switch:
-            print 111111111111111
             order_ct = r.scard(key)
             if order_ct < KF_ORDER_CT:
                 count = KF_ORDER_CT-order_ct

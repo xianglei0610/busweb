@@ -194,6 +194,7 @@ $(document).ready(function(){
     $("#id-"+$(this).val()+" select").attr("name", "source_account");
     $("#id-"+$(this).val()).show();
   });
+
   {%if condition.source %}
     $(".src_acc_blank").hide();
     $("#id-{{condition.source}}"+" select").attr("name", "source_account");
