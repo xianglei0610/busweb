@@ -293,6 +293,7 @@ class Order(db.Document):
     # 下单时使用的源网站账号
     source_account = db.StringField()
 
+    kefu_username = db.StringField()
     kefu_order_status = db.IntField()
     kefu_updatetime = db.DateTimeField()
 

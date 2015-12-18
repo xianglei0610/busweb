@@ -425,7 +425,8 @@ def my_order():
                            page=parse_page_data(qs),
                            status_msg=STATUS_MSG,
                            source_info=SOURCE_INFO,
-                           userObj=userObj
+                           userObj=userObj,
+                           condition=request.args
                            )
 
 
@@ -463,7 +464,7 @@ def kefu_complete():
     orderObj = Order.objects.get(order_no=order_no)
     orderObj.kefu_order_status = 1
     orderObj.kefu_updatetime = dte.now()
-    orderObj.username = username
+    orderObj.kefu_username = username
     orderObj.save()
     r = getRedisObj()
     key = 'order_list:%s' % username
@@ -490,3 +491,32 @@ def kefu_reflesh_order():
     return jsonify({"status": 0, "msg": "处理完成"})
 
 
+@admin.route('/kefu_complete_order', methods=['GET'])
+@login_required
+def kefu_complete_order():
+    username = current_user.username
+    userObj = AdminUser.objects.get(username=username)
+    status = request.args.get("status", "")
+    source = request.args.get("source", "")
+    source_account = request.args.get("source_account", "")
+    str_date = request.args.get("str_date", "")
+    end_date = request.args.get("end_date", "")
+
+    query = {'kefu_username':username}
+    if status:
+        query.update(status=int(status))
+    if source:
+        query.update(crawl_source=source)
+        if source_account:
+            query.update(source_account=source_account)
+    if str_date:
+        query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
+    if end_date:
+        query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
+    print query
+    qs = Order.objects.filter(**query).order_by("-create_date_time")
+    return render_template('admin-new/kefu_ticket_order.html',
+                           page=parse_page_data(qs),
+                           status_msg=STATUS_MSG,
+                           source_info=SOURCE_INFO,
+                           condition=request.args)
