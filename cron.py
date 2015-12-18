@@ -117,7 +117,6 @@ def reflesh_order_list():
                 r.zrem('lock_order_list', i)
 
 
-
 def main():
     """ 定时任务处理 """
 
@@ -134,6 +133,6 @@ def main():
 
 
 if __name__ == '__main__':
-    reflesh_order_list()
+    main()
 #     polling_order_status()
 # bus_crawl('bus100')
