@@ -12,16 +12,16 @@
     <script language="javascript">
         $(function (){
 			//全选
-			$("#checkall").checkall({ chname: "test[]", callback: function (e) { } });		
+			$("#checkall").checkall({ chname: "test[]", callback: function (e) { } });
 
 			$(".single-select").uedSelect({width : 240});
-   
 			$('.J_close').on('click', function(){
 				var is_switch = 0;
 				var	_this = $(this);
 				if(_this.attr('data-status')==0){
 					is_switch = 1;
-				}
+          run();
+        }
 				$.ajax({
 					url : '/kefu_on_off',
 					type : 'post',
@@ -30,14 +30,14 @@
 					},
 					success : function(data){
 						if(data.status==0){
-							alert('操作成功！');
-							window.location.reload();
+              set_switch(data["is_switch"]);
+              load_orders();
 					    }
 				    }
 				});
-			});
-          })
-        
+			  });
+       })
+
           function disp_confirm(order_no)
 		    {
 			  var r=confirm('确定已支付?')
@@ -68,52 +68,25 @@
 					},
 					success : function(data){
 						if(data.status==0){
-							window.location.href='/myorder';
+              load_orders();
 					    }
 				    }
 				});
 			  }
 
-
-
-
-	 	
-	    window.onload = function ()
-	    {   var index = 0;
-	        var ul = document.getElementById ("itab");
-	        var btns = ul.getElementsByTagName ("li");
-	        for ( var i = 0; i < btns.length; i++)
-	        {	
-	            btns[i].index = i;
-	            btns[i].onclick = function ()
-	            {	
-	                btns[index].getElementsByTagName("a")[0].className = '';
-	                this.getElementsByTagName("a")[0].className = "selected";
-	                index = this.index;
-	                if (index==1){
-	                   $("#tab2").load("/kefu_complete_order");
-	                   }else{
-	                	window.location.href='/myorder';
-	                    }
-
-
-	            }
-	        }
-	    }
-	    
 	    function run(){
+          if($("#switch_button").attr("data-status") == 0){
+            return
+          }
            var s = document.getElementById("timeout");
            if(s.innerHTML == 0){
-              window.location.href='/myorder';
-              return false;
+              load_orders();
+              s.innerHTML = 30;
+           }else{
+              s.innerHTML = s.innerHTML * 1 - 1;
            }
-           s.innerHTML = s.innerHTML * 1 - 1;
            }
-           
            window.setInterval("run();", 1000);
-	    
-	    
-		
     </script>
 </head>
 <body>
@@ -129,75 +102,34 @@
              <div class="itab" >
                 <ul id='itab'>
                     <li><a href="#tab1" class="selected"  >待处理订单</a></li>
-                    <li><a href="#tab2" >已处理订单</a></li>                    
+                    <!-- <li><a href="#tab2" >已处理订单</a></li>  -->
                </ul>
             </div>
    <!--查询条件-->
-   
    <div id='tab2' class="tabson2">
-   
    <div id='tab1' class="tabson">
-    <ul class="seachform">    
+    <ul class="seachform">
     <li>
       <label class="timecount">自动刷新，距离下次刷新还剩<em id = 'timeout'>30</em> 秒</label>
     </li>
+
     <li  class="right"><label>&nbsp;</label>
-
-    
-
-	{% if  userObj.is_switch %}	
-	 	<input name="" type="button" class="g_btn J_close" data-status="{{userObj.is_switch}}" value="暂停刷新"/>
-	{% else %}	
-	    <input name="" type="button" class="b_btn J_close" data-status="{{userObj.is_switch}}" value="开启刷新"/>
-	{% endif %}
-
+	 	  <input  id="switch_button" name="" type="button" class="b_btn J_close" data-status="1" value="开始接单"/>
     </li>
-    </ul>    
+    </ul>
    </div>
-   
-   <div>
-    <table class="tablelist">
-    	<thead>
-    	<tr>
-        <th>12308订单号</th>
-        <th>下单/出发时间<i class="sort"><img src="{{url_for('static', filename='admin-new/images/px.gif')}}" /></i></th>
-        <th>车次号/行程</th>
-        <th>来自源网站</th>
-        <th>订票数</th>
-        <th>订单金额（元）</th>
-        <th>订单状态</th>
-        <th>操作</th> 		
-        </tr>
-        </thead>
-        <tbody>
-        {% for order in page["items"] %}
-        <tr>
-         <td>{{order.out_order_no}}</td>
-         <td>{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}<br>{{order.line.drv_date}} {{order.line.drv_time}}</td>
-         <td>{{order.line.bus_num}}<br>{{order.line.starting.city_name}} --> {{order.line.destination.station_name}}</td>
-         <td>{{source_info[order.crawl_source]["name"]}}<br></td>
-         <td>{{order.ticket_amount}}</td>
-         <td class="m">{{order.order_price}}</td>
-         <td class="color4">{{status_msg[order.status]}}</td>
-         <td>
-          <p><a href="javascript:pay({{order.order_no}}, '');" class="btsize">立即支付</a></p>
-          <p class="pt"><a href="#" class="tablelink mr10" onclick="kefu_reflesh_order({{order.order_no}})" >获取刷新</a>
-          <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a></p>
-         </td>
-        </tr> 
-        {%endfor%}
-        </tbody>
-    </table>
+
+    <div id="wating-deal-table">
     </div>
     </div>
-    
+
     <div id="btsizebox" style="display: none">
         <div class="regbox_bd">
             <div class="signup_hd">
                 <h2>选择登陆账号<span>账号登陆不进，直接<a>登陆官网</a></span></h2>
             </div>
             <div class="signup_box">
-                <form method="post" action="http://www.baidu.com" id="formPublic">
+                <form method="post" action="#" id="formPublic">
                     <div class="pub-form reg-form">
                         <div class="fm-li pbot-5">
                             <span class="fm-label">
@@ -235,35 +167,31 @@
             <p class="signup_bot">正在尝试下单，来着12308汽车票</p>
         </div>
     </div>
-    
-   <!--登录提示
-   <div class="tip">
-    	<div class="tiptop"><span>登录提示</span><a></a></div>
-        
-      <div class="tipinfo">
-        <span><img src="images/ticon.png" /></span>
-        <div class="tipright">
-        <p>是否确认对信息的修改 ？</p>
-        <cite>如果是请点击确定按钮 ，否则请点取消。</cite>
-        </div>
-        </div>
-        
-        <div class="tipbtn">
-        <input name="" type="button"  class="sure" value="确定" />&nbsp;
-        <input name="" type="button"  class="cancel" value="取消" />
-        </div>    
-    </div>
-   --> 
-   
+
 <script languge="javascript">
-function search(){
-  var no = $("#in_orderno").val();
-  var url = "{{page.req_path2}}";
-  if(no){
-    url=url+"order_no="+no;
-  }
-  window.location.href = url;
-};
+
+$(function (){
+  load_orders();
+  set_switch({{current_user.is_switch}});
+});
+
+function load_orders(){
+  $("#wating-deal-table").load("{{url_for('admin.wating_deal_order')}}");
+}
+
+function set_switch(i){
+    var cls="g_btn J_close";
+    var v="1";
+    var text = "结束接单"
+    if(i==0){
+      cls="b_btn J_close";
+      v="0";
+      text = "开始接单"
+    }
+    $("#switch_button").attr("class", cls);
+    $("#switch_button").attr("data-status", v);
+    $("#switch_button").val(text);
+}
 
 function pay(order_no, code){
   var query=""
@@ -303,20 +231,4 @@ function pay(order_no, code){
 }
 </script>
 </body>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 </html>
