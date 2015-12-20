@@ -6,14 +6,14 @@ import urllib2
 import re
 
 from app.constants import *
-from datetime import datetime
+from datetime import datetime as dte
 from flask import json, current_app
 from lxml import etree
 from contextlib import contextmanager
 from app.constants import *
 from app import db
 from tasks import issued_callback
-from app.utils import md5
+from app.utils import md5, getRedisObj
 
 
 class AdminUser(db.Document):
@@ -22,13 +22,15 @@ class AdminUser(db.Document):
     """
     username = db.StringField(max_length=30)
     password = db.StringField(max_length=50)
-    create_datetime = db.DateTimeField(default=datetime.now)
+    create_datetime = db.DateTimeField(default=dte.now)
     is_switch = db.IntField()
     is_kefu = db.IntField()
 
     meta = {
         "indexes": [
             "username",
+            "is_kefu",
+            "is_switch",
         ],
     }
 
@@ -170,6 +172,9 @@ class Line(db.Document):
             ],
     }
 
+    def real_price(self):
+        return self.fee+self.full_price
+
     def get_json(self):
         """
         传给客户端的格式和数据，不能轻易修改！
@@ -204,7 +209,7 @@ class Line(db.Document):
             )
             ua = random.choice(MOBILE_USER_AGENG)
             ret = ScqcpRebot.get_one().http_post("/scqcp/api/v2/ticket/query_plan_info", params, user_agent=ua)
-            now = datetime.now()
+            now = dte.now()
             if ret["status"] == 1:
                 if ret["plan_info"]:
                     raw = ret["plan_info"][0]
@@ -238,7 +243,7 @@ class Line(db.Document):
                         left_tickets = int(left_tickets[0])
             except:
                 left_tickets = 0
-            now = datetime.now()
+            now = dte.now()
             self.modify(left_tickets=left_tickets, update_datetime=now)
 
 
@@ -305,7 +310,7 @@ class Order(db.Document):
             "status",
             "crawl_source",
             "-create_date_time",
-            ],
+        ],
     }
 
     @property
@@ -323,6 +328,18 @@ class Order(db.Document):
                 return rebot
         return None
 
+    def complete_by(self, user_obj):
+        self.kefu_order_status = 1
+        self.kefu_updatetime = dte.now()
+        self.kefu_username = user_obj.username
+        self.modify(
+                kefu_order_status=1,
+                kefu_updatetime=dte.now(),
+                kefu_username=user_obj.username)
+        r = getRedisObj()
+        key = 'order_list:%s' % user_obj.username
+        r.srem(key, self.order_no)
+
     def refresh_issued(self):
         """
         刷新出票情况
@@ -333,7 +350,7 @@ class Order(db.Document):
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
             if not tickets:
-                self.modify(status=STATUS_WAITING_LOCK)
+                self.modify(status=STATUS_ISSUE_FAIL)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
                 return
@@ -361,7 +378,7 @@ class Order(db.Document):
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif tickets['status'] == '5':
-                self.modify(status=STATUS_WAITING_LOCK)
+                self.modify(status=STATUS_ISSUE_FAIL)
                 rebot.remove_doing_order(self)
 
     def get_contact_info(self):
@@ -398,7 +415,7 @@ class Order(db.Document):
         组成：
         年(4)+月(2)+日(2)+毫秒(6)+随机数(2)
         """
-        now = datetime.now()
+        now = dte.now()
         sdate = now.strftime("%Y%m%d")
         micro = "%06d" % now.microsecond
         srand = "%02d" % random.randrange(10, 100)
@@ -414,7 +431,7 @@ class Rebot(db.Document):
     password = db.StringField()
     is_active = db.BooleanField(default=True)   # 是否有效
     is_locked = db.BooleanField(default=False)  # 是否被锁
-    last_login_time = db.DateTimeField(default=datetime.now)  # 最近一次登录时间
+    last_login_time = db.DateTimeField(default=dte.now)  # 最近一次登录时间
     doing_orders = db.DictField()   # 正在处理的订单
 
     meta = {
@@ -515,13 +532,13 @@ class ScqcpRebot(Rebot):
         if "open_id" not in ret:
             # 登陆失败
             self.is_active = False
-            self.last_login_time = datetime.now()
+            self.last_login_time = dte.now()
             self.save()
             return ret.get("msg", "fail")
         else:
             # 登陆成功
             self.is_active = True
-            self.last_login_time = datetime.now()
+            self.last_login_time = dte.now()
             self.open_id = ret["open_id"]
             self.save()
             return "OK"
@@ -644,7 +661,7 @@ class Bus100Rebot(Rebot):
             self.modify(is_active=False)
             return ret.get("returnMsg", "fail")
 
-        self.modify(is_active=True, last_login_time=datetime.now(), user_agent=ua)
+        self.modify(is_active=True, last_login_time=dte.now(), user_agent=ua)
         return "OK"
 
     @classmethod

@@ -38,50 +38,34 @@
 			  });
        })
 
-          function disp_confirm(order_no)
-		    {
-			  var r=confirm('确定已支付?')
-			  if (r==true)
-			    {
-			    $.ajax({
-					url : '/kefu_complete',
-					type : 'post',
-					data : {
-						 order_no:order_no
-					},
-					success : function(data){
-						if(data.status==0){
-							parent.location.reload();
-					    }
-				    }
-				});
-			    }
-			  }
-
-          function kefu_reflesh_order(order_no)
-		    {
-			    $.ajax({
-					url : '/kefu_reflesh_order',
-					type : 'post',
-					data : {
-						 order_no:order_no
-					},
-					success : function(data){
-						if(data.status==0){
-              load_orders();
-					    }
-				    }
-				});
-			  }
+  function disp_confirm(order_no)
+         {
+               var r=confirm('确定已支付?')
+               if (r==true)
+                 {
+                 $.ajax({
+                             url : '/kefu_complete',
+                             type : 'post',
+                             data : {
+                                      order_no:order_no
+                             },
+                             success : function(data){
+                                     if(data.status==0){
+                                             parent.location.reload();
+                                 }
+                         }
+                     });
+                 }
+               }
 
 	    function run(){
-          if($("#switch_button").attr("data-status") == 0){
-            return
-          }
+          //if($("#switch_button").attr("data-status") == 0){
+          //  return
+          //}
            var s = document.getElementById("timeout");
            if(s.innerHTML == 0){
               load_orders();
-              s.innerHTML = 30;
+              s.innerHTML = 3;
            }else{
               s.innerHTML = s.innerHTML * 1 - 1;
            }
@@ -110,7 +94,7 @@
    <div id='tab1' class="tabson">
     <ul class="seachform">
     <li>
-      <label class="timecount">自动刷新，距离下次刷新还剩<em id = 'timeout'>30</em> 秒</label>
+      <label class="timecount">自动刷新，距离下次刷新还剩<em id = 'timeout'>3</em> 秒</label>
     </li>
 
     <li  class="right"><label>&nbsp;</label>
@@ -191,43 +175,6 @@ function set_switch(i){
     $("#switch_button").attr("class", cls);
     $("#switch_button").attr("data-status", v);
     $("#switch_button").val(text);
-}
-
-function pay(order_no, code){
-  var query=""
-  if(code){
-      query = "?valid_code="+code
-  }
-  var base_url= "/orders/"+order_no+"/pay";
-  $.ajax({
-      type: "get",
-      url: "/orders/"+order_no+"/pay"+query,
-      dataType: "json",
-      success: function (data) {
-        if(data.status=="OK"){
-          parent.parent.layer.closeAll();
-          newWindow = window.open("/404","","");
-          newWindow.document.write(data.data);
-        }else if(data.status=="code_error"){
-          $("#imgVerifyCode").attr("src", data.data)
-          $("#id-order").val(order_no);
-          parent.parent.layer.closeAll();
-          parent.parent.layer.open({
-                type: 1,
-                title:'登录手动下单',
-                area: ['580px', ''],
-                //skin: 'layui-layer-lan',
-                moveType: 1, //拖拽风格，0是默认，1是传统拖动
-                shift: 0, //0-6的动画形式，-1不开启
-                content: $("#btsizebox").html()
-          });
-        }else{
-          parent.parent.layer.closeAll();
-          alert(data.msg);
-        }
-      }, error: function (XMLHttpRequest, textStatus, errorThrown) { alert(errorThrown);
-      }
-  });
 }
 </script>
 </body>

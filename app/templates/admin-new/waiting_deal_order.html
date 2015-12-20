@@ -22,11 +22,12 @@
      <td class="m">{{order.order_price}}</td>
      <td class="color4">{{status_msg[order.status]}}</td>
      <td>
-       <p><a href="{{url_for('admin.order_pay', order_no=order.order_no)}}" class="btsize" target="_blank">立即支付</a></p>
-      <p class="pt"><a href="#" class="tablelink mr10" onclick="kefu_reflesh_order({{order.order_no}})" >获取刷新</a>
-      <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a></p>
+       <p><a href="{{url_for('admin.order_pay', order_no=order.order_no)}}" class="btsize" target="_blank" onclick="click_pay()">立即支付</a></p>
+       <p class="pt">
+         <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a>
+       </p>
      </td>
-    </tr> 
+    </tr>
     {%endfor%}
     </tbody>
 </table>

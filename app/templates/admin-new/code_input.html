@@ -17,13 +17,13 @@
                 <h2>选择登陆账号<span>账号登陆不进，直接<a>登陆官网</a></span></h2>
             </div>
             <div class="signup_box">
-                <form method="post" action="#" id="formPublic">
+              <form method="get" action="{{url_for('admin.order_pay', order_no=order.order_no)}}" id="pay-form">
                     <div class="pub-form reg-form">
                         <div class="fm-li pbot-5">
                             <span class="fm-label">
                                 <label for="txt_userName">我的账号：</label></span>
                             <select name="levelName" id="levelName" datatype="*" sucmsg=" " class="single-select">
-                                <option value="2">1895545668(牧师)</option>
+                              <option value="2">{{order.source_account}}</option>
                             </select>
 
                         </div>
@@ -32,22 +32,21 @@
                             <span class="fm-label">
                                 <label for="txt_input6">验证码：</label></span>
                             <div class="code_box">
-                                <input value="" name="verifyCode" id="verifyCode" class="i-input w220" type="text">
+                                <input value="" name="valid_code" id="verifyCode" class="i-input w220" type="text">``
                             </div>
                         </div>
 
                         <div class="fm-li pbot-5">
                             <span class="fm-label"></span>
                             <span class="code_img">
-                                <img alt="" class="regimg" src="#" id="imgVerifyCode"></span>
+                              <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}" alt="" class="regimg" id="imgVerifyCode"></span>
                         </div>
 
-                        <input value="" id="id-order" type="hidden">
                         <div class="fm-li">
                             <span class="fm-label">
                                 <label for="txt_input6"></label>
                             </span>
-                            <input onclick="javascript:mainfm.rightFrame.pay($('#id-order').val(), $('#verifyCode').val());" name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
+                            <input onclick="javascript:$('#pay-form').submit();" name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
                         </div>
                     </div>
                 </form>
