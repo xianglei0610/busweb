@@ -48,12 +48,11 @@ def setup_app(config_name, server_type="api"):
 
 
 def setup_api_app(config_name):
-    print "run api server"
     app = Flask(__name__)
     config_name = "api_%s" % config_name
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
-    print "use config", config[config_name].__name__
+    print ">>> run api server, use", config[config_name].__name__
 
     mail.init_app(app)
     db.init_app(app)
@@ -66,12 +65,11 @@ def setup_api_app(config_name):
 
 
 def setup_admin_app(config_name):
-    print "run admin server"
     config_name = "admin_%s" % config_name
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
-    print "use config", config[config_name].__name__
+    print ">>> run api server, use", config[config_name].__name__
 
     mail.init_app(app)
     db.init_app(app)

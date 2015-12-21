@@ -81,8 +81,7 @@ def query_destination():
     try:
         post = json.loads(request.get_data())
         starting_name = post["starting_name"]
-        if not starting_name:
-            raise Exception("starting_name is null")
+        assert start != ""
     except Exception, e:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
@@ -126,13 +125,14 @@ def query_line():
             ]
         }
     """
+    now = dte.now()
     try:
         post = json.loads(request.get_data())
         starting_name = post.get("starting_name")
         dest_name = post.get("destination_name")
         start_date = post.get("start_date")
-        if not (starting_name and dest_name and start_date):
-            raise Exception()
+        assert (starting_name and dest_name and start_date)
+        assert now.strftime("%Y-%m-%d") <= start_date
     except:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
@@ -146,7 +146,6 @@ def query_line():
                            destination__in=qs_dest,
                            drv_date=start_date)
 
-    now = dte.now()
     data = []
     for line in qs_line:
         # 过滤不在预售期的
