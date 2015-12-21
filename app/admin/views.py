@@ -1,5 +1,7 @@
 # -*- coding:utf-8 -*-
+import time
 import math
+import copy
 import urllib2
 import urllib
 import requests
@@ -20,6 +22,7 @@ from flask.ext.login import login_required, current_user
 from app.admin import admin
 from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser
+from tasks import refresh_kefu_order
 
 
 def parse_page_data(qs):
@@ -105,19 +108,25 @@ def src_code_img(order_no):
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
 
+@admin.route('/orders/<order_no>/srccodeinput', methods=['GET'])
+def src_code_input(order_no):
+    order = Order.objects.get(order_no=order_no)
+    return render_template('admin-new/code_input.html',
+                           order=order,
+                           )
 
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_ISSUE:
         return jsonify({"status": "status_error", "msg": "不是支付的时候", "data": ""})
+
     code = request.args.get("valid_code", "")
     if order.crawl_source == "scqcp":
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
         }
         pay_url = order.pay_url
-
         # 验证码处理
         if code:
             data = json.loads(session["pay_login_info"])
@@ -171,7 +180,7 @@ def order_pay(order_no):
 
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             r = requests.post(info_url, data=data, headers=headers, cookies=cookies)
-            return jsonify({"status": "OK", "msg": "登陆成功", "data": r.content})
+            return r.content
 
         elif ret["msg"] == "验证码不正确":
             print("验证码错误")
@@ -182,7 +191,7 @@ def order_pay(order_no):
                 "token": token,
             }
             session["pay_login_info"] = json.dumps(data)
-            return jsonify({"status": "code_error", "msg": "验证码错误", "data": "/orders/%s/srccodeimg" % order_no})
+            return redirect(url_for("admin.src_code_input", order_no=order_no))
     elif order.crawl_source == "bus100":
         pay_url = order.pay_url
         headers = {
@@ -240,14 +249,13 @@ class SubmitOrder(MethodView):
             "idcard": "431021199004165616",
         }
 
-        line = Line.objects.order_by("full_price")[0]
         kwargs = dict(
             item=None,
             contact=contact,
             rider1=rider1,
             api_url="http://localhost:8000",
-            line_id=line.line_id,
-            order_price=line.full_price+line.fee,
+            line_id="",
+            order_price=0,
         )
         return render_template('admin/submit_order.html', **kwargs)
 
@@ -284,13 +292,12 @@ class SubmitOrder(MethodView):
             "issued_return_url": fd.get("issue_url"),
         }
 
-        import copy
         for d in copy.copy(data["rider_info"]):
             if not d["name"]:
                 data["rider_info"].remove(d)
 
         api_url = urllib2.urlparse.urljoin(fd.get("api_url"), "/orders/submit")
-        res = requests.post(api_url, data=json.dumps(data))
+        r = requests.post(api_url, data=json.dumps(data))
         return redirect(url_for('admin.order_list'))
 
 
@@ -332,15 +339,10 @@ def logout():
     return redirect(url_for('admin.login'))
 
 
-@admin.route('/main', methods=['GET'])
-@login_required
-def main():
-    return render_template("admin-new/main.html")
-
 @admin.route('/', methods=['GET'])
 @login_required
 def index():
-    return render_template("admin-new/index.html")
+    return render_template("admin-new/main.html")
 
 @admin.route('/top', methods=['GET'])
 @login_required
@@ -362,11 +364,6 @@ def top_page():
 @login_required
 def left_page():
     return render_template("admin-new/left.html")
-
-@admin.route('/callPage', methods=['GET'])
-@login_required
-def call_page():
-    return render_template("admin-new/call.html")
 
 @admin.route('/allorder', methods=['GET'])
 @login_required
@@ -409,31 +406,7 @@ admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 @admin.route('/myorder', methods=['GET'])
 @login_required
 def my_order():
-    username = current_user.username
-    userObj = AdminUser.objects.get(username=current_user.username)
-    order_nos = []
-    if userObj.is_kefu:
-        r = getRedisObj()
-        key = 'order_list:%s' % username
-        if userObj.is_switch:
-            order_ct = r.scard(key)
-            if order_ct < KF_ORDER_CT:
-                count = KF_ORDER_CT-order_ct
-                lock_order_list = r.zrange('lock_order_list', 0, count-1)
-                for i in lock_order_list:
-                    r.sadd(key, i)
-                    r.zrem('lock_order_list', i)
-        order_nos = r.smembers(key)
-
-    qs = Order.objects.filter(order_no__in=order_nos)
-    qs = qs.order_by("-create_date_time")
-    return render_template("admin-new/my_order.html",
-                           page=parse_page_data(qs),
-                           status_msg=STATUS_MSG,
-                           source_info=SOURCE_INFO,
-                           userObj=userObj,
-                           condition=request.args
-                           )
+    return render_template("admin-new/my_order.html")
 
 
 @admin.route('/orders/<order_no>', methods=['GET'])
@@ -446,6 +419,52 @@ def detail_order(order_no):
                             source_info=SOURCE_INFO,
                            )
 
+@admin.route('/orders/wating_deal', methods=['GET'])
+@login_required
+def wating_deal_order():
+    """
+    等待处理订单列表
+    """
+    userObj = current_user
+    order_nos = []
+    if userObj.is_kefu:
+        r = getRedisObj()
+        key = 'order_list:%s' % userObj.username
+        for o in  Order.objects.filter(order_no__in=r.smembers(key)):
+            if o.status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC]:
+                o.complete_by(current_user)
+            elif o.status == STATUS_WAITING_LOCK:
+                r.srem(key, o.order_no)
+
+        if userObj.is_switch:
+            order_ct = r.scard(key)
+            if order_ct < KF_ORDER_CT:
+                count = KF_ORDER_CT-order_ct
+                lock_order_list = r.zrange('lock_order_list', 0, count-1)
+                for i in lock_order_list:
+                    r.zrem('lock_order_list', i)
+                    r.sadd(key, i)
+                    refresh_kefu_order.apply_async((userObj.username, i))
+        order_nos = r.smembers(key)
+
+    qs = Order.objects.filter(order_no__in=order_nos)
+    qs = qs.order_by("-create_date_time")
+    return render_template("admin-new/waiting_deal_order.html",
+                           page=parse_page_data(qs),
+                           status_msg=STATUS_MSG,
+                           source_info=SOURCE_INFO,
+                           )
+
+@admin.route('/kefu_complete', methods=['POST'])
+@login_required
+def kefu_complete():
+    userObj = current_user
+    order_no = request.form.get("order_no", '')
+    if not (order_no):
+        return jsonify({"status": -1, "msg": "参数错误"})
+    orderObj = Order.objects.get(order_no=order_no)
+    orderObj.complete_by(userObj)
+    return jsonify({"status": 0, "msg": "处理完成"})
 
 @admin.route('/kefu_on_off', methods=['POST'])
 @login_required
@@ -455,78 +474,4 @@ def kefu_on_off():
 
     userObj.is_switch = is_switch
     userObj.save()
-    return jsonify({"status": "0", "msg": "设置成功"})
-
-
-@admin.route('/kefu_complete', methods=['POST'])
-@login_required
-def kefu_complete():
-    username = current_user.username
-    userObj = AdminUser.objects.get(username=username)
-    order_no = request.form.get("order_no", '')
-    if not (order_no):
-        return jsonify({"status": -1, "msg": "参数错误"})
-
-    orderObj = Order.objects.get(order_no=order_no)
-    orderObj.kefu_order_status = 1
-    orderObj.kefu_updatetime = dte.now()
-    orderObj.kefu_username = username
-    orderObj.save()
-    r = getRedisObj()
-    key = 'order_list:%s' % username
-    r.srem(key, order_no)
-    return jsonify({"status": 0, "msg": "处理完成"})
-
-
-@admin.route('/kefu_reflesh_order', methods=['POST'])
-@login_required
-def kefu_reflesh_order():
-    username = current_user.username
-    userObj = AdminUser.objects.get(username=username)
-    order_no = request.form.get("order_no", '')
-    if not (order_no):
-        return jsonify({"status": -1, "msg": "参数错误"})
-    orderObj = Order.objects.get(order_no=order_no)
-    orderObj.refresh_issued()
-
-    if orderObj.status != STATUS_WAITING_ISSUE:
-        r = getRedisObj()
-        key = 'order_list:%s' % username
-        print key
-        r.srem(key, order_no)
-        orderObj.kefu_order_status = 1
-        orderObj.kefu_updatetime = dte.now()
-        orderObj.kefu_username = username
-        orderObj.save()
-    return jsonify({"status": 0, "msg": "处理完成"})
-
-
-@admin.route('/kefu_complete_order', methods=['GET'])
-@login_required
-def kefu_complete_order():
-    username = current_user.username
-    userObj = AdminUser.objects.get(username=username)
-    status = request.args.get("status", "")
-    source = request.args.get("source", "")
-    source_account = request.args.get("source_account", "")
-    str_date = request.args.get("str_date", "")
-    end_date = request.args.get("end_date", "")
-
-    query = {'kefu_username':username}
-    if status:
-        query.update(status=int(status))
-    if source:
-        query.update(crawl_source=source)
-        if source_account:
-            query.update(source_account=source_account)
-    if str_date:
-        query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
-    if end_date:
-        query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
-    print query
-    qs = Order.objects.filter(**query).order_by("-create_date_time")
-    return render_template('admin-new/kefu_ticket_order.html',
-                           page=parse_page_data(qs),
-                           status_msg=STATUS_MSG,
-                           source_info=SOURCE_INFO,
-                           condition=request.args)
+    return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})

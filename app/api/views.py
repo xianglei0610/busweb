@@ -229,10 +229,19 @@ def submit_order():
     ticket_amount = len(rider_list)
     locked_return_url = post.get("callback_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
+    status = STATUS_WAITING_LOCK
+
+    should_pay = ticket_amount*line.real_price()
+    ret_code = RET_OK
+    ret_msg = "OK"
+    if should_pay != order_price:
+        status = STATUS_LOCK_FAIL
+        ret_code = RET_PRICE_WRONG
+        ret_msg = "the order price is wrong, %s != %s" % (should_pay, order_price)
 
     order = Order()
     order.order_no = Order.generate_order_no()
-    order.status = STATUS_WAITING_LOCK
+    order.status = status
     order.order_price = order_price
     order.create_date_time = datetime.now()
     order.line = line
@@ -246,9 +255,10 @@ def submit_order():
     order.issued_return_url = issued_return_url
     order.save()
 
-    lock_ticket.delay(order)
-    return jsonify({"code": RET_OK,
-                    "message": "submit order success!",
+    if ret_code == RET_OK:
+        lock_ticket.delay(order.order_no)
+    return jsonify({"code": ret_code,
+                    "message": ret_msg,
                     "data": {"sys_order_no": order.order_no}})
 
 

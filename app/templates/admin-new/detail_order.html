@@ -56,7 +56,7 @@
           <tr>
             <td><a href="{{source_info[order.crawl_source]['website']}}">{{source_info[order.crawl_source]['name']}}</a><br />              
               {{source_info[order.crawl_source]['website']}} </td>
-              <td><span class="bold">order.raw_order_no</span></td>
+            <td><span class="bold">{{order.raw_order_no}}</span></td>
               <td>{{order.create_date_time|format_datetime}}</td>
               <td>{{order.lock_datetime|format_datetime}}</td>
               <td>
@@ -196,11 +196,11 @@
         </tr>
         <tr>
           <th>DG账户</th>
-          <td>Kalven775</td>
+          <td>{{order.kefu_username}}</td>
           <th>处理时间</th>
-          <td>2015-06-08 11：33：23</td>
+          <td>{{order.kefu_updatetime|format_datetime}}</td>
           <th>成功购票</th>
-          <td>112次【50】张</td>
+          <td>0 张</td>
         </tr>
       </tbody></table>
      </div>

@@ -12,8 +12,8 @@ from app.constants import *
 from app import celery
 from app.utils import getRedisObj
 
-@celery.task
-def lock_ticket(order):
+@celery.task(ignore_result=True)
+def lock_ticket(order_no):
     """
     请求源网站锁票 + 锁票成功回调
 
@@ -21,6 +21,8 @@ def lock_ticket(order):
         expire_time: 122112121,     # 订单过期时间戳
         total_price: 322，          # 车票价格
     """
+    from app.models import  Order 
+    order = Order.objects.get(order_no=order_no)
     notify_url = order.locked_return_url
     data = {
         "sys_order_no": order.order_no,
@@ -125,7 +127,7 @@ def lock_ticket(order):
             print response, "async_lock_ticket"
 
 
-@celery.task
+@celery.task(ignore_result=True)
 def issued_callback(order_no):
     """
     出票回调
