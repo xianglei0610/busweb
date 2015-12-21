@@ -12,4 +12,5 @@ def page_not_found(e):
 
 @api.app_errorhandler(500)
 def internal_server_error(e):
+    print e
     return jsonify({"code": RET_SERVER_ERROR, "message": "服务器异常", "data": ""})
