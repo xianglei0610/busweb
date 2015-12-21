@@ -41,4 +41,4 @@ def refresh_kefu_order(self, username, order_no):
     except Exception, e:
         print e
     if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=3+random.random()*10%3, max_retries=None)
+        self.retry(countdown=3+random.random()*10%3, max_retries=100)
