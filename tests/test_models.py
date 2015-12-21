@@ -5,7 +5,7 @@ import random
 from flask.ext.testing import TestCase
 from app.constants import *
 from app import setup_app
-from app.models import ScqcpRebot
+from app.models import ScqcpRebot, Order
 
 class RebotTestCase(TestCase):
     def create_app(self):
@@ -26,11 +26,3 @@ class RebotTestCase(TestCase):
         finally:
             rebot.modify(password=passwd)
         self.assertEqual(rebot.login(), "OK")
-
-    def test_lock(self):
-        rebot = ScqcpRebot.get_and_lock()
-        try:
-            self.assertTrue(rebot.is_locked)
-        finally:
-            if rebot:
-                rebot.free()

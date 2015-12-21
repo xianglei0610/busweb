@@ -14,9 +14,20 @@ from app import setup_app
 
 
 class APITestCase(TestCase):
+    def setUp(self):
+        print "setup"
+
+    def tearDown(self):
+        pass
+
     def create_app(self):
-        app = setup_app('local', 'api')
+        print "create_app"
+        if hasattr(self, "flask_app"):
+            return self.flask_app
+        app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
+                        os.getenv('FLASK_SERVER') or 'api')
         app.config['TESTING'] = True
+        self.flask_app = app
         return app
 
     def test_query_startings(self):
@@ -37,14 +48,12 @@ class APITestCase(TestCase):
         for data in datas:
             response = self.client.post('/destinations/query', data=json.dumps(data))
             result = json.loads(response.data)
-            print result, data
             self.assertTrue(response.status_code == 200)
             self.assertTrue(result['data'] != [])
 
     def test_query_lines(self):
         time1 = datetime.datetime.now()
-        time2 = datetime.datetime.now() + datetime.timedelta(days = random.choice(range(1,10)))
-        print time1,time2
+        time2 = datetime.datetime.now() + datetime.timedelta(days=random.choice(range(1,10)))
         times = []
         time1 = datetime.datetime.strftime(time1,'%Y-%m-%d')
         time2 = datetime.datetime.strftime(time2,'%Y-%m-%d')
@@ -58,7 +67,6 @@ class APITestCase(TestCase):
                 "start_date": i
                         })
                 )
-            print i
             result = json.loads(response.data)
             self.assertTrue(response.status_code == 200)
             self.assertTrue(result['data'] != [])
@@ -79,7 +87,6 @@ class APITestCase(TestCase):
         drv_date = datetime.datetime.strftime(now, "%Y-%m-%d")
         drv_time = datetime.datetime.strftime(now, '%H:%M:%S')
         busLine = Line.objects.filter(crawl_source='bus100', drv_date__gte=drv_date, drv_time__gte=drv_time).order_by('-crawl_datetime').limit(1)
-        print busLine
         scLine = Line.objects.filter(crawl_source='scqcp', drv_date__gte=drv_date, drv_time__gte=drv_time).order_by('-crawl_datetime').limit(1)
         lines = []
         if busLine:
@@ -120,7 +127,6 @@ class APITestCase(TestCase):
                     })
                 )
             result = json.loads(response.data)
-            print result
             self.assertTrue(response.status_code == 200)
             self.assertTrue(result['data'] != [])
 
@@ -142,7 +148,6 @@ class APITestCase(TestCase):
                     })
                 )
         result = json.loads(response.data)
-        print result
         self.assertTrue(response.status_code == 200)
         self.assertTrue(result['data'] != [])
 if __name__ == '__main__':
