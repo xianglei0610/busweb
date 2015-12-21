@@ -100,6 +100,7 @@ class Starting(db.Document):
 
     @property
     def advance_order_time(self):
+        "单位：分钟"
         return 120  # 2hour
 
     @property
