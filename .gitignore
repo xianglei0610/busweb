@@ -1,2 +1,6 @@
 *.py[o|c]
+.project
+.pydevproject
+.settings/
 *.swp
+tmp/

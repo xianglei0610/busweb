@@ -1,12 +1,39 @@
 # -*- coding:utf-8 -*-
 
-# 四川汽车票务网登陆账号
-SCQCP_ACCOUNTS = {
-    # telephone: {password, is_encrypt)
-    "15575101324": ("sha1$dae47$3702fcfa2d29e01350e98f0fe4057b8921c9d3d4", 1),
+# 爬取来源
+SOURCE_SCQCP = "scqcp"
+SOURCE_BUS100 = "bus100"
+
+SOURCE_INFO = {
+    SOURCE_SCQCP: {
+        "name": "四川汽车票务网",
+        "website": "www.scqcp.com",
+        "accounts": {
+            # telephone: {password, is_encrypt)
+            "15575101324": ("cibRpL", 0),
+        }
+    },
+    SOURCE_BUS100: {
+        "name": "巴士壹佰",
+        "website": "www.84100.com",
+        "accounts": {
+            # telephone: {password, opendid)
+            "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
+            "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
+        }
+    }
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
+Bus100_DOMAIN = "http://wap.84100.com"
+
+ADMINS = ['xiangleilei@12308.com','luojunping@12308.com']
+
+REDIS_HOST = '127.0.0.1'
+REDIS_PASSWD = ""
+REDIS_PORT = 6379
+KF_ORDER_CT = 3
+
 
 BROWSER_USER_AGENT = [
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
@@ -37,19 +64,22 @@ MOBILE_USER_AGENG = [
     "Dalvik/1.6.0 (Linux; U; Android 4.4.4; MI 4W MIUI/V7.0.5.0.KXDCNCI)",
 ]
 
-# 爬取来源
-SOURCE_SCQCP = 1
-SOURCE_BUS100 = 2
 
-# 订单状态
-STATUS_FAIL = 0         # 失败
-STATUS_SUCC = 1         # 支付成功
-STATUS_ISSUE_DOING = 2  # 正在出票
-STATUS_LOCK = 3         # 锁票成功
-STATUS_COMMIT = 4       # 提交订单(初始状态)
-STATUS_LOCK_FAIL = 5    # 锁票失败
-STATUS_ISSUE_FAIL = 13  # 出票失败
-STATUS_ISSUE_OK = 14    # 出票成功
+STATUS_WAITING_ISSUE = 3    # 等待出票, 在源网站锁票成功
+STATUS_WAITING_LOCK = 4     # 等待下单，12308已提交了订单，但未向源网站提交订单
+STATUS_LOCK_FAIL = 5        # 下单失败，12308已提交了订单，向源网站提交订单失败
+STATUS_ISSUE_FAIL = 13      # 出票失败, 支付完成后，已确认源网站出票失败
+STATUS_ISSUE_SUCC = 14      # 出票成功, 支付完成后，源网站也出票成功
+STATUS_GIVE_BACK = 15       # 退票
+
+STATUS_MSG = {
+    STATUS_WAITING_ISSUE: "等待出票",
+    STATUS_WAITING_LOCK: "等待下单",
+    STATUS_ISSUE_FAIL: "出票失败",
+    STATUS_LOCK_FAIL: "下单失败",
+    STATUS_ISSUE_SUCC: "出票成功",
+    STATUS_GIVE_BACK: "已退票",
+}
 
 # 证件类型
 IDTYPE_IDCARD = 1   # 身份证
@@ -61,9 +91,15 @@ RIDER_CHILD = 0     # 儿童
 # 通用状态码
 RET_OK = 1
 RET_PARAM_ERROR = 2     # 参数错误
+RET_SERVER_ERROR = 3    # 服务器异常
+RET_PAGE_404 = 4        # 404
+
 # 订单错误1xx
-RET_ORDER_404 = 101     # 订单不存在
+RET_ORDER_404 = 101         # 订单不存在
+RET_LOCK_FAIL = 102         # 锁票失败
+RET_ISSUED_FAIL = 103       # 出票失败
+RET_PRICE_WRONG = 104       # 金额不对
+
 # 线路错误2xx
-RET_LINE_404 = 201      # 线路不存在
-
-
+RET_LINE_404 = 201    # 线路不存在
+RET_BUY_TIME_ERROR = 202    # 线路不在预售期

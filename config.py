@@ -4,30 +4,37 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
+    DEBUG = False
+    PRESERVE_CONTEXT_ON_EXCEPTION = False
+
+    MAIL_SERVER = 'smtp.exmail.qq.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = 'xiangleilei@12308.com'
+    MAIL_PASSWORD = 'Lei710920610'
+
+    # celery config
+    CELERY_BROKER_URL = 'redis://localhost:6379/10'
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/11'
+    CELERY_TASK_SERIALIZER = 'pickle'
+    CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+
+    #PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
+
+    REDIS_HOST = "localhost"
+    REDIS_PORT = 6379
+    REDIS_SETTIGNS = {
+        "SESSION": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 9,
+        },
+    }
 
     @staticmethod
     def init_app(app):
         pass
 
-
-class DevelopmentConfig(Config):
-    DEBUG = True
-
-    MAIL_SERVER = 'smtp.googlemail.com'
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-
-
-class ProductionConfig(Config):
-    pass
-
-
-class LocalConfig(Config):
-
-    DEBUG = True
     MONGODB_SETTINGS = {
         'db': 'web12308',
         'host': 'localhost',
@@ -40,13 +47,43 @@ class LocalConfig(Config):
         'port': 27017,
     }
 
-    CELERY_BROKER_URL='redis://localhost:6379',
-    CELERY_RESULT_BACKEND='redis://localhost:6379'
 
+class ApiDevConfig(Config):
+
+    MAIL_SERVER = 'smtp.googlemail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+
+
+class ApiProdConfig(Config):
+    pass
+
+
+class ApiLocalConfig(Config):
+
+    DEBUG = True
+
+
+class AdminDevConfig(Config):
+    pass
+
+
+class AdminProdConfig(Config):
+    pass
+
+
+class AdminLocalConfig(Config):
+
+    DEBUG = True
 
 config = {
-    'local': LocalConfig,
-    'dev': DevelopmentConfig,
-    'prod': ProductionConfig,
-    'default': LocalConfig
+    'api_local': ApiLocalConfig,
+    'api_dev': ApiDevConfig,
+    'api_prod': ApiProdConfig,
+
+    'admin_local': AdminLocalConfig,
+    'admin_dev': AdminDevConfig,
+    'admin_prod': AdminProdConfig,
 }
