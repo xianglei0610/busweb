@@ -56,6 +56,18 @@ class ApiDevConfig(Config):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
+    MONGODB_SETTINGS = {
+        'db': 'web12308',
+        'host': '192.168.1.202',
+        'port': 27017,
+    }
+
+    CRAWL_MONGODB_SETTINGS = {
+        'db': 'crawl12308',
+        'host': '192.168.1.202',
+        'port': 27017,
+    }
+
 
 class ApiProdConfig(Config):
     pass
@@ -67,8 +79,17 @@ class ApiLocalConfig(Config):
 
 
 class AdminDevConfig(Config):
-    pass
+    MONGODB_SETTINGS = {
+        'db': 'web12308',
+        'host': '192.168.1.202',
+        'port': 27017,
+    }
 
+    CRAWL_MONGODB_SETTINGS = {
+        'db': 'crawl12308',
+        'host': '192.168.1.202',
+        'port': 27017,
+    }
 
 class AdminProdConfig(Config):
     pass

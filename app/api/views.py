@@ -81,7 +81,7 @@ def query_destination():
     try:
         post = json.loads(request.get_data())
         starting_name = post["starting_name"]
-        assert start != ""
+        assert starting_name != ""
     except Exception, e:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
@@ -136,7 +136,7 @@ def query_line():
     except:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
-                        "data": data})
+                        "data": ""})
 
     qs_starting = Starting.objects(Q(city_name__startswith=starting_name) |
                                    Q(station_name__startswith=starting_name))
@@ -149,7 +149,7 @@ def query_line():
     data = []
     for line in qs_line:
         # 过滤不在预售期的
-        if line.drv_datetime-now <= line.starting.advance_order_time*60:
+        if (line.drv_datetime-now).total_seconds <= line.starting.advance_order_time*60:
             continue
         data.append(line.get_json())
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
@@ -188,14 +188,14 @@ def submit_order():
             "name": "罗军平",                               # 名字
             "telephone": "15575101324",                     # 手机
             "id_type": 1,                                   # 证件类型
-            "id_number": 431021199004165616,                # 证件号
+            "id_number": "xxxxx",                # 证件号
             "age_level": 1,                                 # 大人 or 小孩
         },
         rider_info: [{                                      # 乘客信息
             "name": "罗军平",                               # 名字
             "telephone": "15575101324",                     # 手机
             "id_type": 1,                                   # 证件类型
-            "id_number": 431021199004165616,                # 证件号
+            "id_number": "xxxxxx",                # 证件号
             "age_level": 1,                                 # 大人 or 小孩
         }],
         "locked_return_url: ""                    # 锁票成功回调地址
@@ -218,10 +218,9 @@ def submit_order():
         rider_list = post["rider_info"]
         for info in [contact_info]+rider_list:
             for key in ["name", "telephone", "id_type", "id_number", "age_level"]:
-                if key not in info:
-                    raise Exception("contact or rider lack of %s" % key)
+                assert key in info
         order_price = float(post.get("order_price"))
-    except Exception, e:
+    except:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": ""})
@@ -362,34 +361,3 @@ def query_order_detail():
             "ticket_info": {},
         }
         return jsonify({"code": RET_OK, "message": "OK", "data": data})
-
-
-@api.route('/orders/refresh', methods=['POST'])
-def refresh_order():
-    """
-    刷新订单状态
-
-    Input:
-        {
-            "sys_order_no": "1111"   # 订单号
-        }
-
-    Return:
-    {
-        "status": 14,
-    }
-    """
-    try:
-        data = {}
-        post = json.loads(request.get_data())
-        sys_order_no = post["sys_order_no"]
-    except:
-        return jsonify({"code": RET_PARAM_ERROR,
-                        "message": "parameter error",
-                        "data": data})
-    try:
-        order = Order.objects.get(order_no=sys_order_no)
-    except Order.DoesNotExist:
-        return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
-    order.refresh_issued()
-    return jsonify({"code": RET_OK, "message": "refresh success", "data": {"status": order.status}})
