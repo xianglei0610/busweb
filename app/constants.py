@@ -101,4 +101,5 @@ RET_ISSUED_FAIL = 103       # 出票失败
 RET_PRICE_WRONG = 104       # 金额不对
 
 # 线路错误2xx
-RET_LINE_404 = 201      # 线路不存在
+RET_LINE_404 = 201    # 线路不存在
+RET_BUY_TIME_ERROR = 202    # 线路不在预售期
