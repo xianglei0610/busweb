@@ -233,7 +233,7 @@ def submit_order():
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
 
     now = dte.now()
-    if line.drv_datetime-now <= line.starting.advance_order_time*60:
+    if (line.drv_datetime-now).seconds <= line.starting.advance_order_time*60:
         return jsonify({"code": RET_BUY_TIME_ERROR,
                         "message": "只能购买%d分钟内的票" % line.starting.advance_order_time,
                         "data": ""})
