@@ -61,7 +61,7 @@ class ApiDevConfig(Config):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
-    SENTRY_DSN = "http://e7e76bd569f342bab99058cc2bfa0edb:7874ace0af4e4783b0ea0eefbcd083b6@192.168.1.202:9000/4"
+    SENTRY_DSN = "http://b611fc0179bc4950862f510e0f0b70b0:c4933230a2314e9c81f11fd09004444c@112.74.132.104:9000/2"
 
     MONGODB_SETTINGS = {
         'db': 'web12308',
@@ -77,7 +77,7 @@ class ApiDevConfig(Config):
 
 
 class ApiProdConfig(Config):
-    SENTRY_DSN = "http://fb2bdf4a6fc14702b607dd3a4375c737:7fbe6570633b4dcbab3ebbe3a9f08a10@112.74.132.104:9000/1"
+    SENTRY_DSN = "http://0ab2a036d18f489d94a8dae384a3ea58:28e30d019c5a410696bad6e100efea5f@112.74.132.104:9000/4"
 
 
 class ApiLocalConfig(Config):
@@ -86,11 +86,11 @@ class ApiLocalConfig(Config):
 
 
 class AdminDevConfig(ApiDevConfig):
-    pass
+    SENTRY_DSN = "http://2cc0ca97e2e5456796de23c1ece3f9f3:6b99a5fea50c434182759494b9be569a@112.74.132.104:9000/3"
 
 
 class AdminProdConfig(ApiProdConfig):
-    pass
+    SENTRY_DSN = "http://c9469ae07fe94fdc842adb3b1e0bae52:f62e2e4d316c458c8a1d462a33dda573@112.74.132.104:9000/5"
 
 
 class AdminLocalConfig(ApiLocalConfig):
