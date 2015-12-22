@@ -1,0 +1,78 @@
+{% extends 'admin/list.html' %}
+
+{% block content%}
+
+<div class="row">
+  <div class="col-xs-4">
+    <div class="dataTables_filter" id="example_filter">
+      <label>线路ID: <input type="text" id="in_lineid" value="{{line_id}}" onchange="search()"></label>
+    </div>
+  </div>
+  <div class="col-xs-4">
+    <div class="dataTables_filter" id="example_filter">
+      <label>出发地: <input type="text" id="in_starting" value="{{starting}}" onchange="search()"></label>
+    </div>
+  </div>
+  <div class="col-xs-4">
+    <div class="dataTables_filter" id="example_filter">
+      <label>目的地: <input type="text" id="in_dest" value="{{destination}}" onchange="search()"></label>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-xs-4"><div class="dataTables_info" id="example_info">总共 {{page.total}} 条线路</div></div>
+</div>
+<table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered dataTable" id="example">
+
+<thead>
+	<tr role="row">
+	<th class="sorting_asc" role="columnheader" tabindex="0" rowspan="1" colspan="1" style="width: 137px;">线路ID</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 204px;">出发地</th>
+	<th class="sorting" role="columnheader" tabindex="0" rowspan="1" colspan="1" style="width: 197px;">目的地</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">开车时间</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">车型/车次</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">票价,手续费</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">爬取来源/时间</th>
+	</tr>
+</thead>
+
+<tbody role="alert">
+	{% for line in page["items"] %}
+		<tr class="gradeA {{i}}">
+			<td class="center">{{line.line_id}}</td>
+      <td class="center">{{line.starting.city_name}}({{line.starting.station_name}})</td>
+      <td class="center">{{line.destination.city_name}}({{line.destination.station_name}})</td>
+      <td class="center">{{line.drv_date}} {{line.drv_time}}</td>
+      <td class="center">{{line.vehicle_type}}/{{line.bus_num}}</td>
+      <td class="center">票价:{{line.full_price}}元, 手续费{{line.fee}}元</td>
+      <td class="center">{{line.crawl_source}}/{{line.crawl_datetime|format_datetime}}</td>
+		</tr>
+	{%endfor%}
+</tbody>
+</table>
+{%endblock%}
+
+{% block script %}
+<script languge="javascript">
+function search(){
+  var url = "{{page.req_path2}}";
+  var lineid=$("#in_lineid").val();
+  if(lineid){
+    url=url+"line_id="+lineid;
+  }else{
+    var start=$("#in_starting").val();
+    var end = $("#in_dest").val();
+    if(start&&end){
+      url=url+"starting="+start+"&destination="+end;
+    }else if(start){
+      url=url+"starting="+start;
+    }else if(end){
+      url=url+"destination="+end;
+    }
+  }
+  window.location.href = url;
+};
+</script>
+ {%endblock%}
+
