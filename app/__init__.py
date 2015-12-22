@@ -69,7 +69,7 @@ def setup_admin_app(config_name):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
-    print ">>> run api server, use", config[config_name].__name__
+    print ">>> run admin server, use", config[config_name].__name__
 
     mail.init_app(app)
     db.init_app(app)
