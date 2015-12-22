@@ -47,6 +47,8 @@ def setup_app(config_name, server_type="api"):
     rset = app.config["REDIS_SETTIGNS"]["SESSION"]
     r = redis.Redis(host=rset["host"], port=rset["port"], db=rset["db"])
     app.session_interface = RedisSessionInterface(redis=r)
+
+    sentry.init_app(app)
     return app
 
 
@@ -60,7 +62,6 @@ def setup_api_app(config_name):
     mail.init_app(app)
     db.init_app(app)
     init_celery(app)
-    sentry.init_app(app, dsn=app.config["SENTRY_DSN"])
 
     from api import api as main_blueprint
     app.register_blueprint(main_blueprint)

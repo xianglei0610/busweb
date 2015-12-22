@@ -7,6 +7,7 @@ class Config:
     DEBUG = False
     PRESERVE_CONTEXT_ON_EXCEPTION = False
 
+    # mail config
     MAIL_SERVER = 'smtp.exmail.qq.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
@@ -21,6 +22,7 @@ class Config:
 
     #PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
 
+    # redis config
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
     REDIS_SETTIGNS = {
@@ -31,9 +33,8 @@ class Config:
         },
     }
 
-    @staticmethod
-    def init_app(app):
-        pass
+    # sentry config
+    SENTRY_DSN = ""
 
     MONGODB_SETTINGS = {
         'db': 'web12308',
@@ -47,6 +48,10 @@ class Config:
         'port': 27017,
     }
 
+    @staticmethod
+    def init_app(app):
+        pass
+
 
 class ApiDevConfig(Config):
 
@@ -55,8 +60,8 @@ class ApiDevConfig(Config):
     MAIL_USE_TLS = True
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+
     SENTRY_DSN = "http://e7e76bd569f342bab99058cc2bfa0edb:7874ace0af4e4783b0ea0eefbcd083b6@192.168.1.202:9000/4"
-    SENTRY_USER_ATTRS = ['username']
 
     MONGODB_SETTINGS = {
         'db': 'web12308',
@@ -72,7 +77,7 @@ class ApiDevConfig(Config):
 
 
 class ApiProdConfig(Config):
-    pass
+    SENTRY_DSN = "http://fb2bdf4a6fc14702b607dd3a4375c737:7fbe6570633b4dcbab3ebbe3a9f08a10@112.74.132.104:9000/1"
 
 
 class ApiLocalConfig(Config):
@@ -80,24 +85,15 @@ class ApiLocalConfig(Config):
     DEBUG = True
 
 
-class AdminDevConfig(Config):
-    MONGODB_SETTINGS = {
-        'db': 'web12308',
-        'host': '192.168.1.202',
-        'port': 27017,
-    }
-
-    CRAWL_MONGODB_SETTINGS = {
-        'db': 'crawl12308',
-        'host': '192.168.1.202',
-        'port': 27017,
-    }
-
-class AdminProdConfig(Config):
+class AdminDevConfig(ApiDevConfig):
     pass
 
 
-class AdminLocalConfig(Config):
+class AdminProdConfig(ApiProdConfig):
+    pass
+
+
+class AdminLocalConfig(ApiLocalConfig):
 
     DEBUG = True
 
