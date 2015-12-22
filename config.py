@@ -55,6 +55,8 @@ class ApiDevConfig(Config):
     MAIL_USE_TLS = True
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    SENTRY_DSN = "http://e7e76bd569f342bab99058cc2bfa0edb:7874ace0af4e4783b0ea0eefbcd083b6@192.168.1.202:9000/4"
+    SENTRY_USER_ATTRS = ['username']
 
     MONGODB_SETTINGS = {
         'db': 'web12308',
