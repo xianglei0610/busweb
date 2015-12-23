@@ -345,8 +345,14 @@ class Order(db.Document):
         """
         刷新出票情况
         """
+
         if self.status != STATUS_WAITING_ISSUE:
             return
+        self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=['0'], pick_msg_list=['no msg, for test'])
+        rebot.remove_doing_order(self)
+        issued_callback.delay(self.order_no)
+        return
+
         if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
@@ -362,7 +368,7 @@ class Order(db.Document):
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
                     msg_list.append("")
-                self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif status == "give_back_ticket":
@@ -375,7 +381,7 @@ class Order(db.Document):
             print '-------------',tickets
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
-                self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif tickets['status'] == '5':
