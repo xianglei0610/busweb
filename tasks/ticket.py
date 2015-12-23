@@ -152,7 +152,7 @@ def issued_callback(order_no):
     cb_url = order.issued_return_url
     if not cb_url:
         return
-    if order.status == STATUS_ISSUE_OK:
+    if order.status == STATUS_ISSUE_SUCC:
         pick_info = []
         for i in range(order.pick_code_list):
             pick_info.append({
