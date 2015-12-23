@@ -43,7 +43,6 @@ def lock_ticket(order_no):
 
         with ScqcpRebot.get_and_lock(order) as rebot:
             ret = rebot.request_lock_ticket(line, riders, contacter)
-            data = {}
             if ret["status"] == 1:
                 pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
                 order.modify(status=STATUS_WAITING_ISSUE,
@@ -98,7 +97,6 @@ def lock_ticket(order_no):
             ret = {"returnCode": -1, "msg": "该条线路无法购买"}
         else:
             ret = rebot.request_lock_ticket(line, riders, contacter)
-        data = {}
         if ret["returnCode"] == "0000" and ret.get('redirectPage', ''):
             expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)
             expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")

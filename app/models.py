@@ -561,6 +561,7 @@ class ScqcpRebot(Rebot):
             bot.modify(password=pwd, is_encrypt=is_encrypt)
 
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
 
         for tele, (pwd, is_encrypt) in accounts.items():
@@ -573,6 +574,7 @@ class ScqcpRebot(Rebot):
                       is_encrypt=is_encrypt)
             bot .save()
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
@@ -691,6 +693,7 @@ class Bus100Rebot(Rebot):
             bot.modify(password=pwd, open_id=openid)
 
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
 
         for tele, (pwd, openid) in accounts.items():
@@ -703,6 +706,7 @@ class Bus100Rebot(Rebot):
                       open_id=openid)
             bot .save()
             if bot.login() == "OK":
+                print "%s 登陆成功" % tele
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
