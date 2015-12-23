@@ -415,7 +415,7 @@ class Order(db.Document):
         """
         lst = []
         for info in self.riders:
-            list.append({
+            lst.append({
                 "name": info["name"],
                 "telephone": info["telephone"],
                 "id_type": info.get("idtype", IDTYPE_IDCARD),
@@ -648,6 +648,15 @@ class Bus100Rebot(Rebot):
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
     }
+
+    @classmethod
+    def get_random_rebot(cls):
+        qs = cls.objects.filter(is_active=True)
+        if not qs:
+            return
+        size = qs.count()
+        rd = random.randint(0, size-1)
+        return qs[rd]
 
     def on_add_doing_order(self, order):
         pass
