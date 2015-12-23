@@ -43,15 +43,17 @@ def lock_ticket(order_no):
 
         with ScqcpRebot.get_and_lock(order) as rebot:
             ret = rebot.request_lock_ticket(line, riders, contacter)
-            data = {}
             if ret["status"] == 1:
                 pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
+                raw_order = "|".join(ret["web_order_id"])
                 order.modify(status=STATUS_WAITING_ISSUE,
                              lock_info=ret,
                              lock_datetime=dte.now(),
                              source_account=rebot.telephone,
-                             pay_url=pay_url)
-                check_order_expire.apply_async((order.order_no,), countdown=8*60+5)  # 8分钟后执行
+                             pay_url=pay_url,
+                             raw_order_no=raw_order,
+                             )
+                check_order_expire.apply_async((order.order_no,), countdown=9*60+5)  # 9分钟后执行
                 total_price = 0
                 for ticket in ret["ticket_list"]:
                     total_price += ticket["server_price"]
@@ -98,7 +100,6 @@ def lock_ticket(order_no):
             ret = {"returnCode": -1, "msg": "该条线路无法购买"}
         else:
             ret = rebot.request_lock_ticket(line, riders, contacter)
-        data = {}
         if ret["returnCode"] == "0000" and ret.get('redirectPage', ''):
             expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)
             expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -155,9 +156,9 @@ def issued_callback(order_no):
         return
     if order.status == STATUS_ISSUE_SUCC:
         pick_info = []
-        for i in range(order.pick_code_list):
+        for i, code in enumerate(order.pick_code_list):
             pick_info.append({
-                "pick_code": order.pick_code_list[i],
+                "pick_code": code,
                 "pick_msg": order.pick_msg_list[i]
                 })
         ret = {
@@ -180,5 +181,5 @@ def issued_callback(order_no):
                 "raw_order_no": order.raw_order_no,
             }
         }
-    response = urllib2.urlopen(notify_url, json.dumps(ret), timeout=10)
+    response = urllib2.urlopen(cb_url, json.dumps(ret), timeout=10)
     print "issued callback", response

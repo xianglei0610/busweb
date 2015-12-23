@@ -345,8 +345,10 @@ class Order(db.Document):
         """
         刷新出票情况
         """
+
         if self.status != STATUS_WAITING_ISSUE:
             return
+
         if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
@@ -362,7 +364,7 @@ class Order(db.Document):
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
                     msg_list.append("")
-                self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif status == "give_back_ticket":
@@ -372,10 +374,9 @@ class Order(db.Document):
         elif self.crawl_source == "bus100":
             rebot = Bus100Rebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
-            print '-------------',tickets
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
-                self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif tickets['status'] == '5':
@@ -560,6 +561,7 @@ class ScqcpRebot(Rebot):
             bot.modify(password=pwd, is_encrypt=is_encrypt)
 
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
 
         for tele, (pwd, is_encrypt) in accounts.items():
@@ -572,6 +574,7 @@ class ScqcpRebot(Rebot):
                       is_encrypt=is_encrypt)
             bot .save()
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
@@ -690,6 +693,7 @@ class Bus100Rebot(Rebot):
             bot.modify(password=pwd, open_id=openid)
 
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
 
         for tele, (pwd, openid) in accounts.items():
@@ -702,6 +706,7 @@ class Bus100Rebot(Rebot):
                       open_id=openid)
             bot .save()
             if bot.login() == "OK":
+                print "%s 登陆成功" % tele
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 

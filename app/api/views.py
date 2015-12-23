@@ -35,6 +35,7 @@ def query_starting():
         },]
     }
     """
+    1/0
     province_data = {}
     distinct_data = {}
     for obj in Starting.objects:
@@ -216,6 +217,7 @@ def submit_order():
         line_id = post["line_id"]
         contact_info = post["contact_info"]
         rider_list = post["rider_info"]
+        out_order_no = post["out_order_no"]
         for info in [contact_info]+rider_list:
             for key in ["name", "telephone", "id_type", "id_number", "age_level"]:
                 assert key in info
@@ -237,7 +239,7 @@ def submit_order():
                         "data": ""})
 
     ticket_amount = len(rider_list)
-    locked_return_url = post.get("callback_url", None) or None
+    locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
     status = STATUS_WAITING_LOCK
 
@@ -251,6 +253,7 @@ def submit_order():
 
     order = Order()
     order.order_no = Order.generate_order_no()
+    order.out_order_no = out_order_no
     order.status = status
     order.order_price = order_price
     order.create_date_time = dte.now()
