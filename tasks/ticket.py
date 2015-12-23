@@ -45,12 +45,15 @@ def lock_ticket(order_no):
             ret = rebot.request_lock_ticket(line, riders, contacter)
             if ret["status"] == 1:
                 pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
+                raw_order = "|".join(ret["web_order_id"])
                 order.modify(status=STATUS_WAITING_ISSUE,
                              lock_info=ret,
                              lock_datetime=dte.now(),
                              source_account=rebot.telephone,
-                             pay_url=pay_url)
-                check_order_expire.apply_async((order.order_no,), countdown=8*60+5)  # 8分钟后执行
+                             pay_url=pay_url,
+                             raw_order_no=raw_order,
+                             )
+                check_order_expire.apply_async((order.order_no,), countdown=9*60+5)  # 9分钟后执行
                 total_price = 0
                 for ticket in ret["ticket_list"]:
                     total_price += ticket["server_price"]
