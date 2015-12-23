@@ -401,7 +401,7 @@ class Order(db.Document):
         """
         lst = []
         for info in self.riders:
-            list.append({
+            lst.append({
                 "name": info["name"],
                 "telephone": info["telephone"],
                 "id_type": info.get("idtype", IDTYPE_IDCARD),
