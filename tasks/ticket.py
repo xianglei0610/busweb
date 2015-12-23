@@ -179,5 +179,5 @@ def issued_callback(order_no):
                 "raw_order_no": order.raw_order_no,
             }
         }
-    response = urllib2.urlopen(notify_url, json.dumps(ret), timeout=10)
+    response = urllib2.urlopen(cb_url, json.dumps(ret), timeout=10)
     print "issued callback", response
