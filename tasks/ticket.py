@@ -94,7 +94,7 @@ def lock_ticket(order_no):
             )
         contacter = order.contact_info
         riders = order.riders
-        if line['bus_num'] ==0 or not line['flag']:
+        if line['bus_num'] == 0 or not line['flag']:
             ret = {"returnCode": -1, "msg": "该条线路无法购买"}
         else:
             ret = rebot.request_lock_ticket(line, riders, contacter)
@@ -109,6 +109,7 @@ def lock_ticket(order_no):
                          pay_url=ret['redirectPage'],
                          raw_order_no=ret['orderNo'],
                          source_account=rebot.telephone)
+            check_order_expire.apply_async((order.order_no,), countdown=20*60+5)  # 20分钟后执行
             data.update({
                 "expire_time": expire_time,
                 "total_price": ret['orderAmt'],
