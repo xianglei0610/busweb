@@ -11,8 +11,8 @@ class Config:
     MAIL_SERVER = 'smtp.exmail.qq.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
-    MAIL_USERNAME = 'xiangleilei@12308.com'
-    MAIL_PASSWORD = 'Lei710920610'
+    MAIL_USERNAME = 'dg@12308.com'
+    MAIL_PASSWORD = 'PY12dg'
 
     # celery config
     CELERY_BROKER_URL = 'redis://localhost:6379/10'

@@ -20,8 +20,10 @@ from app import setup_app
 from app.models import Order
 
 
-app = setup_app('local', 'api')
+app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
+                os.getenv('FLASK_SERVER') or 'api')
 
+print app.config["DEBUG"]
 
 path = os.path.dirname(__file__)
 sys.path.append(os.path.join(path, ".."))
@@ -57,21 +59,28 @@ def check(func):
 
 @check
 def bus_crawl(crawl_source):
-    url = "http://192.168.1.202:6800/schedule.json"
+    if os.getenv('FLASK_CONFIG') == 'dev':
+        url = "http://192.168.1.202:6800/schedule.json"
+    elif os.getenv('FLASK_CONFIG') == 'prod':
+        url = "http://localhost:6800/schedule.json"
+    else:
+        return
     data = {
           "project": "BusCrawl",
           "spider": crawl_source
           }
-    print data
+    print url
     res = requests.post(url, data=data)
     res = res.json()
-    with app.app_context():
-        subject = str(datetime.datetime.now())[0:19] + '  start bus_crawl,crawl_source :%s ' % crawl_source
-        sender = 'xiangleilei@12308.com'
-        recipients = ADMINS
-        text_body = ''
-        html_body = subject + '</br>' + 'result:%s' % res
-        send_email(subject, sender, recipients, text_body, html_body)
+    print res
+    if not app.config["DEBUG"]:
+        with app.app_context():
+            subject = str(datetime.datetime.now())[0:19] + '  start bus_crawl,crawl_source :%s ' % crawl_source
+            sender = 'dg@12308.com'
+            recipients = ADMINS
+            text_body = ''
+            html_body = subject + '</br>' + 'result:%s' % res
+            send_email(subject, sender, recipients, text_body, html_body)
 
 
 @check
@@ -81,13 +90,14 @@ def sync_crawl_to_api(crawl_source):
     end = time.time()
     logstr = "sync_crawl_to_api ,%s spend %s" % (crawl_source, end - start)
     print logstr
-    with app.app_context():
-        subject = str(datetime.datetime.now())[0:19] + '  start sync_crawl_to_api,crawl_source :%s ' % crawl_source
-        sender = 'xiangleilei@12308.com'
-        recipients = ADMINS
-        text_body = ''
-        html_body = subject + '</br>' + 'logstr:%s' % logstr
-        send_email(subject, sender, recipients, text_body, html_body)
+    if not app.config["DEBUG"]:
+        with app.app_context():
+            subject = str(datetime.datetime.now())[0:19] + '  start sync_crawl_to_api,crawl_source :%s ' % crawl_source
+            sender = 'dg@12308.com'
+            recipients = ADMINS
+            text_body = ''
+            html_body = subject + '</br>' + 'logstr:%s' % logstr
+            send_email(subject, sender, recipients, text_body, html_body)
 
 
 @check
@@ -96,33 +106,13 @@ def polling_order_status():
     for order in orderObj:
         order.refresh_status()
 
-from app.utils import getRedisObj
-
-def reflesh_order_list():
-#     user_id = request.args.get("user_id")
-#     status = request.args.get("status", 0)
-    user_id = 1
-    status = 0
-    KF_ORDER_CT = 3
-    if not status:
-        r = getRedisObj()
-        key = 'order_list:%s' % user_id
-        order_ct = r.scard(key)
-        print order_ct
-        if order_ct < KF_ORDER_CT:
-            count = KF_ORDER_CT-order_ct
-            lock_order_list = r.zrange('lock_order_list', 0, count-1)
-            for i in lock_order_list:
-                r.sadd(key, i)
-                r.zrem('lock_order_list', i)
-
 
 def main():
     """ 定时任务处理 """
 
     sched = Scheduler(daemonic=False)
-    sched.add_cron_job(bus_crawl, hour=10, minute=53, args=['scqcp'])
-    sched.add_cron_job(bus_crawl, hour=10, minute=52, args=['bus100'])
+    sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['scqcp'])
+    sched.add_cron_job(bus_crawl, hour=2, minute=40, args=['bus100'])
 
     sched.add_cron_job(sync_crawl_to_api, hour=4, minute=30, args=['scqcp'])
     sched.add_cron_job(sync_crawl_to_api, hour=6, minute=30, args=['bus100'])
