@@ -154,9 +154,9 @@ def issued_callback(order_no):
         return
     if order.status == STATUS_ISSUE_SUCC:
         pick_info = []
-        for i in range(order.pick_code_list):
+        for i, code in enumerate(order.pick_code_list):
             pick_info.append({
-                "pick_code": order.pick_code_list[i],
+                "pick_code": code,
                 "pick_msg": order.pick_msg_list[i]
                 })
         ret = {
