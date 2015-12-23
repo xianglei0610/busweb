@@ -35,6 +35,7 @@ def query_starting():
         },]
     }
     """
+    1/0
     province_data = {}
     distinct_data = {}
     for obj in Starting.objects:
@@ -216,6 +217,7 @@ def submit_order():
         line_id = post["line_id"]
         contact_info = post["contact_info"]
         rider_list = post["rider_info"]
+        out_order_no = post["out_order_no"]
         for info in [contact_info]+rider_list:
             for key in ["name", "telephone", "id_type", "id_number", "age_level"]:
                 assert key in info
@@ -237,7 +239,7 @@ def submit_order():
                         "data": ""})
 
     ticket_amount = len(rider_list)
-    locked_return_url = post.get("callback_url", None) or None
+    locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
     status = STATUS_WAITING_LOCK
 
@@ -251,6 +253,7 @@ def submit_order():
 
     order = Order()
     order.order_no = Order.generate_order_no()
+    order.out_order_no = out_order_no
     order.status = status
     order.order_price = order_price
     order.create_date_time = dte.now()
@@ -263,6 +266,12 @@ def submit_order():
     order.crawl_source = line.crawl_source
     order.locked_return_url = locked_return_url
     order.issued_return_url = issued_return_url
+
+    order.drv_datetime = line.drv_datetime
+    order.bus_num = line.bus_num
+    order.starting_name = line.starting.city_name + ';' + line.starting.station_name
+    order.destination_name = line.destination.city_name + ';' + line.destination.station_name
+
     order.save()
 
     if ret_code == RET_OK:
@@ -332,6 +341,9 @@ def query_order_detail():
         return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
 
     if order.status == STATUS_ISSUE_SUCC:
+        starting_name_list = order.starting_name.split(';')
+        destination_name_list = order.destination_name.split(';')
+        drv_datetime_list = dte.strftime(order.drv_datetime, "%Y-%m-%d %H:%M").split(' ')
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
@@ -340,12 +352,12 @@ def query_order_detail():
             "contacter_info": order.get_contact_info(),
             "rider_info": order.get_rider_info(),
             "ticket_info": {
-                "start_city": order.line.starting.city_name,
-                "start_station": order.line.starting.station_name,
-                "dest_city": order.line.destination.city_name,
-                "dest_station": order.line.destination.station_name,
-                "drv_date": order.line.drv_date,
-                "drv_time": order.line.drv_time,
+                "start_city": starting_name_list[0],
+                "start_station": starting_name_list[1],
+                "dest_city": destination_name_list[0],
+                "dest_station": destination_name_list[1],
+                "drv_date": drv_datetime_list[0],
+                "drv_time": drv_datetime_list[1],
                 "total_price": order.order_price,
             }
         }

@@ -88,6 +88,8 @@ class Starting(db.Document):
             return 0
         if self.province_name == "四川" and self.crawl_source == "scqcp":
             return 10
+        elif self.province_name == "广西" and self.crawl_source == "bus100":
+            return 15
         return 0
 
     @property
@@ -303,6 +305,14 @@ class Order(db.Document):
     kefu_order_status = db.IntField()   # 1表示已处理
     kefu_updatetime = db.DateTimeField()
 
+    drv_datetime = db.DateTimeField()         # DateTime类型的开车时间
+    bus_num = db.StringField()       # 车次/班次
+    starting_name = db.StringField()
+    destination_name = db.StringField()
+
+
+
+
     meta = {
         "indexes": [
             "order_no",
@@ -345,8 +355,10 @@ class Order(db.Document):
         """
         刷新出票情况
         """
+
         if self.status != STATUS_WAITING_ISSUE:
             return
+
         if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
@@ -362,7 +374,7 @@ class Order(db.Document):
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
                     msg_list.append("")
-                self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif status == "give_back_ticket":
@@ -372,10 +384,9 @@ class Order(db.Document):
         elif self.crawl_source == "bus100":
             rebot = Bus100Rebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
-            print '-------------',tickets
             code_list, msg_list = [], []
             if tickets and tickets['status'] == '4':
-                self.modify(status=STATUS_ISSUE_OK, pick_code_list=code_list, pick_msg_list=msg_list)
+                self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif tickets['status'] == '5':
@@ -560,6 +571,7 @@ class ScqcpRebot(Rebot):
             bot.modify(password=pwd, is_encrypt=is_encrypt)
 
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
 
         for tele, (pwd, is_encrypt) in accounts.items():
@@ -572,6 +584,7 @@ class ScqcpRebot(Rebot):
                       is_encrypt=is_encrypt)
             bot .save()
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
@@ -635,6 +648,15 @@ class Bus100Rebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
     }
 
+    @classmethod
+    def get_random_rebot(cls):
+        qs = cls.objects.filter(is_active=True)
+        if not qs:
+            return
+        size = qs.count()
+        rd = random.randint(0, size-1)
+        return qs[rd]
+
     def on_add_doing_order(self, order):
         pass
 
@@ -681,6 +703,7 @@ class Bus100Rebot(Rebot):
             bot.modify(password=pwd, open_id=openid)
 
             if bot.login() == "OK":
+                print "%s 登陆成功" % bot.telephone
                 valid_cnt += 1
 
         for tele, (pwd, openid) in accounts.items():
@@ -693,6 +716,7 @@ class Bus100Rebot(Rebot):
                       open_id=openid)
             bot .save()
             if bot.login() == "OK":
+                print "%s 登陆成功" % tele
                 valid_cnt += 1
         current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
@@ -859,26 +883,46 @@ class Bus100Rebot(Rebot):
         ret['returnMsg'] = returnMsg
         return ret
 
+#     def request_order(self, order):
+#         url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
+#         data = {
+#             "mobile": self.telephone,
+#             "password": self.password,
+#             "phone":   '',
+#             "code":  ''
+#         }
+#         ua = random.choice(MOBILE_USER_AGENG)
+# 
+#         headers = {"User-Agent": ua}
+#         r = requests.post(url, data=data, headers=headers)
+#         print 33333333333333333333,r.content
+#         _cookies = r.cookies
+# 
+#         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
+#         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
+#         r = requests.get(url, cookies=_cookies, headers=headers)
+#         print r.content
+#         sel = etree.HTML(r.content)
+#         orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
+#         orderDetail = json.loads(orderDetailObj)
+#         orderDetail = orderDetail[0]
+#         return orderDetail
+
     def request_order(self, order):
-        url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
-        data = {
-            "mobile": self.telephone,
-            "password": self.password,
-            "phone":   '',
-            "code":  ''
-        }
-        ua = random.choice(MOBILE_USER_AGENG)
-
-        headers = {"User-Agent": ua}
-        r = requests.post(url, data=data, headers=headers)
-        print 33333333333333333333
-        _cookies = r.cookies
-
-        uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
-        url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
-        r = requests.get(url, cookies=_cookies)
+        url = "http://www.84100.com/orderInfo.shtml"
+        #headers={"cookie":'CNZZDATA1254030256=1424378201-1448438538-http%253A%252F%252Fwww.84100.com%252F%7C1448444026; JSESSIONID=3798865869AAB17AFF58752C57F24CA1; trainHistory=%5B%7B%22sendDate%22%3A%222015-11-27%22%2C%22startId%22%3A%2245010000%22%2C%22startName%22%3A%22%E5%9F%8C%E4%B8%9C%E7%AB%99%22%2C%22endName%22%3A%22%E5%AE%9D%E5%AE%89%22%2C%22showDate%22%3Anull%2C%22showWeek%22%3A%22%E6%98%9F%E6%9C%9F%E4%BA%94%22%2C%22createDate%22%3A%222015-11-27+09%3A38%3A28%22%7D%5D'} 
+        data = {"orderId": order.raw_order_no}
+        r = requests.post(url, data=data) 
+#         print r.content
         sel = etree.HTML(r.content)
-        orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
-        orderDetail = json.loads(orderDetailObj)
-        orderDetail = orderDetail[0]
+        orderDetailObj = sel.xpath('//div[@class="order-details"]/ul')
+        orderDetail = {}
+        order_status = {
+            u"购票成功":"4",
+            u"初始状态":'3',
+            u"订单失效":"5",
+        }
+        if orderDetailObj:
+            status = orderDetailObj[0].xpath('li')[1].xpath('em/text()')[0].replace('\r\n','').replace(' ','') 
+            orderDetail.update({'status': order_status[status]})
         return orderDetail
