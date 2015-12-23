@@ -348,19 +348,6 @@ class Order(db.Document):
 
         if self.status != STATUS_WAITING_ISSUE:
             return
-        if self.crawl_source == "scqcp":
-            rebot = ScqcpRebot.objects.get(telephone=self.source_account)
-            self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=['0'], pick_msg_list=['no msg, for test'])
-            rebot.remove_doing_order(self)
-            issued_callback.delay(self.order_no)
-            return
-        elif self.crawl_source == "bus100":
-            rebot = Bus100Rebot.objects.get(telephone=self.source_account)
-            self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=['0'], pick_msg_list=['no msg, for test'])
-            rebot.remove_doing_order(self)
-            issued_callback.delay(self.order_no)
-            return
-
 
         if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
