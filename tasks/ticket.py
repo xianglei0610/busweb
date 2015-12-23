@@ -12,6 +12,7 @@ from app.constants import *
 from app import celery
 from app.utils import getRedisObj
 
+
 @celery.task(ignore_result=True)
 def lock_ticket(order_no):
     """
@@ -79,6 +80,7 @@ def lock_ticket(order_no):
 
     elif order.crawl_source == "bus100":
         from app.models import Bus100Rebot, Line
+        from tasks import check_order_expire
         rebot = Bus100Rebot.get_random_rebot()
         print rebot.telephone
         ret = rebot.recrawl_shiftid(order.line)

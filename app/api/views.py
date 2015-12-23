@@ -266,6 +266,12 @@ def submit_order():
     order.crawl_source = line.crawl_source
     order.locked_return_url = locked_return_url
     order.issued_return_url = issued_return_url
+
+    order.drv_datetime = line.drv_datetime
+    order.bus_num = line.bus_num
+    order.starting_name = line.starting.city_name + ';' + line.starting.station_name
+    order.destination_name = line.destination.city_name + ';' + line.destination.station_name
+
     order.save()
 
     if ret_code == RET_OK:
@@ -335,6 +341,9 @@ def query_order_detail():
         return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
 
     if order.status == STATUS_ISSUE_SUCC:
+        starting_name_list = order.starting_name.split(';')
+        destination_name_list = order.destination_name.split(';')
+        drv_datetime_list = dte.strftime(order.drv_datetime, "%Y-%m-%d %H:%M").split(' ')
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
@@ -343,12 +352,12 @@ def query_order_detail():
             "contacter_info": order.get_contact_info(),
             "rider_info": order.get_rider_info(),
             "ticket_info": {
-                "start_city": order.line.starting.city_name,
-                "start_station": order.line.starting.station_name,
-                "dest_city": order.line.destination.city_name,
-                "dest_station": order.line.destination.station_name,
-                "drv_date": order.line.drv_date,
-                "drv_time": order.line.drv_time,
+                "start_city": starting_name_list[0],
+                "start_station": starting_name_list[1],
+                "dest_city": destination_name_list[0],
+                "dest_station": destination_name_list[1],
+                "drv_date": drv_datetime_list[0],
+                "drv_time": drv_datetime_list[1],
                 "total_price": order.order_price,
             }
         }
