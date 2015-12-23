@@ -120,6 +120,7 @@ def src_code_input(order_no):
                            order=order,
                            )
 
+
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 @login_required
 def order_pay(order_no):
@@ -352,6 +353,7 @@ def logout():
 def index():
     return render_template("admin-new/main.html")
 
+
 @admin.route('/top', methods=['GET'])
 @login_required
 def top_page():
@@ -372,6 +374,7 @@ def top_page():
 @login_required
 def left_page():
     return render_template("admin-new/left.html")
+
 
 @admin.route('/allorder', methods=['GET'])
 @login_required
@@ -427,6 +430,7 @@ def detail_order(order_no):
                             source_info=SOURCE_INFO,
                            )
 
+
 @admin.route('/orders/wating_deal', methods=['GET'])
 @login_required
 def wating_deal_order():
@@ -473,6 +477,7 @@ def kefu_complete():
     orderObj = Order.objects.get(order_no=order_no)
     orderObj.complete_by(userObj)
     return jsonify({"status": 0, "msg": "处理完成"})
+
 
 @admin.route('/kefu_on_off', methods=['POST'])
 @login_required
