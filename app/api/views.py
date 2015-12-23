@@ -35,6 +35,7 @@ def query_starting():
         },]
     }
     """
+    1/0
     province_data = {}
     distinct_data = {}
     for obj in Starting.objects:
@@ -237,7 +238,7 @@ def submit_order():
                         "data": ""})
 
     ticket_amount = len(rider_list)
-    locked_return_url = post.get("callback_url", None) or None
+    locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
     status = STATUS_WAITING_LOCK
 
