@@ -3,6 +3,7 @@ import urllib2
 import json
 import datetime
 import random
+import traceback
 
 from app.constants import *
 from app import celery
@@ -21,7 +22,7 @@ def check_order_expire(self, order_no):
     try:
         order.refresh_issued()
     except Exception, e:
-        print e
+        print traceback.format_exc()
     if order.status == STATUS_WAITING_ISSUE:
         self.retry(countdown=10, max_retries=30)
 

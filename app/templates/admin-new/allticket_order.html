@@ -128,7 +128,7 @@
          <td>{{d.out_order_no}}</td>
          <td>{{d.contact_info["name"]}}<br />{{d.contact_info["telephone"]}}</td>
          <td>{{d.create_date_time|format_datetime}}<br>{{d.line.drv_datetime|format_datetime}}</td>
-         <td>{{d.line.bus_num}}<br>{{d.line.starting.city_name or d.line.starting.station_name}} - {{d.line.destination.city_name or d.line.destination.station_name}}</td>
+         <td>{{d.bus_num}}<br>{{d.starting_name.split(';')[0] or d.starting_name.split(';')[1]}} - {{d.destination_name.split(';')[0] or d.destination_name.split(';')[1]}}</td>
          <td>{{source_info[d.crawl_source]["name"]}}<br></td>
          <td>{{d.riders|count}}张</td>
          <td class="m">￥{{d.order_price}}</td>

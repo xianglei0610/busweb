@@ -111,11 +111,11 @@ def main():
     """ 定时任务处理 """
 
     sched = Scheduler(daemonic=False)
-    sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['scqcp'])
-    sched.add_cron_job(bus_crawl, hour=2, minute=40, args=['bus100'])
 
-    sched.add_cron_job(sync_crawl_to_api, hour=4, minute=30, args=['scqcp'])
-    sched.add_cron_job(sync_crawl_to_api, hour=6, minute=30, args=['bus100'])
+    sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
+    sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['bus100'])
+    sched.add_cron_job(sync_crawl_to_api, hour=21, minute=10, args=['scqcp'])
+    sched.add_cron_job(sync_crawl_to_api, hour=22, minute=30, args=['bus100'])
 
 #     sched.add_interval_job(polling_order_status, minutes=1)
 
