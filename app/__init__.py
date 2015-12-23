@@ -4,6 +4,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
 import redis
+import logging
 
 from flask import Flask
 from flask.ext.mail import Mail
@@ -13,12 +14,14 @@ from config import config
 from celery import Celery, platforms
 from redis_session import RedisSessionInterface
 platforms.C_FORCE_ROOT = True    # celery需要这样
+from raven.contrib.flask import Sentry
 
 mail = Mail()
 db = MongoEngine()
 celery = Celery(__name__, broker="redis://localhost:6379/10")
 login_manager = LoginManager()
 BASE_DIR = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
+sentry = Sentry()
 
 
 def init_celery(app):
@@ -44,6 +47,8 @@ def setup_app(config_name, server_type="api"):
     rset = app.config["REDIS_SETTIGNS"]["SESSION"]
     r = redis.Redis(host=rset["host"], port=rset["port"], db=rset["db"])
     app.session_interface = RedisSessionInterface(redis=r)
+
+    sentry.init_app(app)
     return app
 
 

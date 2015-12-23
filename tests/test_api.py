@@ -7,7 +7,7 @@ import random
 from app.constants import *
 from datetime import datetime as dte
 from flask.ext.testing import TestCase
-from app.models import Line, Starting
+from app.models import Line, Starting, Order
 from app import setup_app
 
 

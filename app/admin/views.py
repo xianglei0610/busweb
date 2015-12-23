@@ -54,6 +54,7 @@ def parse_page_data(qs):
 
 
 @admin.route('/orders', methods=['GET'])
+@login_required
 def order_list():
     order_no = request.args.get("order_no", "")
     if order_no:
@@ -72,6 +73,7 @@ def order_list():
 
 
 @admin.route('/lines', methods=['GET'])
+@login_required
 def line_list():
     lineid = request.args.get("line_id", "")
     starting_name = request.args.get("starting", "")
@@ -98,6 +100,7 @@ def line_list():
 
 
 @admin.route('/orders/<order_no>/srccodeimg', methods=['GET'])
+@login_required
 def src_code_img(order_no):
     order = Order.objects.get(order_no=order_no)
     if order.crawl_source == "scqcp":
@@ -108,7 +111,9 @@ def src_code_img(order_no):
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
 
+
 @admin.route('/orders/<order_no>/srccodeinput', methods=['GET'])
+@login_required
 def src_code_input(order_no):
     order = Order.objects.get(order_no=order_no)
     return render_template('admin-new/code_input.html',
@@ -116,6 +121,7 @@ def src_code_input(order_no):
                            )
 
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
+@login_required
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_ISSUE:
@@ -229,6 +235,7 @@ def order_pay(order_no):
 
 
 @admin.route('/orders/<order_no>/refresh', methods=['GET'])
+@login_required
 def order_refresh(order_no):
     order = Order.objects.get(order_no=order_no)
     order.refresh_issued()
@@ -236,6 +243,7 @@ def order_refresh(order_no):
 
 
 class SubmitOrder(MethodView):
+    @login_required
     def get(self):
         contact = {
             "name": "罗军平",
@@ -258,6 +266,7 @@ class SubmitOrder(MethodView):
         )
         return render_template('admin/submit_order.html', **kwargs)
 
+    @login_required
     def post(self):
         fd = request.form
         data = {
