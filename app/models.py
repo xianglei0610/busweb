@@ -635,6 +635,15 @@ class Bus100Rebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
     }
 
+    @classmethod
+    def get_random_rebot(cls):
+        qs = cls.objects.filter(is_active=True)
+        if not qs:
+            return
+        size = qs.count()
+        rd = random.randint(0, size-1)
+        return qs[rd]
+
     def on_add_doing_order(self, order):
         pass
 

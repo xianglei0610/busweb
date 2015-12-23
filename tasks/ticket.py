@@ -76,8 +76,9 @@ def lock_ticket(order_no):
                 print response, "async_lock_ticket"
 
     elif order.crawl_source == "bus100":
-        from app.models import Bus100Rebot,Line
-        rebot = Bus100Rebot.objects.first()
+        from app.models import Bus100Rebot, Line
+        rebot = Bus100Rebot.get_random_rebot()
+        print rebot.telephone
         ret = rebot.recrawl_shiftid(order.line)
         line = Line.objects.get(line_id=order.line.line_id)
         order.line = line
