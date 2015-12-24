@@ -4,6 +4,7 @@ import os
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
+import logging
 from app import setup_app, celery
 from raven import Client
 from raven.contrib.celery import register_signal, register_logger_signal
