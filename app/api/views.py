@@ -35,7 +35,6 @@ def query_starting():
         },]
     }
     """
-    1/0
     province_data = {}
     distinct_data = {}
     for obj in Starting.objects:
