@@ -385,13 +385,14 @@ class Order(db.Document):
             rebot = Bus100Rebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
             code_list, msg_list = [], []
-            if tickets and tickets['status'] == '4':
-                self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
-                rebot.remove_doing_order(self)
-                issued_callback.delay(self.order_no)
-            elif tickets['status'] == '5':
-                self.modify(status=STATUS_ISSUE_FAIL)
-                rebot.remove_doing_order(self)
+            if tickets:
+                if tickets['status'] == '4':
+                    self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
+                    rebot.remove_doing_order(self)
+                    issued_callback.delay(self.order_no)
+                elif tickets['status'] == '5':
+                    self.modify(status=STATUS_ISSUE_FAIL)
+                    rebot.remove_doing_order(self)
 
     def get_contact_info(self):
         """
@@ -928,4 +929,5 @@ class Bus100Rebot(Rebot):
                 orderDetail.update({'status': '4'})
             elif status == u"订单失效" or status == u'\xe8\xae\xa2\xe5\x8d\x95\xe5\xa4\xb1\xe6\x95\x88':
                 orderDetail.update({'status': '5'})
+        
         return orderDetail
