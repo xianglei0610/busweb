@@ -9,6 +9,7 @@ from flask import request, jsonify
 from tasks import lock_ticket
 from app.api import api
 from app.models import Line, Starting, Destination, Order
+from app import order_log
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -225,6 +226,7 @@ def submit_order():
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": ""})
+    order_log.info("[submit-1] receive order %s", request.get_data())
 
     try:
         line = Line.objects.get(line_id=line_id)
@@ -267,6 +269,7 @@ def submit_order():
     order.issued_return_url = issued_return_url
     order.save()
 
+    order_log.info("[submit-2] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret_msg)
     if ret_code == RET_OK:
         lock_ticket.delay(order.order_no)
     return jsonify({"code": ret_code,

@@ -29,6 +29,7 @@ line_log = logging.getLogger("line")
 order_log = logging.getLogger("order")
 kefu_log = logging.getLogger("kefu")
 access_log = logging.getLogger("access")
+rebot_log = logging.getLogger("rebot")
 
 
 def init_celery(app):
@@ -52,7 +53,7 @@ def init_logging(app, server_type):
     for logger in [line_log, order_log, kefu_log, access_log]:
         logger.setLevel(logging.DEBUG)
         s = logger.name
-        f = "logs/%s_%s.log" % (s, server_type)
+        f = "logs/%s.log" % s
         file_hd = TimedRotatingFileHandler(os.path.join(BASE_DIR, f),
                                            when='D', interval=1)
         file_hd.setLevel(logging.INFO)
