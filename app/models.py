@@ -650,7 +650,7 @@ class Bus100Rebot(Rebot):
 
     @classmethod
     def get_random_rebot(cls):
-        qs = cls.objects.filter(is_active=True)
+        qs = cls.objects.filter()
         if not qs:
             return
         size = qs.count()
@@ -924,5 +924,8 @@ class Bus100Rebot(Rebot):
         }
         if orderDetailObj:
             status = orderDetailObj[0].xpath('li')[1].xpath('em/text()')[0].replace('\r\n','').replace(' ','') 
-            orderDetail.update({'status': order_status[status]})
+            if status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
+                orderDetail.update({'status': '4'})
+            elif status == u"订单失效" or status == u'\xe8\xae\xa2\xe5\x8d\x95\xe5\xa4\xb1\xe6\x95\x88':
+                orderDetail.update({'status': '5'})
         return orderDetail
