@@ -110,7 +110,7 @@ def main():
     """ 定时任务处理 """
 
     sched = Scheduler(daemonic=False)
-    sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
+    sched.add_cron_job(bus_crawl, hour=15, minute=38, args=['scqcp'])
     sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['bus100'])
 
     sched.add_cron_job(sync_crawl_to_api, hour=21, minute=10, args=['scqcp'])

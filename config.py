@@ -56,7 +56,7 @@ class Config:
 
 class ApiDevConfig(Config):
 
-    MAIL_SERVER = 'smtp.googlemail.com'
+    MAIL_SERVER = 'smtp.exmail.qq.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
