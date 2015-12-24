@@ -116,7 +116,7 @@ def src_code_img(order_no):
 @login_required
 def src_code_input(order_no):
     order = Order.objects.get(order_no=order_no)
-    return render_template('admin-new/code_input.html',
+    return render_template('admin-new/code_input2.html',
                            order=order,
                            )
 
@@ -153,6 +153,7 @@ def order_pay(order_no):
             tmpIm = cStringIO.StringIO(r.content)
             im = Image.open(tmpIm)
             code = pytesseract.image_to_string(im)
+            code = 1111
 
         accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
         passwd, _ = accounts[order.source_account]
