@@ -180,6 +180,7 @@ def migrate_from_crawl(site):
                 "fee": d["service_price"],
                 "left_tickets": d["amount"],
                 "extra_info": {"sign_id": d["sign_id"], "stop_name_short": d["stop_name"]},
+                'update_datetime': datetime.now(),
             }
             try:
                 line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)
@@ -265,6 +266,7 @@ def migrate_from_crawl(site):
                 "fee": 0,
                 "left_tickets": 50 if d["flag"] else 0,
                 "extra_info": {"flag": d["flag"]},
+                'update_datetime': datetime.now(),
             }
             try:
                 line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)
