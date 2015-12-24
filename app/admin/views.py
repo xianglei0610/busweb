@@ -399,7 +399,7 @@ def all_order():
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
     stat = {
-        "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).count(),
+        "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount'),
         "money_total": qs.sum("order_price"),
         "dealed_total": qs.filter(kefu_order_status=1).count(),
     }
