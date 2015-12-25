@@ -14,6 +14,7 @@ from app.utils import getRedisObj
 from app import order_log
 
 
+
 @celery.task(ignore_result=True)
 def lock_ticket(order_no):
     """
@@ -85,6 +86,7 @@ def lock_ticket(order_no):
 
     elif order.crawl_source == "bus100":
         from app.models import Bus100Rebot, Line
+        from tasks import check_order_expire
         rebot = Bus100Rebot.get_random_rebot()
         ret = rebot.recrawl_shiftid(order.line)
         line = Line.objects.get(line_id=order.line.line_id)

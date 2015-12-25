@@ -78,7 +78,7 @@ MOBILE_USER_AGENG = [
 STATUS_WAITING_ISSUE = 3    # 等待出票, 在源网站锁票成功
 STATUS_WAITING_LOCK = 4     # 等待下单，12308已提交了订单，但未向源网站提交订单
 STATUS_LOCK_FAIL = 5        # 下单失败，12308已提交了订单，向源网站提交订单失败
-STATUS_GIVE_BACK = 6       # 退票
+STATUS_GIVE_BACK = 6        # 退票
 STATUS_ISSUE_FAIL = 13      # 出票失败, 支付完成后，已确认源网站出票失败
 STATUS_ISSUE_SUCC = 14      # 出票成功, 支付完成后，源网站也出票成功
 
@@ -111,5 +111,12 @@ RET_ISSUED_FAIL = 103       # 出票失败
 RET_PRICE_WRONG = 104       # 金额不对
 
 # 线路错误2xx
-RET_LINE_404 = 201    # 线路不存在
+RET_LINE_404 = 201          # 线路不存在
 RET_BUY_TIME_ERROR = 202    # 线路不在预售期
+
+# 立即支付按钮变灰持续时间
+# 8s
+PAY_CLICK_EXPIR = 20
+
+# redis keys
+LAST_PAY_CLICK_TIME = "payclicktime:%s"

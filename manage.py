@@ -58,10 +58,13 @@ def test(coverage=False):
 
 
 @manager.command
-def create_user():
+def create_user(type):
     import getpass
     from app.models import AdminUser
     from app.utils import md5
+    if type not in ["kefu", "admin"]:
+        print "fail, the right command should like 'python manage.py create_user (kefu or admin)'"
+        return
     username = raw_input("用户名:")
     try:
         u = AdminUser.objects.get(username=username)
@@ -74,7 +77,16 @@ def create_user():
     if pwd1 != pwd2:
         print "两次输入密码不一致, 创建用户失败"
         return
-    u = AdminUser(username=username, password=md5(pwd1), is_kefu=1, is_switch=1)
+    u = AdminUser(username=username, password=md5(pwd1))
+    if type == "kefu":
+        u.is_kefu = 1
+        u.is_switch = 0
+        u.is_admin = 0
+    elif type == "admin":
+        u.is_kefu = 0
+        u.is_switch = 0
+        u.is_admin = 1
+
     u.save()
     print "创建用户成功"
 
@@ -180,6 +192,7 @@ def migrate_from_crawl(site):
                 "fee": d["service_price"],
                 "left_tickets": d["amount"],
                 "extra_info": {"sign_id": d["sign_id"], "stop_name_short": d["stop_name"]},
+                'update_datetime': datetime.now(),
             }
             try:
                 line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)
@@ -265,6 +278,7 @@ def migrate_from_crawl(site):
                 "fee": 0,
                 "left_tickets": 50 if d["flag"] else 0,
                 "extra_info": {"flag": d["flag"]},
+                'update_datetime': datetime.now(),
             }
             try:
                 line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)
@@ -272,6 +286,7 @@ def migrate_from_crawl(site):
             except Line.DoesNotExist:
                 line_obj = Line(**attrs)
                 line_obj.save()
+            print line_obj.line_id
 
     app.logger.info("start migrate data from crawldb to webdb:%s", site)
     if site == "scqcp":

@@ -117,7 +117,7 @@ def src_code_img(order_no):
 @login_required
 def src_code_input(order_no):
     order = Order.objects.get(order_no=order_no)
-    return render_template('admin-new/code_input.html',
+    return render_template('admin-new/code_input2.html',
                            order=order,
                            )
 
@@ -128,6 +128,8 @@ def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_ISSUE:
         return jsonify({"status": "status_error", "msg": "不是支付的时候", "data": ""})
+    r = getRedisObj()
+    r.set(LAST_PAY_CLICK_TIME % order_no, time.time(), ex=PAY_CLICK_EXPIR)
 
     code = request.args.get("valid_code", "")
     if order.crawl_source == "scqcp":
@@ -401,7 +403,7 @@ def all_order():
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
     stat = {
-        "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).count(),
+        "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount'),
         "money_total": qs.sum("order_price"),
         "dealed_total": qs.filter(kefu_order_status=1).count(),
     }
@@ -442,8 +444,8 @@ def wating_deal_order():
     """
     userObj = current_user
     order_nos = []
+    r = getRedisObj()
     if userObj.is_kefu:
-        r = getRedisObj()
         key = 'order_list:%s' % userObj.username
         for o in  Order.objects.filter(order_no__in=r.smembers(key)):
             if o.status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC]:
@@ -464,10 +466,20 @@ def wating_deal_order():
 
     qs = Order.objects.filter(order_no__in=order_nos)
     qs = qs.order_by("-create_date_time")
+    expire_seconds = {}
+    t = time.time()
+    for o in qs:
+        click_time = r.get(LAST_PAY_CLICK_TIME % o.order_no)
+        if not click_time:
+            expire_seconds[o.order_no] = 0
+            continue
+        click_time = float(click_time)
+        expire_seconds[o.order_no] = max(0, PAY_CLICK_EXPIR-int(t-click_time))
     return render_template("admin-new/waiting_deal_order.html",
                            page=parse_page_data(qs),
                            status_msg=STATUS_MSG,
                            source_info=SOURCE_INFO,
+                           expire_seconds=expire_seconds,
                            )
 
 @admin.route('/kefu_complete', methods=['POST'])
