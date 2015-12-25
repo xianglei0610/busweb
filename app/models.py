@@ -25,6 +25,7 @@ class AdminUser(db.Document):
     create_datetime = db.DateTimeField(default=dte.now)
     is_switch = db.IntField()
     is_kefu = db.IntField()
+    is_admin = db.IntField(default=0)
 
     meta = {
         "indexes": [
