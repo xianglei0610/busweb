@@ -401,7 +401,6 @@ class Order(db.Document):
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
 
-
     def get_contact_info(self):
         """
         返回给client的数据和格式， 不要轻易修改!
