@@ -386,7 +386,7 @@ def all_order():
     source_account = request.args.get("source_account", "")
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
-
+    print request.args, type(request.args)
     query = {}
     if status:
         query.update(status=int(status))
