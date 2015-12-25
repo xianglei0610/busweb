@@ -394,6 +394,7 @@ class Order(db.Document):
                 elif tickets['status'] == '5':
                     self.modify(status=STATUS_ISSUE_FAIL)
                     rebot.remove_doing_order(self)
+                    issued_callback.delay(self.order_no)
 
     def get_contact_info(self):
         """
