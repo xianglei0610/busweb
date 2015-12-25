@@ -25,6 +25,7 @@ class AdminUser(db.Document):
     create_datetime = db.DateTimeField(default=dte.now)
     is_switch = db.IntField()
     is_kefu = db.IntField()
+    is_admin = db.IntField(default=0)
 
     meta = {
         "indexes": [
@@ -393,6 +394,7 @@ class Order(db.Document):
                 elif tickets['status'] == '5':
                     self.modify(status=STATUS_ISSUE_FAIL)
                     rebot.remove_doing_order(self)
+                    issued_callback.delay(self.order_no)
 
     def get_contact_info(self):
         """
