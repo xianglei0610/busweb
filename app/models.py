@@ -406,6 +406,7 @@ class Order(db.Document):
                     order_log.info("[issue-refresh-result] %s succ. ret-status:%s", self.order_no, tickets["status"])
                     self.modify(status=STATUS_ISSUE_FAIL)
                     rebot.remove_doing_order(self)
+                    issued_callback.delay(self.order_no)
 
     def get_contact_info(self):
         """
