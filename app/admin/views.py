@@ -23,6 +23,7 @@ from app.admin import admin
 from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser
 from tasks import refresh_kefu_order
+from tasks import issued_callback
 
 
 def parse_page_data(qs):
@@ -170,10 +171,12 @@ def order_pay(order_no):
             r = requests.get(pay_url, headers=headers, cookies=cookies)
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
-                order.modify(status=STATUS_LOCK_FAIL)
+                order.modify(status=STATUS_ISSUE_FAIL)
                 rebot = order.get_rebot()
                 if rebot:
                     rebot.remove_doing_order(order)
+
+                issued_callback.delay(order.order_no)
                 return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
             sel = etree.HTML(r.content)
             data = dict(

@@ -78,7 +78,7 @@ MOBILE_USER_AGENG = [
 STATUS_WAITING_ISSUE = 3    # 等待出票, 在源网站锁票成功
 STATUS_WAITING_LOCK = 4     # 等待下单，12308已提交了订单，但未向源网站提交订单
 STATUS_LOCK_FAIL = 5        # 下单失败，12308已提交了订单，向源网站提交订单失败
-STATUS_ISSUE_FAIL = 13      # 出票失败, 支付完成后，已确认源网站出票失败
+STATUS_ISSUE_FAIL = 13      # 出票失败, 已确认源网站出票失败
 STATUS_ISSUE_SUCC = 14      # 出票成功, 支付完成后，源网站也出票成功
 STATUS_GIVE_BACK = 15       # 退票
 
