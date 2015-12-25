@@ -328,6 +328,7 @@ z-index: 100;bottom:-2px;padding: 0 3px;height: 30px;line-height: 30px;left:0px;
 .seachform .timecount{font-size:20px;} .seachform .timecount em{font-style:normal;font-weight:bold;color:#f30;font-size:28px;}
 a.btsize{padding:8px 18px;font-size:20px;width:120px;height:36px;font-weight:bold;color:#fff;cursor:pointer;behavior:url(js/pie.htc);text-align:center;line-height:36px;background:#f90;border-radius:5px;margin:5px 0px;}
 a.btsize:hover{opacity:0.85;color:#fff;}
+a.btgray{background:#999;}
 
 .btn_login{ display:inline-block;padding:0 18px;font-size:20px;width:120px;height:50px;line-height:50px;font-weight:bold;color:#fff;cursor:pointer;behavior:url(js/pie.htc);text-align:center;line-height:36px;background:#f90;border-radius:5px;margin:5px 0px;}
 .btn_login:hover{opacity:0.85;color:#fff;}
