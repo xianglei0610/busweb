@@ -58,10 +58,13 @@ def test(coverage=False):
 
 
 @manager.command
-def create_user():
+def create_user(type):
     import getpass
     from app.models import AdminUser
     from app.utils import md5
+    if type not in ["kefu", "admin"]:
+        print "fail, the right command should like 'python manage.py create_user (kefu or admin)'"
+        return
     username = raw_input("用户名:")
     try:
         u = AdminUser.objects.get(username=username)
@@ -74,7 +77,16 @@ def create_user():
     if pwd1 != pwd2:
         print "两次输入密码不一致, 创建用户失败"
         return
-    u = AdminUser(username=username, password=md5(pwd1), is_kefu=1, is_switch=1)
+    u = AdminUser(username=username, password=md5(pwd1))
+    if type == "kefu":
+        u.is_kefu = 1
+        u.is_switch = 0
+        u.is_admin = 0
+    elif type == "admin":
+        u.is_kefu = 0
+        u.is_switch = 0
+        u.is_admin = 1
+
     u.save()
     print "创建用户成功"
 
