@@ -401,7 +401,7 @@ def all_order():
     if end_date:
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
     else:
-        query.update(create_date_time__gte=dte.strptime((dte.now()+timedelta(1)).strftime("%Y-%m-%d"), "%Y-%m-%d"))
+        query.update(create_date_time__lte=dte.strptime((dte.now()+timedelta(1)).strftime("%Y-%m-%d"), "%Y-%m-%d"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
     stat = {
         "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount'),
