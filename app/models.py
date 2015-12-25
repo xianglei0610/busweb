@@ -291,7 +291,7 @@ class Order(db.Document):
 
     # 取票信息
     pick_code_list = db.ListField(db.StringField(max_length=30))     # 取票密码
-    pick_msg_list = db.ListField(db.StringField(max_length=50))      # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
+    pick_msg_list = db.ListField(db.StringField(max_length=300))      # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
 
     # 其他
     crawl_source = db.StringField()     # 源网站
@@ -356,10 +356,8 @@ class Order(db.Document):
         """
         刷新出票情况
         """
-
         if self.status != STATUS_WAITING_ISSUE:
             return
-
         if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
@@ -388,6 +386,11 @@ class Order(db.Document):
             code_list, msg_list = [], []
             if tickets:
                 if tickets['status'] == '4':
+                    msg = """温馨提醒：您有%s张汽车票，出发日期：%s；行程：%s(%s)-%s；订单号：%s；请在发车前两小时内凭乘车人身份证取票。祝您旅途愉快！""" % (len(self.riders), 
+                                                                                                            self.drv_datetime,self.line.starting.city_name,
+                                                                                                            self.line.starting.station_name,self.line.destination.station_name,tickets['order_id'])
+                    code_list.append('无需取票密码')
+                    msg_list.append(msg)
                     self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
@@ -929,7 +932,10 @@ class Bus100Rebot(Rebot):
             status = orderDetailObj[0].xpath('li')[1].xpath('em/text()')[0].replace('\r\n','').replace(' ','') 
             if status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
                 orderDetail.update({'status': '4'})
+                matchObj = re.findall('<li>订单号：(.*)', r.content)
+                order_id = matchObj[0].replace(' ','')
+                print order_id
+                orderDetail.update({'order_id': order_id})
             elif status == u"订单失效" or status == u'\xe8\xae\xa2\xe5\x8d\x95\xe5\xa4\xb1\xe6\x95\x88':
                 orderDetail.update({'status': '5'})
-        
         return orderDetail
