@@ -338,11 +338,16 @@ def query_order_detail():
         order = Order.objects.get(order_no=sys_order_no)
     except Order.DoesNotExist:
         return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
-
+    pick_info = []
     if order.status == STATUS_ISSUE_SUCC:
         starting_name_list = order.starting_name.split(';')
         destination_name_list = order.destination_name.split(';')
         drv_datetime_list = dte.strftime(order.drv_datetime, "%Y-%m-%d %H:%M").split(' ')
+        for i, code in enumerate(order.pick_code_list):
+            pick_info.append({
+                "pick_code": code,
+                "pick_msg": order.pick_msg_list[i]
+                })
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
@@ -358,7 +363,8 @@ def query_order_detail():
                 "drv_date": drv_datetime_list[0],
                 "drv_time": drv_datetime_list[1],
                 "total_price": order.order_price,
-            }
+            },
+            "pick_info": pick_info
         }
         return jsonify({"code": RET_OK, "message": "OK", "data": data})
     else:
@@ -370,5 +376,6 @@ def query_order_detail():
             "contacter_info": {},
             "rider_info": [],
             "ticket_info": {},
+            "pick_info": pick_info
         }
         return jsonify({"code": RET_OK, "message": "OK", "data": data})

@@ -372,7 +372,9 @@ class Order(db.Document):
                 # 出票成功
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
-                    msg_list.append("")
+                    msg = "【四川汽车票务网】您已购买%s%s(%s)至%s的汽车票，取票验证码%s,请在发车时间前乘车" %(self.drv_datetime, self.line.starting.city_name,
+                                                                                                            self.line.starting.station_name,self.line.destination.station_name,tickets[tid]["code"])
+                    msg_list.append(msg)
                 self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
