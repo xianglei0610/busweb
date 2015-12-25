@@ -894,7 +894,6 @@ class Bus100Rebot(Rebot):
         ret['returnMsg'] = returnMsg
         return ret
 
-<<<<<<< HEAD
     def request_order(self, order):
         url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
         data = {
@@ -908,32 +907,6 @@ class Bus100Rebot(Rebot):
         headers = {"User-Agent": ua}
         r = requests.post(url, data=data, headers=headers)
         _cookies = r.cookies
-=======
-#     def request_order(self, order):
-#         url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
-#         data = {
-#             "mobile": self.telephone,
-#             "password": self.password,
-#             "phone":   '',
-#             "code":  ''
-#         }
-#         ua = random.choice(MOBILE_USER_AGENG)
-# 
-#         headers = {"User-Agent": ua}
-#         r = requests.post(url, data=data, headers=headers)
-#         print 33333333333333333333,r.content
-#         _cookies = r.cookies
-# 
-#         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
-#         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
-#         r = requests.get(url, cookies=_cookies, headers=headers)
-#         print r.content
-#         sel = etree.HTML(r.content)
-#         orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
-#         orderDetail = json.loads(orderDetailObj)
-#         orderDetail = orderDetail[0]
-#         return orderDetail
->>>>>>> origin/develop
 
     def request_order(self, order):
         url = "http://www.84100.com/orderInfo.shtml"
