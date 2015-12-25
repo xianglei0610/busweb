@@ -24,6 +24,7 @@ from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser
 from tasks import refresh_kefu_order
 from tasks import issued_callback
+from app import order_log
 
 
 def parse_page_data(qs):
@@ -174,6 +175,7 @@ def order_pay(order_no):
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
                 order.modify(status=STATUS_ISSUE_FAIL)
+                order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
                 rebot = order.get_rebot()
                 if rebot:
                     rebot.remove_doing_order(order)
