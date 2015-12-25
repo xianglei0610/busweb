@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>验证码输入框</title>
+    <link href="{{url_for('static', filename='admin-new/css/style.css')}}" rel="stylesheet" type="text/css" />
+    <link href="{{url_for('static', filename='admin-new/css/select.css')}}" rel="stylesheet" type="text/css" />
+    <script language="JavaScript" src="{{url_for('static', filename='admin-new/js/jquery.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='admin-new/js/select-ui.min.js')}}"></script>
+    <script language="javascript">
+        $(function (){
+			$(".single-select").uedSelect({width : 240});
+        })
+    </script>
+</head>
+<body>
+
+   
+   <div id="btsizebox" style=" display:">
+   
+   <div class="regbox_bd">
+     <div class="signup_hd"><h2>选择登陆账号<span>账号登陆不进，直接<a>登陆官网</a></span></h2></div>
+     <div class="signup_box">
+        <form method="get" action="{{url_for('admin.order_pay', order_no=order.order_no)}}" id="pay-form">
+		<div class="pub-form reg-form">
+         <div class="fm-li pbot-5">
+          <span class="fm-label"><label for="txt_userName">我的账号：</label></span>
+           <select name="levelName" id="levelName" datatype="*" sucmsg=" " class="single-select">
+                <option value="{{order.source_account}}<2">{{order.source_account}}</option>
+           </select>
+
+        </div>
+        
+        <div class="fm-li pbot-5">
+          <span class="fm-label"><label for="txt_input6">验证码：</label></span>
+             <input value="" name="valid_code" id="verifyCode" class="i-input w220" type="text">``
+        </div>
+        
+        <div class="fm-li pbot-5">
+          <span class="fm-label"></span>
+          <span class="code_img">
+             <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}" alt="" class="regimg" id="imgVerifyCode"></span>
+          </span>
+        </div>
+        
+        <div class="fm-li">
+          <span class="fm-label"><label for="txt_input6"></label></span>
+          <input onclick="javascript:$('#pay-form').submit();" name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
+          </div>
+          
+        </div>
+        </form>
+        </div>
+        <p class="signup_bot">正在尝试下单，来着12308汽车票</p> 
+	
+  </div>
+   </div>
+</body>
+</html>
