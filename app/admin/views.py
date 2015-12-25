@@ -155,7 +155,6 @@ def order_pay(order_no):
             tmpIm = cStringIO.StringIO(r.content)
             im = Image.open(tmpIm)
             code = pytesseract.image_to_string(im)
-            code = 1111
 
         accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
         passwd, _ = accounts[order.source_account]
