@@ -7,13 +7,14 @@ import re
 
 from app.constants import *
 from datetime import datetime as dte
-from flask import json, current_app
+from flask import json
 from lxml import etree
 from contextlib import contextmanager
 from app.constants import *
 from app import db
 from tasks import issued_callback
 from app.utils import md5, getRedisObj
+from app import line_log, order_log, rebot_log
 
 
 class AdminUser(db.Document):
@@ -104,7 +105,9 @@ class Starting(db.Document):
     @property
     def advance_order_time(self):
         "单位：分钟"
-        return 120  # 2hour
+        if self.crawl_source == "scqcp":
+            return 120  # 2hour
+        return 0
 
     @property
     def max_ticket_per_order(self):
@@ -221,10 +224,13 @@ class Line(db.Document):
                                 fee=raw["service_price"],
                                 left_tickets=raw["amount"],
                                 update_datetime=now)
+                    line_log.info("[refresh] line:%s, amount:%s ", self.line_id, raw["amount"])
                 else:  # 线路信息没查到
                     self.modify(left_tickets=0, update_datetime=now)
+                    line_log.info("[refresh] line:%s, no info ", self.line_id)
             else:
                 self.modify(left_tickets=0, update_datetime=now)
+                line_log.info("[refresh] line:%s, fail: %s", self.line_id, str(ret))
         elif self.crawl_source == SOURCE_BUS100:
             rebot = Bus100Rebot.objects.first()
             ret = rebot.recrawl_shiftid(self)
@@ -245,8 +251,10 @@ class Line(db.Document):
                     left_tickets = sel.xpath('//div[@class="ticketPrice"]/ul/li/strong[@id="leftSeatNum"]/text()')
                     if left_tickets:
                         left_tickets = int(left_tickets[0])
-            except:
+                    line_log.info("[refresh] line:%s, amount: %s", self.line_id, left_tickets)
+            except Exception, e:
                 left_tickets = 0
+                line_log.info("[refresh] line:%s, fail: %s", self.line_id, str(e))
             now = dte.now()
             self.modify(left_tickets=left_tickets, update_datetime=now)
 
@@ -356,12 +364,15 @@ class Order(db.Document):
         """
         刷新出票情况
         """
+
+        order_log.info("[issue-refresh-start] order:%s status:%s", self.order_no, STATUS_MSG[self.status])
         if self.status != STATUS_WAITING_ISSUE:
             return
         if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
             if not tickets:
+                order_log.info("[issue-refresh-result] order: %s fail. no ticket info.", self.order_no)
                 self.modify(status=STATUS_ISSUE_FAIL)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
@@ -369,6 +380,7 @@ class Order(db.Document):
             code_list, msg_list = [], []
             status = tickets.values()[0]["order_status"]
             if status == "sell_succeeded":
+                order_log.info("[issue-refresh-result] order: %s succ. ret-status:%s", self.order_no, status)
                 # 出票成功
                 for tid in self.lock_info["ticket_ids"]:
                     if tickets[tid]["code"] in code_list:
@@ -381,6 +393,7 @@ class Order(db.Document):
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif status == "give_back_ticket":
+                order_log.info("[issue-refresh-result] order: %s fail. ret-status:%s", self.order_no, status)
                 self.modify(status=STATUS_GIVE_BACK)
                 issued_callback.delay(self.order_no)
 
@@ -397,10 +410,12 @@ class Order(db.Document):
                     code_list.append('无需取票密码')
                     msg_list.append(msg)
 
+                    order_log.info("[issue-refresh-result] %s succ.", self.order_no)
                     self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
                 elif tickets['status'] == '5':
+                    order_log.info("[issue-refresh-result] order;%s succ. ret-status:%s", self.order_no, tickets["status"])
                     self.modify(status=STATUS_ISSUE_FAIL)
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
@@ -570,7 +585,7 @@ class ScqcpRebot(Rebot):
     @classmethod
     def login_all(cls):
         # 登陆所有预设账号
-        current_app.logger.info(">>>> start to login scqcp.com:")
+        rebot_log.info(">>>> start to login scqcp.com:")
         valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
@@ -583,7 +598,7 @@ class ScqcpRebot(Rebot):
             bot.modify(password=pwd, is_encrypt=is_encrypt)
 
             if bot.login() == "OK":
-                print "%s 登陆成功" % bot.telephone
+                rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
 
         for tele, (pwd, is_encrypt) in accounts.items():
@@ -596,9 +611,9 @@ class ScqcpRebot(Rebot):
                       is_encrypt=is_encrypt)
             bot .save()
             if bot.login() == "OK":
-                print "%s 登陆成功" % bot.telephone
+                rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
-        current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
+        rebot_log.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
     def http_post(self, uri, data, user_agent="", token=""):
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
@@ -692,7 +707,7 @@ class Bus100Rebot(Rebot):
         ret = self.http_post(uri, data, user_agent=ua)
         if ret['returnCode'] != "0000":
             # 登陆失败
-            current_app.logger.error("%s %s login failed! %s", self.telephone, self.password, ret.get("returnMsg", ""))
+            rebot_log.error("%s %s login failed! %s", self.telephone, self.password, ret.get("returnMsg", ""))
             self.modify(is_active=False)
             return ret.get("returnMsg", "fail")
 
@@ -702,7 +717,7 @@ class Bus100Rebot(Rebot):
     @classmethod
     def login_all(cls):
         """登陆所有预设账号"""
-        current_app.logger.info(">>>> start to login wap.84100.com:")
+        rebot_log.info(">>>> start to login wap.84100.com:")
         valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
@@ -715,7 +730,7 @@ class Bus100Rebot(Rebot):
             bot.modify(password=pwd, open_id=openid)
 
             if bot.login() == "OK":
-                print "%s 登陆成功" % bot.telephone
+                rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
 
         for tele, (pwd, openid) in accounts.items():
@@ -728,9 +743,9 @@ class Bus100Rebot(Rebot):
                       open_id=openid)
             bot .save()
             if bot.login() == "OK":
-                print "%s 登陆成功" % tele
+                rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
-        current_app.logger.info(">>>> end login scqcp.com, success %d", valid_cnt)
+        rebot_log.info(">>>> end login scqcp.com, success %d", valid_cnt)
 
     def http_post(self, uri, data, user_agent=None, token=None):
         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
@@ -873,11 +888,8 @@ class Bus100Rebot(Rebot):
             "isWeixin": 1,
         }
         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
-        print url
         ret = requests.post(url, data=data, cookies=_cookies)
         ret=ret.json()
-        print ret
-#         ret = self.http_post(uri, data)
         pay_url = ret.get('redirectPage', '')
         returnMsg = ret.get('returnMsg', '')
         if pay_url:
@@ -895,30 +907,19 @@ class Bus100Rebot(Rebot):
         ret['returnMsg'] = returnMsg
         return ret
 
-#     def request_order(self, order):
-#         url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
-#         data = {
-#             "mobile": self.telephone,
-#             "password": self.password,
-#             "phone":   '',
-#             "code":  ''
-#         }
-#         ua = random.choice(MOBILE_USER_AGENG)
-# 
-#         headers = {"User-Agent": ua}
-#         r = requests.post(url, data=data, headers=headers)
-#         print 33333333333333333333,r.content
-#         _cookies = r.cookies
-# 
-#         uri = "/wap/userCenter/orderDetails.do?orderNo=%s&openId=%s&isWeixin=1"%(order.raw_order_no, self.open_id or 1)
-#         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
-#         r = requests.get(url, cookies=_cookies, headers=headers)
-#         print r.content
-#         sel = etree.HTML(r.content)
-#         orderDetailObj = sel.xpath('//div[@id="orderDetailJson"]/text()')[0]
-#         orderDetail = json.loads(orderDetailObj)
-#         orderDetail = orderDetail[0]
-#         return orderDetail
+    def request_order(self, order):
+        url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
+        data = {
+            "mobile": self.telephone,
+            "password": self.password,
+            "phone":   '',
+            "code":  ''
+        }
+        ua = random.choice(MOBILE_USER_AGENG)
+
+        headers = {"User-Agent": ua}
+        r = requests.post(url, data=data, headers=headers)
+        _cookies = r.cookies
 
     def request_order(self, order):
         url = "http://www.84100.com/orderInfo.shtml"
