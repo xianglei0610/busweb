@@ -398,13 +398,11 @@ def all_order():
         query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
     else:
         str_date = dte.now().strftime("%Y-%m-%d")
-        request.args.update({'str_date': str_date})
         query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
     if end_date:
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
     else:
         end_date = (dte.now()+timedelta(1)).strftime("%Y-%m-%d")
-        request.args.update({'end_date': end_date})
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
     stat = {
@@ -417,7 +415,10 @@ def all_order():
                            status_msg=STATUS_MSG,
                            source_info=SOURCE_INFO,
                            condition=request.args,
-                           stat=stat,)
+                           stat=stat,
+                           str_date=str_date,
+                           end_date=end_date
+                           )
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
