@@ -10,7 +10,7 @@ import pytesseract
 import cStringIO
 import flask.ext.login as flask_login
 
-from datetime import datetime as dte
+from datetime import datetime as dte, timedelta 
 from app.utils import md5, create_validate_code
 from app.constants import *
 from PIL import Image
@@ -396,8 +396,12 @@ def all_order():
             query.update(source_account=source_account)
     if str_date:
         query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
+    else:
+        query.update(create_date_time__gte=dte.strptime(dte.now(), "%Y-%m-%d"))
     if end_date:
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
+    else:
+        query.update(create_date_time__gte=dte.strptime(dte.now()+timedelta(1), "%Y-%m-%d"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
     stat = {
         "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount'),
@@ -444,7 +448,7 @@ def wating_deal_order():
     r = getRedisObj()
     if userObj.is_kefu:
         key = 'order_list:%s' % userObj.username
-        for o in  Order.objects.filter(order_no__in=r.smembers(key)):
+        for o in Order.objects.filter(order_no__in=r.smembers(key)):
             if o.status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC]:
                 o.complete_by(current_user)
             elif o.status == STATUS_WAITING_LOCK:
@@ -478,6 +482,7 @@ def wating_deal_order():
                            source_info=SOURCE_INFO,
                            expire_seconds=expire_seconds,
                            )
+
 
 @admin.route('/kefu_complete', methods=['POST'])
 @login_required
