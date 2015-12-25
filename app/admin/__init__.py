@@ -20,10 +20,10 @@ def format_datetime(context, value, format="%Y-%m-%d %H:%M:%S"):
 
 @admin.before_request
 def log_request():
-    access_log.debug("[request]%s %s %s", request.method, request.url, request.data)
+    access_log.debug("[request] %s %s %s", request.method, request.path, request.data)
 
 
 @admin.after_request
 def log_response(response):
-    access_log.debug("[response]%s", response.get_data()[:1000])
+    access_log.debug("[response] %s %s", request.path, response.status)
     return response

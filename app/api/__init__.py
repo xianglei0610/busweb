@@ -12,7 +12,7 @@ import views, errors
 
 @api.before_request
 def log_request():
-    access_log.debug("[request]%s %s %s", request.method, request.url, request.data)
+    access_log.debug("[request]%s %s %s", request.method, request.path, request.data)
 
 
 @api.after_request

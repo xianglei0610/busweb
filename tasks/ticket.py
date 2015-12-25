@@ -1,4 +1,4 @@
-# -*- coding:utf-8 -*-
+I# -*- coding:utf-8 -*-
 """
 异步锁票任务
 """
@@ -11,6 +11,8 @@ from datetime import datetime as dte
 from app.constants import *
 from app import celery
 from app.utils import getRedisObj
+from app import order_log
+
 
 @celery.task(ignore_result=True)
 def lock_ticket(order_no):
@@ -21,7 +23,7 @@ def lock_ticket(order_no):
         expire_time: 122112121,     # 订单过期时间戳
         total_price: 322，          # 车票价格
     """
-    from app.models import  Order 
+    from app.models import Order
     order = Order.objects.get(order_no=order_no)
     notify_url = order.locked_return_url
     data = {
@@ -29,6 +31,7 @@ def lock_ticket(order_no):
         "out_order_no": order.out_order_no,
         "raw_order_no": order.raw_order_no,
     }
+    order_log.info("[lock-start] %s", str(data))
     if order.crawl_source == "scqcp":
         from app.models import ScqcpRebot
         from tasks import check_order_expire
@@ -66,6 +69,7 @@ def lock_ticket(order_no):
                 r = getRedisObj()
                 r.zadd('lock_order_list', order.order_no, time.time()*1000)
                 json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
+                order_log.info("[lock-result] succ. %s", order.order_no)
             else:
                 rebot.remove_doing_order(order)
                 order.modify(status=STATUS_LOCK_FAIL,
@@ -73,14 +77,15 @@ def lock_ticket(order_no):
                              lock_datetime=dte.now(),
                              source_account=rebot.telephone)
                 json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["msg"], "data": data})
+                order_log.info("[lock-result] fail. %s reason: %s", order.order_no, ret["msg"])
             if notify_url:
+                order_log.info("[lock-callback] %s %s", notify_url, json_str)
                 response = urllib2.urlopen(notify_url, json_str, timeout=30)
-                print response, "async_lock_ticket"
+                order_log.info("[lock-callback-response] %s", str(response))
 
     elif order.crawl_source == "bus100":
         from app.models import Bus100Rebot, Line
         rebot = Bus100Rebot.get_random_rebot()
-        print rebot.telephone
         ret = rebot.recrawl_shiftid(order.line)
         line = Line.objects.get(line_id=order.line.line_id)
         order.line = line
@@ -118,16 +123,19 @@ def lock_ticket(order_no):
             r = getRedisObj()
             r.zadd('lock_order_list', order.order_no, time.time()*1000)
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
+            order_log.info("[lock-result] succ. %s", order.order_no)
         else:
             order.modify(status=STATUS_LOCK_FAIL,
                          lock_info=ret,
                          lock_datetime=dte.now(),
                          source_account=rebot.telephone)
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
+            order_log.info("[lock-result] fail. %s reason: %s", order.order_no, ret.get("msg", ""))
 
         if notify_url:
+            order_log.info("[lock-callback] %s %s", notify_url, json_str)
             response = urllib2.urlopen(notify_url, json_str, timeout=30)
-            print response, "async_lock_ticket"
+            order_log.info("[lock-callback-response] %s", str(response))
 
 
 @celery.task(ignore_result=True)
@@ -153,6 +161,7 @@ def issued_callback(order_no):
     from app.models import Order
     order = Order.objects.get(order_no=order_no)
     cb_url = order.issued_return_url
+    order_log.info("[issue-callback-start] %s %s", order_no, cb_url)
     if not cb_url:
         return
     if order.status == STATUS_ISSUE_SUCC:
@@ -182,5 +191,6 @@ def issued_callback(order_no):
                 "raw_order_no": order.raw_order_no,
             }
         }
+    order_log.info("[issue-callback]%s %s", order_no, str(ret))
     response = urllib2.urlopen(cb_url, json.dumps(ret), timeout=10)
-    print "issued callback", response
+    order_log.info("[issue-callback-response]%s %s", order_no, str(response))
