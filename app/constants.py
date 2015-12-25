@@ -10,6 +10,7 @@ SOURCE_INFO = {
         "website": "www.scqcp.com",
         "accounts": {
             # telephone: {password, is_encrypt)
+            # "13267109876": ("123456", 0),      # 用于本地测试
             "15575101324": ("cibRpL", 0),
             "15626025673": ("lxy12308", 0),
             "13719074050": ("lxy12308", 0),

@@ -70,7 +70,7 @@ def lock_ticket(order_no):
                 r = getRedisObj()
                 r.zadd('lock_order_list', order.order_no, time.time()*1000)
                 json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-                order_log.info("[lock-result] succ. %s", order.order_no)
+                order_log.info("[lock-result] succ. order: %s", order.order_no)
             else:
                 rebot.remove_doing_order(order)
                 order.modify(status=STATUS_LOCK_FAIL,
@@ -78,7 +78,7 @@ def lock_ticket(order_no):
                              lock_datetime=dte.now(),
                              source_account=rebot.telephone)
                 json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["msg"], "data": data})
-                order_log.info("[lock-result] fail. %s reason: %s", order.order_no, ret["msg"])
+                order_log.info("[lock-result] fail. order: %s reason: %s", order.order_no, ret["msg"])
             if notify_url:
                 order_log.info("[lock-callback] %s %s", notify_url, json_str)
                 response = urllib2.urlopen(notify_url, json_str, timeout=30)
@@ -125,14 +125,14 @@ def lock_ticket(order_no):
             r = getRedisObj()
             r.zadd('lock_order_list', order.order_no, time.time()*1000)
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-            order_log.info("[lock-result] succ. %s", order.order_no)
+            order_log.info("[lock-result] succ. order: %s", order.order_no)
         else:
             order.modify(status=STATUS_LOCK_FAIL,
                          lock_info=ret,
                          lock_datetime=dte.now(),
                          source_account=rebot.telephone)
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
-            order_log.info("[lock-result] fail. %s reason: %s", order.order_no, ret.get("msg", ""))
+            order_log.info("[lock-result] fail. order:%s reason: %s", order.order_no, ret.get("msg", ""))
 
         if notify_url:
             order_log.info("[lock-callback] %s %s", notify_url, json_str)
@@ -163,7 +163,7 @@ def issued_callback(order_no):
     from app.models import Order
     order = Order.objects.get(order_no=order_no)
     cb_url = order.issued_return_url
-    order_log.info("[issue-callback-start] %s %s", order_no, cb_url)
+    order_log.info("[issue-callback-start] order:%s, callback:%s", order_no, cb_url)
     if not cb_url:
         return
     if order.status == STATUS_ISSUE_SUCC:

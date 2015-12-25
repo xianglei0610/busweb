@@ -105,7 +105,9 @@ class Starting(db.Document):
     @property
     def advance_order_time(self):
         "单位：分钟"
-        return 120  # 2hour
+        if self.crawl_source == "scqcp":
+            return 120  # 2hour
+        return 0
 
     @property
     def max_ticket_per_order(self):
@@ -363,7 +365,7 @@ class Order(db.Document):
         刷新出票情况
         """
 
-        order_log.info("[issue-refresh-start] %s status:%s", self.order_no, STATUS_MSG[order.status])
+        order_log.info("[issue-refresh-start] order:%s status:%s", self.order_no, STATUS_MSG[self.status])
         if self.status != STATUS_WAITING_ISSUE:
             return
 
@@ -371,7 +373,7 @@ class Order(db.Document):
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
             if not tickets:
-                order_log.info("[issue-refresh-result] %s fail. no ticket info.", self.order_no)
+                order_log.info("[issue-refresh-result] order: %s fail. no ticket info.", self.order_no)
                 self.modify(status=STATUS_ISSUE_FAIL)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
@@ -379,7 +381,7 @@ class Order(db.Document):
             code_list, msg_list = [], []
             status = tickets.values()[0]["order_status"]
             if status == "sell_succeeded":
-                order_log.info("[issue-refresh-result] %s succ. ret-status:%s", self.order_no, status)
+                order_log.info("[issue-refresh-result] order: %s succ. ret-status:%s", self.order_no, status)
                 # 出票成功
                 for tid in self.lock_info["ticket_ids"]:
                     code_list.append(tickets[tid]["code"])
@@ -388,7 +390,7 @@ class Order(db.Document):
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
             elif status == "give_back_ticket":
-                order_log.info("[issue-refresh-result] %s fail. ret-status:%s", self.order_no, status)
+                order_log.info("[issue-refresh-result] order: %s fail. ret-status:%s", self.order_no, status)
                 self.modify(status=STATUS_GIVE_BACK)
                 issued_callback.delay(self.order_no)
 
@@ -403,7 +405,7 @@ class Order(db.Document):
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
                 elif tickets['status'] == '5':
-                    order_log.info("[issue-refresh-result] %s succ. ret-status:%s", self.order_no, tickets["status"])
+                    order_log.info("[issue-refresh-result] order;%s succ. ret-status:%s", self.order_no, tickets["status"])
                     self.modify(status=STATUS_ISSUE_FAIL)
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)

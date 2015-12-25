@@ -179,7 +179,6 @@ def order_pay(order_no):
                 rebot = order.get_rebot()
                 if rebot:
                     rebot.remove_doing_order(order)
-
                 issued_callback.delay(order.order_no)
                 return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
             sel = etree.HTML(r.content)
