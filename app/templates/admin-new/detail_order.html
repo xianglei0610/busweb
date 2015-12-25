@@ -49,7 +49,7 @@
             <th>代购订单号</th>
             <th>12308下单时间</th>
             <th>代购下单时间</th>
-            <th>取票密码（取票号）</th>
+            <th>取票信息（取票号）</th>
           </tr>
         </thead>
         <tbody>
@@ -90,57 +90,27 @@
         <tbody>
           <tr class="td_c">
             <td>
-              {{order.line.starting.city_name or order.line.starting.station_name}} - {{order.line.destination.city_name or order.line.destination.station_name}}<br>
+              {{order.line.starting.city_name }} {{ order.line.starting.station_name}} - {{order.line.destination.city_name }} {{  order.line.destination.station_name}}<br>
               {{order.line.drv_datetime|format_datetime}}
             </td>
             <td>{{order.line.bus_num}}<br>
-              {{order.line.starting.city_name or order.line.starting.station_name}} - {{order.line.destination.city_name or order.line.destination.station_name}}<br>
+              {{order.line.starting.city_name}} {{ order.line.starting.station_name}} - {{order.line.destination.city_name }} {{  order.line.destination.station_name}}<br>
             </td>
             <td>￥{{order.ticket_price}} /张</td>
             <td>{{order.ticket_amount}} 张</td>
             <td>￥0.00</td>
             <td>￥{{order.ticket_fee}}</td>
             <td>￥{{(order.ticket_price+order.ticket_fee)*order.ticket_amount}}</td>
-            <td><label class="f14 yellow">￥29.00</label></td>
+            <td><label class="f14 yellow">￥{{(order.ticket_price+order.ticket_fee)*order.ticket_amount}}</label></td>
           </tr>          
         </tbody>
       </table>
       </div>
-      <div class="h15"></div>
-     <!--支付信息-->
-     <div>
-     <div class="tableh1"><span>支付信息</span></div>
-    <table class="tablelist">
-        <thead>
-          <tr>
-            <th>支付交易号</th>
-            <th>支付状态</th>
-            <th>支付方式</th>
-            <th>支付账号/时间</th>
-            <th>支付金额</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="td_c">
-            <td>
-              {{order.pay_no}}
-</td>
-<td> 	    	<label class="ordersuccess">{{order.pay_status}}</label>
-</td>
-            <td>
-            <label class="orderspecial">
-              {{order.pay_channel}}</label></td>
-          <td>{{order.pay_account}}<br>
-            {{order.pay_datetime|format_datetime}}</td>
-          <td><label class="f14 yellow">￥0</label></td>
-          </tr>
-        </tbody>
-      </table>
-     </div>
+
      <div class="h15"></div>
-     <!--取票信息-->
+     <!--联系人信息-->
      <div>
-      <div class="tableh1"><span>取票信息</span></div>
+      <div class="tableh1"><span>联系人信息</span></div>
      <table class="tablelist">
         <thead>
           <tr>

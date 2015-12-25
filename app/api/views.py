@@ -9,6 +9,7 @@ from flask import request, jsonify
 from tasks import lock_ticket
 from app.api import api
 from app.models import Line, Starting, Destination, Order
+from app import order_log
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -211,6 +212,7 @@ def submit_order():
             }
         }
     """
+    order_log.info("[submit-start] receive order %s", request.get_data())
     try:
         post = json.loads(request.get_data())
         line_id = post["line_id"]
@@ -222,6 +224,7 @@ def submit_order():
                 assert key in info
         order_price = float(post.get("order_price"))
     except:
+        order_log.info("[submit-fail] parameter error")
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": ""})
@@ -229,10 +232,12 @@ def submit_order():
     try:
         line = Line.objects.get(line_id=line_id)
     except Line.DoesNotExist:
+        order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
 
     now = dte.now()
     if (line.drv_datetime-now).seconds <= line.starting.advance_order_time*60:
+        order_log.info("[submit-fail] %s, 只能购买%d分钟内的票", out_order_no, line.starting.advance_order_time)
         return jsonify({"code": RET_BUY_TIME_ERROR,
                         "message": "只能购买%d分钟内的票" % line.starting.advance_order_time,
                         "data": ""})
@@ -273,6 +278,7 @@ def submit_order():
 
     order.save()
 
+    order_log.info("[submit-response] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret_msg)
     if ret_code == RET_OK:
         lock_ticket.delay(order.order_no)
     return jsonify({"code": ret_code,

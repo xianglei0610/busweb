@@ -10,7 +10,7 @@ import pytesseract
 import cStringIO
 import flask.ext.login as flask_login
 
-from datetime import datetime as dte
+from datetime import datetime as dte, timedelta 
 from app.utils import md5, create_validate_code
 from app.constants import *
 from PIL import Image
@@ -23,6 +23,8 @@ from app.admin import admin
 from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser
 from tasks import refresh_kefu_order
+from tasks import issued_callback
+from app import order_log
 
 
 def parse_page_data(qs):
@@ -172,10 +174,12 @@ def order_pay(order_no):
             r = requests.get(pay_url, headers=headers, cookies=cookies)
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
-                order.modify(status=STATUS_LOCK_FAIL)
+                order.modify(status=STATUS_ISSUE_FAIL)
+                order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
                 rebot = order.get_rebot()
                 if rebot:
                     rebot.remove_doing_order(order)
+                issued_callback.delay(order.order_no)
                 return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
             sel = etree.HTML(r.content)
             data = dict(
@@ -386,7 +390,7 @@ def all_order():
     source_account = request.args.get("source_account", "")
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
-
+    print request.args, type(request.args)
     query = {}
     if status:
         query.update(status=int(status))
@@ -396,7 +400,13 @@ def all_order():
             query.update(source_account=source_account)
     if str_date:
         query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
+    else:
+        str_date = dte.now().strftime("%Y-%m-%d")
+        query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
     if end_date:
+        query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
+    else:
+        end_date = (dte.now()+timedelta(1)).strftime("%Y-%m-%d")
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
     stat = {
@@ -409,7 +419,10 @@ def all_order():
                            status_msg=STATUS_MSG,
                            source_info=SOURCE_INFO,
                            condition=request.args,
-                           stat=stat,)
+                           stat=stat,
+                           str_date=str_date,
+                           end_date=end_date
+                           )
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
@@ -444,7 +457,7 @@ def wating_deal_order():
     r = getRedisObj()
     if userObj.is_kefu:
         key = 'order_list:%s' % userObj.username
-        for o in  Order.objects.filter(order_no__in=r.smembers(key)):
+        for o in Order.objects.filter(order_no__in=r.smembers(key)):
             if o.status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC]:
                 o.complete_by(current_user)
             elif o.status == STATUS_WAITING_LOCK:
@@ -478,6 +491,7 @@ def wating_deal_order():
                            source_info=SOURCE_INFO,
                            expire_seconds=expire_seconds,
                            )
+
 
 @admin.route('/kefu_complete', methods=['POST'])
 @login_required

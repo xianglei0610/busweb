@@ -1,7 +1,8 @@
 # -*- coding:utf-8 -*-
 import jinja2
 
-from flask import Blueprint
+from flask import Blueprint, request
+from app import access_log
 
 admin = Blueprint('admin', __name__)
 
@@ -15,3 +16,14 @@ def format_datetime(context, value, format="%Y-%m-%d %H:%M:%S"):
     if not value:
         return ""
     return value.strftime(format)
+
+
+@admin.before_request
+def log_request():
+    access_log.debug("[request] %s %s %s", request.method, request.path, request.data)
+
+
+@admin.after_request
+def log_response(response):
+    access_log.debug("[response] %s %s", request.path, response.status)
+    return response
