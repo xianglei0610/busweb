@@ -23,6 +23,7 @@ from app.models import Order
 app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
                 os.getenv('FLASK_SERVER') or 'api')
 
+print app.config["DEBUG"]
 
 path = os.path.dirname(__file__)
 sys.path.append(os.path.join(path, ".."))
@@ -110,9 +111,9 @@ def main():
     """ 定时任务处理 """
 
     sched = Scheduler(daemonic=False)
+
     sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
     sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['bus100'])
-
     sched.add_cron_job(sync_crawl_to_api, hour=21, minute=10, args=['scqcp'])
     sched.add_cron_job(sync_crawl_to_api, hour=22, minute=30, args=['bus100'])
 

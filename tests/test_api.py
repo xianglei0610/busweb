@@ -106,14 +106,14 @@ class ScqcpAPITestCase(TestCase):
                         "name": "罗军平",                              # 名字
                         "telephone": "15575101324",                     # 手机
                         "id_type": 1,                                   # 证件类型
-                        "id_number": 431021199004165616,                # 证件号
+                        "id_number": "431021199004165616",                # 证件号
                         "age_level": 1,                                 # 大人 or 小孩
                     },
                     "rider_info": [{                                    # 乘客信息
                         "name": "罗军平",                               # 名字
                         "telephone": "15575101324",                     # 手机
                         "id_type": 1,                                   # 证件类型
-                        "id_number": 431021199004165616,                # 证件号
+                        "id_number": "431021199004165616",                # 证件号
                         "age_level": 1,                                 # 大人 or 小孩
                     },
                     ],

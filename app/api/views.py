@@ -9,6 +9,7 @@ from flask import request, jsonify
 from tasks import lock_ticket
 from app.api import api
 from app.models import Line, Starting, Destination, Order
+from app import order_log
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -211,6 +212,7 @@ def submit_order():
             }
         }
     """
+    order_log.info("[submit-start] receive order %s", request.get_data())
     try:
         post = json.loads(request.get_data())
         line_id = post["line_id"]
@@ -222,6 +224,7 @@ def submit_order():
                 assert key in info
         order_price = float(post.get("order_price"))
     except:
+        order_log.info("[submit-fail] parameter error")
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": ""})
@@ -229,10 +232,12 @@ def submit_order():
     try:
         line = Line.objects.get(line_id=line_id)
     except Line.DoesNotExist:
+        order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
 
     now = dte.now()
-    if (line.drv_datetime-now).seconds <= line.starting.advance_order_time*60:
+    if (line.drv_datetime-now).total_seconds()<= line.starting.advance_order_time*60:
+        order_log.info("[submit-fail] %s, 只能购买%d分钟内的票", out_order_no, line.starting.advance_order_time)
         return jsonify({"code": RET_BUY_TIME_ERROR,
                         "message": "只能购买%d分钟内的票" % line.starting.advance_order_time,
                         "data": ""})
@@ -273,6 +278,7 @@ def submit_order():
 
     order.save()
 
+    order_log.info("[submit-response] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret_msg)
     if ret_code == RET_OK:
         lock_ticket.delay(order.order_no)
     return jsonify({"code": ret_code,
@@ -338,11 +344,16 @@ def query_order_detail():
         order = Order.objects.get(order_no=sys_order_no)
     except Order.DoesNotExist:
         return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
-
+    pick_info = []
     if order.status == STATUS_ISSUE_SUCC:
         starting_name_list = order.starting_name.split(';')
         destination_name_list = order.destination_name.split(';')
         drv_datetime_list = dte.strftime(order.drv_datetime, "%Y-%m-%d %H:%M").split(' ')
+        for i, code in enumerate(order.pick_code_list):
+            pick_info.append({
+                "pick_code": code,
+                "pick_msg": order.pick_msg_list[i]
+                })
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
@@ -358,7 +369,8 @@ def query_order_detail():
                 "drv_date": drv_datetime_list[0],
                 "drv_time": drv_datetime_list[1],
                 "total_price": order.order_price,
-            }
+            },
+            "pick_info": pick_info
         }
         return jsonify({"code": RET_OK, "message": "OK", "data": data})
     else:
@@ -370,5 +382,6 @@ def query_order_detail():
             "contacter_info": {},
             "rider_info": [],
             "ticket_info": {},
+            "pick_info": pick_info
         }
         return jsonify({"code": RET_OK, "message": "OK", "data": data})
