@@ -90,11 +90,11 @@
         <tbody>
           <tr class="td_c">
             <td>
-              {{order.line.starting.city_name }} {{ order.line.starting.station_name}} - {{order.line.destination.city_name }} {{  order.line.destination.station_name}}<br>
-              {{order.line.drv_datetime|format_datetime}}
+              {{order.starting_name.split(';')[0] }}({{order.starting_name.split(';')[1]}}) - {{order.destination_name.split(';')[0] or order.destination_name.split(';')[1]}}<br>
+              {{order.drv_datetime|format_datetime}}
             </td>
-            <td>{{order.line.bus_num}}<br>
-              {{order.line.starting.city_name}} {{ order.line.starting.station_name}} - {{order.line.destination.city_name }} {{  order.line.destination.station_name}}<br>
+            <td>{{order.bus_num}}<br>
+              {{order.starting_name.split(';')[0]}}({{order.starting_name.split(';')[1]}}) - {{order.destination_name.split(';')[0] or order.destination_name.split(';')[1]}}<br>
             </td>
             <td>￥{{order.ticket_price}} /张</td>
             <td>{{order.ticket_amount}} 张</td>

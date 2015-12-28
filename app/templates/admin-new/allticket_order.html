@@ -127,7 +127,7 @@
          <td><input type="checkbox"  name="test[]" class="chkID" value="6"/></td>
          <td>{{d.out_order_no}}</td>
          <td>{{d.contact_info["name"]}}<br />{{d.contact_info["telephone"]}}</td>
-         <td>{{d.create_date_time|format_datetime}}<br>{{d.line.drv_datetime|format_datetime}}</td>
+         <td>{{d.create_date_time|format_datetime}}<br>{{d.drv_datetime|format_datetime}}</td>
          <td>{{d.bus_num}}<br>{{d.starting_name.split(';')[0] or d.starting_name.split(';')[1]}} - {{d.destination_name.split(';')[0] or d.destination_name.split(';')[1]}}</td>
          <td>{{source_info[d.crawl_source]["name"]}}<br></td>
          <td>{{d.riders|count}}张</td>
