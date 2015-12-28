@@ -34,8 +34,8 @@
 			<td class="sorting_1">{{order.order_no}}</td>
       <td class="center">{{order.contact_info.name}} {{order.contact_info.telephone}}</td>
       <td class="center">{{source_info[order.crawl_source]["name"]}}({{order.source_account}}/{{scqcp_accounts[order.source_account]|first}})</td>
-      <td class="center">{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}/{{d.drv_datetime|format_datetime}}</td>
-      <td class="center">{{order.bus_num}}/{{d.starting_name.split(';')[0] or d.starting_name.split(';')[1]}} - {{d.destination_name.split(';')[0] or d.destination_name.split(';')[1]}}</td>
+      <td class="center">{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}/{{order.drv_datetime|format_datetime}}</td>
+      <td class="center">{{order.bus_num}}/{{order.starting_name.split(';')[0] or order.starting_name.split(';')[1]}} - {{order.destination_name.split(';')[0] or order.destination_name.split(';')[1]}}</td>
       <td class="center">{{status_msg[order.status]}}</td>
       
       <td class="center">
