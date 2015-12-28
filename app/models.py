@@ -908,20 +908,6 @@ class Bus100Rebot(Rebot):
         return ret
 
     def request_order(self, order):
-        url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
-        data = {
-            "mobile": self.telephone,
-            "password": self.password,
-            "phone":   '',
-            "code":  ''
-        }
-        ua = random.choice(MOBILE_USER_AGENG)
-
-        headers = {"User-Agent": ua}
-        r = requests.post(url, data=data, headers=headers)
-        _cookies = r.cookies
-
-    def request_order(self, order):
         url = "http://www.84100.com/orderInfo.shtml"
         #headers={"cookie":'CNZZDATA1254030256=1424378201-1448438538-http%253A%252F%252Fwww.84100.com%252F%7C1448444026; JSESSIONID=3798865869AAB17AFF58752C57F24CA1; trainHistory=%5B%7B%22sendDate%22%3A%222015-11-27%22%2C%22startId%22%3A%2245010000%22%2C%22startName%22%3A%22%E5%9F%8C%E4%B8%9C%E7%AB%99%22%2C%22endName%22%3A%22%E5%AE%9D%E5%AE%89%22%2C%22showDate%22%3Anull%2C%22showWeek%22%3A%22%E6%98%9F%E6%9C%9F%E4%BA%94%22%2C%22createDate%22%3A%222015-11-27+09%3A38%3A28%22%7D%5D'} 
         data = {"orderId": order.raw_order_no}
