@@ -514,3 +514,34 @@ def kefu_on_off():
     userObj.is_switch = is_switch
     userObj.save()
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
+
+
+@admin.route('/test_pay', methods=['GET'])
+def test_ctrip_pay():
+    import requests
+    login_form = "https://accounts.ctrip.com/member/login.aspx"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36",
+    }
+    r = requests.get(login_form, headers=headers)
+    cookies = r.cookies
+    sel = etree.HTML(r.content)
+    form_data = {}
+    for s in sel.xpath("//input[@type='hidden']"):
+        name = s.get("name")
+        if not name:
+            continue
+        value = s.get("value", "")
+        print name, value
+        form_data[name] = value
+
+    login_url = "https://accounts.ctrip.com/member/login.aspx"
+    import urllib
+    qstr = urllib.urlencode(form_data)
+    r = requests.post(login_url, data=qstr, headers=headers, cookies=cookies)
+    cookies = r.cookies
+
+    #url = "https://secure.ctrip.com/RealTimePay/Catalog/Submit/336498767"
+    #data = """{"CustomerID":"M302009380","MerchantID":"200093","OrderID":"1574557621","OrderAmount":"15.50","OrderType":"36","RequestID":"336498767","CmoneyPassword":"","CmoneyAmount":0,"CmoneyList":"[]","ElseAmount":15.5,"ElseCatalogCode":"EBank","ElseCode":"Alipay","ElseFee":0,"BankName":"支付宝","ElseNumber":"","ElseEndDate":"","ElseExchangeChannel":"EDC","SmsCodePassed":"F","BrandID":"Alipay","ChannelID":"24","VendorID":"2","CheckPhone":"0"}"""
+    #r = requests.post(url, data=data, headers=headers, cookies=cookies)
+    return r.content

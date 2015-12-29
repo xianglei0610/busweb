@@ -38,8 +38,8 @@ SOURCE_INFO = {
         "name": "携程网",
         "website": "www.ctrip.com",
         "accounts": {
-            # telephone: {password, opendid)
-            "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
+            # telephone: {password, auth)
+            "15575101324": ("icbRpL", ''),
         }
     }
 }

@@ -25,7 +25,8 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 @manager.command
 def deploy():
-    from app.models import ScqcpRebot, Bus100Rebot
+    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot
+    CTripRebot.login_all()
     ScqcpRebot.login_all()
     Bus100Rebot.login_all()
 

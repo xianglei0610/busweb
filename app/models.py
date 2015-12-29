@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from app.constants import *
 from app import db
 from tasks import issued_callback
-from app.utils import md5, getRedisObj
+from app.utils import md5, getRedisObj, idcard_birthday
 from app import line_log, order_log, rebot_log
 
 
@@ -664,118 +664,122 @@ class ScqcpRebot(Rebot):
 
 
 class CTripRebot(Rebot):
-    is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
-    token = db.StringField()
-    open_id = db.StringField()
+    head = db.DictField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
     }
 
     def on_add_doing_order(self, order):
-        self.modify(is_locked=True)
+        if len(self.doing_orders) >= 5:
+            self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        self.modify(is_locked=False)
+        if len(self.doing_orders) < 5 and self.is_locked:
+            self.modify(is_locked=False)
 
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
-        device = "android" if "android" in ua else "ios"
-
-        # 获取token
-        uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
-        ret = self.http_post(uri, "")
-        token = ret["token"]
+        if self.telephone == "15575101324":
+            head = {
+                "cid": "09031120210146050165",
+                "ctok": "",
+                "cver": "1.0",
+                "lang": "01",
+                "sid": "8888",
+                "syscode": "09",
+                "auth": "310AB1B95E0DB5DFD369286D8AA5B5D9586D71FD8D9B5B6653C140503EDE8F0F",
+                "sauth": "3CA2CAF81E580E6DFFEB80141AA84700FCFFAF1F1BED587A7BFC5736E6E89CDE"
+            }
         self.user_agent = ua
-        self.token = token
-
-        # 登陆
-        uri = "/api/v1/user/login_phone"
-        data = {
-            "username": self.telephone,
-            "password": self.password,
-            "is_encrypt": self.is_encrypt,
-        }
-        ret = self.http_post(uri, data)
-        if "open_id" not in ret:
-            # 登陆失败
-            self.is_active = False
-            self.last_login_time = dte.now()
-            self.save()
-            return ret.get("msg", "fail")
-        else:
-            # 登陆成功
-            self.is_active = True
-            self.last_login_time = dte.now()
-            self.open_id = ret["open_id"]
-            self.save()
-            return "OK"
+        self.is_active = True
+        self.last_login_time = dte.now()
+        self.head = head
+        self.save()
+        return "OK"
 
     @classmethod
     def login_all(cls):
         # 登陆所有预设账号
-        rebot_log.info(">>>> start to login scqcp.com:")
+        rebot_log.info(">>>> start to login ctrip.com:")
         valid_cnt = 0
         has_checked = {}
-        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
+        accounts = SOURCE_INFO[SOURCE_CTRIP]["accounts"]
         for bot in cls.objects:
             has_checked[bot.telephone] = 1
             if bot.telephone not in accounts:
                 bot.modify(is_active=False)
                 continue
-            pwd, is_encrypt = accounts[bot.telephone]
-            bot.modify(password=pwd, is_encrypt=is_encrypt)
-
+            pwd, _ = accounts[bot.telephone]
+            bot.modify(password=pwd)
             if bot.login() == "OK":
                 rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
 
-        for tele, (pwd, is_encrypt) in accounts.items():
+        for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
                 continue
             bot = cls(is_active=False,
                       is_locked=False,
                       telephone=tele,
-                      password=pwd,
-                      is_encrypt=is_encrypt)
-            bot .save()
+                      password=pwd,)
+            bot.save()
             if bot.login() == "OK":
                 rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
-        rebot_log.info(">>>> end login scqcp.com, success %d", valid_cnt)
+        rebot_log.info(">>>> end login ctrip.com, success %d", valid_cnt)
 
-    def http_post(self, uri, data, user_agent="", token=""):
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
-        request = urllib2.Request(url)
-        request.add_header('User-Agent', user_agent or self.user_agent)
-        request.add_header('Authorization', token or self.token)
-        request.add_header('Content-type', "application/json; charset=UTF-8")
-        qstr = urllib.urlencode(data)
-        response = urllib2.urlopen(request, qstr, timeout=30)
-        ret = json.loads(response.read())
-        return ret
-
-    def request_lock_ticket(self, line, riders, contacter):
+    def request_lock_ticket(self, order):
         """
         请求锁票
         """
-        uri = "/api/v1/telecom/lock"
-        tickets = []
-        for r in riders:
-            lst = [r["id_number"], r["name"], contacter, "0", "0"]
-            tickets.append("|".join(lst))
-
+        url = "https://sec-m.ctrip.com/restapi/busphp/app/index.php?param=/api/home&method=order.addOrder&v=1.0&ref=ctrip.h5&partner=ctrip.h5&clientType=Android--h5&_fxpcqlniredt=09031120210146050165"
+        line = order.line
         data = {
-            "carry_sta_id": line["carry_sta_id"],
-            "stop_name": line["stop_name"],
-            "str_date": line["str_date"],
-            "sign_id": line["sign_id"],
-            "phone_num": contacter,
-            "buy_ticket_info": "$".join(tickets),
-            "open_id": self.open_id,
+            "head": self.head,
+            "fromCityName": line.starting.city_name,
+            "toCityName": line.destination.city_name,
+            "fromStationName": line.starting.station_name,
+            "toStationName": line.destination.station_name,
+            "ticketDate": line.drv_date,
+            "ticketTime": line.drv_time,
+            "busNumber": line.bus_num,
+            "busType": line.vehicle_type,
+            "toTime": "",
+            "toDays": 0,
+            "contactMobile": order.contact_info["telephone"],
+            "ticket_type": "成人票",
+            "acceptFreeInsurance": True,
+            "selectServicePackage2": "0",
+            "clientType": "Android--h5",
+            "identityInfoCount": len(order.riders),
+            "isJoinActivity": 0,
+            "selectOffsetActivityType": 0,
+            "couponCode": "",
+            "useCouponClientType": 2,
+            "acceptFromDateFloating": True,
+            "productPackageId": 0,
+            "DispatchType": 0,
+            "contactName": order.contact_info["name"],
+            "contactPaperType": "身份证",
+            "contactPaperNum": order.contact_info["id_number"],
+            "contentType": "json"
         }
-        ret = self.http_post(uri, data)
+        for i, r in enumerate(order.riders):
+            idcard = r["id_number"]
+            birthday = idcard_birthday(idcard).strftime("%Y-%m-%d")
+            data.update({"identityInfo%d" % (i+1): "%s;身份证;%s;%s" % (r["name"], idcard, birthday)})
+        ret = self.http_post(url, data)
+        return ret
+
+    def http_post(self, url, data):
+        request = urllib2.Request(url)
+        request.add_header('User-Agent', self.user_agent)
+        request.add_header('Content-type', "application/json; charset=UTF-8")
+        qstr = json.dumps(data)
+        response = urllib2.urlopen(request, qstr, timeout=30)
+        ret = json.loads(response.read())
         return ret
 
     def request_order(self, order):
@@ -1041,7 +1045,6 @@ class Bus100Rebot(Rebot):
         #headers={"cookie":'CNZZDATA1254030256=1424378201-1448438538-http%253A%252F%252Fwww.84100.com%252F%7C1448444026; JSESSIONID=3798865869AAB17AFF58752C57F24CA1; trainHistory=%5B%7B%22sendDate%22%3A%222015-11-27%22%2C%22startId%22%3A%2245010000%22%2C%22startName%22%3A%22%E5%9F%8C%E4%B8%9C%E7%AB%99%22%2C%22endName%22%3A%22%E5%AE%9D%E5%AE%89%22%2C%22showDate%22%3Anull%2C%22showWeek%22%3A%22%E6%98%9F%E6%9C%9F%E4%BA%94%22%2C%22createDate%22%3A%222015-11-27+09%3A38%3A28%22%7D%5D'} 
         data = {"orderId": order.raw_order_no}
         r = requests.post(url, data=data) 
-#         print r.content
         sel = etree.HTML(r.content)
         orderDetailObj = sel.xpath('//div[@class="order-details"]/ul')
         orderDetail = {}
