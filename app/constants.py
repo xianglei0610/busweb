@@ -3,6 +3,7 @@
 # 爬取来源
 SOURCE_SCQCP = "scqcp"
 SOURCE_BUS100 = "bus100"
+SOURCE_CTRIP = "ctrip"
 
 SOURCE_INFO = {
     SOURCE_SCQCP: {
@@ -30,6 +31,14 @@ SOURCE_INFO = {
         "accounts": {
             # telephone: {password, opendid)
             "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
+            "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
+        }
+    },
+    SOURCE_CTRIP: {
+        "name": "携程网",
+        "website": "www.ctrip.com",
+        "accounts": {
+            # telephone: {password, opendid)
             "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
         }
     }

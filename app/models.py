@@ -96,7 +96,7 @@ class Starting(db.Document):
 
     @property
     def open_time(self):
-        return "07:00:00"
+        return "08:00:00"
 
     @property
     def end_time(self):
@@ -105,13 +105,13 @@ class Starting(db.Document):
     @property
     def advance_order_time(self):
         "单位：分钟"
-        if self.crawl_source == "scqcp":
+        if self.crawl_source in ["scqcp", "ctrip"]:
             return 120  # 2hour
         return 0
 
     @property
     def max_ticket_per_order(self):
-        if self.crawl_source == "scqcp":
+        if self.crawl_source in ["scqcp", "ctrip"]:
             return 5
         return 3
 
@@ -318,8 +318,6 @@ class Order(db.Document):
     bus_num = db.StringField()       # 车次/班次
     starting_name = db.StringField()
     destination_name = db.StringField()
-
-
 
 
     meta = {
@@ -664,6 +662,137 @@ class ScqcpRebot(Rebot):
                 break
         return data
 
+
+class CTripRebot(Rebot):
+    is_encrypt = db.IntField(choices=(0, 1))
+    user_agent = db.StringField()
+    token = db.StringField()
+    open_id = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+    }
+
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        device = "android" if "android" in ua else "ios"
+
+        # 获取token
+        uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
+        ret = self.http_post(uri, "")
+        token = ret["token"]
+        self.user_agent = ua
+        self.token = token
+
+        # 登陆
+        uri = "/api/v1/user/login_phone"
+        data = {
+            "username": self.telephone,
+            "password": self.password,
+            "is_encrypt": self.is_encrypt,
+        }
+        ret = self.http_post(uri, data)
+        if "open_id" not in ret:
+            # 登陆失败
+            self.is_active = False
+            self.last_login_time = dte.now()
+            self.save()
+            return ret.get("msg", "fail")
+        else:
+            # 登陆成功
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.open_id = ret["open_id"]
+            self.save()
+            return "OK"
+
+    @classmethod
+    def login_all(cls):
+        # 登陆所有预设账号
+        rebot_log.info(">>>> start to login scqcp.com:")
+        valid_cnt = 0
+        has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd, is_encrypt = accounts[bot.telephone]
+            bot.modify(password=pwd, is_encrypt=is_encrypt)
+
+            if bot.login() == "OK":
+                rebot_log.info("%s 登陆成功" % bot.telephone)
+                valid_cnt += 1
+
+        for tele, (pwd, is_encrypt) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=False,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,
+                      is_encrypt=is_encrypt)
+            bot .save()
+            if bot.login() == "OK":
+                rebot_log.info("%s 登陆成功" % bot.telephone)
+                valid_cnt += 1
+        rebot_log.info(">>>> end login scqcp.com, success %d", valid_cnt)
+
+    def http_post(self, uri, data, user_agent="", token=""):
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        request = urllib2.Request(url)
+        request.add_header('User-Agent', user_agent or self.user_agent)
+        request.add_header('Authorization', token or self.token)
+        request.add_header('Content-type', "application/json; charset=UTF-8")
+        qstr = urllib.urlencode(data)
+        response = urllib2.urlopen(request, qstr, timeout=30)
+        ret = json.loads(response.read())
+        return ret
+
+    def request_lock_ticket(self, line, riders, contacter):
+        """
+        请求锁票
+        """
+        uri = "/api/v1/telecom/lock"
+        tickets = []
+        for r in riders:
+            lst = [r["id_number"], r["name"], contacter, "0", "0"]
+            tickets.append("|".join(lst))
+
+        data = {
+            "carry_sta_id": line["carry_sta_id"],
+            "stop_name": line["stop_name"],
+            "str_date": line["str_date"],
+            "sign_id": line["sign_id"],
+            "phone_num": contacter,
+            "buy_ticket_info": "$".join(tickets),
+            "open_id": self.open_id,
+        }
+        ret = self.http_post(uri, data)
+        return ret
+
+    def request_order(self, order):
+        if order.status in [STATUS_LOCK_FAIL]:
+            return
+        uri = "/api/v1/ticket_lines/query_order"
+        data = {"open_id": self.open_id}
+        ret = self.http_post(uri, data=data)
+        ticket_ids = order.lock_info["ticket_ids"]
+        amount = len(ticket_ids)
+        data = {}
+        for d in ret["ticket_list"]:
+            if d["ticket_id"] in ticket_ids:
+                data[d["ticket_id"]] = d
+            if len(data) >= amount:
+                break
+        return data
 
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
