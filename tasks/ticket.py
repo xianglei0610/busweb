@@ -14,7 +14,6 @@ from app.utils import getRedisObj
 from app import order_log
 
 
-
 @celery.task(ignore_result=True)
 def lock_ticket(order_no):
     """
