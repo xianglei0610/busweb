@@ -910,7 +910,7 @@ class Bus100Rebot(Rebot):
         }
         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
         ret = requests.post(url, data=data, cookies=_cookies)
-        ret=ret.json()
+        ret = ret.json()
         pay_url = ret.get('redirectPage', '')
         returnMsg = ret.get('returnMsg', '')
         if pay_url:
@@ -944,7 +944,9 @@ class Bus100Rebot(Rebot):
         }
         if orderDetailObj:
             status = orderDetailObj[0].xpath('li')[1].xpath('em/text()')[0].replace('\r\n','').replace(' ','') 
-            if status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
+            if not status:
+                orderDetail.update({'status': '5'})
+            elif status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
                 orderDetail.update({'status': '4'})
                 matchObj = re.findall('<li>订单号：(.*)', r.content)
                 order_id = matchObj[0].replace(' ','')
