@@ -23,7 +23,7 @@ from app.admin import admin
 from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser
 from tasks import refresh_kefu_order
-from tasks import issued_callback
+from tasks import issued_callback, check_order_completed, issue_fail_send_email
 from app import order_log
 
 
@@ -130,7 +130,11 @@ def order_pay(order_no):
     if order.status != STATUS_WAITING_ISSUE:
         return jsonify({"status": "status_error", "msg": "不是支付的时候", "data": ""})
     r = getRedisObj()
-    r.set(LAST_PAY_CLICK_TIME % order_no, time.time(), ex=PAY_CLICK_EXPIR)
+    try:
+        r.set(LAST_PAY_CLICK_TIME % order_no, time.time(), ex=PAY_CLICK_EXPIR)
+    except:
+        r.set(LAST_PAY_CLICK_TIME % order_no, time.time())
+        r.expire(LAST_PAY_CLICK_TIME % order_no, PAY_CLICK_EXPIR)
 
     code = request.args.get("valid_code", "")
     if order.crawl_source == "scqcp":
@@ -175,6 +179,13 @@ def order_pay(order_no):
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
                 order.modify(status=STATUS_ISSUE_FAIL)
+
+                key = 'scqcp_issue_fail'
+                r.sadd(key, order.order_no)
+                order_ct = r.scard(key)
+                if order_ct > 2:
+                    issue_fail_send_email.delay(key)
+
                 order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
                 rebot = order.get_rebot()
                 if rebot:
@@ -472,6 +483,7 @@ def wating_deal_order():
                     r.zrem('lock_order_list', i)
                     r.sadd(key, i)
                     refresh_kefu_order.apply_async((userObj.username, i))
+                    check_order_completed.apply_async((userObj.username, key, i), countdown=4*60)  # 4分钟后执行
         order_nos = r.smembers(key)
 
     qs = Order.objects.filter(order_no__in=order_nos)

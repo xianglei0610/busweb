@@ -12,7 +12,7 @@ from lxml import etree
 from contextlib import contextmanager
 from app.constants import *
 from app import db
-from tasks import issued_callback
+from tasks import issued_callback, issue_fail_send_email
 from app.utils import md5, getRedisObj
 from app import line_log, order_log, rebot_log
 
@@ -368,6 +368,8 @@ class Order(db.Document):
         order_log.info("[issue-refresh-start] order:%s status:%s", self.order_no, STATUS_MSG[self.status])
         if self.status != STATUS_WAITING_ISSUE:
             return
+        r = getRedisObj()
+        key = '%s_issue_fail' % self.crawl_source
         if self.crawl_source == "scqcp":
             rebot = ScqcpRebot.objects.get(telephone=self.source_account)
             tickets = rebot.request_order(self)
@@ -376,6 +378,12 @@ class Order(db.Document):
                 self.modify(status=STATUS_ISSUE_FAIL)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
+
+                r.sadd(key, self.order_no)
+                order_ct = r.scard(key)
+                if order_ct > 2:
+                    issue_fail_send_email.delay(key)
+
                 return
             code_list, msg_list = [], []
             status = tickets.values()[0]["order_status"]
@@ -392,10 +400,15 @@ class Order(db.Document):
                 self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
+
+                r.delete(key)
+
             elif status == "give_back_ticket":
                 order_log.info("[issue-refresh-result] order: %s fail. ret-status:%s", self.order_no, status)
                 self.modify(status=STATUS_GIVE_BACK)
                 issued_callback.delay(self.order_no)
+
+                r.delete(key)
 
         elif self.crawl_source == "bus100":
             rebot = Bus100Rebot.objects.get(telephone=self.source_account)
@@ -414,11 +427,19 @@ class Order(db.Document):
                     self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
+
+                    r.delete(key)
+
                 elif tickets['status'] == '5':
                     order_log.info("[issue-refresh-result] order;%s succ. ret-status:%s", self.order_no, tickets["status"])
                     self.modify(status=STATUS_ISSUE_FAIL)
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
+
+                    r.sadd(key, self.order_no)
+                    order_ct = r.scard(key)
+                    if order_ct > 2:
+                        issue_fail_send_email.delay(key)
 
     def get_contact_info(self):
         """

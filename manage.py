@@ -81,7 +81,7 @@ def create_user(type):
     if type == "kefu":
         u.is_kefu = 1
         u.is_switch = 0
-        u.is_admin = 0
+        u.is_admin = 1
     elif type == "admin":
         u.is_kefu = 0
         u.is_switch = 0

@@ -3,4 +3,4 @@
 celery任务模块
 """
 from ticket import lock_ticket, issued_callback
-from order import check_order_expire, refresh_kefu_order
+from order import check_order_expire, refresh_kefu_order, check_order_completed, issue_fail_send_email
