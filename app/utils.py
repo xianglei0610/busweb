@@ -14,10 +14,13 @@ except ImportError:
     from PIL import ImageDraw
     from PIL import ImageFont
     from PIL import ImageFilter
-
-
+from datetime import datetime as dte
 from app.constants import REDIS_HOST, REDIS_PASSWD
 from app import BASE_DIR
+
+
+def idcard_birthday(idcard):
+    return dte.strptime(idcard[6:14], "%Y%m%d")
 
 
 def md5(msg):

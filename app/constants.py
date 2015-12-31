@@ -3,6 +3,7 @@
 # 爬取来源
 SOURCE_SCQCP = "scqcp"
 SOURCE_BUS100 = "bus100"
+SOURCE_CTRIP = "ctrip"
 
 SOURCE_INFO = {
     SOURCE_SCQCP: {
@@ -32,6 +33,47 @@ SOURCE_INFO = {
             "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
             "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
         }
+    },
+    SOURCE_CTRIP: {
+        "name": "携程网",
+        "website": "www.ctrip.com",
+        "accounts": {
+            # telephone: {password, auth)
+            "15575101324": ("icbRpL", ''),
+        }
+    }
+}
+
+CTRIP_HEADS = {
+    "15575101324": {
+        "cid": "09031120210146050165",
+        "ctok": "",
+        "cver": "1.0",
+        "lang": "01",
+        "sid": "8888",
+        "syscode": "09",
+        "auth": "310AB1B95E0DB5DFD369286D8AA5B5D9586D71FD8D9B5B6653C140503EDE8F0F",
+        "sauth": "3CA2CAF81E580E6DFFEB80141AA84700FCFFAF1F1BED587A7BFC5736E6E89CDE"
+    },
+    "15626025673": {
+        "cid": "09031120210146050165",
+        "ctok": "",
+        "cver": "1.0",
+        "lang": "01",
+        "sid": "8888",
+        "syscode": "09",
+        "auth": "661CD5CAFCE6FA37467AB055B9B5241FDB73AD9A59F8033A50F270E5CF608F98",
+        "sauth": "D272C7D76CB9EC7DC34C2D823B4AC09AB3FF514F541B829D6BD9C27A887D40AC"
+    },
+    "15112257071": {
+        "cid": "09031120210146050165",
+        "ctok": "",
+        "cver": "1.0",
+        "lang": "01",
+        "sid": "8888",
+        "syscode": "09",
+        "auth": "661CD5CAFCE6FA37467AB055B9B5241FDB73AD9A59F8033A50F270E5CF608F98",
+        "sauth": "D272C7D76CB9EC7DC34C2D823B4AC09AB3FF514F541B829D6BD9C27A887D40AC"
     }
 }
 
@@ -125,7 +167,16 @@ RET_BUY_TIME_ERROR = 202    # 线路不在预售期
 
 # 立即支付按钮变灰持续时间
 # 8s
-PAY_CLICK_EXPIR = 20
+PAY_CLICK_EXPIR = 4
 
 # redis keys
 LAST_PAY_CLICK_TIME = "payclicktime:%s"
+ACCOUNT_ORDER_COUNT = "account_order_count"
+CURRENT_ACCOUNT = "current_account"
+
+
+# 源站选择
+SOURCE_MAPPING = {
+    "成都": SOURCE_CTRIP,
+    "成都市": SOURCE_CTRIP,
+}
