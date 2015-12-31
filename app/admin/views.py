@@ -576,10 +576,8 @@ def wating_deal_order():
                     r.zrem('lock_order_list', i)
                     r.sadd(key, i)
                     check_order_completed.apply_async((userObj.username, key, i), countdown=4*60)  # 4分钟后执行
-        order_nos = r.smembers(key)
-        if order_nos:
-            for i in order_nos:
-                refresh_kefu_order.apply_async((userObj.username, i))
+                    refresh_kefu_order.apply_async((userObj.username, i))
+                    order_nos = r.smembers(key)
 
     qs = Order.objects.filter(order_no__in=order_nos)
     qs = qs.order_by("-create_date_time")
