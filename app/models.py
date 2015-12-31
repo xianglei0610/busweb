@@ -479,9 +479,9 @@ class Order(db.Document):
                 return
             detail = ret["return"]
             code_list, msg_list = [], []
-            status = detail["retorderState"]
-            if status == "超时未支付":
-                order_log.info("[issue-refresh-result] order: %s fail. 超时未支付.", self.order_no)
+            status = detail["orderState"]
+            if status in ["超时未支付", "已取消"]:
+                order_log.info("[issue-refresh-result] order: %s fail. 超时未支付或者已取消.", self.order_no)
                 self.modify(status=STATUS_ISSUE_FAIL)
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
@@ -498,10 +498,6 @@ class Order(db.Document):
                     msg_list.append(msg)
                 self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
                 rebot.remove_doing_order(self)
-                issued_callback.delay(self.order_no)
-            elif status == "give_back_ticket":
-                order_log.info("[issue-refresh-result] order: %s fail. ret-status:%s", self.order_no, status)
-                self.modify(status=STATUS_GIVE_BACK)
                 issued_callback.delay(self.order_no)
 
     def get_contact_info(self):
@@ -757,31 +753,34 @@ class CTripRebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
     }
 
-    def on_add_doing_order(self, order):
-        if len(self.doing_orders) >= 5:
-            self.modify(is_locked=True)
-
-    def on_remove_doing_order(self, order):
-        if len(self.doing_orders) < 5 and self.is_locked:
-            self.modify(is_locked=False)
+    @classmethod
+    def get_one(cls):
+        r = getRedisObj()
+        current = r.hget(CURRENT_ACCOUNT, "ctrip")
+        if current:
+            used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % current)
+            if not used or (used and used < 20):
+                r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % current, used+1)
+                return cls.objects.get(telephone=current)
+        ids = []
+        for obj in cls.objects:
+            used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone)
+            ids.append(obj.telephone)
+            if used and used >= 20:
+                continue
+            r.hset(CURRENT_ACCOUNT, "ctrip", obj.telephone)
+            r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone, 1)
+            return obj
+        r.hdel(CURRENT_ACCOUNT, "ctrip")
+        map(lambda k: r.hdel(ACCOUNT_ORDER_COUNT, "ctrip%s" % k), ids)
+        return cls.get_one()
 
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
-        if self.telephone == "15575101324":
-            head = {
-                "cid": "09031120210146050165",
-                "ctok": "",
-                "cver": "1.0",
-                "lang": "01",
-                "sid": "8888",
-                "syscode": "09",
-                "auth": "310AB1B95E0DB5DFD369286D8AA5B5D9586D71FD8D9B5B6653C140503EDE8F0F",
-                "sauth": "3CA2CAF81E580E6DFFEB80141AA84700FCFFAF1F1BED587A7BFC5736E6E89CDE"
-            }
         self.user_agent = ua
         self.is_active = True
         self.last_login_time = dte.now()
-        self.head = head
+        self.head = CTRIP_HEADS[self.telephone]
         self.save()
         return "OK"
 
@@ -856,7 +855,12 @@ class CTripRebot(Rebot):
             idcard = r["id_number"]
             birthday = idcard_birthday(idcard).strftime("%Y-%m-%d")
             data.update({"identityInfo%d" % (i+1): "%s;身份证;%s;%s" % (r["name"], idcard, birthday)})
-        ret = self.http_post(url, data)
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-type": "application/json; charset=UTF-8",
+        }
+        r = requests.post(url, data=json.dumps(data), headers=headers, timeout=20)
+        ret = r.json()
         return ret
 
     def http_post(self, url, data):
@@ -865,7 +869,6 @@ class CTripRebot(Rebot):
         request.add_header('Content-type', "application/json; charset=UTF-8")
         qstr = json.dumps(data)
         response = urllib2.urlopen(request, qstr, timeout=30)
-        print response.read()
         ret = json.loads(response.read())
         return ret
 
@@ -875,12 +878,16 @@ class CTripRebot(Rebot):
 
         params = {
             "head": self.head,
-            "orderNumber": "1570641146",
+            "orderNumber": order.raw_order_no,
             "contentType": "json"
         }
-        base_url = "http://m.ctrip.com/restapi/busphp/app/index.php"
-        url = "%s?%s" % (base_url, urllib.urlencode(params))
-        ret = self.http_post(url, params)
+        url = "http://m.ctrip.com/restapi/busphp/app/index.php?param=/api/home&method=order.detail&v=1.0&ref=ctrip.h5&partner=ctrip.h5&clientType=Android--h5&_fxpcqlniredt=09031120210146050165"
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-type": "application/json; charset=UTF-8",
+        }
+        r = requests.post(url, data=json.dumps(params), headers=headers, timeout=20)
+        ret = r.json()
         return ret
 
 

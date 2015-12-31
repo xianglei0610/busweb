@@ -289,8 +289,8 @@ def order_pay(order_no):
             "ver": 612,
             "plat": 5,
             "requestid": req_id,
-            "clienttoken": "",
-            "clientextend": "",
+            "clientextend": "eyJpc1JlYWxUaW1lUGF5IjoxLCJpc0F1dG9BcHBseUJpbGwiOjF9",
+            "clienttoken": "eyAib2lkIjogIjE2NjIxMzA3NjUiLCAiYnVzdHlwZSI6ICIxNCIsICJzYmFjayI6ICJodHRwOi8vbS5jdHJpcC5jb20vd2ViYXBwL3RyYWluL2luZGV4Lmh0bWwjYnVzcmVzdWx0IiwgInRpdGxlIjogIui+vuW3ni3ph43luoYiLCAiYW1vdW50IjogIjQ3IiwgInJiYWNrIjogIiIsICJlYmFjayI6ICJodHRwOi8vbS5jdHJpcC5jb20vd2ViYXBwL3RyYWluL2luZGV4Lmh0bWwjYnVzcmVzdWx0IiwgInJlcXVlc3RpZCI6ICIxMzE1MTIzMTEwMDAwMTI5ODIzIiwgImF1dGgiOiAiNzI3NTI4ODU5RjA2MEIzMkMzMTIyMkYwMzVCNDA1NTZFN0Q1QjU2MTg4MzU3QTM1NTIxMDFDMjY3RUM3RTNCMyIsICJmcm9tIjogImh0dHA6Ly9tLmN0cmlwLmNvbS93ZWJhcHAvbXljdHJpcC9pbmRleCIsICJpc2xvZ2luIjogIjAiIH0=",
             "clientsign": "",
             "bustype": bus_type,
             "usetype": 1,
@@ -322,14 +322,35 @@ def order_pay(order_no):
         ret = r.json()
         pay_url = ret["thirdpartyinfo"]["sig"]
         base_url, query_str = pay_url.split("?")
-        #base_url = "https://mclient.alipay.com/home/exterfaceAssign.htm"
+        base_url = "https://mclient.alipay.com/home/exterfaceAssign.htm"
         params = {}
         lst = []
         for s in query_str.split("&"):
-            k, v= s.split("=")
-            params[k] = v[1:-1]
+            k, v = s.split("=")
+            if k == "ctu_info":
+                params["ctu_info"] = "{isAccountDeposit:false,isCertificate:true}"
+            else:
+                params[k] = v[1:-1]
             lst.append("%s=%s" % (k, v[1:-1]))
-        #pay_url = "%s?%s" % (base_url, urllib.urlencode(params))
+        # pay_url = "%s?%s" % (base_url, urllib.urlencode(params))
+
+        # sbHtml = []
+        # ALIPAY_GATEWAY_NEW = "https://mapi.alipay.com/gateway.do?"
+        # strMethod = "get"
+        # strButtonName = "submit"
+        # sbHtml.append("<form id=\"alipaysubmit\" name=\"alipaysubmit\" action=\"" + ALIPAY_GATEWAY_NEW
+        #               + "_input_charset=" + params["_input_charset"]+ "\" method=\"" + strMethod
+        #               + "\">")
+
+        # for name, value in params.items():
+        #     sbHtml.append("<input type=\"hidden\" name=\"" + name + "\" value=\"" + value + "\"/>")
+
+        # #submit按钮控件请不要含有name属性
+        # sbHtml.append("<input type=\"submit\" value=\"" + strButtonName + "\" style=\"display:none;\"></form>")
+        # sbHtml.append("<script>document.forms['alipaysubmit'].submit();</script>")
+        # sbHtml.append("</form>")
+        # return "\n".join(sbHtml)
+
         pay_url = "%s?%s" % (base_url, "&".join(lst))
         order_log.info("[pay] order:%s pay_url: %s", order.order_no, pay_url)
         return redirect(pay_url)

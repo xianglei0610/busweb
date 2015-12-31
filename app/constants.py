@@ -44,6 +44,19 @@ SOURCE_INFO = {
     }
 }
 
+CTRIP_HEADS = {
+    "15575101324": {
+        "cid": "09031120210146050165",
+        "ctok": "",
+        "cver": "1.0",
+        "lang": "01",
+        "sid": "8888",
+        "syscode": "09",
+        "auth": "310AB1B95E0DB5DFD369286D8AA5B5D9586D71FD8D9B5B6653C140503EDE8F0F",
+        "sauth": "3CA2CAF81E580E6DFFEB80141AA84700FCFFAF1F1BED587A7BFC5736E6E89CDE"
+    }
+}
+
 SCQCP_DOMAIN = "http://java.cdqcp.com"
 Bus100_DOMAIN = "http://wap.84100.com"
 
@@ -130,3 +143,12 @@ PAY_CLICK_EXPIR = 4
 
 # redis keys
 LAST_PAY_CLICK_TIME = "payclicktime:%s"
+ACCOUNT_ORDER_COUNT = "account_order_count"
+CURRENT_ACCOUNT = "current_account"
+
+
+# 源站选择
+SOURCE_MAPPING = {
+    "成都": SOURCE_CTRIP,
+    "成都市": SOURCE_CTRIP,
+}

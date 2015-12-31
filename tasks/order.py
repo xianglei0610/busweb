@@ -24,7 +24,7 @@ def check_order_expire(self, order_no):
     except Exception, e:
         print traceback.format_exc()
     if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=10, max_retries=30)
+        self.retry(countdown=10, max_retries=100)
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -42,4 +42,4 @@ def refresh_kefu_order(self, username, order_no):
     except Exception, e:
         print e
     if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=3+random.random()*10%3, max_retries=100)
+        self.retry(countdown=3+random.random()*10%3, max_retries=1000)
