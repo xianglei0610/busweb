@@ -21,7 +21,7 @@ from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.admin import admin
 from app.utils import getRedisObj
-from app.models import Order, Line, Starting, Destination, AdminUser
+from app.models import Order, Line, Starting, Destination, AdminUser, PushUserList
 from tasks import refresh_kefu_order
 from tasks import issued_callback, check_order_completed, issue_fail_send_email
 from app import order_log
@@ -439,17 +439,43 @@ class LoginInView(MethodView):
         return render_template('admin-new/login.html')
 
     def post(self):
+        client = request.headers.get("type", 'web')
         name = request.form.get("username")
         pwd = request.form.get("password")
-        code = request.form.get("validcode")
-        if code != session.get("img_valid_code"):
-            return redirect(url_for('admin.login'))
-        try:
-            u = AdminUser.objects.get(username=name, password=md5(pwd))
-            flask_login.login_user(u)
-            return redirect(url_for('admin.index'))
-        except AdminUser.DoesNotExist:
-            return redirect(url_for('admin.login'))
+        if client == 'web':
+            code = request.form.get("validcode")
+            print session.get("img_valid_code"),code
+            if code != session.get("img_valid_code"):
+                return redirect(url_for('admin.login'))
+            try:
+                u = AdminUser.objects.get(username=name, password=md5(pwd))
+                flask_login.login_user(u)
+                return redirect(url_for('admin.index'))
+            except AdminUser.DoesNotExist:
+                return redirect(url_for('admin.login'))
+        elif client in ['android', 'ios']:
+            try:
+                u = AdminUser.objects.get(username=name, password=md5(pwd))
+                flask_login.login_user(u)
+                clientId = request.form.get("clientId")
+                data = {
+                    'username': name,
+                    "push_id": clientId,
+                    "client": client,
+                    "update_datetime": dte.now()
+                }
+                try:
+                    pushObj = PushUserList.objects.get(username=name)
+                    pushObj.push_id = clientId
+                    pushObj.client = client
+                    pushObj.update_datetime = dte.now()
+                    pushObj.save()
+                except PushUserList.DoesNotExist:
+                    pushObj = PushUserList(**data)
+                    pushObj.save()
+                return jsonify({"status": "0", "msg": "登录成功", 'token':TOKEN})
+            except AdminUser.DoesNotExist:
+                return jsonify({"status": "-1", "msg": "登录失败"})
 
 
 @admin.route('/logout')
@@ -487,7 +513,7 @@ def left_page():
     return render_template("admin-new/left.html")
 
 
-@admin.route('/allorder', methods=['GET'])
+@admin.route('/allorder', methods=['GET','POST'])
 @login_required
 def all_order():
     status = request.args.get("status", "")
@@ -495,6 +521,7 @@ def all_order():
     source_account = request.args.get("source_account", "")
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
+    client = request.headers.get("type", 'web')
     query = {}
     if status:
         query.update(status=int(status))
@@ -502,6 +529,7 @@ def all_order():
         query.update(crawl_source=source)
         if source_account:
             query.update(source_account=source_account)
+
     if str_date:
         query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
     else:
@@ -518,16 +546,37 @@ def all_order():
         "money_total": qs.sum("order_price"),
         "dealed_total": qs.filter(kefu_order_status=1).count(),
     }
-    return render_template('admin-new/allticket_order.html',
-                           page=parse_page_data(qs),
-                           status_msg=STATUS_MSG,
-                           source_info=SOURCE_INFO,
-                           condition=request.args,
-                           stat=stat,
-                           str_date=str_date,
-                           end_date=end_date
-                           )
-
+    if client == 'web':
+        return render_template('admin-new/allticket_order.html',
+                               page=parse_page_data(qs),
+                               status_msg=STATUS_MSG,
+                               source_info=SOURCE_INFO,
+                               condition=request.args,
+                               stat=stat,
+                               str_date=str_date,
+                               end_date=end_date
+                               )
+    elif client in ['android', 'ios']:
+        order_info = parse_page_data(qs)
+        orders = order_info['items']
+        data = []
+        for i in orders:
+            tmp = {}
+            tmp['out_order_no'] = i.out_order_no
+            tmp['create_date_time'] = i.create_date_time.strftime('%Y-%m-%d %H:%M:%S')
+            tmp['ticket_amount'] = i.ticket_amount
+            tmp['starting_name'] = i.starting_name.split(';')[1]
+            tmp['destination_name'] = i.destination_name.split(';')[1]
+            tmp['order_price'] = i.order_price
+            tmp['status'] = i.status
+            tmp['alias_status'] = STATUS_MSG[i.status]
+            tmp['crawl_source'] = SOURCE_INFO[i.crawl_source]["name"]
+            data.append(tmp)
+        total = order_info['total']
+        page = order_info['page'],
+        pageCount = order_info['pageCount'],
+        pageNum = order_info['pageNum'],
+        return jsonify({"status": 0,"total":total,"page":page,"pageCount":pageCount,"pageNum":pageNum, "stat":stat, "data": data})
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
 admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
@@ -550,7 +599,7 @@ def detail_order(order_no):
                            )
 
 
-@admin.route('/orders/wating_deal', methods=['GET'])
+@admin.route('/orders/wating_deal', methods=['GET','POST'])
 @login_required
 def wating_deal_order():
     """
@@ -559,6 +608,7 @@ def wating_deal_order():
     userObj = current_user
     order_nos = []
     r = getRedisObj()
+    client = request.headers.get("type", 'web')
     if userObj.is_kefu:
         key = 'order_list:%s' % userObj.username
         for o in Order.objects.filter(order_no__in=r.smembers(key)):
@@ -575,27 +625,45 @@ def wating_deal_order():
                 for i in lock_order_list:
                     r.zrem('lock_order_list', i)
                     r.sadd(key, i)
+                    refresh_kefu_order.apply_async((userObj.username, i))
                     check_order_completed.apply_async((userObj.username, key, i), countdown=4*60)  # 4分钟后执行
                     refresh_kefu_order.apply_async((userObj.username, i))
-                    order_nos = r.smembers(key)
+            order_nos = r.smembers(key)
 
     qs = Order.objects.filter(order_no__in=order_nos)
     qs = qs.order_by("-create_date_time")
-    expire_seconds = {}
-    t = time.time()
-    for o in qs:
-        click_time = r.get(LAST_PAY_CLICK_TIME % o.order_no)
-        if not click_time:
-            expire_seconds[o.order_no] = 0
-            continue
-        click_time = float(click_time)
-        expire_seconds[o.order_no] = max(0, PAY_CLICK_EXPIR-int(t-click_time))
-    return render_template("admin-new/waiting_deal_order.html",
-                           page=parse_page_data(qs),
-                           status_msg=STATUS_MSG,
-                           source_info=SOURCE_INFO,
-                           expire_seconds=expire_seconds,
-                           )
+    if client == 'web':
+        expire_seconds = {}
+        t = time.time()
+        for o in qs:
+            click_time = r.get(LAST_PAY_CLICK_TIME % o.order_no)
+            if not click_time:
+                expire_seconds[o.order_no] = 0
+                continue
+            click_time = float(click_time)
+            expire_seconds[o.order_no] = max(0, PAY_CLICK_EXPIR-int(t-click_time))
+        return render_template("admin-new/waiting_deal_order.html",
+                               page=parse_page_data(qs),
+                               status_msg=STATUS_MSG,
+                               source_info=SOURCE_INFO,
+                               expire_seconds=expire_seconds,
+                               )
+    elif client in ['android', 'ios']:
+        data = []
+        for i in qs:
+            tmp = {}
+            tmp['out_order_no'] = i.out_order_no
+            tmp['order_no'] = i.order_no
+            tmp['create_date_time'] = i.create_date_time.strftime('%Y-%m-%d %H:%M:%S')
+            tmp['ticket_amount'] = i.ticket_amount
+            tmp['starting_name'] = i.starting_name.split(';')[1]
+            tmp['destination_name'] = i.destination_name.split(';')[1]
+            tmp['order_price'] = i.order_price
+            tmp['status'] = i.status
+            tmp['alias_status'] = STATUS_MSG[i.status]
+            tmp['crawl_source'] = SOURCE_INFO[i.crawl_source]["name"]
+            data.append(tmp)
+        return jsonify({"status": 0, "data": data})
 
 
 @admin.route('/kefu_complete', methods=['POST'])

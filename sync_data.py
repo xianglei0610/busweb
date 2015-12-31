@@ -178,11 +178,8 @@ def migrate_scqcp(crawl_db):
             line_obj.save()
         print line_obj.line_id
 
-def migrate_bus100(crawl_db):
-    crawl_db = get_crawl_db()
-    startingObj = Starting.objects.filter(station_name__in = ["埌东站","江南站","金桥站","安吉站"])
-    qs_line = Line.objects.filter(starting__in=startingObj, crawl_source=site).delete()
 
+def migrate_bus100(crawl_db):
     for d in crawl_db.line_bus100.find({"departure_time": {"$gte": str(datetime.now())}}):
         crawl_source = "bus100"
 

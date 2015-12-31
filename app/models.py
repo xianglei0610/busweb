@@ -52,6 +52,23 @@ class AdminUser(db.Document):
         return self.username
 
 
+class PushUserList(db.Document):
+    """
+    push用户列表
+    """
+    username = db.StringField(unique=True)
+    push_id = db.StringField(max_length=50)
+    client = db.StringField(max_length=50)
+    create_datetime = db.DateTimeField(default=dte.now)
+    update_datetime = db.DateTimeField()
+
+    meta = {
+        "indexes": [
+            "username",
+        ],
+    }
+
+
 class Starting(db.Document):
     """
     出发地

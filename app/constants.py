@@ -87,6 +87,14 @@ REDIS_PASSWD = ""
 REDIS_PORT = 6379
 KF_ORDER_CT = 3
 
+TOKEN = '303fed16373c61a9ee8bdc27f9b6ca4e' #代购token
+
+HOST = 'http://sdk.open.api.igexin.com/apiex.htm'
+AppID = "BRAvWtfxoz6Fvc4HaXciy"
+AppKey = "mHFHq6gxrm6E2lEMvXQpIA"
+AppSecret = "hNkmc4rFI69G6c5vT4lIL"
+MasterSecret = "9lDpT4uieS6qM57euqOFN1"
+
 
 BROWSER_USER_AGENT = [
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
