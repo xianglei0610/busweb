@@ -242,7 +242,6 @@ def order_pay(order_no):
         rebot = order.get_rebot()
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
-            "Content-Type": "application/json;charset=utf-8",
         }
         param_url = "http://m.ctrip.com/restapi/soa2/10098/HandleOrderPayment.json?_fxpcqlniredt=09031108210147109160"
         req_args = {
@@ -251,7 +250,7 @@ def order_pay(order_no):
             "PaymentOrderInfos": [
                 {
                     "BizType": "QiChe",
-                    "OrderIDs": [order.raw_order_no,]
+                    "OrderIDs": [order.lock_info["return"]["orderId"],]
                 }
             ],
             "From": "http://m.ctrip.com/webapp/myctrip/orders/allorders?from=%2Fwebapp%2Fmyctrip%2Findex",
@@ -259,80 +258,64 @@ def order_pay(order_no):
             "head": rebot.head,
             "contentType": "json"
         }
-        r = requests.post(param_url, data=json.dumps(req_args), headers=headers)
-        ret = r.json()
-        order_log.info("[pay-request1] order:%s ret: %s", order.order_no, str(ret))
-        if ret["Result"]["ResultCode"] == -1:
-            order_log.error("[pay-fail] order:%s msg: %s", order.order_no, ret["Result"]["ResultMsg"])
-        token_info = json.loads(ret["PaymentInfos"][0]["Token"])
-        bus_type = token_info["bustype"]
-        req_id = token_info["requestid"]
-        price = token_info["amount"]
-        title = token_info["title"]
+        pay_url = order.pay_url
+        # 验证码处理
+        if code:
+            data = json.loads(session["pay_login_info"])
+            code_url = data["valid_url"]
+            headers = data["headers"]
+            cookies = data["cookies"]
+            token = data["token"]
+        else:
+            login_form_url = "http://scqcp.com/login/index.html"
+            r = requests.get(login_form_url, headers=headers)
+            sel = etree.HTML(r.content)
+            cookies = dict(r.cookies)
+            code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+            token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+            r = requests.get(code_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            tmpIm = cStringIO.StringIO(r.content)
+            im = Image.open(tmpIm)
+            code = pytesseract.image_to_string(im)
 
-        submit_url = "https://gateway.secure.ctrip.com/restful/soa2/10289/paymentinfo/submitv3?_fxpcqlniredt=09031108210147109160"
-        submit_args = {
-            "opttype": 1,
-            "paytype": 4,
-            "thirdpartyinfo": {
-                "paymentwayid": "EB_MobileAlipay",
-                "typeid": 0,
-                "subtypeid": 4,
-                "typecode": "",
-                "thirdcardnum": "",
-                "amount": str(price),
-                "brandid": "EB_MobileAlipay",
-                "brandtype": "2",
-                "channelid": "109"
-            },
-            "opadbitmp": 4,
-            "ver": 612,
-            "plat": 5,
-            "requestid": req_id,
-            "clienttoken": "",
-            "clientextend": "",
-            "clientsign": "",
-            "bustype": bus_type,
-            "usetype": 1,
-            "subusetype": 0,
-            "subpay": 0,
-            "forcardfee": 0,
-            "forcardcharg": 0,
-            "stype": 0,
-            "payrestrict": {},
-            "oinfo": {
-                "oid": order.raw_order_no,
-                "oidex": order.raw_order_no,
-                "odesc": title,
-                "currency": "CNY",
-                "oamount": str(price),
-                "displayCurrency": "CNY",
-                "displayAmount": "",
-                "extno": "",
-                "autoalybil": True,
-                "recall": ""
-            },
-            "cardinfo": None,
-            "statistic": None,
-            "cashinfo": None,
-            "head": rebot.head,
-            "contentType": "json"
+        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
+        passwd, _ = accounts[order.source_account]
+        data = {
+            "uname": order.source_account,
+            "passwd": passwd,
+            "code": code,
+            "token": token,
         }
-        r = requests.post(submit_url, data=json.dumps(submit_args), headers=headers)
+        r = requests.post("http://scqcp.com/login/check.json", data=data, headers=headers, cookies=cookies)
+        cookies.update(dict(r.cookies))
         ret = r.json()
-        pay_url = ret["thirdpartyinfo"]["sig"]
-        base_url, query_str = pay_url.split("?")
-        #base_url = "https://mclient.alipay.com/home/exterfaceAssign.htm"
-        params = {}
-        lst = []
-        for s in query_str.split("&"):
-            k, v= s.split("=")
-            params[k] = v[1:-1]
-            lst.append("%s=%s" % (k, v[1:-1]))
-        #pay_url = "%s?%s" % (base_url, urllib.urlencode(params))
-        pay_url = "%s?%s" % (base_url, "&".join(lst))
-        order_log.info("[pay] order:%s pay_url: %s", order.order_no, pay_url)
-        return redirect(pay_url)
+        if ret["success"]:
+            print('登录成功')
+            r = requests.get(pay_url, headers=headers, cookies=cookies)
+            r_url = urllib2.urlparse.urlparse(r.url)
+            if r_url.path in ["/error.html", "/error.htm"]:
+                order.modify(status=STATUS_ISSUE_FAIL)
+                order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
+                rebot = order.get_rebot()
+                if rebot:
+                    rebot.remove_doing_order(order)
+                issued_callback.delay(order.order_no)
+                return jsonify({"status": "error", "msg": u"订单过期", "data": ""})
+            sel = etree.HTML(r.content)
+            data = dict(
+                payid=sel.xpath("//input[@name='payid']/@value")[0],
+                bank=sel.xpath("//input[@id='s_bank']/@value")[0],
+                plate=sel.xpath("//input[@id='s_plate']/@value")[0],
+                plateform="alipay",
+                qr_pay_mode=0,
+                discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
+            )
+
+            info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
+            r = requests.post(info_url, data=data, headers=headers, cookies=cookies)
+            return r.content
+
     return redirect(url_for('admin.order_list'))
 
 
@@ -485,6 +468,7 @@ def all_order():
     source_account = request.args.get("source_account", "")
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
+    print request.args, type(request.args)
     query = {}
     if status:
         query.update(status=int(status))
@@ -626,6 +610,7 @@ def test_ctrip_pay():
         if not name:
             continue
         value = s.get("value", "")
+        print name, value
         form_data[name] = value
     form_data.update({"txtUserName": "15575101324", "txtPwd": "luoguiyang"})
     form_data.update(hidGohome=form_data["hdnToken"])

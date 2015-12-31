@@ -257,6 +257,57 @@ class Line(db.Document):
                 line_log.info("[refresh] line:%s, fail: %s", self.line_id, str(e))
             now = dte.now()
             self.modify(left_tickets=left_tickets, update_datetime=now)
+        elif self.crawl_source == SOURCE_CTRIP:
+            params = dict(
+                param="/api/home",
+                method="product.getBusDetail",
+                v="1.0",
+                ref="ctrip.h5",
+                partner="ctrip.h5",
+                clientType="Android--hybrid",
+                fromCity=self.starting.city_name,
+                toCity=self.destination.city_name,
+                busNumber=self.bus_num,
+                fromStation=self.starting.station_name,
+                toStation=self.destination.station_name,
+                fromDate=self.drv_date,
+                fromTime=self.drv_time,
+                contentType="json",
+            )
+
+            base_url = "http://m.ctrip.com/restapi/busphp/app/index.php"
+            url = "%s?%s" % (base_url, urllib.urlencode(params))
+            ua = random.choice(MOBILE_USER_AGENG)
+            r = requests.get(url, headers={"User-Agent": ua})
+            ret = r.json()
+            now = dte.now()
+            if ret["code"] == 1:
+                info = ret["return"]
+                if info:
+                    ticket_info = info["showTicketInfo"]
+                    if ticket_info == "有票":
+                        left_tickets = 45
+                    elif ticket_info.endswith("张"):
+                        left_tickets = int(ticket_info[:-1])
+                    elif ticket_info == "预约购票":
+                        left_tickets = 0
+                    service_info = info["servicePackage"]
+                    fee = 0
+                    for d in service_info:
+                        if d["type"] == "service":
+                            fee = d["amount"]
+                            break
+                    self.modify(full_price=info["fullPrice"],
+                                fee=fee,
+                                left_tickets=left_tickets,
+                                update_datetime=now)
+                    line_log.info("[refresh] line:%s, amount:%s fee:%s", self.line_id, left_tickets, fee)
+                else:  # 线路信息没查到
+                    self.modify(left_tickets=0, update_datetime=now)
+                    line_log.info("[refresh] line:%s, no info ", self.line_id)
+            else:
+                self.modify(left_tickets=0, update_datetime=now)
+                line_log.info("[refresh] line:%s, fail: %s", self.line_id, str(ret))
 
 
 class Order(db.Document):
@@ -344,6 +395,9 @@ class Order(db.Document):
             if type == "app":
                 rebot = ScqcpRebot.objects.get(telephone=self.source_account)
                 return rebot
+        elif self.crawl_source == "ctrip":
+            rebot = CTripRebot.objects.get(telephone=self.source_account)
+            return rebot
         return None
 
     def complete_by(self, user_obj):
@@ -417,6 +471,38 @@ class Order(db.Document):
                     self.modify(status=STATUS_ISSUE_FAIL)
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
+        elif self.crawl_source == "ctrip":
+            rebot = CTripRebot.objects.get(telephone=self.source_account)
+            ret = rebot.request_order(self)
+            if ret["code"] != 1:
+                order_log.info("[issue-refresh-fail] order: %s, 未预料到的返回:%s", self.order_no, str(ret))
+                return
+            detail = ret["return"]
+            code_list, msg_list = [], []
+            status = detail["retorderState"]
+            if status == "超时未支付":
+                order_log.info("[issue-refresh-result] order: %s fail. 超时未支付.", self.order_no)
+                self.modify(status=STATUS_ISSUE_FAIL)
+                rebot.remove_doing_order(self)
+                issued_callback.delay(self.order_no)
+                return
+            elif status == "已成交":
+                order_log.info("[issue-refresh-result] order: %s succ. ret-status:%s", self.order_no, status)
+                # 出票成功
+                pick_info = detail["fetcherInfo"]
+                for d in pick_info:
+                    if d["k"] == "取票密码":
+                        code_list.append(d["v"])
+                    msg = "%s，%s--%s 共%s张成功出票。取票验证码%s，请在发车时间前乘车" %(self.drv_datetime, self.line.starting.station_name,
+                                                                                                             elf.line.destination.station_name,d["v"])
+                    msg_list.append(msg)
+                self.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
+                rebot.remove_doing_order(self)
+                issued_callback.delay(self.order_no)
+            elif status == "give_back_ticket":
+                order_log.info("[issue-refresh-result] order: %s fail. ret-status:%s", self.order_no, status)
+                self.modify(status=STATUS_GIVE_BACK)
+                issued_callback.delay(self.order_no)
 
     def get_contact_info(self):
         """
@@ -432,7 +518,7 @@ class Order(db.Document):
         }
 
     def get_rider_info(self):
-        """
+        """]
         返回给client的数据和格式， 不要轻易修改!
         """
         lst = []
@@ -779,24 +865,24 @@ class CTripRebot(Rebot):
         request.add_header('Content-type', "application/json; charset=UTF-8")
         qstr = json.dumps(data)
         response = urllib2.urlopen(request, qstr, timeout=30)
+        print response.read()
         ret = json.loads(response.read())
         return ret
 
     def request_order(self, order):
         if order.status in [STATUS_LOCK_FAIL]:
             return
-        uri = "/api/v1/ticket_lines/query_order"
-        data = {"open_id": self.open_id}
-        ret = self.http_post(uri, data=data)
-        ticket_ids = order.lock_info["ticket_ids"]
-        amount = len(ticket_ids)
-        data = {}
-        for d in ret["ticket_list"]:
-            if d["ticket_id"] in ticket_ids:
-                data[d["ticket_id"]] = d
-            if len(data) >= amount:
-                break
-        return data
+
+        params = {
+            "head": self.head,
+            "orderNumber": "1570641146",
+            "contentType": "json"
+        }
+        base_url = "http://m.ctrip.com/restapi/busphp/app/index.php"
+        url = "%s?%s" % (base_url, urllib.urlencode(params))
+        ret = self.http_post(url, params)
+        return ret
+
 
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))

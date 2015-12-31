@@ -143,23 +143,21 @@ def lock_ticket(order_no):
         from tasks import check_order_expire
         with CTripRebot.get_and_lock(order) as rebot:
             ret = rebot.request_lock_ticket(order)
+            print "111",ret
             if ret["code"] == 1:
-                pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
-                raw_order = "|".join(ret["web_order_id"])
+                raw_order = ret["return"]["orderNumber"]
                 order.modify(status=STATUS_WAITING_ISSUE,
                              lock_info=ret,
                              lock_datetime=dte.now(),
                              source_account=rebot.telephone,
-                             pay_url=pay_url,
                              raw_order_no=raw_order,
                              )
-                check_order_expire.apply_async((order.order_no,), countdown=9*60+5)  # 9分钟后执行
-                total_price = 0
-                for ticket in ret["ticket_list"]:
-                    total_price += ticket["server_price"]
-                    total_price += ticket["real_price"]
+                expire_time = dte.now()+datetime.timedelta(seconds=60*60)
+                expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
+                check_order_expire.apply_async((order.order_no,), countdown=60*60+5)
+                total_price = ret["return"]["displayRealPayFee"]
                 data.update({
-                    "expire_time": ret["expire_time"],
+                    "expire_time": expire_time,
                     "total_price": total_price,
                 })
 
@@ -173,8 +171,8 @@ def lock_ticket(order_no):
                              lock_info=ret,
                              lock_datetime=dte.now(),
                              source_account=rebot.telephone)
-                json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["msg"], "data": data})
-                order_log.info("[lock-result] fail. order: %s reason: %s", order.order_no, ret["msg"])
+                json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["message"], "data": data})
+                order_log.info("[lock-result] fail. order: %s reason: %s", order.order_no, ret["message"])
             if notify_url:
                 order_log.info("[lock-callback] %s %s", notify_url, json_str)
                 response = urllib2.urlopen(notify_url, json_str, timeout=30)

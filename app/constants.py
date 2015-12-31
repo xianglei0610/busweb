@@ -126,7 +126,7 @@ RET_BUY_TIME_ERROR = 202    # 线路不在预售期
 
 # 立即支付按钮变灰持续时间
 # 8s
-PAY_CLICK_EXPIR = 20
+PAY_CLICK_EXPIR = 4
 
 # redis keys
 LAST_PAY_CLICK_TIME = "payclicktime:%s"
