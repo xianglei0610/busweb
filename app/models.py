@@ -487,6 +487,10 @@ class Order(db.Document):
                     self.modify(status=STATUS_ISSUE_FAIL)
                     rebot.remove_doing_order(self)
                     issued_callback.delay(self.order_no)
+                    r.sadd(key, self.order_no)
+                    order_ct = r.scard(key)
+                    if order_ct > 2:
+                        issue_fail_send_email.delay(key)
         elif self.crawl_source == "ctrip":
             rebot = CTripRebot.objects.get(telephone=self.source_account)
             ret = rebot.request_order(self)
@@ -516,10 +520,6 @@ class Order(db.Document):
                 rebot.remove_doing_order(self)
                 issued_callback.delay(self.order_no)
 
-                    r.sadd(key, self.order_no)
-                    order_ct = r.scard(key)
-                    if order_ct > 2:
-                        issue_fail_send_email.delay(key)
 
     def get_contact_info(self):
         """
