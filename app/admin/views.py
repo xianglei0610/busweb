@@ -249,6 +249,100 @@ def order_pay(order_no):
         info_url = "https://pay.84100.com/payment/page/alipayapi.jsp"
         r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
         return r.content
+    elif order.crawl_source == "ctrip":
+        rebot = order.get_rebot()
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+            "Content-Type": "application/json;charset=utf-8",
+        }
+        param_url = "http://m.ctrip.com/restapi/soa2/10098/HandleOrderPayment.json?_fxpcqlniredt=09031108210147109160"
+        req_args = {
+            "ClientVersion": "6.12",
+            "Channel": "H5",
+            "PaymentOrderInfos": [
+                {
+                    "BizType": "QiChe",
+                    "OrderIDs": [order.raw_order_no,]
+                }
+            ],
+            "From": "http://m.ctrip.com/webapp/myctrip/orders/allorders?from=%2Fwebapp%2Fmyctrip%2Findex",
+            "Platform": "H5",
+            "head": rebot.head,
+            "contentType": "json"
+        }
+        r = requests.post(param_url, data=json.dumps(req_args), headers=headers)
+        ret = r.json()
+        order_log.info("[pay-request1] order:%s ret: %s", order.order_no, str(ret))
+        if ret["Result"]["ResultCode"] == -1:
+            order_log.error("[pay-fail] order:%s msg: %s", order.order_no, ret["Result"]["ResultMsg"])
+        token_info = json.loads(ret["PaymentInfos"][0]["Token"])
+        bus_type = token_info["bustype"]
+        req_id = token_info["requestid"]
+        price = token_info["amount"]
+        title = token_info["title"]
+
+        submit_url = "https://gateway.secure.ctrip.com/restful/soa2/10289/paymentinfo/submitv3?_fxpcqlniredt=09031108210147109160"
+        submit_args = {
+            "opttype": 1,
+            "paytype": 4,
+            "thirdpartyinfo": {
+                "paymentwayid": "EB_MobileAlipay",
+                "typeid": 0,
+                "subtypeid": 4,
+                "typecode": "",
+                "thirdcardnum": "",
+                "amount": str(price),
+                "brandid": "EB_MobileAlipay",
+                "brandtype": "2",
+                "channelid": "109"
+            },
+            "opadbitmp": 4,
+            "ver": 612,
+            "plat": 5,
+            "requestid": req_id,
+            "clientextend": "eyJpc1JlYWxUaW1lUGF5IjoxLCJpc0F1dG9BcHBseUJpbGwiOjF9",
+            "clienttoken": "eyAib2lkIjogIjE2NjIxMzA3NjUiLCAiYnVzdHlwZSI6ICIxNCIsICJzYmFjayI6ICJodHRwOi8vbS5jdHJpcC5jb20vd2ViYXBwL3RyYWluL2luZGV4Lmh0bWwjYnVzcmVzdWx0IiwgInRpdGxlIjogIui+vuW3ni3ph43luoYiLCAiYW1vdW50IjogIjQ3IiwgInJiYWNrIjogIiIsICJlYmFjayI6ICJodHRwOi8vbS5jdHJpcC5jb20vd2ViYXBwL3RyYWluL2luZGV4Lmh0bWwjYnVzcmVzdWx0IiwgInJlcXVlc3RpZCI6ICIxMzE1MTIzMTEwMDAwMTI5ODIzIiwgImF1dGgiOiAiNzI3NTI4ODU5RjA2MEIzMkMzMTIyMkYwMzVCNDA1NTZFN0Q1QjU2MTg4MzU3QTM1NTIxMDFDMjY3RUM3RTNCMyIsICJmcm9tIjogImh0dHA6Ly9tLmN0cmlwLmNvbS93ZWJhcHAvbXljdHJpcC9pbmRleCIsICJpc2xvZ2luIjogIjAiIH0=",
+            "clientsign": "",
+            "bustype": bus_type,
+            "usetype": 1,
+            "subusetype": 0,
+            "subpay": 0,
+            "forcardfee": 0,
+            "forcardcharg": 0,
+            "stype": 0,
+            "payrestrict": {},
+            "oinfo": {
+                "oid": order.raw_order_no,
+                "oidex": order.raw_order_no,
+                "odesc": title,
+                "currency": "CNY",
+                "oamount": str(price),
+                "displayCurrency": "CNY",
+                "displayAmount": "",
+                "extno": "",
+                "autoalybil": True,
+                "recall": ""
+            },
+            "cardinfo": None,
+            "statistic": None,
+            "cashinfo": None,
+            "head": rebot.head,
+            "contentType": "json"
+        }
+        r = requests.post(submit_url, data=json.dumps(submit_args), headers=headers)
+        ret = r.json()
+        pay_url = ret["thirdpartyinfo"]["sig"]
+        base_url, query_str = pay_url.split("?")
+        params = {}
+        lst = []
+        for s in query_str.split("&"):
+            k, v = s.split("=")
+            if k == "ctu_info":
+                v = "\"{isAccountDeposit:false,isCertificate:true}\""
+            params[k] = v[1:-1]
+            lst.append("%s=%s" % (k, v[1:-1]))
+        pay_url = "%s?%s" % (base_url, "&".join(lst))
+        return redirect(pay_url)
     return redirect(url_for('admin.order_list'))
 
 
@@ -401,7 +495,6 @@ def all_order():
     source_account = request.args.get("source_account", "")
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
-    print request.args, type(request.args)
     query = {}
     if status:
         query.update(status=int(status))
@@ -528,3 +621,35 @@ def kefu_on_off():
     userObj.is_switch = is_switch
     userObj.save()
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
+
+
+@admin.route('/test_pay', methods=['GET'])
+def test_ctrip_pay():
+    import requests
+    login_form = "https://accounts.ctrip.com/member/login.aspx"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36",
+    }
+    r = requests.get(login_form, headers=headers)
+    cookies = r.cookies
+    sel = etree.HTML(r.content)
+    form_data = {}
+    for s in sel.xpath("//input"):
+        name = s.get("name")
+        if not name:
+            continue
+        value = s.get("value", "")
+        form_data[name] = value
+    form_data.update({"txtUserName": "15575101324", "txtPwd": "luoguiyang"})
+    form_data.update(hidGohome=form_data["hdnToken"])
+
+    login_url = "https://accounts.ctrip.com/member/login.aspx"
+    import urllib
+    qstr = urllib.urlencode(form_data)
+    r = requests.post(login_url, data=qstr, headers=headers, cookies=cookies, proxies={"http": "http://localhost:8888"})
+    cookies = r.cookies
+
+    #url = "https://secure.ctrip.com/RealTimePay/Catalog/Submit/336498767"
+    #data = """{"CustomerID":"M302009380","MerchantID":"200093","OrderID":"1574557621","OrderAmount":"15.50","OrderType":"36","RequestID":"336498767","CmoneyPassword":"","CmoneyAmount":0,"CmoneyList":"[]","ElseAmount":15.5,"ElseCatalogCode":"EBank","ElseCode":"Alipay","ElseFee":0,"BankName":"支付宝","ElseNumber":"","ElseEndDate":"","ElseExchangeChannel":"EDC","SmsCodePassed":"F","BrandID":"Alipay","ChannelID":"24","VendorID":"2","CheckPhone":"0"}"""
+    #r = requests.post(url, data=data, headers=headers, cookies=cookies)
+    return r.content
