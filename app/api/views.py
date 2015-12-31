@@ -143,10 +143,17 @@ def query_line():
                         "message": "parameter error",
                         "data": ""})
 
+    crawl_source = ""
+    if starting_name in SOURCE_MAPPING:
+        crawl_source = SOURCE_MAPPING[starting_name]
+
     qs_starting = Starting.objects(Q(city_name__startswith=starting_name) |
                                    Q(station_name__startswith=starting_name))
     qs_dest = Destination.objects(Q(city_name__startswith=dest_name) |
                                   Q(station_name__startswith=dest_name))
+    if crawl_source:
+        qs_starting = qs_starting.filter(crawl_source=crawl_source)
+        qs_dest = qs_dest.filter(crawl_source=crawl_source)
     qs_line = Line.objects(starting__in=qs_starting,
                            destination__in=qs_dest,
                            drv_date=start_date)
