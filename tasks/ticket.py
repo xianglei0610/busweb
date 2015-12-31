@@ -143,7 +143,6 @@ def lock_ticket(order_no):
         from tasks import check_order_expire
         with CTripRebot.get_and_lock(order) as rebot:
             ret = rebot.request_lock_ticket(order)
-            print "111",ret
             if ret["code"] == 1:
                 raw_order = ret["return"]["orderNumber"]
                 order.modify(status=STATUS_WAITING_ISSUE,

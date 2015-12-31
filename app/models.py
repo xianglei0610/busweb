@@ -572,6 +572,9 @@ class Rebot(db.Document):
         obj = cls.get_one()
         if obj:
             obj.add_doing_order(order)
+            rebot_log.info("[get_and_lock] succ. tele: %s, order: %s", obj.telephone, order.order_no)
+        else:
+            rebot_log.info("[get_and_lock] fail. order: %s", order.order_no)
         try:
             yield obj
         except Exception, e:
@@ -756,24 +759,40 @@ class CTripRebot(Rebot):
     @classmethod
     def get_one(cls):
         r = getRedisObj()
-        current = r.hget(CURRENT_ACCOUNT, "ctrip")
-        if current:
-            used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % current)
-            if not used or (used and used < 20):
-                r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % current, used+1)
-                return cls.objects.get(telephone=current)
-        ids = []
-        for obj in cls.objects:
-            used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone)
-            ids.append(obj.telephone)
-            if used and used >= 20:
-                continue
-            r.hset(CURRENT_ACCOUNT, "ctrip", obj.telephone)
-            r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone, 1)
+
+        def _check_current():
+            current = r.hget(CURRENT_ACCOUNT, "ctrip")
+            if current:
+                used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % current)
+                if not used or (used and int(used) < 20):
+                    r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % current, int(used)+1)
+                    return cls.objects.get(telephone=current)
+            return None
+
+        def _choose_new():
+            ids = []
+            for obj in cls.objects:
+                used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone)
+                ids.append(obj.telephone)
+                if used and int(used) >= 20:
+                    continue
+                r.hset(CURRENT_ACCOUNT, "ctrip", obj.telephone)
+                r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone, 1)
+                return obj, ids
+            return None, []
+
+        obj = _check_current()
+        if obj:
             return obj
+
+        obj, ids = _choose_new()
+        if obj:
+            return obj
+
         r.hdel(CURRENT_ACCOUNT, "ctrip")
         map(lambda k: r.hdel(ACCOUNT_ORDER_COUNT, "ctrip%s" % k), ids)
-        return cls.get_one()
+        new, _ = _choose_new()
+        return new
 
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
