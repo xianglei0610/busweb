@@ -137,6 +137,44 @@ def lock_ticket(order_no):
             order_log.info("[lock-callback] %s %s", notify_url, json_str)
             response = urllib2.urlopen(notify_url, json_str, timeout=30)
             order_log.info("[lock-callback-response] %s", str(response))
+    elif order.crawl_source == "ctrip":
+        from app.models import CTripRebot
+        from tasks import check_order_expire
+        with CTripRebot.get_and_lock(order) as rebot:
+            ret = rebot.request_lock_ticket(order)
+            if ret["code"] == 1:
+                raw_order = ret["return"]["orderNumber"]
+                order.modify(status=STATUS_WAITING_ISSUE,
+                             lock_info=ret,
+                             lock_datetime=dte.now(),
+                             source_account=rebot.telephone,
+                             raw_order_no=raw_order,
+                             )
+                expire_time = dte.now()+datetime.timedelta(seconds=60*60)
+                expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
+                check_order_expire.apply_async((order.order_no,), countdown=60*60+5)
+                total_price = ret["return"]["displayRealPayFee"]
+                data.update({
+                    "expire_time": expire_time,
+                    "total_price": total_price,
+                })
+
+                r = getRedisObj()
+                r.zadd('lock_order_list', order.order_no, time.time()*1000)
+                json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
+                order_log.info("[lock-result] succ. order: %s", order.order_no)
+            else:
+                rebot.remove_doing_order(order)
+                order.modify(status=STATUS_LOCK_FAIL,
+                             lock_info=ret,
+                             lock_datetime=dte.now(),
+                             source_account=rebot.telephone)
+                json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["message"], "data": data})
+                order_log.info("[lock-result] fail. order: %s reason: %s", order.order_no, ret["message"])
+            if notify_url:
+                order_log.info("[lock-callback] %s %s", notify_url, json_str)
+                response = urllib2.urlopen(notify_url, json_str, timeout=30)
+                order_log.info("[lock-callback-response] %s", str(response))
 
 
 @celery.task(ignore_result=True)

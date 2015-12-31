@@ -9,7 +9,7 @@ from flask import request, jsonify
 from tasks import lock_ticket
 from app.api import api
 from app.models import Line, Starting, Destination, Order
-from app import order_log
+from app import order_log, line_log
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -88,7 +88,11 @@ def query_destination():
                         "message": "parameter error",
                         "data": ""})
 
-    st_qs = Starting.objects(city_name__startswith=unicode(starting_name))
+    query = {"city_name__startswith": unicode(starting_name)}
+    if starting_name in SOURCE_MAPPING:
+        query.update(crawl_source=SOURCE_MAPPING[starting_name])
+    line_log.info("查询%s的目的地, 查询条件:%s", starting_name, str(query))
+    st_qs = Starting.objects(**query)
     dest_list = Destination.objects(starting__in=st_qs)
     data = map(lambda obj: "%s|%s" % (obj.station_name or obj.city_name,
                obj.station_pinyin_prefix or obj.city_pinyin_prefix), dest_list)
@@ -139,10 +143,17 @@ def query_line():
                         "message": "parameter error",
                         "data": ""})
 
+    crawl_source = ""
+    if starting_name in SOURCE_MAPPING:
+        crawl_source = SOURCE_MAPPING[starting_name]
+
     qs_starting = Starting.objects(Q(city_name__startswith=starting_name) |
                                    Q(station_name__startswith=starting_name))
     qs_dest = Destination.objects(Q(city_name__startswith=dest_name) |
                                   Q(station_name__startswith=dest_name))
+    if crawl_source:
+        qs_starting = qs_starting.filter(crawl_source=crawl_source)
+        qs_dest = qs_dest.filter(crawl_source=crawl_source)
     qs_line = Line.objects(starting__in=qs_starting,
                            destination__in=qs_dest,
                            drv_date=start_date)
