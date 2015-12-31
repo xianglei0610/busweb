@@ -322,37 +322,15 @@ def order_pay(order_no):
         ret = r.json()
         pay_url = ret["thirdpartyinfo"]["sig"]
         base_url, query_str = pay_url.split("?")
-        base_url = "https://mclient.alipay.com/home/exterfaceAssign.htm"
         params = {}
         lst = []
         for s in query_str.split("&"):
             k, v = s.split("=")
             if k == "ctu_info":
-                params["ctu_info"] = "{isAccountDeposit:false,isCertificate:true}"
-            else:
-                params[k] = v[1:-1]
+                v = "\"{isAccountDeposit:false,isCertificate:true}\""
+            params[k] = v[1:-1]
             lst.append("%s=%s" % (k, v[1:-1]))
-        # pay_url = "%s?%s" % (base_url, urllib.urlencode(params))
-
-        # sbHtml = []
-        # ALIPAY_GATEWAY_NEW = "https://mapi.alipay.com/gateway.do?"
-        # strMethod = "get"
-        # strButtonName = "submit"
-        # sbHtml.append("<form id=\"alipaysubmit\" name=\"alipaysubmit\" action=\"" + ALIPAY_GATEWAY_NEW
-        #               + "_input_charset=" + params["_input_charset"]+ "\" method=\"" + strMethod
-        #               + "\">")
-
-        # for name, value in params.items():
-        #     sbHtml.append("<input type=\"hidden\" name=\"" + name + "\" value=\"" + value + "\"/>")
-
-        # #submit按钮控件请不要含有name属性
-        # sbHtml.append("<input type=\"submit\" value=\"" + strButtonName + "\" style=\"display:none;\"></form>")
-        # sbHtml.append("<script>document.forms['alipaysubmit'].submit();</script>")
-        # sbHtml.append("</form>")
-        # return "\n".join(sbHtml)
-
         pay_url = "%s?%s" % (base_url, "&".join(lst))
-        order_log.info("[pay] order:%s pay_url: %s", order.order_no, pay_url)
         return redirect(pay_url)
     return redirect(url_for('admin.order_list'))
 
