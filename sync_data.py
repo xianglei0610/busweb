@@ -93,7 +93,7 @@ def insert_or_update_line(starting, destination, line):
     return line_obj
 
 
-def migrate_scqcp(crawl_db):
+def migrate_scqcp(crawl_db, city=""):
     for d in crawl_db.scqcp_line.find({"drv_date_time": {"$gte": datetime.now().strftime("%Y-%m-%d %H:%M")}}):
         crawl_source = "scqcp"
         # migrate Starting
@@ -179,7 +179,7 @@ def migrate_scqcp(crawl_db):
         print line_obj.line_id
 
 
-def migrate_bus100(crawl_db):
+def migrate_bus100(crawl_db, city=""):
     for d in crawl_db.line_bus100.find({"departure_time": {"$gte": str(datetime.now())}}):
         crawl_source = "bus100"
 
@@ -266,9 +266,16 @@ def migrate_bus100(crawl_db):
         print line_obj.line_id
 
 
-def migrate_ctrip(crawl_db):
-    for d in crawl_db.ctrip_line.find({"drv_datetime": {"$gte": datetime.now()}}):
+def migrate_ctrip(crawl_db, city=""):
+    query = {
+        "drv_datetime": {
+            "$gte": datetime.now()
+        },
+    }
+    if city:
+        query.update({"s_city_name": city})
+    for d in crawl_db.ctrip_line.find(query):
         starting = insert_or_update_starting(d)
         destination = insert_or_update_destination(starting, d)
         line_obj = insert_or_update_line(starting, destination, d)
-        print line_obj.line_id
+        print line_obj.line_id, d["s_city_name"]
