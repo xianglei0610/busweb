@@ -45,7 +45,6 @@ SOURCE_INFO = {
             "s89xhlnjkb@sina.com": ("cibRpL", ""),
             "hdsjd255596@sina.com": ("cibRpL", ""),
             "ereref1633@sina.com": ("cibRpL", ""),
-            "jdsdsod788@sina.com ": ("cibRpL", ""),
             "sjso123@163.com": ("lxy12308", ""),
             "asadjd12@sina.com": ("lxy12308", ""),
             "s8vg43@sina.com": ("lxy12308", ""),
