@@ -4,177 +4,26 @@
 """
 import urllib2
 import json
-import datetime
-import time
 
-from datetime import datetime as dte
 from app.constants import *
 from app import celery
-from app.utils import getRedisObj
 from app import order_log
+from app.models import Order
+from app.flow import get_flow
 
 
 @celery.task(ignore_result=True)
-def lock_ticket(order_no):
+def async_lock_ticket(order_no):
     """
     请求源网站锁票 + 锁票成功回调
 
     Return:
-        expire_time: 122112121,     # 订单过期时间戳
+        expire_time: "2015-11-11 11:11:11",     # 订单过期时间
         total_price: 322，          # 车票价格
     """
-    from app.models import Order
     order = Order.objects.get(order_no=order_no)
-    notify_url = order.locked_return_url
-    data = {
-        "sys_order_no": order.order_no,
-        "out_order_no": order.out_order_no,
-        "raw_order_no": order.raw_order_no,
-    }
-    order_log.info("[lock-start] %s", str(data))
-    if order.crawl_source == "scqcp":
-        from app.models import ScqcpRebot
-        from tasks import check_order_expire
-        line = dict(
-            carry_sta_id=order.line.starting.station_id,
-            stop_name=order.line.extra_info["stop_name_short"],
-            str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
-            sign_id=order.line.extra_info["sign_id"],
-        )
-        contacter = order.contact_info["telephone"]
-        riders = order.riders
-
-        with ScqcpRebot.get_and_lock(order) as rebot:
-            ret = rebot.request_lock_ticket(line, riders, contacter)
-            if ret["status"] == 1:
-                pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
-                raw_order = "|".join(ret["web_order_id"])
-                order.modify(status=STATUS_WAITING_ISSUE,
-                             lock_info=ret,
-                             lock_datetime=dte.now(),
-                             source_account=rebot.telephone,
-                             pay_url=pay_url,
-                             raw_order_no=raw_order,
-                             )
-                check_order_expire.apply_async((order.order_no,), countdown=9*60+5)  # 9分钟后执行
-                total_price = 0
-                for ticket in ret["ticket_list"]:
-                    total_price += ticket["server_price"]
-                    total_price += ticket["real_price"]
-                data.update({
-                    "expire_time": ret["expire_time"],
-                    "total_price": total_price,
-                })
-
-                r = getRedisObj()
-                r.zadd('lock_order_list', order.order_no, time.time()*1000)
-                json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-                order_log.info("[lock-result] succ. order: %s", order.order_no)
-            else:
-                rebot.remove_doing_order(order)
-                order.modify(status=STATUS_LOCK_FAIL,
-                             lock_info=ret,
-                             lock_datetime=dte.now(),
-                             source_account=rebot.telephone)
-                json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["msg"], "data": data})
-                order_log.info("[lock-result] fail. order: %s reason: %s", order.order_no, ret["msg"])
-            if notify_url:
-                order_log.info("[lock-callback] %s %s", notify_url, json_str)
-                response = urllib2.urlopen(notify_url, json_str, timeout=30)
-                order_log.info("[lock-callback-response] %s", str(response))
-
-    elif order.crawl_source == "bus100":
-        from app.models import Bus100Rebot, Line
-        from tasks import check_order_expire
-        rebot = Bus100Rebot.get_random_rebot()
-        ret = rebot.recrawl_shiftid(order.line)
-        line = Line.objects.get(line_id=order.line.line_id)
-        order.line = line
-        order.ticket_price = line.full_price
-        order.save()
-
-        line = dict(
-            carry_sta_id=order.line.starting.station_id,
-            stop_name=order.line.destination.station_name,
-            str_date="%s %s" % (order.line.drv_date, order.line.drv_time),
-            bus_num=order.line.bus_num,
-            flag=order.line.extra_info.get("flag", 0)
-            )
-        contacter = order.contact_info
-        riders = order.riders
-        if line['bus_num'] == 0 or not line['flag']:
-            ret = {"returnCode": -1, "msg": "该条线路无法购买"}
-        else:
-            ret = rebot.request_lock_ticket(line, riders, contacter)
-        if ret["returnCode"] == "0000" and ret.get('redirectPage', ''):
-            expire_time = datetime.datetime.now()+datetime.timedelta(seconds=20*60)
-            expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
-            ret['expire_time'] = expire_time
-            order.modify(status=STATUS_WAITING_ISSUE,
-                         lock_info=ret,
-                         lock_datetime=dte.now(),
-                         pay_url=ret['redirectPage'],
-                         raw_order_no=ret['orderNo'],
-                         source_account=rebot.telephone)
-            check_order_expire.apply_async((order.order_no,), countdown=20*60+5)  # 20分钟后执行
-            data.update({
-                "expire_time": expire_time,
-                "total_price": ret['orderAmt'],
-            })
-            r = getRedisObj()
-            r.zadd('lock_order_list', order.order_no, time.time()*1000)
-            json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-            order_log.info("[lock-result] succ. order: %s", order.order_no)
-        else:
-            order.modify(status=STATUS_LOCK_FAIL,
-                         lock_info=ret,
-                         lock_datetime=dte.now(),
-                         source_account=rebot.telephone)
-            json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret.get("msg",'') or ret.get('returnMsg','') , "data": data})
-            order_log.info("[lock-result] fail. order:%s reason: %s", order.order_no, ret.get("msg", ""))
-
-        if notify_url:
-            order_log.info("[lock-callback] %s %s", notify_url, json_str)
-            response = urllib2.urlopen(notify_url, json_str, timeout=30)
-            order_log.info("[lock-callback-response] %s", str(response))
-    elif order.crawl_source == "ctrip":
-        from app.models import CTripRebot
-        from tasks import check_order_expire
-        with CTripRebot.get_and_lock(order) as rebot:
-            ret = rebot.request_lock_ticket(order)
-            if ret["code"] == 1:
-                raw_order = ret["return"]["orderNumber"]
-                order.modify(status=STATUS_WAITING_ISSUE,
-                             lock_info=ret,
-                             lock_datetime=dte.now(),
-                             source_account=rebot.telephone,
-                             raw_order_no=raw_order,
-                             )
-                expire_time = dte.now()+datetime.timedelta(seconds=60*60)
-                expire_time = expire_time.strftime("%Y-%m-%d %H:%M:%S")
-                check_order_expire.apply_async((order.order_no,), countdown=60*60+5)
-                total_price = ret["return"]["displayRealPayFee"]
-                data.update({
-                    "expire_time": expire_time,
-                    "total_price": total_price,
-                })
-
-                r = getRedisObj()
-                r.zadd('lock_order_list', order.order_no, time.time()*1000)
-                json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-                order_log.info("[lock-result] succ. order: %s", order.order_no)
-            else:
-                rebot.remove_doing_order(order)
-                order.modify(status=STATUS_LOCK_FAIL,
-                             lock_info=ret,
-                             lock_datetime=dte.now(),
-                             source_account=rebot.telephone)
-                json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["message"], "data": data})
-                order_log.info("[lock-result] fail. order: %s reason: %s", order.order_no, ret["message"])
-            if notify_url:
-                order_log.info("[lock-callback] %s %s", notify_url, json_str)
-                response = urllib2.urlopen(notify_url, json_str, timeout=30)
-                order_log.info("[lock-callback-response] %s", str(response))
+    flow = get_flow(order.crawl_source)
+    flow.lock_ticket(order)
 
 
 @celery.task(ignore_result=True)

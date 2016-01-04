@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 *-*
 import os
-import sys
 import pymongo
-import multiprocessing
 
-from datetime import datetime
 from app import setup_app, db
-from app.utils import md5
 from flask.ext.script import Manager, Shell
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -24,11 +20,14 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 
 @manager.command
-def deploy():
+def deploy(site):
     from app.models import ScqcpRebot, Bus100Rebot, CTripRebot
-    CTripRebot.login_all()
-    ScqcpRebot.login_all()
-    Bus100Rebot.login_all()
+    if site == "ctrip":
+        CTripRebot.login_all()
+    elif site == "scqcp":
+        ScqcpRebot.login_all()
+    elif site == "bus100":
+        Bus100Rebot.login_all()
 
 
 @manager.command
