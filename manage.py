@@ -110,8 +110,9 @@ def reset_password():
         print "不存在用户", username
 
 
-@manager.command
-def migrate_from_crawl(site):
+@manager.option('-s', '--site', dest='site', default='')
+@manager.option('-c', '--city', dest='city', default='')
+def migrate_from_crawl(site, city=""):
     settings = app.config["CRAWL_MONGODB_SETTINGS"]
     crawl_mongo = pymongo.MongoClient("mongodb://%s:%s" % (settings["host"], settings["port"]))
     crawl_db = crawl_mongo[settings["db"]]
@@ -123,7 +124,7 @@ def migrate_from_crawl(site):
         "ctrip": migrate_ctrip,
     }
     app.logger.info("start migrate data from crawldb to webdb:%s", site)
-    mappings[site](crawl_db)
+    mappings[site](crawl_db, city=city)
     app.logger.info("end migrate %s" % site)
 
 
