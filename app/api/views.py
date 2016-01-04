@@ -149,7 +149,7 @@ def query_line():
                         "data": ""})
 
     try:
-        open_city = OpenCity.objects(city_name=starting_name)
+        open_city = OpenCity.objects.get(city_name=starting_name)
     except Exception, e:
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
