@@ -159,7 +159,7 @@ def query_line():
     qs_starting = Starting.objects(Q(crawl_source=crawl_source) &
                                    (Q(city_name__startswith=starting_name) |
                                    Q(station_name__startswith=starting_name)))
-    qs_dest = Destination.objects(Q(crawl_sourc=crawl_source) &
+    qs_dest = Destination.objects(Q(crawl_source=crawl_source) &
                                   (Q(city_name__startswith=dest_name) |
                                   Q(station_name__startswith=dest_name)))
     qs_line = Line.objects(starting__in=qs_starting,
@@ -190,7 +190,9 @@ def query_line_detail():
         line = Line.objects.get(line_id=post["line_id"])
     except Line.DoesNotExist:
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
-    line.refresh()
+    flow = get_flow(line.crawl_source)
+    flow.refresh_line(line)
+    #line.refresh()
     return jsonify({"code": RET_OK, "message": "OK", "data": line.get_json()})
 
 

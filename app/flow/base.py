@@ -153,7 +153,7 @@ class Flow(object):
         if not self.is_need_refresh(line):
             line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
             return
-        ret = self.do_refresh_line()
+        ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
         if update:
             line.modify(**update)
