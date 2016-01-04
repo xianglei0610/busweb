@@ -414,8 +414,8 @@ class Order(db.Document):
 
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
-        r.delete(key)
 
+        r.delete(key)
         rebot = self.get_rebot()
         if rebot:
             rebot.remove_doing_order(self)
@@ -768,6 +768,7 @@ class Bus100Rebot(Rebot):
     user_agent = db.StringField()
     token = db.StringField()
     open_id = db.StringField()
+    cookie = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -775,9 +776,9 @@ class Bus100Rebot(Rebot):
 
     @classmethod
     def get_random_rebot(cls):
-        qs = cls.objects.filter()
+        qs = cls.objects.filter(is_active=True)
         if not qs:
-            return
+            return None
         size = qs.count()
         rd = random.randint(0, size-1)
         return qs[rd]
@@ -815,7 +816,7 @@ class Bus100Rebot(Rebot):
     @classmethod
     def login_all(cls):
         """登陆所有预设账号"""
-        rebot_log.info(">>>> start to login wap.84100.com:")
+        rebot_log.info(">>>> start to init 84100:")
         valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
@@ -827,9 +828,9 @@ class Bus100Rebot(Rebot):
             pwd, openid = accounts[bot.telephone]
             bot.modify(password=pwd, open_id=openid)
 
-            if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
+#             if bot.login() == "OK":
+#                 rebot_log.info("%s 登陆成功" % bot.telephone)
+#                 valid_cnt += 1
 
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
@@ -839,11 +840,12 @@ class Bus100Rebot(Rebot):
                       telephone=tele,
                       password=pwd,
                       open_id=openid)
-            bot .save()
-            if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-        rebot_log.info(">>>> end login scqcp.com, success %d", valid_cnt)
+            bot.save()
+#             if bot.login() == "OK":
+#                 rebot_log.info("%s 登陆成功" % bot.telephone)
+            valid_cnt += 1
+        print valid_cnt
+        rebot_log.info(">>>> end init 84100 success %d", valid_cnt)
 
     def http_post(self, uri, data, user_agent=None, token=None):
         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)

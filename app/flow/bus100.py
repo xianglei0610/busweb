@@ -4,6 +4,7 @@ import urllib2
 import requests
 import datetime
 import json
+import re
 
 from lxml import etree
 from app.constants import *
@@ -11,20 +12,15 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Bus100Rebot, Line
 from datetime import datetime as dte
 
+
+
 class Flow(BaseFlow):
     name = "bus100"
 
     def do_lock_ticket(self, order):
-        rebot = Bus100Rebot.get_random_rebot()
-        ret = rebot.recrawl_shiftid(order.line)
-        line = Line.objects.get(line_id=order.line.line_id)
-        order.line = line
-        order.ticket_price = line.full_price
-        order.save()
-
         lock_result = {
             "lock_info": {},
-            "source_account": rebot.telephone,
+            "source_account": '',
             "result_code": 0,
             "result_reason": "",
             "pay_url": "",
@@ -32,68 +28,86 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
+        rebot = Bus100Rebot.get_random_rebot()
+        if not rebot:
+            return lock_result
+        rebot.recrawl_shiftid(order.line)
+        line = Line.objects.get(line_id=order.line.line_id)
+        order.line = line
+        order.ticket_price = line.full_price
+        order.save()
+
+        lock_result.update(source_account=rebot.telephone)
 
         if order.line.bus_num == 0 or not order.line.extra_info.get('flag', 0):
             lock_result.update(result_reason="该条线路无法购买")
             return lock_result
 
-        url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
-        data = {
-              "mobile": rebot.telephone,
-              "password": rebot.password,
-              "phone":   '',
-              "code":  ''
-        }
-        ua = random.choice(MOBILE_USER_AGENG)
-        headers = {"User-Agent": ua}
-        r = requests.post(url, data=data, headers=headers)
-        rebot.cookies = r.cookies
-
-        passengerList = []
+#         url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
+#         data = {
+#               "mobile": rebot.telephone,
+#               "password": rebot.password,
+#               "phone":   '',
+#               "code":  ''
+#         }
+#         ua = random.choice(MOBILE_USER_AGENG)
+#         headers = {"User-Agent": ua}
+#         r = requests.post(url, data=data, headers=headers)
+#         rebot.cookies = r.cookies
+        url = 'http://www.84100.com/createOrder/ajax'
+        idNos = []
+        names = []
+        ticketTypes = []
+        idTypes = []
         for r in order.riders:
-            tmp = {}
-            tmp['idType'] = r["id_type"]
-            tmp['idNo'] = r["id_number"]
-            tmp['name'] = r["name"]
-            tmp['mobile'] = r["telephone"]
-            tmp['ticketType'] = "全票"
-            passengerList.append(tmp)
+            idNos.append(r["id_number"])
+            names.append(r["name"])
+            idTypes.append(str(r["id_type"]))
+            ticketTypes.append(u'全票')
 
         data = {
             "startId": order.line.starting.station_id,
             "planId": order.line.bus_num,
             "name": order.contact_info['name'],
             "mobile": order.contact_info['telephone'],
-            "password": '',
-            "terminalType": 3,
-            "passengerList": json.dumps(passengerList),
-            "openId": rebot.open_id or 1,
-            "isWeixin": 1,
+            "ticketNo": '',
+            "ticketPassword": '',
+            "idNos": ','.join(idNos),
+            "ticketTypes": ','.join(ticketTypes),
+            "idTypes": ','.join(idTypes),
+            "names": ','.join(names),
         }
-        ret = self.request_lock(rebot, data)
-        pay_url = ret.get('redirectPage', '')
-        returnMsg = ret.get('returnMsg', '')
+        print data
+        headers = {"cookie": rebot.cookie}
+        orderInfo = requests.post(url, data=data, headers=headers)
+        orderInfo = orderInfo.json()
+        pay_url = ''
+        if orderInfo.get('flag') == '0':
+            orderId = orderInfo['orderId']
+            url = "http://www.84100.com/pay/ajax?orderId=%s" % orderId
+            orderPay = requests.post(url, headers=headers)
+            orderPay = orderPay.json()
+            if orderPay.get('flag') == '0':
+                pay_url = orderPay['url']
 
-        if ret["returnCode"] == "0000" and ret.get('redirectPage', ''):
+        if pay_url:
             pay_info = self.request_pay_info(pay_url)
+            expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
+            orderInfo['expire_datetime'] = expire_datetime
             lock_result.update({
                 "result_code": 1,
-                "lock_info": ret,
+                "lock_info": orderInfo,
                 "pay_url": pay_url,
-                "raw_order_no": pay_info["order_no"],
-                "expire_datetime": dte.now()+datetime.timedelta(seconds=20*60),
+                "raw_order_no": orderId,
+                "expire_datetime": expire_datetime,
                 "pay_money": pay_info["pay_money"]
             })
         else:
             lock_result.update({
-                "lock_info": ret,
+                "lock_info": orderInfo,
+                "result_reason": orderInfo.get('msg', ''),
             })
         return lock_result
-
-    def request_lock(self, rebot, data):
-        url = urllib2.urlparse.urljoin(Bus100_DOMAIN, "/wap/ticketSales/ajaxMakeOrder.do")
-        ret = requests.post(url, data=data, cookies=rebot.cookies)
-        return ret.json()
 
     def request_pay_info(self, pay_url):
         ua = random.choice(MOBILE_USER_AGENG)
@@ -138,19 +152,22 @@ class Flow(BaseFlow):
             })
         elif status == '5':
             result_info.update(result_code=2, result_msg="")
+        elif status == '6':
+            result_info.update(result_code=4, result_msg="正在出票")
         return result_info
 
     def send_order_request(self, order, rebot):
         data = {"orderId": order.raw_order_no}
+        headers = {"cookie": rebot.cookie}
         url = "http://www.84100.com/orderInfo.shtml"
-        r = requests.post(url, data=data)
+        r = requests.post(url, data=data, headers=headers)
         sel = etree.HTML(r.content)
         orderDetailObj = sel.xpath('//div[@class="order-details"]/ul')
         orderDetail = {}
         if orderDetailObj:
             status = orderDetailObj[0].xpath('li')[1].xpath('em/text()')[0].replace('\r\n','').replace(' ','')
-            if not status:
-                orderDetail.update({'status': '5'})
+            if status == u'正在出票' or status == u'\xe6\xad\xa3\xe5\x9c\xa8\xe5\x87\xba\xe7\xa5\xa8':
+                orderDetail.update({'status': '6'})
             elif status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
                 orderDetail.update({'status': '4'})
                 matchObj = re.findall('<li>订单号：(.*)', r.content)

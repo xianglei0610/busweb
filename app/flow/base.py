@@ -7,6 +7,7 @@ from app import order_log, line_log
 from datetime import datetime as dte
 from tasks import check_order_expire, issued_callback, refresh_issueing_order
 
+
 class Flow(object):
     name = "flow"
 
