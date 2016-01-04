@@ -39,43 +39,17 @@ SOURCE_INFO = {
         "website": "www.ctrip.com",
         "accounts": {
             # telephone: {password, auth)
-            "15575101324": ("icbRpL", ''),
-            "15626025673": ("", ""),
-            "15112257071": ("", ""),
+            #"15575101324": ("icbRpL", ''),
+            "15626025673": ("lxy12308", ""),
+            "15112257071": ("7996266", ""),
+            "s89xhlnjkb@sina.com": ("cibRpL", ""),
+            "hdsjd255596@sina.com": ("cibRpL", ""),
+            "ereref1633@sina.com": ("cibRpL", ""),
+            "jdsdsod788@sina.com ": ("cibRpL", ""),
+            "sjso123@163.com": ("lxy12308", ""),
+            "asadjd12@sina.com": ("lxy12308", ""),
+            "s8vg43@sina.com": ("lxy12308", ""),
         }
-    }
-}
-
-CTRIP_HEADS = {
-    "15575101324": {
-        "cid": "09031120210146050165",
-        "ctok": "",
-        "cver": "1.0",
-        "lang": "01",
-        "sid": "8888",
-        "syscode": "09",
-        "auth": "310AB1B95E0DB5DFD369286D8AA5B5D9586D71FD8D9B5B6653C140503EDE8F0F",
-        "sauth": "3CA2CAF81E580E6DFFEB80141AA84700FCFFAF1F1BED587A7BFC5736E6E89CDE"
-    },
-    "15626025673": {
-        "cid": "09031120210146050165",
-        "ctok": "",
-        "cver": "1.0",
-        "lang": "01",
-        "sid": "8888",
-        "syscode": "09",
-        "auth": "661CD5CAFCE6FA37467AB055B9B5241FDB73AD9A59F8033A50F270E5CF608F98",
-        "sauth": "D272C7D76CB9EC7DC34C2D823B4AC09AB3FF514F541B829D6BD9C27A887D40AC"
-    },
-    "15112257071": {
-        "cid": "09031120210146050165",
-        "ctok": "",
-        "cver": "1.0",
-        "lang": "01",
-        "sid": "8888",
-        "syscode": "09",
-        "auth": "661CD5CAFCE6FA37467AB055B9B5241FDB73AD9A59F8033A50F270E5CF608F98",
-        "sauth": "D272C7D76CB9EC7DC34C2D823B4AC09AB3FF514F541B829D6BD9C27A887D40AC"
     }
 }
 
@@ -132,6 +106,7 @@ STATUS_WAITING_ISSUE = 3    # 等待出票, 在源网站锁票成功
 STATUS_WAITING_LOCK = 4     # 等待下单，12308已提交了订单，但未向源网站提交订单
 STATUS_LOCK_FAIL = 5        # 下单失败，12308已提交了订单，向源网站提交订单失败
 STATUS_GIVE_BACK = 6        # 退票
+STATUS_ISSUE_ING = 12       # 源站正在出票
 STATUS_ISSUE_FAIL = 13      # 出票失败, 支付完成后，已确认源网站出票失败
 STATUS_ISSUE_SUCC = 14      # 出票成功, 支付完成后，源网站也出票成功
 
@@ -142,6 +117,7 @@ STATUS_MSG = {
     STATUS_LOCK_FAIL: "下单失败",
     STATUS_ISSUE_SUCC: "出票成功",
     STATUS_GIVE_BACK: "已退票",
+    STATUS_ISSUE_ING: "正在出票",
 }
 
 # 证件类型
@@ -166,19 +142,29 @@ RET_PRICE_WRONG = 104       # 金额不对
 # 线路错误2xx
 RET_LINE_404 = 201          # 线路不存在
 RET_BUY_TIME_ERROR = 202    # 线路不在预售期
+RET_CITY_NOT_OPEN = 203     # 该城市未开放
 
 # 立即支付按钮变灰持续时间
-# 8s
-PAY_CLICK_EXPIR = 4
+PAY_CLICK_EXPIR = 30
+
+ISSUE_FAIL_WARNING = 3
 
 # redis keys
 LAST_PAY_CLICK_TIME = "payclicktime:%s"
 ACCOUNT_ORDER_COUNT = "account_order_count"
 CURRENT_ACCOUNT = "current_account"
-
+RK_ISSUE_FAIL_COUNT = "%s_issue_fail"
 
 # 源站选择
 SOURCE_MAPPING = {
     "成都": SOURCE_CTRIP,
     "成都市": SOURCE_CTRIP,
+}
+
+# 短信模版
+
+DUAN_XIN_TEMPL = {
+    SOURCE_SCQCP: "您已购买%(time)s%(start)s至%(end)s的汽车票%(amount)s张，取票验证码%(code)s，请在发车时间前乘车",
+    SOURCE_BUS100: "温馨提醒：您有%(amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order)s；请在发车前两小时内凭乘车人身份证取票。祝您旅途愉快！",
+    SOURCE_CTRIP: "%(time)s，%(start)s--%(end)s 共%(amount)s张成功出票。取票验证码%(code)s，请在发车时间前乘车",
 }

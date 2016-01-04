@@ -27,6 +27,7 @@ sentry = Sentry()
 
 line_log = logging.getLogger("line")
 order_log = logging.getLogger("order")
+order_status_log = logging.getLogger("order_status")
 kefu_log = logging.getLogger("kefu")
 access_log = logging.getLogger("access")
 rebot_log = logging.getLogger("rebot")

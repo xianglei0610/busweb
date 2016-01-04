@@ -6,10 +6,11 @@ from mongoengine import Q
 
 from app.constants import *
 from flask import request, jsonify
-from tasks import lock_ticket
+from tasks import async_lock_ticket
 from app.api import api
-from app.models import Line, Starting, Destination, Order
+from app.models import Line, Starting, Destination, Order, OpenCity
 from app import order_log, line_log
+from app.flow import get_flow
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -36,22 +37,19 @@ def query_starting():
         },]
     }
     """
+    open_citys = OpenCity.objects.filter(is_active=True)
     province_data = {}
-    distinct_data = {}
-    for obj in Starting.objects:
-        if (obj.province_name, obj.city_name) in distinct_data:
-            continue
-        distinct_data[(obj.province_name, obj.city_name)] = 1
-
-        if obj.province_name not in province_data:
-            province_data[obj.province_name] = {}
-            province_data[obj.province_name]["province"] = obj.province_name
-            province_data[obj.province_name]["city_list"] = []
+    for obj in open_citys:
+        province = obj.province
+        if province not in province_data:
+            province_data[province] = {}
+            province_data[province]["province"] = province
+            province_data[province]["city_list"] = []
 
         item = {
             "city_name": obj.city_name,
-            "city_code": obj.city_pinyin_prefix,
-            "is_pre_sell": obj.is_pre_sell,
+            "city_code": obj.city_code,
+            "is_pre_sell": True,
             "pre_sell_days": obj.pre_sell_days,
             "open_time": obj.open_time,
             "end_time": obj.end_time,
@@ -87,10 +85,17 @@ def query_destination():
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": ""})
-
-    query = {"city_name__startswith": unicode(starting_name)}
-    if starting_name in SOURCE_MAPPING:
-        query.update(crawl_source=SOURCE_MAPPING[starting_name])
+    try:
+        open_city = OpenCity.objects(city_name=starting_name)
+    except Exception, e:
+        return jsonify({"code": RET_CITY_NOT_OPEN,
+                        "message": "%s is not open" % starting_name,
+                        "data": ""})
+    crawl_source = open_city.crawl_source
+    query = {
+        "city_name__startswith": unicode(starting_name),
+        "crawl_source": crawl_source,
+    }
     line_log.info("查询%s的目的地, 查询条件:%s", starting_name, str(query))
     st_qs = Starting.objects(**query)
     dest_list = Destination.objects(starting__in=st_qs)
@@ -143,17 +148,20 @@ def query_line():
                         "message": "parameter error",
                         "data": ""})
 
-    crawl_source = ""
-    if starting_name in SOURCE_MAPPING:
-        crawl_source = SOURCE_MAPPING[starting_name]
+    try:
+        open_city = OpenCity.objects(city_name=starting_name)
+    except Exception, e:
+        return jsonify({"code": RET_CITY_NOT_OPEN,
+                        "message": "%s is not open" % starting_name,
+                        "data": ""})
+    crawl_source = open_city.crawl_source
 
-    qs_starting = Starting.objects(Q(city_name__startswith=starting_name) |
-                                   Q(station_name__startswith=starting_name))
-    qs_dest = Destination.objects(Q(city_name__startswith=dest_name) |
-                                  Q(station_name__startswith=dest_name))
-    if crawl_source:
-        qs_starting = qs_starting.filter(crawl_source=crawl_source)
-        qs_dest = qs_dest.filter(crawl_source=crawl_source)
+    qs_starting = Starting.objects(Q(crawl_source=crawl_source) &
+                                   (Q(city_name__startswith=starting_name) |
+                                   Q(station_name__startswith=starting_name)))
+    qs_dest = Destination.objects(Q(crawl_sourc=crawl_source) &
+                                  (Q(city_name__startswith=dest_name) |
+                                  Q(station_name__startswith=dest_name)))
     qs_line = Line.objects(starting__in=qs_starting,
                            destination__in=qs_dest,
                            drv_date=start_date)
@@ -223,7 +231,7 @@ def submit_order():
             }
         }
     """
-    order_log.info("[submit-start] receive order %s", request.get_data())
+    order_log.info("[submit-start] receive order: %s", request.get_data())
     try:
         post = json.loads(request.get_data())
         line_id = post["line_id"]
@@ -256,20 +264,11 @@ def submit_order():
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
-    status = STATUS_WAITING_LOCK
-
-    should_pay = ticket_amount*line.real_price()
-    ret_code = RET_OK
-    ret_msg = "OK"
-    if should_pay != order_price:
-        status = STATUS_LOCK_FAIL
-        ret_code = RET_PRICE_WRONG
-        ret_msg = "the order price is wrong, %s != %s" % (should_pay, order_price)
 
     order = Order()
     order.order_no = Order.generate_order_no()
     order.out_order_no = out_order_no
-    order.status = status
+    order.status = STATUS_WAITING_LOCK
     order.order_price = order_price
     order.create_date_time = dte.now()
     order.line = line
@@ -286,12 +285,19 @@ def submit_order():
     order.bus_num = line.bus_num
     order.starting_name = line.starting.city_name + ';' + line.starting.station_name
     order.destination_name = line.destination.city_name + ';' + line.destination.station_name
-
     order.save()
+    order.on_create()
+
+    #should_pay = ticket_amount*line.real_price()
+    ret_code = RET_OK
+    ret_msg = "OK"
+    # if should_pay > order_price:
+    #     ret_code = RET_PRICE_WRONG
+    #     ret_msg = "订单金额不能小于实际票价, received: %s real: %s" % (order_price, should_pay)
 
     order_log.info("[submit-response] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret_msg)
     if ret_code == RET_OK:
-        lock_ticket.delay(order.order_no)
+        async_lock_ticket.delay(order.order_no)
     return jsonify({"code": ret_code,
                     "message": ret_msg,
                     "data": {"sys_order_no": order.order_no}})
