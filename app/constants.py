@@ -48,7 +48,6 @@ SOURCE_INFO = {
             "s89xhlnjkb@sina.com": ("cibRpL", ""),
             "hdsjd255596@sina.com": ("cibRpL", ""),
             "ereref1633@sina.com": ("cibRpL", ""),
-            "jdsdsod788@sina.com ": ("cibRpL", ""),
             "sjso123@163.com": ("lxy12308", ""),
             "asadjd12@sina.com": ("lxy12308", ""),
             "s8vg43@sina.com": ("lxy12308", ""),
@@ -161,7 +160,9 @@ RK_ISSUE_FAIL_COUNT = "%s_issue_fail"
 # 源站选择
 SOURCE_MAPPING = {
     "成都": SOURCE_CTRIP,
-    "成都市": SOURCE_CTRIP,
+    "德阳": SOURCE_CTRIP,
+    "绵阳": SOURCE_CTRIP,
+    "泸州": SOURCE_CTRIP,
 }
 
 # 短信模版

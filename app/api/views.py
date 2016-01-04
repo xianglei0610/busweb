@@ -56,7 +56,7 @@ def query_starting():
             "advance_order_time": obj.advance_order_time,
             "max_ticket_per_order": obj.max_ticket_per_order,
         }
-        province_data[obj.province_name]["city_list"].append(item)
+        province_data[obj.province]["city_list"].append(item)
     return jsonify({"code": RET_OK, "message": "OK", "data": province_data.values()})
 
 
@@ -86,7 +86,7 @@ def query_destination():
                         "message": "parameter error",
                         "data": ""})
     try:
-        open_city = OpenCity.objects(city_name=starting_name)
+        open_city = OpenCity.objects.get(city_name=starting_name)
     except Exception, e:
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
@@ -99,8 +99,8 @@ def query_destination():
     line_log.info("查询%s的目的地, 查询条件:%s", starting_name, str(query))
     st_qs = Starting.objects(**query)
     dest_list = Destination.objects(starting__in=st_qs)
-    data = map(lambda obj: "%s|%s" % (obj.station_name or obj.city_name,
-               obj.station_pinyin_prefix or obj.city_pinyin_prefix), dest_list)
+    data = list(set(map(lambda obj: "%s|%s" % (obj.station_name or obj.city_name, obj.station_pinyin_prefix or
+                obj.city_pinyin_prefix), dest_list)))
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
@@ -149,7 +149,7 @@ def query_line():
                         "data": ""})
 
     try:
-        open_city = OpenCity.objects(city_name=starting_name)
+        open_city = OpenCity.objects.get(city_name=starting_name)
     except Exception, e:
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
@@ -159,7 +159,7 @@ def query_line():
     qs_starting = Starting.objects(Q(crawl_source=crawl_source) &
                                    (Q(city_name__startswith=starting_name) |
                                    Q(station_name__startswith=starting_name)))
-    qs_dest = Destination.objects(Q(crawl_sourc=crawl_source) &
+    qs_dest = Destination.objects(Q(crawl_source=crawl_source) &
                                   (Q(city_name__startswith=dest_name) |
                                   Q(station_name__startswith=dest_name)))
     qs_line = Line.objects(starting__in=qs_starting,
@@ -190,7 +190,9 @@ def query_line_detail():
         line = Line.objects.get(line_id=post["line_id"])
     except Line.DoesNotExist:
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
-    line.refresh()
+    flow = get_flow(line.crawl_source)
+    flow.refresh_line(line)
+    #line.refresh()
     return jsonify({"code": RET_OK, "message": "OK", "data": line.get_json()})
 
 

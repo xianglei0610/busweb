@@ -83,7 +83,7 @@ class Flow(object):
         """
         出票刷新主流程，子类不用重写
         """
-        if order.status != STATUS_WAITING_ISSUE:
+        if order.status not in [STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]:
             return
         order_log.info("[issue-refresh-start] order:%s", order.order_no)
         ret = self.do_refresh_issue(order)
@@ -154,7 +154,7 @@ class Flow(object):
         if not self.is_need_refresh(line):
             line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
             return
-        ret = self.do_refresh_line()
+        ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
         if update:
             line.modify(**update)

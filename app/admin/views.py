@@ -242,12 +242,16 @@ def get_code():
 
 class LoginInView(MethodView):
     def get(self):
+        if not current_user.is_anonymous:
+            return redirect(url_for("admin.index"))
         return render_template('admin-new/login.html')
 
     def post(self):
         client = request.headers.get("type", 'web')
         name = request.form.get("username")
         pwd = request.form.get("password")
+        session["username"] = name
+        session["password"] = pwd
         if client == 'web':
             code = request.form.get("validcode")
             if code != session.get("img_valid_code"):
