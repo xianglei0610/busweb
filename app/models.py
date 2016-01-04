@@ -715,8 +715,10 @@ class CTripRebot(Rebot):
                 self.head = head
                 self.save()
                 driver.quit()
+                print "OK", self.head, self.telephone
                 return "OK"
         driver.quit()
+        print 'fail', self.telephone
         rebot_log.info("%s 登陆失败" % self.telephone)
         return "fail"
 
