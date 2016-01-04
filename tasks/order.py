@@ -1,14 +1,13 @@
 # -*- coding:utf-8 -*-
-import urllib2
-import json
-import datetime
 import random
-import traceback
 
 from app.constants import *
 from app import celery
 from app.utils import getRedisObj
 from app.email import send_email
+from app.flow import get_flow
+from app.models import Order
+from app import order_log
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -16,16 +15,14 @@ def check_order_expire(self, order_no):
     """
     定时检查订单过期情况
     """
-    from app.models import Order
+    order_log.info("[check_order_expire] order:%s", order_no)
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_ISSUE:
         return
-    try:
-        order.refresh_issued()
-    except Exception, e:
-        print traceback.format_exc()
+    flow = get_flow(order.crawl_source)
+    flow.refresh_issue(order)
     if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=10, max_retries=100)
+        self.retry(countdown=30, max_retries=30)
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -33,17 +30,29 @@ def refresh_kefu_order(self, username, order_no):
     """
     刷新客服订单状态
     """
-    from app.models import Order, AdminUser
+    order_log.info("[refresh_kefu_order] order:%s, kefu:%s", order_no, username)
     order = Order.objects.get(order_no=order_no)
-    user = AdminUser.objects.get(username=username)
     if order.status != STATUS_WAITING_ISSUE:
         return
-    try:
-        order.refresh_issued()
-    except Exception, e:
-        print e
+    flow = get_flow(order.crawl_source)
+    flow.refresh_issue(order)
     if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=3+random.random()*10%3, max_retries=1000)
+        self.retry(countdown=3+random.random()*10%3, max_retries=200)
+
+
+@celery.task(bind=True, ignore_result=True)
+def refresh_issueing_order(self, order_no):
+    """
+    刷新正在出票订单状态
+    """
+    order_log.info("[refresh_issueing_order] order:%s", order_no)
+    order = Order.objects.get(order_no=order_no)
+    if order.status != STATUS_ISSUE_ING:
+        return
+    flow = get_flow(order.crawl_source)
+    flow.refresh_issue(order)
+    if order.status == STATUS_ISSUE_ING:
+        self.retry(countdown=60+random.random()*10%3, max_retries=60*12)
 
 
 @celery.task(bind=True, ignore_result=True)
