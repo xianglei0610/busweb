@@ -82,7 +82,7 @@ class Flow(object):
         """
         出票刷新主流程，子类不用重写
         """
-        if order.status != STATUS_WAITING_ISSUE:
+        if order.status not in [STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]:
             return
         order_log.info("[issue-refresh-start] order:%s", order.order_no)
         ret = self.do_refresh_issue(order)
