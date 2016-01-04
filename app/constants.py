@@ -32,6 +32,9 @@ SOURCE_INFO = {
             # telephone: {password, opendid)
             "13267109876": ("123456", '7pUGyHIri3Fjk6jEUsvv4pNfBDiX1448953063894'),
             "15575101324": ("icbRpL", 'o82gDszqOaOk1_tdc54xQo4oGaL1'),
+            "13760232870": ("a112308", '1'),
+            "18588468517": ("lxy12308", '1'),
+            "15626025673": ("lxy12308", '1'),
         }
     },
     SOURCE_CTRIP: {

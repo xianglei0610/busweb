@@ -9,6 +9,7 @@ import requests
 import traceback
 import datetime
 import time
+from lxml import etree
 
 from apscheduler.scheduler import Scheduler
 
@@ -17,7 +18,7 @@ from manage import migrate_from_crawl
 from app.email import send_email
 from app.constants import ADMINS, STATUS_WAITING_ISSUE
 from app import setup_app
-from app.models import Order
+from app.models import Order, Bus100Rebot
 
 
 app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
@@ -107,6 +108,34 @@ def polling_order_status():
         order.refresh_status()
 
 
+def check_login_status(crawl_source):
+    if crawl_source == 'bus100':
+        obj = Bus100Rebot.objects.all()
+        url = "http://www.84100.com/user.shtml"
+        phone_list = []
+        for i in obj:
+            print i.telephone
+            headers = {"cookie": i.cookie}
+            res = requests.post(url, headers=headers)
+            res = res.content
+            sel = etree.HTML(res)
+            userinfo = sel.xpath('//div[@class="operation"]/ul/li[@class="tel"]')
+            print userinfo
+            if not userinfo:
+                i.is_active = False
+                i.save()
+                phone_list.append(i.telephone)
+        if not app.config["DEBUG"] and phone_list:
+            with app.app_context():
+                subject = 'check_login_status'
+                content = ' check_login_status,crawl_source :%s ' % crawl_source
+                sender = 'dg@12308.com'
+                recipients = ADMINS
+                text_body = ''
+                html_body = content + ' '+','.join(phone_list)
+                send_email(subject, sender, recipients, text_body, html_body)
+
+
 def main():
     """ 定时任务处理 """
 
@@ -117,6 +146,7 @@ def main():
     #sched.add_cron_job(sync_crawl_to_api, hour=21, minute=10, args=['scqcp'])
     sched.add_cron_job(sync_crawl_to_api, hour=22, minute=30, args=['bus100'])
 
+    sched.add_interval_job(check_login_status, minutes=1, args=['bus100'])
 #     sched.add_interval_job(polling_order_status, minutes=1)
 
     sched.start()
@@ -124,5 +154,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-#     polling_order_status()
+#     check_login_status('bus100')
 # bus_crawl('bus100')

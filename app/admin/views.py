@@ -26,8 +26,12 @@ from app.flow import get_flow
 
 def parse_page_data(qs):
     total = qs.count()
-    page = int(request.args.get("page", default=1))
-    pageCount = int(request.args.get("pageCount", default=10))
+    if request.method == 'POST':
+        page = int(request.form.get("page", default=1))
+        pageCount = int(request.form.get("pageCount", default=10))
+    else:
+        page = int(request.args.get("page", default=1))
+        pageCount = int(request.args.get("pageCount", default=10))
     pageNum = int(math.ceil(total*1.0/pageCount))
     skip = (page-1)*pageCount
 
@@ -321,19 +325,24 @@ def left_page():
 @admin.route('/allorder', methods=['GET','POST'])
 @login_required
 def all_order():
-    status = request.args.get("status", "")
-    source = request.args.get("source", "")
-    source_account = request.args.get("source_account", "")
-    str_date = request.args.get("str_date", "")
-    end_date = request.args.get("end_date", "")
     client = request.headers.get("type", 'web')
     query = {}
+    if request.method == 'POST':
+        status = request.form.get("status", "")
+    else:
+        status = request.args.get("status", "")
+
+        source = request.args.get("source", "")
+        source_account = request.args.get("source_account", "")
+
+        if source:
+            query.update(crawl_source=source)
+            if source_account:
+                query.update(source_account=source_account)
     if status:
         query.update(status=int(status))
-    if source:
-        query.update(crawl_source=source)
-        if source_account:
-            query.update(source_account=source_account)
+    str_date = request.args.get("str_date", "")
+    end_date = request.args.get("end_date", "")
 
     if str_date:
         query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
@@ -363,6 +372,7 @@ def all_order():
                                )
     elif client in ['android', 'ios']:
         order_info = parse_page_data(qs)
+        print order_info
         orders = order_info['items']
         data = []
         for i in orders:
@@ -378,9 +388,9 @@ def all_order():
             tmp['crawl_source'] = SOURCE_INFO[i.crawl_source]["name"]
             data.append(tmp)
         total = order_info['total']
-        page = order_info['page'],
-        pageCount = order_info['pageCount'],
-        pageNum = order_info['pageNum'],
+        page = order_info['page']
+        pageCount = order_info['pageCount']
+        pageNum = order_info['pageNum']
         return jsonify({"status": 0,"total":total,"page":page,"pageCount":pageCount,"pageNum":pageNum, "stat":stat, "data": data})
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
