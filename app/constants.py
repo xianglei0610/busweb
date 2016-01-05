@@ -11,8 +11,8 @@ SOURCE_INFO = {
         "website": "www.scqcp.com",
         "accounts": {
             # telephone: {password, is_encrypt)
-            # "13267109876": ("123456", 0),      # 用于本地测试
-            "15575101324": ("cibRpL", 0),
+            "13267109876": ("123456", 0),      # 用于本地测试
+            # "15575101324": ("cibRpL", 0),
             "15626025673": ("lxy12308", 0),
             "13719074050": ("lxy12308", 0),
             "18676665359": ("lxy12308", 0),
@@ -157,13 +157,6 @@ ACCOUNT_ORDER_COUNT = "account_order_count"
 CURRENT_ACCOUNT = "current_account"
 RK_ISSUE_FAIL_COUNT = "%s_issue_fail"
 
-# 源站选择
-SOURCE_MAPPING = {
-    "成都": SOURCE_CTRIP,
-    "德阳": SOURCE_CTRIP,
-    "绵阳": SOURCE_CTRIP,
-    "泸州": SOURCE_CTRIP,
-}
 
 # 短信模版
 
