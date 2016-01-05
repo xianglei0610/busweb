@@ -28,10 +28,10 @@ def parse_page_data(qs):
     total = qs.count()
     if request.method == 'POST':
         page = int(request.form.get("page", default=1))
-        pageCount = int(request.form.get("pageCount", default=10))
+        pageCount = int(request.form.get("pageCount", default=20))
     else:
         page = int(request.args.get("page", default=1))
-        pageCount = int(request.args.get("pageCount", default=10))
+        pageCount = int(request.args.get("pageCount", default=20))
     pageNum = int(math.ceil(total*1.0/pageCount))
     skip = (page-1)*pageCount
 
@@ -136,7 +136,7 @@ def src_code_input(order_no):
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_ISSUE:
-        if order.status == STATUS_WAITING_LOCK and order.crawl_source == 'bus100': 
+        if order.status == STATUS_WAITING_LOCK and order.crawl_source == 'bus100':
             pass
         else:
             return redirect(url_for("admin.wating_deal_order"))
