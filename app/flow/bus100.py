@@ -5,13 +5,14 @@ import requests
 import datetime
 import json
 import re
-
+from datetime import datetime as dte
+from flask import render_template, request, redirect
 from lxml import etree
+
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import Bus100Rebot, Line
-from datetime import datetime as dte
-
+from app.flow import get_flow
 
 
 class Flow(BaseFlow):
@@ -30,6 +31,9 @@ class Flow(BaseFlow):
         }
         rebot = Bus100Rebot.get_random_rebot()
         if not rebot:
+            rebot = Bus100Rebot.objects.first()
+            lock_result.update(result_code=2)
+            lock_result.update(source_account=rebot.telephone)
             return lock_result
         rebot.recrawl_shiftid(order.line)
         line = Line.objects.get(line_id=order.line.line_id)
@@ -78,14 +82,13 @@ class Flow(BaseFlow):
             "names": ','.join(names),
         }
         print data
-        headers = {"cookie": rebot.cookie}
-        orderInfo = requests.post(url, data=data, headers=headers)
+        orderInfo = requests.post(url, data=data, cookies=rebot.cookies)
         orderInfo = orderInfo.json()
         pay_url = ''
         if orderInfo.get('flag') == '0':
             orderId = orderInfo['orderId']
             url = "http://www.84100.com/pay/ajax?orderId=%s" % orderId
-            orderPay = requests.post(url, headers=headers)
+            orderPay = requests.post(url, cookies=rebot.cookies)
             orderPay = orderPay.json()
             if orderPay.get('flag') == '0':
                 pay_url = orderPay['url']
@@ -158,9 +161,8 @@ class Flow(BaseFlow):
 
     def send_order_request(self, order, rebot):
         data = {"orderId": order.raw_order_no}
-        headers = {"cookie": rebot.cookie}
         url = "http://www.84100.com/orderInfo.shtml"
-        r = requests.post(url, data=data, headers=headers)
+        r = requests.post(url, data=data, cookies=rebot.cookies)
         sel = etree.HTML(r.content)
         orderDetailObj = sel.xpath('//div[@class="order-details"]/ul')
         orderDetail = {}
@@ -210,36 +212,91 @@ class Flow(BaseFlow):
             result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         return result_info
 
-    def get_pay_page(self, order, **kwargs):
-        pay_url = order.pay_url
-        headers = {
-            'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",
-        }
-        r = requests.get(pay_url, headers=headers, verify=False)
-        cookies = dict(r.cookies)
+    def get_pay_page(self, order, valid_code="", session=None, **kwargs):
 
-        sel = etree.HTML(r.content)
-        try:
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+        }
+        pay_url = order.pay_url
+        code = valid_code
+        # 验证码处理
+        flag = False
+        ret = {}
+        if code:
+            data = json.loads(session["bus100_pay_login_info"])
+            code_url = data["valid_url"]
+            headers = data["headers"]
+            cookies = data["cookies"]
+            flag = True
+        else:
+            login_form_url = "http://84100.com/login.shtml"
+            r = requests.get(login_form_url, headers=headers)
+            sel = etree.HTML(r.content)
+            cookies = dict(r.cookies)
+            code_url = sel.xpath("//img[@id='validateImg']/@src")[0]
+            code_url = 'http://84100.com'+code_url
+            r = requests.get(code_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+        if flag:
+            accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
+            passwd, _ = accounts[order.source_account]
+            data = {
+                "loginType": 0,
+                "backUrl": '',
+                "mobile": order.source_account,
+                "password": passwd,
+                "validateCode": code
+            }
+            r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            ret = r.json()
+            print ret,'333333333333333333333333333',code
+        if ret.get("flag", '') == '0':
+            rebot = Bus100Rebot.objects.get(telephone=order.source_account)
+            rebot.cookies = cookies
+            print cookies
+            rebot.is_active = True
+            rebot.save()
+            flow = get_flow(order.crawl_source)
+            flow.lock_ticket(order)
+            pay_url = order.pay_url
+        if pay_url:
+            headers = {
+                'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",
+            }
+            r = requests.get(pay_url, headers=headers, verify=False)
+            cookies = dict(r.cookies)
+            sel = etree.HTML(r.content)
+            try:
+                data = dict(
+                    orderId=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderId"]/@value')[0],
+                    orderAmt=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderAmt"]/@value')[0],
+                )
+            except:
+                return {"flag": "url", "content": pay_url}
+            check_url = 'https://pay.84100.com/payment/alipay/orderCheck.do'
+    
+            r = requests.post(check_url, data=data, headers=headers, cookies=cookies, verify=False)
+            checkInfo = r.json()
+            orderNo = checkInfo['request_so']
             data = dict(
                 orderId=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderId"]/@value')[0],
                 orderAmt=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderAmt"]/@value')[0],
+                orderNo=orderNo,
+                orderInfo=sel.xpath('//form[@id="alipayForm"]/input[@name="orderInfo"]/@value')[0],
+                count=sel.xpath('//form[@id="alipayForm"]/input[@name="count"]/@value')[0],
+                isMobile=sel.xpath('//form[@id="alipayForm"]/input[@name="isMobile"]/@value')[0],
             )
-        except:
-            return redirect(pay_url)
-        check_url = 'https://pay.84100.com/payment/alipay/orderCheck.do'
-
-        r = requests.post(check_url, data=data, headers=headers, cookies=cookies, verify=False)
-        checkInfo = r.json()
-        orderNo = checkInfo['request_so']
-        data = dict(
-            orderId=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderId"]/@value')[0],
-            orderAmt=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderAmt"]/@value')[0],
-            orderNo=orderNo,
-            orderInfo=sel.xpath('//form[@id="alipayForm"]/input[@name="orderInfo"]/@value')[0],
-            count=sel.xpath('//form[@id="alipayForm"]/input[@name="count"]/@value')[0],
-            isMobile=sel.xpath('//form[@id="alipayForm"]/input[@name="isMobile"]/@value')[0],
-        )
-
-        info_url = "https://pay.84100.com/payment/page/alipayapi.jsp"
-        r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
-        return {"flag": "html", "content": r.content}
+    
+            info_url = "https://pay.84100.com/payment/page/alipayapi.jsp"
+            r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
+            return {"flag": "html", "content": r.content}
+        if ret.get("msg", '') == "验证码不正确" or not flag:
+            data = {
+                "cookies": cookies,
+                "headers": headers,
+                "valid_url": code_url,
+            }
+            session["bus100_pay_login_info"] = json.dumps(data)
+            return {"flag": "input_code", "content": ""}
+           

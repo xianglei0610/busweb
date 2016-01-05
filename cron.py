@@ -110,17 +110,15 @@ def polling_order_status():
 
 def check_login_status(crawl_source):
     if crawl_source == 'bus100':
-        obj = Bus100Rebot.objects.all()
+        obj = Bus100Rebot.objects.filter(is_active=True)
         url = "http://www.84100.com/user.shtml"
         phone_list = []
         for i in obj:
             print i.telephone
-            headers = {"cookie": i.cookie}
-            res = requests.post(url, headers=headers)
+            res = requests.post(url, cookies=i.cookies)
             res = res.content
             sel = etree.HTML(res)
             userinfo = sel.xpath('//div[@class="operation"]/ul/li[@class="tel"]')
-            print userinfo
             if not userinfo:
                 i.is_active = False
                 i.save()
@@ -153,6 +151,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-#     check_login_status('bus100')
+#     main()
+    check_login_status('bus100')
 # bus_crawl('bus100')

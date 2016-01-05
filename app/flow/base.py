@@ -48,6 +48,12 @@ class Flow(object):
             })
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
             order_log.info("[lock-result] succ. order: %s", order.order_no)
+        elif ret["result_code"] == 2:
+            order.modify(status=STATUS_WAITING_LOCK,
+                         source_account=ret["source_account"],
+                         )
+            order.on_wating_lock()
+            
         else:
             order.modify(status=STATUS_LOCK_FAIL,
                          lock_info=ret["lock_info"],

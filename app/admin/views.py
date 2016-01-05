@@ -113,6 +113,13 @@ def src_code_img(order_no):
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
+    elif order.crawl_source == "bus100":
+        data = json.loads(session["bus100_pay_login_info"])
+        code_url = data.get("valid_url")
+        headers = data.get("headers")
+        cookies = data.get("cookies")
+        r = requests.get(code_url, headers=headers, cookies=cookies)
+        return r.content
 
 
 @admin.route('/orders/<order_no>/srccodeinput', methods=['GET'])
@@ -129,7 +136,10 @@ def src_code_input(order_no):
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_ISSUE:
-        return redirect(url_for("admin.wating_deal_order"))
+        if order.status == STATUS_WAITING_LOCK and order.crawl_source == 'bus100': 
+            pass
+        else:
+            return redirect(url_for("admin.wating_deal_order"))
     r = getRedisObj()
     try:
         r.set(LAST_PAY_CLICK_TIME % order_no, time.time(), ex=PAY_CLICK_EXPIR)
@@ -138,6 +148,7 @@ def order_pay(order_no):
         r.expire(LAST_PAY_CLICK_TIME % order_no, PAY_CLICK_EXPIR)
 
     code = request.args.get("valid_code", "")
+    ret = {'flag': ''}
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session)
     if ret["flag"] == "url":
@@ -429,8 +440,8 @@ def wating_deal_order():
         for o in Order.objects.filter(order_no__in=r.smembers(key)):
             if o.status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING]:
                 o.complete_by(current_user)
-            elif o.status == STATUS_WAITING_LOCK:
-                r.srem(key, o.order_no)
+#             elif o.status == STATUS_WAITING_LOCK:
+#                 r.srem(key, o.order_no)
 
         if userObj.is_switch:
             order_ct = r.scard(key)
