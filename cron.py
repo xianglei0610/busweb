@@ -110,7 +110,8 @@ def polling_order_status():
 
 def check_login_status(crawl_source):
     if crawl_source == 'bus100':
-        obj = Bus100Rebot.objects.filter(is_active=True)
+        obj = Bus100Rebot.objects.all()
+        count = obj.count()
         url = "http://www.84100.com/user.shtml"
         phone_list = []
         for i in obj:
@@ -123,7 +124,7 @@ def check_login_status(crawl_source):
                 i.is_active = False
                 i.save()
                 phone_list.append(i.telephone)
-        if not app.config["DEBUG"] and phone_list:
+        if not app.config["DEBUG"] and len(phone_list) == count:
             with app.app_context():
                 subject = 'check_login_status'
                 content = ' check_login_status,crawl_source :%s ' % crawl_source
@@ -151,6 +152,6 @@ def main():
 
 
 if __name__ == '__main__':
-#     main()
-    check_login_status('bus100')
+    main()
+#     check_login_status('bus100')
 # bus_crawl('bus100')
