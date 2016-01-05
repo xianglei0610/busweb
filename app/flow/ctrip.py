@@ -137,6 +137,11 @@ class Flow(BaseFlow):
                 "result_code": 2,
                 "result_msg": status,
             })
+        elif status in ["全部退款", "退款中"]:
+            result_info.update({
+                "result_code": 3,
+                "result_msg": status,
+            })
         elif status == "购票中":
             result_info.update({
                 "result_code": 4,
