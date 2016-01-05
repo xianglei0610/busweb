@@ -368,6 +368,14 @@ class Order(db.Document):
         r = getRedisObj()
         r.zadd('lock_order_list', self.order_no, time.time())
 
+    def on_wating_lock(self):
+        if self.status != STATUS_WAITING_LOCK:
+            return
+        order_status_log.info("[on_wating_lock] order:%s", self.order_no)
+
+        r = getRedisObj()
+        r.zadd('lock_order_list', self.order_no, time.time())
+
     def on_give_back(self, reason=""):
         if self.status != STATUS_GIVE_BACK:
             return
@@ -768,7 +776,7 @@ class Bus100Rebot(Rebot):
     user_agent = db.StringField()
     token = db.StringField()
     open_id = db.StringField()
-    cookie = db.StringField()
+    cookies = db.DictField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],

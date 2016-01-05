@@ -111,21 +111,20 @@ def polling_order_status():
 def check_login_status(crawl_source):
     if crawl_source == 'bus100':
         obj = Bus100Rebot.objects.all()
+        count = obj.count()
         url = "http://www.84100.com/user.shtml"
         phone_list = []
         for i in obj:
             print i.telephone
-            headers = {"cookie": i.cookie}
-            res = requests.post(url, headers=headers)
+            res = requests.post(url, cookies=i.cookies)
             res = res.content
             sel = etree.HTML(res)
             userinfo = sel.xpath('//div[@class="operation"]/ul/li[@class="tel"]')
-            print userinfo
             if not userinfo:
                 i.is_active = False
                 i.save()
                 phone_list.append(i.telephone)
-        if not app.config["DEBUG"] and phone_list:
+        if not app.config["DEBUG"] and len(phone_list) == count:
             with app.app_context():
                 subject = 'check_login_status'
                 content = ' check_login_status,crawl_source :%s ' % crawl_source
