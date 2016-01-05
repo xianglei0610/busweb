@@ -185,7 +185,7 @@ class Flow(BaseFlow):
             result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         return result_info
 
-    def get_pay_page(self, order, valid_code="", session=None, **kwargs):
+    def get_pay_page(self, order, valid_code="", session=None, pay_channel="wy" ,**kwargs):
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
         }
@@ -232,11 +232,12 @@ class Flow(BaseFlow):
                 issued_callback.delay(order.order_no)
                 return {"flag": "html", "content": r.content}
             sel = etree.HTML(r.content)
+            plateform = pay_channel
             data = dict(
                 payid=sel.xpath("//input[@name='payid']/@value")[0],
                 bank=sel.xpath("//input[@id='s_bank']/@value")[0],
                 plate=sel.xpath("//input[@id='s_plate']/@value")[0],
-                plateform="alipay",
+                plateform=plateform,
                 qr_pay_mode=0,
                 discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
             )

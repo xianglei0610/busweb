@@ -22,7 +22,12 @@
      <td class="m">{{order.order_price}}</td>
      <td class="color4">{{status_msg[order.status]}}</td>
      <td>
-       <p><a href="{{url_for('admin.order_pay', order_no=order.order_no)}}" class="btsize payclick" data-expire="{{expire_seconds[order.order_no]}}">立即支付</a></p>
+       <p>
+       <a href="{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay" class="btsize payclick" data-expire="{{expire_seconds[order.order_no]}}">支付宝</a> &nbsp;&nbsp;
+       {% if order.crawl_source == "scqcp" %}
+       <a href="{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=wy" class="btsize payclick" data-expire="{{expire_seconds[order.order_no]}}">网银</a>
+       {%endif%}
+       </p>
        <p class="pt">
          <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a>
        </p>
