@@ -187,7 +187,9 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        rebot = Bus100Rebot.objects.first()
+        rebot = Bus100Rebot.get_random_rebot()
+        if not rebot:
+            return result_info
         ret = rebot.recrawl_shiftid(line)
         line = Line.objects.get(line_id=line.line_id)
         url = 'http://www.84100.com/getTrainInfo/ajax'
@@ -199,7 +201,7 @@ class Flow(BaseFlow):
         }
         now = dte.now()
         try:
-            trainInfo = requests.post(url, data=payload)
+            trainInfo = requests.post(url, data=payload, cookies=rebot.cookies)
             trainInfo = trainInfo.json()
             left_tickets = 0
             if str(trainInfo['flag']) == '0':
