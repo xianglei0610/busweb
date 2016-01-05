@@ -6,6 +6,7 @@ import requests
 import json
 import pytesseract
 import cStringIO
+import random
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -45,7 +46,7 @@ class Flow(BaseFlow):
                 pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
                 total_price = 0
                 for ticket in ret["ticket_list"]:
-                    total_price += ticket["server_price"]
+                    total_price += ticket["service_price"]
                     total_price += ticket["real_price"]
                 lock_result.update({
                     "result_code": 1,

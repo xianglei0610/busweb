@@ -195,12 +195,16 @@ class Flow(BaseFlow):
             info = ret["return"]
             if info:
                 ticket_info = info["showTicketInfo"]
+                left_tickets = 0
                 if ticket_info == "有票":
                     left_tickets = 45
                 elif ticket_info.endswith("张"):
                     left_tickets = int(ticket_info[:-1])
-                elif ticket_info == "预约购票":
+                elif ticket_info in ["预约购票", "无票"]:
                     left_tickets = 0
+                else:
+                    pass
+
                 service_info = info["servicePackage"]
                 fee = 0
                 for d in service_info:
