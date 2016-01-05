@@ -39,7 +39,12 @@
         <div class="fm-li pbot-5">
           <span class="fm-label"></span>
           <span class="code_img">
-             <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}" alt="" class="regimg" id="imgVerifyCode"></span>
+            {% if order.crawl_source == "scqcp" %}
+             <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=wy" alt="" class="regimg" id="imgVerifyCode"></span>
+            {%else%}
+             <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=alipay" alt="" class="regimg" id="imgVerifyCode"></span>
+            {%endif%}
+
           </span>
         </div>
         
