@@ -86,7 +86,7 @@ def query_destination():
                         "message": "parameter error",
                         "data": ""})
     try:
-        open_city = OpenCity.objects.get(city_name=starting_name)
+        open_city = OpenCity.objects.get(city_name=starting_name, is_active=True)
     except Exception, e:
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
@@ -149,7 +149,7 @@ def query_line():
                         "data": ""})
 
     try:
-        open_city = OpenCity.objects.get(city_name=starting_name)
+        open_city = OpenCity.objects.get(city_name=starting_name, is_active=True)
     except Exception, e:
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
