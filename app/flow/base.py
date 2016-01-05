@@ -100,9 +100,10 @@ class Flow(object):
             0: old_status,
             1: STATUS_ISSUE_SUCC,
             2: STATUS_ISSUE_FAIL,
-            3: STATUS_ISSUE_FAIL,
+            3: STATUS_GIVE_BACK,
             4: STATUS_ISSUE_ING,
         }
+        order_log.info("%s--->%s", old_status, code_status_mapping.get("code", ""))
         if code_status_mapping.get(code, None) == old_status:
             return
         if code == 0:

@@ -20,7 +20,7 @@ class Config:
     CELERY_TASK_SERIALIZER = 'pickle'
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
 
-    #PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
+    PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
 
     # redis config
     REDIS_HOST = "localhost"
