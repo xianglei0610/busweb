@@ -65,8 +65,8 @@ def TransmissionTemplateDemo():
     return template
 
 
-@celery.task(bind=True, ignore_result=True)
-def pushMessageToSingle(self, CID):
+# @celery.task(bind=True, ignore_result=True)
+def pushMessageToSingle(CID):
     push = IGeTui(HOST, AppKey, MasterSecret)
     # 消息模版：
     # 1.TransmissionTemplate:透传功能模板
