@@ -33,7 +33,7 @@ def TransmissionTemplateDemo(order_no):
 
 # APN简单推送
     alertMsg = SimpleAlertMsg()
-    alertMsg.alertMsg = ""
+    alertMsg.alertMsg = '定单来啦：%s'%order_no
     apn = APNPayload()
     apn.alertMsg = alertMsg
     apn.badge = 1
