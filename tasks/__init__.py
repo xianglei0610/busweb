@@ -4,4 +4,4 @@ celery任务模块
 """
 from ticket import *
 from order import *
-from push import *
+from push import push_kefu_order

@@ -42,7 +42,11 @@
             {% if order.crawl_source == "scqcp" %}
              <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=wy" alt="" class="regimg" id="imgVerifyCode"></span>
             {%else%}
-             <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=alipay" alt="" class="regimg" id="imgVerifyCode"></span>
+            	{%if token %}
+             		<img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=alipay&token={{token}}&username={{username}}" alt="" class="regimg" id="imgVerifyCode"></span>
+             	{%else%}
+             		<img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=alipay" alt="" class="regimg" id="imgVerifyCode"></span>
+            	{%endif%}
             {%endif%}
 
           </span>

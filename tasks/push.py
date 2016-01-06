@@ -4,17 +4,19 @@ import json
 import datetime
 import random
 import traceback
-from igetui.igt_push import *
-from igetui.template.igt_transmission_template import *
-from igetui.template.igt_link_template import *
-from igetui.template.igt_notification_template import *
-from igetui.template.igt_notypopload_template import *
-from igetui.template.igt_apn_template import *
-from igetui.igt_message import *
-from igetui.igt_target import *
-from igetui.BatchImpl import *
-from igetui.payload.APNPayload import *
-
+try:
+    from igetui.igt_push import *
+    from igetui.template.igt_transmission_template import *
+    from igetui.template.igt_link_template import *
+    from igetui.template.igt_notification_template import *
+    from igetui.template.igt_notypopload_template import *
+    from igetui.template.igt_apn_template import *
+    from igetui.igt_message import *
+    from igetui.igt_target import *
+    from igetui.BatchImpl import *
+    from igetui.payload.APNPayload import *
+except:
+    pass
 from app.constants import HOST, AppKey, AppID, MasterSecret, AppSecret
 from app import celery
 from app.utils import getRedisObj
