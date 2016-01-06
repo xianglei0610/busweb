@@ -4,38 +4,41 @@ import json
 import datetime
 import random
 import traceback
-from igetui.igt_push import *
-from igetui.template.igt_transmission_template import *
-from igetui.template.igt_link_template import *
-from igetui.template.igt_notification_template import *
-from igetui.template.igt_notypopload_template import *
-from igetui.template.igt_apn_template import *
-from igetui.igt_message import *
-from igetui.igt_target import *
-from igetui.BatchImpl import *
-from igetui.payload.APNPayload import *
-
+try:
+    from igetui.igt_push import *
+    from igetui.template.igt_transmission_template import *
+    from igetui.template.igt_link_template import *
+    from igetui.template.igt_notification_template import *
+    from igetui.template.igt_notypopload_template import *
+    from igetui.template.igt_apn_template import *
+    from igetui.igt_message import *
+    from igetui.igt_target import *
+    from igetui.BatchImpl import *
+    from igetui.payload.APNPayload import *
+except:
+    pass
 from app.constants import HOST, AppKey, AppID, MasterSecret, AppSecret
 from app import celery
 from app.utils import getRedisObj
+from app.models import PushUserList, Order
 
 
-def TransmissionTemplateDemo():
+def TransmissionTemplateDemo(order_no):
     template = TransmissionTemplate()
     template.transmissionType = 1
     template.appId = AppID
     template.appKey = AppKey
-    template.transmissionContent = '请填入透传内容'
+    template.transmissionContent = '定单来啦：%s'%order_no
     # iOS 推送需要的PushInfo字段 前三项必填，后四项可以填空字符串
     # template.setPushInfo(actionLocKey, badge, message, sound, payload, locKey, locArgs, launchImage)
 #     template.setPushInfo("", 0, "", "com.gexin.ios.silence", "", "", "", "");
 
 # APN简单推送
     alertMsg = SimpleAlertMsg()
-    alertMsg.alertMsg = ""
+    alertMsg.alertMsg = '定单来啦：%s'%order_no
     apn = APNPayload()
     apn.alertMsg = alertMsg
-    apn.badge = 2
+    apn.badge = 1
 #     apn.sound = ""
     apn.addCustomMsg("payload", "payload")
 #     apn.contentAvailable=1
@@ -66,7 +69,9 @@ def TransmissionTemplateDemo():
 
 
 @celery.task(bind=True, ignore_result=True)
-def pushMessageToSingle(self, CID):
+def push_kefu_order(self, username, order_no):
+    pushobj = PushUserList.objects.get(username=username)
+    order = Order.objects.get(order_no=order_no)
     push = IGeTui(HOST, AppKey, MasterSecret)
     # 消息模版：
     # 1.TransmissionTemplate:透传功能模板
@@ -76,7 +81,7 @@ def pushMessageToSingle(self, CID):
 
 #     template = NotificationTemplateDemo()
     # template = LinkTemplateDemo()
-    template = TransmissionTemplateDemo()
+    template = TransmissionTemplateDemo(order.order_no)
     # template = NotyPopLoadTemplateDemo()
 
     message = IGtSingleMessage()
@@ -87,7 +92,7 @@ def pushMessageToSingle(self, CID):
 
     target = Target()
     target.appId = AppID
-    target.clientId = CID
+    target.clientId = pushobj.push_id
 
     try:
         ret = push.pushMessageToSingle(message, target)

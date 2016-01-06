@@ -162,6 +162,6 @@ RK_ISSUE_FAIL_COUNT = "%s_issue_fail"
 
 DUAN_XIN_TEMPL = {
     SOURCE_SCQCP: "您已购买%(time)s%(start)s至%(end)s的汽车票%(amount)s张，取票验证码%(code)s，请在发车时间前乘车",
-    SOURCE_BUS100: "温馨提醒：您有%(amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order)s；请在发车前两小时内凭乘车人身份证取票。祝您旅途愉快！",
+    SOURCE_BUS100: "温馨提醒：您有%(amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order)s；请在发车前两小时内凭乘车人身份证或取票密码取票。祝您旅途愉快！",
     SOURCE_CTRIP: "%(time)s，%(start)s--%(end)s 共%(amount)s张成功出票。取票验证码%(code)s，请在发车时间前乘车",
 }

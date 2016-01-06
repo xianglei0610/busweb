@@ -20,7 +20,7 @@ from app.admin import admin
 from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser, PushUserList
 from tasks import refresh_kefu_order
-from tasks import check_order_completed
+from tasks import check_order_completed, push_kefu_order
 from app.flow import get_flow
 
 
@@ -126,8 +126,12 @@ def src_code_img(order_no):
 @login_required
 def src_code_input(order_no):
     order = Order.objects.get(order_no=order_no)
+    token = request.args.get("token", "")
+    username = request.args.get("username", '')
     return render_template('admin-new/code_input2.html',
                            order=order,
+                           token=token,
+                           username=username
                            )
 
 
@@ -135,6 +139,8 @@ def src_code_input(order_no):
 @login_required
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
+    token = request.args.get("token", "")
+    username = request.args.get("username",'')
     if order.status != STATUS_WAITING_ISSUE:
         if order.status == STATUS_WAITING_LOCK and order.crawl_source == 'bus100':
             pass
@@ -148,16 +154,20 @@ def order_pay(order_no):
         r.expire(LAST_PAY_CLICK_TIME % order_no, PAY_CLICK_EXPIR)
 
     code = request.args.get("valid_code", "")
-    ret = {'flag': ''}
     channel = request.args.get("channel", "alipay")
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
+    if not ret:
+        return redirect(url_for("admin.wating_deal_order"))
     if ret["flag"] == "url":
         return redirect(ret["content"])
     elif ret["flag"] == "html":
         return ret["content"]
     elif ret["flag"] == "input_code":
-        return redirect(url_for("admin.src_code_input", order_no=order_no))
+        if token and token == TOKEN:
+            return redirect(url_for("admin.src_code_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
+        else:
+            return redirect(url_for("admin.src_code_input", order_no=order_no))
     elif ret["flag"] == "refuse":
         pass
     return redirect(url_for("admin.wating_deal_order"))
@@ -454,6 +464,10 @@ def wating_deal_order():
                     r.sadd(key, i)
                     refresh_kefu_order.apply_async((userObj.username, i))
                     check_order_completed.apply_async((userObj.username, key, i), countdown=4*60)  # 4分钟后执行
+                    try:
+                        push_kefu_order.apply_async((userObj.username, i))
+                    except:
+                        pass
     order_nos = r.smembers(key)
 
     qs = Order.objects.filter(order_no__in=order_nos)
