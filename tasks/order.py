@@ -32,7 +32,7 @@ def refresh_kefu_order(self, username, order_no):
     """
     order_log.info("[refresh_kefu_order] order:%s, kefu:%s", order_no, username)
     order = Order.objects.get(order_no=order_no)
-    if order.status != STATUS_WAITING_ISSUE:
+    if order.status not in (STATUS_WAITING_ISSUE, STATUS_ISSUE_ING):
         return
     flow = get_flow(order.crawl_source)
     flow.refresh_issue(order)

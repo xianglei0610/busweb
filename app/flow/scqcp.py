@@ -124,6 +124,11 @@ class Flow(BaseFlow):
                 "result_code": 3,
                 "result_msg": "源站已退票",
             })
+        elif status == "closed":
+            result_info.update({
+                "result_code": 2,
+                "result_msg": status,
+            })
         return result_info
 
     def send_order_request(self, order, rebot):
