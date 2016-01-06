@@ -28,14 +28,14 @@ def TransmissionTemplateDemo(order_no):
     template.transmissionType = 1
     template.appId = AppID
     template.appKey = AppKey
-    template.transmissionContent = '定单来啦：%s'%order_no
+    template.transmissionContent = '订单来啦：%s'%order_no
     # iOS 推送需要的PushInfo字段 前三项必填，后四项可以填空字符串
     # template.setPushInfo(actionLocKey, badge, message, sound, payload, locKey, locArgs, launchImage)
 #     template.setPushInfo("", 0, "", "com.gexin.ios.silence", "", "", "", "");
 
 # APN简单推送
     alertMsg = SimpleAlertMsg()
-    alertMsg.alertMsg = '定单来啦：%s'%order_no
+    alertMsg.alertMsg = '订单来啦：%s'%order_no
     apn = APNPayload()
     apn.alertMsg = alertMsg
     apn.badge = 1
