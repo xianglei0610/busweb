@@ -36,7 +36,7 @@ def TransmissionTemplateDemo(order_no):
     alertMsg.alertMsg = ""
     apn = APNPayload()
     apn.alertMsg = alertMsg
-    apn.badge = 2
+    apn.badge = 1
 #     apn.sound = ""
     apn.addCustomMsg("payload", "payload")
 #     apn.contentAvailable=1
