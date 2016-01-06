@@ -127,7 +127,7 @@ def src_code_img(order_no):
 def src_code_input(order_no):
     order = Order.objects.get(order_no=order_no)
     token = request.args.get("token", "")
-    username = request.args.get("username")
+    username = request.args.get("username", '')
     return render_template('admin-new/code_input2.html',
                            order=order,
                            token=token,
@@ -140,7 +140,7 @@ def src_code_input(order_no):
 def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     token = request.args.get("token", "")
-    username = request.args.get("username")
+    username = request.args.get("username",'')
     if order.status != STATUS_WAITING_ISSUE:
         if order.status == STATUS_WAITING_LOCK and order.crawl_source == 'bus100':
             pass
