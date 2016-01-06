@@ -154,10 +154,11 @@ def order_pay(order_no):
         r.expire(LAST_PAY_CLICK_TIME % order_no, PAY_CLICK_EXPIR)
 
     code = request.args.get("valid_code", "")
-    ret = {'flag': ''}
     channel = request.args.get("channel", "alipay")
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
+    if not ret:
+        return redirect(url_for("admin.wating_deal_order"))
     if ret["flag"] == "url":
         return redirect(ret["content"])
     elif ret["flag"] == "html":

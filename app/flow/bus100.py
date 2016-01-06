@@ -46,18 +46,31 @@ class Flow(BaseFlow):
         if order.line.bus_num == 0 or not order.line.extra_info.get('flag', 0):
             lock_result.update(result_reason="该条线路无法购买")
             return lock_result
+        ticketType = u'全票'
+        ticketPassword = ''
 
-#         url = 'http://wap.84100.com/wap/login/ajaxLogin.do'
-#         data = {
-#               "mobile": rebot.telephone,
-#               "password": rebot.password,
-#               "phone":   '',
-#               "code":  ''
-#         }
-#         ua = random.choice(MOBILE_USER_AGENG)
-#         headers = {"User-Agent": ua}
-#         r = requests.post(url, data=data, headers=headers)
-#         rebot.cookies = r.cookies
+        url = 'http://www.84100.com/getTrainInfo/ajax'
+        data = {
+              "shiftId": order.line.bus_num,
+              "startId": order.line.starting.station_id,
+              "startName": order.line.starting.station_name,
+              "ttsId":  ''
+        }
+        trainInfo = requests.post(url, data=data, cookies=rebot.cookies)
+        trainInfo = trainInfo.json()
+        tickType = trainInfo['tickType']
+        if re.findall(u'全票', tickType) or re.findall('\u5168\u7968', tickType):
+            ticketType = u'全票'
+        else:
+            if re.findall(u'全', tickType):
+                ticketType = u'全'
+
+        msg = trainInfo['msg']
+        if re.findall('ticketPassword', msg):
+            ticketPassword = str(random.randint(100000, 999999))
+        else:
+            ticketPassword = ''
+
         url = 'http://www.84100.com/createOrder/ajax'
         idNos = []
         names = []
@@ -67,7 +80,7 @@ class Flow(BaseFlow):
             idNos.append(r["id_number"])
             names.append(r["name"])
             idTypes.append(str(r["id_type"]))
-            ticketTypes.append(u'全票')
+            ticketTypes.append(ticketType)
 
         data = {
             "startId": order.line.starting.station_id,
@@ -75,7 +88,7 @@ class Flow(BaseFlow):
             "name": order.contact_info['name'],
             "mobile": order.contact_info['telephone'],
             "ticketNo": '',
-            "ticketPassword": '',
+            "ticketPassword": ticketPassword,
             "idNos": ','.join(idNos),
             "ticketTypes": ','.join(ticketTypes),
             "idTypes": ','.join(idTypes),
@@ -97,6 +110,7 @@ class Flow(BaseFlow):
             pay_info = self.request_pay_info(pay_url)
             expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
             orderInfo['expire_datetime'] = expire_datetime
+            orderInfo['ticketPassword'] = ticketPassword
             lock_result.update({
                 "result_code": 1,
                 "lock_info": orderInfo,
@@ -145,7 +159,10 @@ class Flow(BaseFlow):
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "order": tickets["order_id"],
             }
-            code_list.append('无需取票密码')
+            if order.lock_info.get('ticketPassword', ''):
+                code_list.append(order.lock_info.get('ticketPassword', ''))
+            else:
+                code_list.append('无需取票密码')
             msg_list.append(dx_templ % dx_info)
             result_info.update({
                 "result_code": 1,
