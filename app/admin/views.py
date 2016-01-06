@@ -20,7 +20,7 @@ from app.admin import admin
 from app.utils import getRedisObj
 from app.models import Order, Line, Starting, Destination, AdminUser, PushUserList
 from tasks import refresh_kefu_order
-from tasks import check_order_completed
+from tasks import check_order_completed, push_kefu_order
 from app.flow import get_flow
 
 
@@ -454,6 +454,7 @@ def wating_deal_order():
                     r.sadd(key, i)
                     refresh_kefu_order.apply_async((userObj.username, i))
                     check_order_completed.apply_async((userObj.username, key, i), countdown=4*60)  # 4分钟后执行
+                    push_kefu_order.apply_async((userObj.username, i))
     order_nos = r.smembers(key)
 
     qs = Order.objects.filter(order_no__in=order_nos)
