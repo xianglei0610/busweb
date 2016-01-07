@@ -53,7 +53,7 @@ class Flow(object):
                          source_account=ret["source_account"],
                          )
             order.on_wating_lock()
-            
+
         else:
             order.modify(status=STATUS_LOCK_FAIL,
                          lock_info=ret["lock_info"],
@@ -103,7 +103,6 @@ class Flow(object):
             3: STATUS_GIVE_BACK,
             4: STATUS_ISSUE_ING,
         }
-        order_log.info("%s--->%s", old_status, code_status_mapping.get("code", ""))
         if code_status_mapping.get(code, None) == old_status:
             return
         if code == 0:
@@ -150,10 +149,12 @@ class Flow(object):
         """
         raise Exception("Not Implemented")
 
-    def is_need_refresh(self, line):
+    def is_need_refresh(self, line, force=False):
         """
         检查线路是否需要刷新, 用来控制不要太过于频繁刷新
         """
+        if force:    # 强制刷新
+            return True
         if not line.refresh_datetime:   # 从没刷新过，刷新
             return True
         now = dte.now()
@@ -164,12 +165,12 @@ class Flow(object):
             return False
         return True
 
-    def refresh_line(self, line):
+    def refresh_line(self, line, force=False):
         """
         线路信息刷新主流程, 不用子类重写
         """
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-        if not self.is_need_refresh(line):
+        if not self.is_need_refresh(line, force=force):
             line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
             return
         ret = self.do_refresh_line(line)
