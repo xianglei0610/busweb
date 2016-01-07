@@ -784,6 +784,15 @@ class Bus100Rebot(Rebot):
 
     @classmethod
     def get_random_rebot(cls):
+        qs = cls.objects.all()
+        if not qs:
+            return None
+        size = qs.count()
+        rd = random.randint(0, size-1)
+        return qs[rd]
+
+    @classmethod
+    def get_random_active_rebot(cls):
         qs = cls.objects.filter(is_active=True)
         if not qs:
             return None

@@ -180,65 +180,66 @@ def migrate_scqcp(crawl_db, city=""):
 
 
 def migrate_bus100(crawl_db, city=""):
-    for d in crawl_db.line_bus100.find({"departure_time": {"$gte": str(datetime.now())}}):
-        crawl_source = "bus100"
-
-        # migrate Starting
-        city_id = str(d["city_id"])
-        starting_id = md5("%s-%s-%s-%s-%s" % \
-                (city_id, d["city_name"], d["start_city_id"], d["start_city_name"], crawl_source))
-        start_city = crawl_db.start_city_bus100.find_one({"start_city_id": d["start_city_id"]})
-
+#     Line.objects.filter(crawl_source='bus100').delete()
+#     Destination.objects.filter(crawl_source='bus100').delete() 
+#     Starting.objects.filter(crawl_source='bus100').delete()
+    
+    query = {
+#         "departure_time": {
+#             "$gte": datetime.now()
+#         },
+    }
+    if city:
+        query.update({"start_city_name": city})
+    for d in crawl_db.line_bus100.find(query):
+        crawl_source = d["crawl_source"]
         starting_attrs = {
-            "starting_id": starting_id,
+            "starting_id": md5("%s-%s-%s-%s" % (d["province_name"], d["start_city_name"], d["start_station"],crawl_source)),
             "province_name": d["province_name"],
-            "city_id": city_id,
-            "city_name": d["city_name"],
+            "city_id": d["start_city_id"],
+            "city_name": d["start_city_name"],
             "station_id": d["start_city_id"],
-            "station_name": d["start_city_name"],
-            "city_pinyin": '',
-            "city_pinyin_prefix": start_city["city_short_name"],
-            "station_pinyin": start_city["start_full_name"],
-            "station_pinyin_prefix": start_city["start_short_name"],
+            "station_name": d["start_station"],
+            "city_pinyin": d["start_full_name"],
+            "city_pinyin_prefix": d["start_short_name"],
+            "station_pinyin": "",
+            "station_pinyin_prefix": "",
             "is_pre_sell": True,
             "crawl_source": crawl_source,
         }
         try:
-            starting_obj = Starting.objects.get(starting_id=starting_id)
+            starting_obj = Starting.objects.get(starting_id=starting_attrs["starting_id"])
             starting_obj.update(**starting_attrs)
         except Starting.DoesNotExist:
             starting_obj = Starting(**starting_attrs)
             starting_obj.save()
 
-        # migrate destination
-        dest_id  = md5("%s-%s-%s-%s-%s-%s" % \
-                (starting_obj.starting_id, "", "", "", d["target_city_name"], crawl_source))
-        target_city = crawl_db.target_city_bus100.find_one({"starting_id": d["start_city_id"], "target_name": d["target_city_name"]})
+        target_city_name = d["target_city_name"]
+        end_station = d["end_station"]
+
         dest_attrs = {
-            "destination_id": dest_id,
+            "destination_id": md5("%s-%s-%s-%s" % (starting_obj.starting_id, target_city_name, end_station, crawl_source)),
             "starting": starting_obj,
             "city_id": "",
-            "city_name": "",
-            "city_pinyin": "",
-            "city_pinyin_prefix": "",
+            "city_name": target_city_name,
+            "city_pinyin": d['target_full_name'],
+            "city_pinyin_prefix": d['target_short_name'],
             "station_id": "",
-            "station_name": target_city["target_name"],
-            "station_pinyin": target_city["full_name"],
-            "station_pinyin_prefix": target_city["short_name"],
+            "station_name": end_station,
+            "station_pinyin": "",
+            "station_pinyin_prefix": "",
             "crawl_source": crawl_source,
         }
         try:
-            dest_obj = Destination.objects.get(destination_id=dest_id)
+            dest_obj = Destination.objects.get(destination_id=dest_attrs["destination_id"])
             dest_obj.update(**dest_attrs)
         except Destination.DoesNotExist:
             dest_obj = Destination(**dest_attrs)
             dest_obj.save()
 
-        # migrate Line
-        line_id = str(d["line_id"])
         drv_date, drv_time = d["departure_time"].split(" ")
         attrs = {
-            "line_id": line_id,
+            "line_id": d["line_id"],
             "crawl_source": crawl_source,
             "starting": starting_obj,
             "destination": dest_obj,
@@ -247,7 +248,7 @@ def migrate_bus100(crawl_db, city=""):
             "drv_datetime": datetime.strptime(d["departure_time"], "%Y-%m-%d %H:%M"),
             "distance": str(d["distance"]),
             "vehicle_type": '',
-            "seat_type": "",
+            "seat_type": '',
             "bus_num": str(d["shiftid"]),
             "full_price": float(str(d["price"]).split('￥')[-1]),
             "half_price": 0,
@@ -256,14 +257,14 @@ def migrate_bus100(crawl_db, city=""):
             "left_tickets": 50 if d["flag"] else 0,
             "extra_info": {"flag": d["flag"]},
             'update_datetime': datetime.now(),
-        }
+            }
         try:
-            line_obj = Line.objects.get(line_id=line_id, crawl_source=crawl_source)
+            line_obj = Line.objects.get(line_id=attrs["line_id"])
             line_obj.update(**attrs)
         except Line.DoesNotExist:
             line_obj = Line(**attrs)
             line_obj.save()
-        print line_obj.line_id
+        print line_obj.line_id, d["start_city_name"]
 
 
 def migrate_ctrip(crawl_db, city=""):

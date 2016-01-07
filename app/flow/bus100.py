@@ -29,11 +29,14 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        rebot = Bus100Rebot.get_random_rebot()
-        if not rebot:
-            rebot = Bus100Rebot.objects.first()
+        if order.source_account:
+            rebot = Bus100Rebot.objects.get(telephone=order.source_account)
+        else:
+            rebot = Bus100Rebot.get_random_rebot()
+        if not rebot.is_active:
             lock_result.update(result_code=2)
             lock_result.update(source_account=rebot.telephone)
+            lock_result.update(result_reason="第三方账号没有激活")
             return lock_result
         rebot.recrawl_shiftid(order.line)
         line = Line.objects.get(line_id=order.line.line_id)
@@ -204,7 +207,7 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        rebot = Bus100Rebot.get_random_rebot()
+        rebot = Bus100Rebot.get_random_active_rebot()
         if not rebot:
             return result_info
         ret = rebot.recrawl_shiftid(line)
@@ -269,7 +272,6 @@ class Flow(BaseFlow):
             r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             ret = r.json()
-            print ret,'333333333333333333333333333',code
         if ret.get("flag", '') == '0':
             rebot = Bus100Rebot.objects.get(telephone=order.source_account)
             rebot.cookies = cookies

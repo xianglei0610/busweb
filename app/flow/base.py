@@ -49,8 +49,9 @@ class Flow(object):
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
             order_log.info("[lock-result] succ. order: %s", order.order_no)
         elif ret["result_code"] == 2:   # 锁票失败,进入锁票重试
+            order.modify(source_account=ret["source_account"])
             self.lock_ticket_retry(order)
-            order_log.info("[lock-result] retry. order: %s", order.order_no)
+            order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
             return
         else:   # 锁票失败
             order.modify(status=STATUS_LOCK_FAIL,
@@ -90,7 +91,6 @@ class Flow(object):
         if order.status not in (STATUS_ISSUE_ING, STATUS_WAITING_ISSUE):
             return False
         return True
-
 
     def refresh_issue(self, order):
         """
