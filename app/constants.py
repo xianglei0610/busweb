@@ -4,6 +4,7 @@
 SOURCE_SCQCP = "scqcp"
 SOURCE_BUS100 = "bus100"
 SOURCE_CTRIP = "ctrip"
+SOURCE_CBD = "cbd"
 
 SOURCE_INFO = {
     SOURCE_SCQCP: {
@@ -51,6 +52,14 @@ SOURCE_INFO = {
             "sjso123@163.com": ("lxy12308", ""),
             "asadjd12@sina.com": ("lxy12308", ""),
             "s8vg43@sina.com": ("lxy12308", ""),
+        }
+    },
+    SOURCE_CBD: {
+        "name": "车巴达",
+        "website": "www.chebada.com",
+        "accounts": {
+            # "15575101324": ("cibRpL", ''),
+            "13267109876": ("123456", 0),
         }
     }
 }

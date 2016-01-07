@@ -279,3 +279,18 @@ def migrate_ctrip(crawl_db, city=""):
         destination = insert_or_update_destination(starting, d)
         line_obj = insert_or_update_line(starting, destination, d)
         print line_obj.line_id, d["s_city_name"]
+
+
+def migrate_cbd(crawl_db, city=""):
+    query = {
+        "drv_datetime": {
+            "$gte": datetime.now()
+        },
+    }
+    if city:
+        query.update({"s_city_name": city})
+    for d in crawl_db.cbd_line.find(query):
+        starting = insert_or_update_starting(d)
+        destination = insert_or_update_destination(starting, d)
+        line_obj = insert_or_update_line(starting, destination, d)
+        print line_obj.line_id, d["s_city_name"]

@@ -14,20 +14,23 @@ manager = Manager(app)
 
 def make_shell_context():
     import app.models as m
-    return dict(app=app, db=db, m=m)
+    import app.flow as f
+    return dict(app=app, db=db, m=m, f=f)
 
 manager.add_command("shell", Shell(make_context=make_shell_context))
 
 
 @manager.command
 def deploy(site):
-    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot
+    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot, CBDRebot
     if site == "ctrip":
         CTripRebot.login_all()
     elif site == "scqcp":
         ScqcpRebot.login_all()
     elif site == "bus100":
         Bus100Rebot.login_all()
+    elif site == "cbd":
+        CBDRebot.login_all()
 
 
 @manager.command
@@ -117,11 +120,12 @@ def migrate_from_crawl(site, city=""):
     crawl_mongo = pymongo.MongoClient("mongodb://%s:%s" % (settings["host"], settings["port"]))
     crawl_db = crawl_mongo[settings["db"]]
 
-    from sync_data import migrate_bus100, migrate_scqcp, migrate_ctrip
+    from sync_data import migrate_bus100, migrate_scqcp, migrate_ctrip, migrate_cbd
     mappings = {
         "scqcp": migrate_scqcp,
         "bus100": migrate_bus100,
         "ctrip": migrate_ctrip,
+        "cbd": migrate_cbd,
     }
     app.logger.info("start migrate data from crawldb to webdb:%s", site)
     mappings[site](crawl_db, city=city)

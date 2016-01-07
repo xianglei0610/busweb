@@ -52,7 +52,7 @@ def init_logging(app, server_type):
     stdout_fhd.setLevel(logging.DEBUG)
     stdout_fhd.setFormatter(fmt)
     for logger in [line_log, order_log, kefu_log, access_log]:
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
         s = logger.name
         f = "logs/%s.log" % s
         file_hd = TimedRotatingFileHandler(os.path.join(BASE_DIR, f),
