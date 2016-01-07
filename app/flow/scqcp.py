@@ -86,7 +86,7 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
-        if order.status != STATUS_WAITING_ISSUE:
+        if not self.need_refresh_issue(order):
             result_info.update(result_msg="状态未变化")
             return result_info
 

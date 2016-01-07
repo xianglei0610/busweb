@@ -142,7 +142,7 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
-        if order.status not in (STATUS_WAITING_ISSUE, STATUS_WAITING_LOCK, STATUS_ISSUE_ING):
+        if not self.need_refresh_issue(order):
             result_info.update(result_msg="状态未变化")
             return result_info
 
@@ -286,51 +286,26 @@ class Flow(BaseFlow):
             r = requests.get(pay_url, headers=headers, verify=False)
             cookies = dict(r.cookies)
             sel = etree.HTML(r.content)
-            paySource = sel.xpath('//input[@id="paySource"]/@value')[0]
-            if paySource == '84100YK':
-                payment = '10'
-            else:
-                payment = '5'
-            data = dict(
-                    userIdentifier=sel.xpath('//form[@id="alipayForm"]/input[@name="userIdentifier"]/@value')[0],
-                    orderNo=sel.xpath('//form[@id="alipayForm"]/input[@name="orderNo"]/@value')[0],
-                    couponId=sel.xpath('//form[@id="alipayForm"]/input[@name="couponId"]/@value')[0],
-                    produceType=sel.xpath('//form[@id="alipayForm"]/input[@name="produceType"]/@value')[0],
-                    payment=payment
-                )
-            print data
-            info_url = "http://pay.84100.com/payment/payment/gateWayPay.do"
-            r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
-            return {"flag": "html", "content": r.content}
-            
-            
-            
-            
-            
-#             try:
-#                 data = dict(
-#                     orderId=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderId"]/@value')[0],
-#                     orderAmt=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderAmt"]/@value')[0],
-#                 )
-#             except:
-#                 return {"flag": "url", "content": pay_url}
-#             check_url = 'https://pay.84100.com/payment/alipay/orderCheck.do'
-#     
-#             r = requests.post(check_url, data=data, headers=headers, cookies=cookies, verify=False)
-#             checkInfo = r.json()
-#             orderNo = checkInfo['request_so']
-#             data = dict(
-#                 orderId=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderId"]/@value')[0],
-#                 orderAmt=sel.xpath('//form[@id="alipayForm"]/input[@id="alipayOrderAmt"]/@value')[0],
-#                 orderNo=orderNo,
-#                 orderInfo=sel.xpath('//form[@id="alipayForm"]/input[@name="orderInfo"]/@value')[0],
-#                 count=sel.xpath('//form[@id="alipayForm"]/input[@name="count"]/@value')[0],
-#                 isMobile=sel.xpath('//form[@id="alipayForm"]/input[@name="isMobile"]/@value')[0],
-#             )
-#     
-#             info_url = "https://pay.84100.com/payment/page/alipayapi.jsp"
-#             r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
-            return {"flag": "html", "content": r.content}
+            try:
+                paySource = sel.xpath('//input[@id="paySource"]/@value')[0]
+                if paySource == '84100YK':
+                    payment = '10'
+                else:
+                    payment = '5'
+                data = dict(
+                        userIdentifier=sel.xpath('//form[@id="alipayForm"]/input[@name="userIdentifier"]/@value')[0],
+                        orderNo=sel.xpath('//form[@id="alipayForm"]/input[@name="orderNo"]/@value')[0],
+                        couponId=sel.xpath('//form[@id="alipayForm"]/input[@name="couponId"]/@value')[0],
+                        produceType=sel.xpath('//form[@id="alipayForm"]/input[@name="produceType"]/@value')[0],
+                        payment=payment
+                    )
+                print data
+                info_url = "http://pay.84100.com/payment/payment/gateWayPay.do"
+                r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
+                return {"flag": "html", "content": r.content}
+            except:
+                return {"flag": "url", "content": pay_url}
+
         if ret.get("msg", '') == "验证码不正确" or not flag:
             data = {
                 "cookies": cookies,
@@ -339,4 +314,4 @@ class Flow(BaseFlow):
             }
             session["bus100_pay_login_info"] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
-           
+
