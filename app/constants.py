@@ -108,6 +108,7 @@ STATUS_WAITING_ISSUE = 3    # 等待出票, 在源网站锁票成功
 STATUS_WAITING_LOCK = 4     # 等待下单，12308已提交了订单，但未向源网站提交订单
 STATUS_LOCK_FAIL = 5        # 下单失败，12308已提交了订单，向源网站提交订单失败
 STATUS_GIVE_BACK = 6        # 退票
+STATUS_LOCK_RETRY = 7       # 锁票重试
 STATUS_ISSUE_ING = 12       # 源站正在出票
 STATUS_ISSUE_FAIL = 13      # 出票失败, 支付完成后，已确认源网站出票失败
 STATUS_ISSUE_SUCC = 14      # 出票成功, 支付完成后，源网站也出票成功
@@ -120,6 +121,7 @@ STATUS_MSG = {
     STATUS_ISSUE_SUCC: "出票成功",
     STATUS_GIVE_BACK: "已退票",
     STATUS_ISSUE_ING: "正在出票",
+    STATUS_LOCK_RETRY: "锁票重试",
 }
 
 # 证件类型
