@@ -185,9 +185,9 @@ def migrate_bus100(crawl_db, city=""):
 #     Starting.objects.filter(crawl_source='bus100').delete()
     
     query = {
-#         "departure_time": {
-#             "$gte": datetime.now()
-#         },
+        "departure_time": {
+           "$gte": str(datetime.now())
+        },
     }
     if city:
         query.update({"start_city_name": city})
