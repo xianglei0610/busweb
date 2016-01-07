@@ -394,7 +394,6 @@ def all_order():
                                )
     elif client in ['android', 'ios']:
         order_info = parse_page_data(qs)
-        print order_info
         orders = order_info['items']
         data = []
         for i in orders:
