@@ -171,9 +171,10 @@ class Flow(BaseFlow):
                     "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                     "start": order.line.starting.station_name,
                     "end": order.line.destination.station_name,
-                    "amount": order.ticket_amount,
+                    #"amount": order.ticket_amount,
                     "code": code,
                     "no": no,
+                    "raw_order": order.raw_order_no,
                 }
                 msg_list.append(dx_tmpl % dx_info)
             result_info.update({
