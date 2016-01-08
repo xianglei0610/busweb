@@ -947,7 +947,7 @@ class Bus100Rebot(Rebot):
         """
         queryline_url = 'http://www.84100.com/getTrainList/ajax'
         start_city_id = line.starting.station_id
-        start_city_name = line.starting.station_name
+        start_city_name = line.starting.city_name
         target_city_name = line.destination.station_name
         sdate = line.drv_date
         drv_time = line.drv_time
@@ -1012,8 +1012,8 @@ class Bus100Rebot(Rebot):
                 item['bus_num'] = str(shiftid)
                 line_id = md5("%s-%s-%s-%s-%s-%s" % \
                     (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'bus100'))
+                
                 item['line_id'] = line_id
-
                 try:
                     line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
                     line_obj.modify(**item)

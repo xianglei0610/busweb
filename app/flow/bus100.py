@@ -14,6 +14,7 @@ from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import Bus100Rebot, Line
 from app.flow import get_flow
+from app import order_log, line_log
 
 
 class Flow(BaseFlow):
@@ -30,6 +31,9 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
+        headers = {
+                'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",
+            }
         if order.source_account:
             rebot = Bus100Rebot.objects.get(telephone=order.source_account)
         else:
@@ -61,21 +65,24 @@ class Flow(BaseFlow):
               "ttsId":  ''
         }
         try:
-            trainInfo = requests.post(url, data=data, cookies=rebot.cookies)
+            trainInfo = requests.post(url, data=data, headers=headers, cookies=rebot.cookies)
             trainInfo = trainInfo.json()
-            tickType = trainInfo['tickType']
-            if re.findall(u'全票', tickType) or re.findall('\u5168\u7968', tickType):
-                ticketType = u'全票'
-            else:
-                if re.findall(u'全', tickType):
-                    ticketType = u'全'
-            msg = trainInfo['msg']
-            if re.findall('ticketPassword', msg):
-                ticketPassword = str(random.randint(100000, 999999))
-            else:
-                ticketPassword = ''
+            tickType = trainInfo.get('tickType', '')
+            print tickType
+            if tickType:
+                if re.findall(u'全票', tickType) or re.findall('\u5168\u7968', tickType):
+                    ticketType = u'全票'
+                else:
+                    if re.findall(u'全', tickType):
+                        ticketType = u'全'
+                msg = trainInfo['msg']
+                if re.findall('ticketPassword', msg):
+                    ticketPassword = str(random.randint(100000, 999999))
+                else:
+                    ticketPassword = ''
         except Exception,e:
             print traceback.format_exc()
+        order_log.info("[lock-result] query trainInfo . order: %s,%s", order.order_no,trainInfo)
         url = 'http://www.84100.com/createOrder/ajax'
         idNos = []
         names = []
@@ -95,24 +102,26 @@ class Flow(BaseFlow):
             "ticketNo": '',
             "ticketPassword": ticketPassword,
             "idNos": ','.join(idNos),
-            "ticketTypes": ','.join(ticketTypes),
+            "ticketTypes": ','.join(ticketTypes)  ,
             "idTypes": ','.join(idTypes),
             "names": ','.join(names),
         }
         print data
-        orderInfo = requests.post(url, data=data, cookies=rebot.cookies)
+        orderInfo = requests.post(url, data=data, headers=headers, cookies=rebot.cookies)
         orderInfo = orderInfo.json()
+        order_log.info("[lock-result] query orderInfo . order: %s,%s", order.order_no,orderInfo) 
         pay_url = ''
         if orderInfo.get('flag') == '0':
             orderId = orderInfo['orderId']
             url = "http://www.84100.com/pay/ajax?orderId=%s" % orderId
-            orderPay = requests.post(url, cookies=rebot.cookies)
+            orderPay = requests.post(url, headers=headers, cookies=rebot.cookies)
             orderPay = orderPay.json()
             if orderPay.get('flag') == '0':
                 pay_url = orderPay['url']
-
+            order_log.info("[lock-result] query orderPay . order: %s,%s", order.order_no,orderPay) 
         if pay_url:
             pay_info = self.request_pay_info(pay_url)
+            order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info) 
             expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
             orderInfo['expire_datetime'] = expire_datetime
             orderInfo['ticketPassword'] = ticketPassword
@@ -132,9 +141,7 @@ class Flow(BaseFlow):
         return lock_result
 
     def request_pay_info(self, pay_url):
-        ua = random.choice(MOBILE_USER_AGENG)
-        headers = {"User-Agent": ua}
-        r = requests.get(pay_url, verify=False,  headers=headers)
+        r = requests.get(pay_url, verify=False)
         sel = etree.HTML(r.content)
         orderNoObj = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderNo"]/@value')
         orderAmtObj = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderAmt"]/@value')
@@ -229,6 +236,8 @@ class Flow(BaseFlow):
                 if left_tickets:
                     left_tickets = int(left_tickets[0])
                 result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now})
+            else:
+                line_log.info("[refresh-result] fail line:%s %s,result:%s ", line.crawl_source, line.line_id,trainInfo)
         except:
             result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         return result_info
@@ -282,9 +291,6 @@ class Flow(BaseFlow):
                 flow.lock_ticket(order)
                 pay_url = order.pay_url
         if pay_url:
-            headers = {
-                'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",
-            }
             r = requests.get(pay_url, headers=headers, verify=False)
             cookies = dict(r.cookies)
             sel = etree.HTML(r.content)
