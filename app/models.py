@@ -330,6 +330,9 @@ class Order(db.Document):
         elif self.crawl_source == "ctrip":
             rebot = CTripRebot.objects.get(telephone=self.source_account)
             return rebot
+        elif self.crawl_source == "cbd":
+            rebot = CBDRebot.objects.get(telephone=self.source_account)
+            return rebot
         return None
 
     def complete_by(self, user_obj):

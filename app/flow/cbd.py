@@ -5,8 +5,10 @@ import requests
 import datetime
 import json
 import urlparse
+import re
 
 from lxml import etree
+from bs4 import BeautifulSoup
 from collections import OrderedDict
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -94,10 +96,9 @@ class Flow(BaseFlow):
             "Content-Type": "application/json",
         }
         for i in range(2):
-            r = requests.post(order_url, data=json.dumps(data), headers=headers, cookies=json.loads(rebot.cookies), proxies={"http": "http://192.168.1.99:8888"})
-            order_log.debug(r.content)
+            r = requests.post(order_url, data=json.dumps(data), headers=headers, cookies=json.loads(rebot.cookies))
             ret = r.json()
-            if self.check_login_by_resp(rebot, r) == "OK":
+            if self.check_login_by_resp(rebot, r) != "relogined":
                 break
         return ret
 
@@ -107,7 +108,7 @@ class Flow(BaseFlow):
                 "User-Agent": rebot.user_agent,
             }
             r = requests.get(pay_url, headers=headers, cookies=json.loads(rebot.cookies))
-            if self.check_login_by_resp(rebot, r) == "OK":
+            if self.check_login_by_resp(rebot, r) != "relogined":
                 break
         sel = etree.HTML(r.content)
         detail_url = sel.xpath("//a[@class='page-back touchable']/@href")[0]
@@ -124,24 +125,26 @@ class Flow(BaseFlow):
         for i in range(2):
             headers = {"User-Agent": rebot.user_agent}
             r = requests.get(detail_url, headers=headers, cookies=json.loads(rebot.cookies))
-            if self.check_login_by_resp(rebot, r) == "OK":
+            if self.check_login_by_resp(rebot, r) != "relogined":
                 break
-        sel = etree.HTML(r.content)
-        order_log.debug("[send_order_request] %s", r.content)
-        order_id = sel.xpath("//input[@id='OrderId']/@value")[0]
-        order_ser_id = sel.xpath("//input[@id='OrderSerialId']/@value")[0]
-        total_price = float(sel.xpath("//span[@class='detail_info totalAmount clr-orange']/text()")[0][1:])
-        order_no = sel.xpath("//dd[@class='detail']/div[1]/div[2]/label/span/text()")[0].split(u"订单号：")[1]
+        soup = BeautifulSoup(r.content, "lxml")
+        state_element =soup.select(".orderDetail_state")[0]
+        state = state_element.get_text().strip()
+        order_no = soup.find_all(text=re.compile(u"订单号"))[0].split(u"订单号：")[1]
 
-        # icons = sel.css(".orderDetail_state .icon_state").xpath("span").extract()
+        pick_no, pick_code = "", ""
+        for ele in soup.select(".ticket_info .mtop-10"):
+            label = ele.label.get_text().strip()
+            span = ele.span.get_text().strip()
+            if label == u"取票号：":
+                pick_no = span
+            elif label == u"取票密码：":
+                pick_code = span
+
         return {
-            "order_id": order_id,
-            "order_ser_id": order_ser_id,
-            "total_price": total_price,
             "order_no": order_no or order.raw_order_no,
-            "state": "待付款",
-            "pick_code_list": [],
-            "pick_msg_list": [],
+            "state": state,
+            "code_list": ["%s|%s" % (pick_no, pick_code)],
         }
 
     def do_refresh_issue(self, order):
@@ -156,7 +159,40 @@ class Flow(BaseFlow):
             return result_info
         rebot = CBDRebot.objects.get(telephone=order.source_account)
         ret = self.send_order_request(order, rebot)
+        if not order.raw_order_no:
+            order.modify(raw_order_no=ret["order_no"])
         state = ret["state"]
+        if "出票成功" in state:
+            msg_list = []
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CBD]
+            for info in ret["code_list"]:
+                no, code = info.split("|")
+                dx_info = {
+                    "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                    "start": order.line.starting.station_name,
+                    "end": order.line.destination.station_name,
+                    "amount": order.ticket_amount,
+                    "code": code,
+                    "no": no,
+                }
+                msg_list.append(dx_tmpl % dx_info)
+            result_info.update({
+                "result_code": 1,
+                "result_msg": state,
+                "pick_code_list": ret["code_list"],
+                "pick_msg_list": msg_list,
+            })
+        elif "出票中" in state and "已支付" in state:
+            result_info.update({
+                "result_code": 4,
+                "result_msg": state,
+            })
+        elif "已取消"  in state:
+            result_info.update({
+                "result_code": 2,
+                "result_msg": state,
+            })
+        return result_info
 
     def do_refresh_line(self, line):
         result_info = {
@@ -219,7 +255,7 @@ class Flow(BaseFlow):
         if urlparse.urlsplit(resp.url).path=="/Account/Login":
             for i in range(2):
                 if rebot.login() == "OK":
-                    return "OK"
+                    return "relogined"
             rebot.modify(is_active=False)
             return "fail"
         try:
@@ -227,12 +263,12 @@ class Flow(BaseFlow):
             if ret["response"]["header"]["rspCode"] == "3100":
                 for i in range(2):
                     if rebot.login() == "OK":
-                        return "OK"
+                        return "relogined"
                 rebot.modify(is_active=False)
                 return "fail"
         except:
             pass
-        return "OK"
+        return "logined"
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="wy" ,**kwargs):
         return {"flag": "url", "content": order.pay_url}
