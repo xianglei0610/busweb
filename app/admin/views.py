@@ -485,7 +485,7 @@ def wating_deal_order():
     if userObj.is_kefu:
         key = 'order_list:%s' % userObj.username
         for o in Order.objects.filter(order_no__in=r.smembers(key)):
-            if o.status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING]:
+            if o.status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING, STATUS_GIVE_BACK]:
                 o.complete_by(current_user)
 #             elif o.status == STATUS_WAITING_LOCK:
 #                 r.srem(key, o.order_no)
