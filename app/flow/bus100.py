@@ -5,6 +5,7 @@ import requests
 import datetime
 import json
 import re
+import traceback
 from datetime import datetime as dte
 from flask import render_template, request, redirect
 from lxml import etree
@@ -59,21 +60,22 @@ class Flow(BaseFlow):
               "startName": order.line.starting.station_name,
               "ttsId":  ''
         }
-        trainInfo = requests.post(url, data=data, cookies=rebot.cookies)
-        trainInfo = trainInfo.json()
-        tickType = trainInfo['tickType']
-        if re.findall(u'全票', tickType) or re.findall('\u5168\u7968', tickType):
-            ticketType = u'全票'
-        else:
-            if re.findall(u'全', tickType):
-                ticketType = u'全'
-
-        msg = trainInfo['msg']
-        if re.findall('ticketPassword', msg):
-            ticketPassword = str(random.randint(100000, 999999))
-        else:
-            ticketPassword = ''
-
+        try:
+            trainInfo = requests.post(url, data=data, cookies=rebot.cookies)
+            trainInfo = trainInfo.json()
+            tickType = trainInfo['tickType']
+            if re.findall(u'全票', tickType) or re.findall('\u5168\u7968', tickType):
+                ticketType = u'全票'
+            else:
+                if re.findall(u'全', tickType):
+                    ticketType = u'全'
+            msg = trainInfo['msg']
+            if re.findall('ticketPassword', msg):
+                ticketPassword = str(random.randint(100000, 999999))
+            else:
+                ticketPassword = ''
+        except Exception,e:
+            print traceback.format_exc()
         url = 'http://www.84100.com/createOrder/ajax'
         idNos = []
         names = []
@@ -125,7 +127,7 @@ class Flow(BaseFlow):
         else:
             lock_result.update({
                 "lock_info": orderInfo,
-                "result_reason": orderInfo.get('msg', ''),
+                "result_reason": orderInfo.get('msg', 'unknow'),
             })
         return lock_result
 
@@ -145,9 +147,6 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
-        if not self.need_refresh_issue(order):
-            result_info.update(result_msg="状态未变化")
-            return result_info
 
         rebot = Bus100Rebot.objects.get(telephone=order.source_account)
         tickets = self.send_order_request(order, rebot)
@@ -229,7 +228,7 @@ class Flow(BaseFlow):
                 left_tickets = sel.xpath('//div[@class="ticketPrice"]/ul/li/strong[@id="leftSeatNum"]/text()')
                 if left_tickets:
                     left_tickets = int(left_tickets[0])
-            result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now})
+                result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now})
         except:
             result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         return result_info
@@ -278,9 +277,10 @@ class Flow(BaseFlow):
             print cookies
             rebot.is_active = True
             rebot.save()
-            flow = get_flow(order.crawl_source)
-            flow.lock_ticket(order)
-            pay_url = order.pay_url
+            if not pay_url:
+                flow = get_flow(order.crawl_source)
+                flow.lock_ticket(order)
+                pay_url = order.pay_url
         if pay_url:
             headers = {
                 'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",

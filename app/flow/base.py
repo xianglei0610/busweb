@@ -97,8 +97,8 @@ class Flow(object):
         出票刷新主流程，子类不用重写
         """
         old_status = order.status
-        if not self.need_refresh_issue(order):
-            return
+#         if not self.need_refresh_issue(order):
+#             return
         order_log.info("[issue-refresh-start] order:%s", order.order_no)
         ret = self.do_refresh_issue(order)
         code = ret["result_code"]
