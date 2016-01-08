@@ -192,6 +192,11 @@ class Flow(BaseFlow):
                 "result_code": 2,
                 "result_msg": state,
             })
+        elif "已退款"  in state:
+            result_info.update({
+                "result_code": 3,
+                "result_msg": state,
+            })
         return result_info
 
     def do_refresh_line(self, line):

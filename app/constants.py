@@ -63,6 +63,7 @@ SOURCE_INFO = {
             "13087921341": ("123456", ""),
             "13291407375": ("123456", ""),
             "15676700545": ("123456", ""),
+            "15677383224": ("123456", "")
         }
     }
 }
@@ -131,7 +132,7 @@ STATUS_MSG = {
     STATUS_ISSUE_FAIL: "出票失败",
     STATUS_LOCK_FAIL: "下单失败",
     STATUS_ISSUE_SUCC: "出票成功",
-    STATUS_GIVE_BACK: "已退票",
+    STATUS_GIVE_BACK: "已退款",
     STATUS_ISSUE_ING: "正在出票",
     STATUS_LOCK_RETRY: "锁票重试",
 }

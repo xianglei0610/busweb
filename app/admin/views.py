@@ -374,8 +374,25 @@ def all_order():
                 query.update(source_account=source_account)
     if status:
         query.update(status=int(status))
+
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
+    q_key = request.args.get("q_key", "")
+    q_value = request.args.get("q_value", "")
+    if q_key and q_value:
+        if q_key == "contact_phone":
+            query.update(contact_info__telephone=q_value)
+        elif q_key == "contact_name":
+            query.update(contact_info__name=q_value)
+        elif q_key == "sys_order_no":
+            query.update(order_no=q_value)
+        elif q_key == "out_order_no":
+            query.update(out_order_no=q_value)
+    kefu_name = request.args.get("kefu_name", "")
+    if kefu_name:
+        if kefu_name == "None":
+            kefu_name=None
+        query.update(kefu_username=kefu_name)
 
     if str_date:
         query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
@@ -388,10 +405,19 @@ def all_order():
         end_date = (dte.now()+timedelta(1)).strftime("%Y-%m-%d")
         query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
+
+    kefu_count = {str(k): v for k,v in Order.objects.item_frequencies('kefu_username', normalize=False).items()}
+
+    status_count = {}
+    for st in STATUS_MSG.keys():
+        status_count[st] = qs.filter(status=st).count()
     stat = {
-        "issued_total": qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount'),
+        "issued_total": int(qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount')),
         "money_total": qs.sum("order_price"),
         "dealed_total": qs.filter(kefu_order_status=1).count(),
+        "order_total": qs.count(),
+        "status_count": status_count,
+        "kefu_count": kefu_count,
     }
     if client == 'web':
         return render_template('admin-new/allticket_order.html',

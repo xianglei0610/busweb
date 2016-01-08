@@ -52,7 +52,7 @@ def refresh_issueing_order(self, order_no):
     flow = get_flow(order.crawl_source)
     flow.refresh_issue(order)
     if order.status == STATUS_ISSUE_ING:
-        self.retry(countdown=60+random.random()*10%3, max_retries=60*12)
+        self.retry(countdown=30+random.random()*10%3, max_retries=60*12)
 
 
 @celery.task(bind=True, ignore_result=True)
