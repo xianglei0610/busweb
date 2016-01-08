@@ -23,6 +23,19 @@ def idcard_birthday(idcard):
     return dte.strptime(idcard[6:14], "%Y%m%d")
 
 
+def chinese_week_day(date):
+    mapping = {
+        0: "周一",
+        1: "周二",
+        2: "周三",
+        3: "周四",
+        4: "周五",
+        5: "周六",
+        6: "周日",
+    }
+    return mapping[date.weekday()]
+
+
 def md5(msg):
     md5 = hashlib.md5(msg.encode('utf-8')).hexdigest()
     return md5

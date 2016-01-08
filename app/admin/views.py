@@ -186,15 +186,25 @@ def order_refresh(order_no):
 class SubmitOrder(MethodView):
     @login_required
     def get(self):
+        #contact = {
+        #    "name": " 张淑瑶",
+        #    "phone": "15575101324",
+        #    "idcard": "513401199007114628",
+        #}
+        #rider1 = {
+        #    "name": "张淑瑶",
+        #    "phone": "15575101324",
+        #    "idcard": "513401199007114628",
+        #}
         contact = {
-            "name": "罗军平",
-            "phone": "15575101324",
-            "idcard": "431021199004165616",
+            "name": "范月芹",
+            "phone": "18620857607",
+            "idcard": "510106199909235149",
         }
         rider1 = {
-            "name": "罗军平",
-            "phone": "15575101324",
-            "idcard": "431021199004165616",
+            "name": "范月芹",
+            "phone": "18620857607",
+            "idcard": "510106199909235149",
         }
 
         kwargs = dict(

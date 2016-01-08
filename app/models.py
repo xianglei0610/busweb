@@ -5,6 +5,7 @@ import urllib
 import urllib2
 import re
 import time
+import cPickle
 
 from app.constants import *
 from datetime import datetime as dte
@@ -329,6 +330,9 @@ class Order(db.Document):
         elif self.crawl_source == "ctrip":
             rebot = CTripRebot.objects.get(telephone=self.source_account)
             return rebot
+        elif self.crawl_source == "cbd":
+            rebot = CBDRebot.objects.get(telephone=self.source_account)
+            return rebot
         return None
 
     def complete_by(self, user_obj):
@@ -636,6 +640,69 @@ class ScqcpRebot(Rebot):
         response = urllib2.urlopen(request, qstr, timeout=30)
         ret = json.loads(response.read())
         return ret
+
+class CBDRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+    }
+
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        log_url = "http://m.chebada.com/Account/UserLogin"
+        data = {
+            "MobileNo": self.telephone,
+            "Password": self.password,
+        }
+        header = {
+            "User-Agent": ua,
+        }
+        r = requests.post(log_url, data=data, headers=header)
+        ret = r.json()
+        if int(ret["response"]["header"]["rspCode"]) == 0:
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.save()
+            return "OK"
+        else:
+            rebot_log.error("登陆错误cbd %s", str(ret))
+        return "fail"
+
+    @classmethod
+    def login_all(cls):
+        # 登陆所有预设账号
+        rebot_log.info(">>>> start to login chebada.com:")
+        valid_cnt = 0
+        has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_CBD]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd, _ = accounts[bot.telephone]
+            bot.modify(password=pwd)
+            if bot.login() == "OK":
+                rebot_log.info("%s 登陆成功" % bot.telephone)
+                valid_cnt += 1
+
+        for tele, (pwd, openid) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=False,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,)
+            bot.save()
+            if bot.login() == "OK":
+                rebot_log.info("%s 登陆成功" % bot.telephone)
+                valid_cnt += 1
+        rebot_log.info(">>>> end login chebada.com, success %d", valid_cnt)
 
 
 class CTripRebot(Rebot):

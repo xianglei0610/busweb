@@ -4,6 +4,7 @@
 SOURCE_SCQCP = "scqcp"
 SOURCE_BUS100 = "bus100"
 SOURCE_CTRIP = "ctrip"
+SOURCE_CBD = "cbd"
 
 SOURCE_INFO = {
     SOURCE_SCQCP: {
@@ -51,6 +52,15 @@ SOURCE_INFO = {
             "sjso123@163.com": ("lxy12308", ""),
             "asadjd12@sina.com": ("lxy12308", ""),
             "s8vg43@sina.com": ("lxy12308", ""),
+        }
+    },
+    SOURCE_CBD: {
+        "name": "车巴达",
+        "website": "www.chebada.com",
+        "accounts": {
+            "15575101324": ("cibRpL", ''),
+            "13267109876": ("123456", ""),
+            "13087921341": ("123456", ""),
         }
     }
 }
@@ -166,4 +176,5 @@ DUAN_XIN_TEMPL = {
     SOURCE_SCQCP: "您已购买%(time)s%(start)s至%(end)s的汽车票%(amount)s张，取票验证码%(code)s，请在发车时间前乘车",
     SOURCE_BUS100: "温馨提醒：您有%(amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order)s；请在发车前两小时内凭乘车人身份证或取票密码取票。祝您旅途愉快！",
     SOURCE_CTRIP: "%(time)s，%(start)s--%(end)s 共%(amount)s张成功出票。取票验证码%(code)s，请在发车时间前乘车",
+    SOURCE_CBD: "%(time)s，%(start)s--%(end)s 共%(amount)s张成功出票。取票号%(no)s, 取票密码%(code)s，请在发车时间前乘车",
 }
