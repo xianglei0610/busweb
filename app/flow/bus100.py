@@ -14,6 +14,7 @@ from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import Bus100Rebot, Line
 from app.flow import get_flow
+from app import order_log, line_log
 
 
 class Flow(BaseFlow):
@@ -75,6 +76,7 @@ class Flow(BaseFlow):
             else:
                 ticketPassword = ''
         except Exception,e:
+            order_log.info("[lock-result] query ticketType errr. order: %s,%s", order.order_no,e)
             print traceback.format_exc()
         url = 'http://www.84100.com/createOrder/ajax'
         idNos = []
@@ -102,6 +104,7 @@ class Flow(BaseFlow):
         print data
         orderInfo = requests.post(url, data=data, cookies=rebot.cookies)
         orderInfo = orderInfo.json()
+        order_log.info("[lock-result] query orderInfo . order: %s,%s", order.order_no,orderInfo) 
         pay_url = ''
         if orderInfo.get('flag') == '0':
             orderId = orderInfo['orderId']
@@ -110,9 +113,10 @@ class Flow(BaseFlow):
             orderPay = orderPay.json()
             if orderPay.get('flag') == '0':
                 pay_url = orderPay['url']
-
+            order_log.info("[lock-result] query orderPay . order: %s,%s", order.order_no,orderPay) 
         if pay_url:
             pay_info = self.request_pay_info(pay_url)
+            order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info) 
             expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
             orderInfo['expire_datetime'] = expire_datetime
             orderInfo['ticketPassword'] = ticketPassword
@@ -132,9 +136,7 @@ class Flow(BaseFlow):
         return lock_result
 
     def request_pay_info(self, pay_url):
-        ua = random.choice(MOBILE_USER_AGENG)
-        headers = {"User-Agent": ua}
-        r = requests.get(pay_url, verify=False,  headers=headers)
+        r = requests.get(pay_url, verify=False)
         sel = etree.HTML(r.content)
         orderNoObj = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderNo"]/@value')
         orderAmtObj = sel.xpath('//form[@id="openUnionPayForm"]/input[@id="orderAmt"]/@value')
@@ -229,6 +231,8 @@ class Flow(BaseFlow):
                 if left_tickets:
                     left_tickets = int(left_tickets[0])
                 result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now})
+            else:
+                line_log.info("[refresh-result] fail line:%s %s,result:%s ", line.crawl_source, line.line_id,trainInfo)
         except:
             result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         return result_info
