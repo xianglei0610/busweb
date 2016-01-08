@@ -372,10 +372,10 @@ class Order(db.Document):
         r = getRedisObj()
         r.zadd('lock_order_list', self.order_no, time.time())
 
-    def on_wating_lock(self):
-        if self.status != STATUS_WAITING_LOCK:
+    def on_lock_retry(self):
+        if self.status != STATUS_LOCK_RETRY:
             return
-        order_status_log.info("[on_wating_lock] order:%s", self.order_no)
+        order_status_log.info("[on_lock_retry] order:%s", self.order_no)
 
         r = getRedisObj()
         r.zadd('lock_order_list', self.order_no, time.time())
@@ -851,6 +851,15 @@ class Bus100Rebot(Rebot):
 
     @classmethod
     def get_random_rebot(cls):
+        qs = cls.objects.all()
+        if not qs:
+            return None
+        size = qs.count()
+        rd = random.randint(0, size-1)
+        return qs[rd]
+
+    @classmethod
+    def get_random_active_rebot(cls):
         qs = cls.objects.filter(is_active=True)
         if not qs:
             return None

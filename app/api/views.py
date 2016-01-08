@@ -148,13 +148,13 @@ def query_line():
                         "message": "parameter error",
                         "data": ""})
 
-    try:
-        open_city = OpenCity.objects.get(city_name=starting_name, is_active=True)
-    except Exception, e:
-        return jsonify({"code": RET_CITY_NOT_OPEN,
-                        "message": "%s is not open" % starting_name,
-                        "data": ""})
-    crawl_source = open_city.crawl_source
+#     try:
+#         open_city = OpenCity.objects.get(city_name=starting_name, is_active=True)
+#     except Exception, e:
+#         return jsonify({"code": RET_CITY_NOT_OPEN,
+#                         "message": "%s is not open" % starting_name,
+#                         "data": ""})
+    crawl_source = 'bus100'
 
     qs_starting = Starting.objects(Q(crawl_source=crawl_source) &
                                    (Q(city_name__startswith=starting_name) |

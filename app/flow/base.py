@@ -28,7 +28,7 @@ class Flow(object):
         order_log.info("[lock-start] order: %s", order.order_no)
         ret = self.do_lock_ticket(order)
         now = dte.now()
-        if ret["result_code"] == 1:
+        if ret["result_code"] == 1:   # 锁票成功
             order.modify(status=STATUS_WAITING_ISSUE,
                          lock_info=ret["lock_info"],
                          lock_datetime=dte.now(),
@@ -48,13 +48,12 @@ class Flow(object):
             })
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
             order_log.info("[lock-result] succ. order: %s", order.order_no)
-        elif ret["result_code"] == 2:
-            order.modify(status=STATUS_WAITING_LOCK,
-                         source_account=ret["source_account"],
-                         )
-            order.on_wating_lock()
-
-        else:
+        elif ret["result_code"] == 2:   # 锁票失败,进入锁票重试
+            order.modify(source_account=ret["source_account"])
+            self.lock_ticket_retry(order)
+            order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
+            return
+        else:   # 锁票失败
             order.modify(status=STATUS_LOCK_FAIL,
                          lock_info=ret["lock_info"],
                          lock_datetime=dte.now(),
@@ -85,12 +84,20 @@ class Flow(object):
         """
         raise Exception("Not Implemented")
 
+    def need_refresh_issue(self, order):
+        """
+        是否有必要刷新出票
+        """
+        if order.status not in (STATUS_ISSUE_ING, STATUS_WAITING_ISSUE):
+            return False
+        return True
+
     def refresh_issue(self, order):
         """
         出票刷新主流程，子类不用重写
         """
         old_status = order.status
-        if order.status not in [STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]:
+        if not self.need_refresh_issue(order):
             return
         order_log.info("[issue-refresh-start] order:%s", order.order_no)
         ret = self.do_refresh_issue(order)
@@ -200,3 +207,7 @@ class Flow(object):
         }
         """
         raise Exception("Not Implemented")
+
+    def lock_ticket_retry(self, order):
+        order.modify(status=STATUS_LOCK_RETRY)
+        order.on_lock_retry()

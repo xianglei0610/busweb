@@ -93,6 +93,7 @@ def line_list():
         qs_dest = Destination.objects(Q(city_name__startswith=dest_name) |
                                       Q(station_name__startswith=dest_name))
         query.update(destination__in=qs_dest)
+    print query
     queryset = Line.objects(**query).order_by("-crawl_datetime")
     return render_template('admin/line_list.html',
                            page=parse_page_data(queryset),
@@ -142,7 +143,7 @@ def order_pay(order_no):
     token = request.args.get("token", "")
     username = request.args.get("username",'')
     if order.status != STATUS_WAITING_ISSUE:
-        if order.status == STATUS_WAITING_LOCK and order.crawl_source == 'bus100':
+        if order.status == STATUS_LOCK_RETRY:
             pass
         else:
             return redirect(url_for("admin.wating_deal_order"))
@@ -404,7 +405,6 @@ def all_order():
                                )
     elif client in ['android', 'ios']:
         order_info = parse_page_data(qs)
-        print order_info
         orders = order_info['items']
         data = []
         for i in orders:
@@ -478,7 +478,7 @@ def wating_deal_order():
                         push_kefu_order.apply_async((userObj.username, i))
                     except:
                         pass
-    order_nos = r.smembers(key)
+        order_nos = r.smembers(key)
 
     qs = Order.objects.filter(order_no__in=order_nos)
     qs = qs.order_by("-create_date_time")
