@@ -668,6 +668,7 @@ class CBDRebot(Rebot):
             self.user_agent = ua
             self.cookies = json.dumps(dict(r.cookies))
             self.save()
+            rebot_log.info("登陆成功cbd %s", self.telephone)
             return "OK"
         else:
             rebot_log.error("登陆错误cbd %s", str(ret))
