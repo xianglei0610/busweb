@@ -671,7 +671,7 @@ class CBDRebot(Rebot):
             rebot_log.info("登陆成功cbd %s", self.telephone)
             return "OK"
         else:
-            rebot_log.error("登陆错误cbd %s", str(ret))
+            rebot_log.error("登陆错误cbd %s, %s", self.telephone, str(ret))
         return "fail"
 
     @classmethod
@@ -1012,7 +1012,7 @@ class Bus100Rebot(Rebot):
                 item['bus_num'] = str(shiftid)
                 line_id = md5("%s-%s-%s-%s-%s-%s" % \
                     (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'bus100'))
-                
+
                 item['line_id'] = line_id
                 try:
                     line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
