@@ -59,7 +59,7 @@ def check(func):
 
 
 @check
-def bus_crawl(crawl_source):
+def bus_crawl(crawl_source, province_id = None):
     if os.getenv('FLASK_CONFIG') == 'dev':
         url = "http://192.168.1.202:6800/schedule.json"
     elif os.getenv('FLASK_CONFIG') == 'prod':
@@ -68,15 +68,17 @@ def bus_crawl(crawl_source):
         return
     data = {
           "project": "BusCrawl",
-          "spider": crawl_source
+          "spider": crawl_source,
           }
+    if province_id:
+        data.update(province_id=province_id)
     print url
     res = requests.post(url, data=data)
     res = res.json()
     print res
     if not app.config["DEBUG"]:
         with app.app_context():
-            subject = str(datetime.datetime.now())[0:19] + '  start bus_crawl,crawl_source :%s ' % crawl_source
+            subject = str(datetime.datetime.now())[0:19] + ' start bus_crawl,crawl_source :%s,province_id:%s ' % (crawl_source,province_id)
             sender = 'dg@12308.com'
             recipients = ADMINS
             text_body = ''
@@ -141,9 +143,11 @@ def main():
     sched = Scheduler(daemonic=False)
 
     #sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
-    sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['bus100'])
+    sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['bus100', "450000"])
+    sched.add_cron_job(bus_crawl, hour=20, minute=40, args=['bus100', "370000"])
+    sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['bus100', "210000"])
     #sched.add_cron_job(sync_crawl_to_api, hour=21, minute=10, args=['scqcp'])
-    sched.add_cron_job(sync_crawl_to_api, hour=22, minute=30, args=['bus100'])
+    sched.add_cron_job(sync_crawl_to_api, hour=23, minute=50, args=['bus100'])
 
     sched.add_interval_job(check_login_status, minutes=10, args=['bus100'])
 #     sched.add_interval_job(polling_order_status, minutes=1)
@@ -154,4 +158,4 @@ def main():
 if __name__ == '__main__':
     main()
 #     check_login_status('bus100')
-# bus_crawl('bus100')
+    #bus_crawl('bus100')

@@ -82,7 +82,7 @@ class Flow(BaseFlow):
                     ticketPassword = ''
         except Exception,e:
             print traceback.format_exc()
-        order_log.info("[lock-result] query trainInfo . order: %s,%s", order.order_no,trainInfo)
+            order_log.info("[lock-result] query trainInfo . order: %s,%s", order.order_no,trainInfo)
         url = 'http://www.84100.com/createOrder/ajax'
         idNos = []
         names = []
@@ -102,7 +102,7 @@ class Flow(BaseFlow):
             "ticketNo": '',
             "ticketPassword": ticketPassword,
             "idNos": ','.join(idNos),
-            "ticketTypes": ','.join(ticketTypes)  ,
+            "ticketTypes": ','.join(ticketTypes),
             "idTypes": ','.join(idTypes),
             "names": ','.join(names),
         }
