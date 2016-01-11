@@ -192,7 +192,6 @@ def query_line_detail():
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
     flow = get_flow(line.crawl_source)
     flow.refresh_line(line)
-    #line.refresh()
     return jsonify({"code": RET_OK, "message": "OK", "data": line.get_json()})
 
 

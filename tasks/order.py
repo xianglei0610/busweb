@@ -41,18 +41,24 @@ def refresh_kefu_order(self, username, order_no):
 
 
 @celery.task(bind=True, ignore_result=True)
-def refresh_issueing_order(self, order_no):
+def refresh_issueing_order(self, order_no, retry_seq=1):
     """
     刷新正在出票订单状态
     """
-    order_log.info("[refresh_issueing_order] order:%s", order_no)
+    order_log.info("[refresh_issueing_order] order:%s retry_seq: %s", order_no, retry_seq)
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_ISSUE_ING:
         return
     flow = get_flow(order.crawl_source)
     flow.refresh_issue(order)
     if order.status == STATUS_ISSUE_ING:
-        self.retry(countdown=30+random.random()*10%3, max_retries=60*12)
+        if retry_seq < 30:      # 前40次,每3~5s刷新一次
+            seconds = random.randint(3, 5)
+        elif retry_seq < 100:   # 前40~100次
+            seconds = random.randint(30, 40)
+        else:
+            seconds = random.randint(60, 90)
+        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=seconds, max_retries=60*12)
 
 
 @celery.task(bind=True, ignore_result=True)
