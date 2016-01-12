@@ -219,10 +219,10 @@ class Line(db.Document):
             "drv_time",
             "drv_datetime",
             "crawl_datetime",
-            {
-                'fields': ['crawl_datetime'],
-                'expireAfterSeconds': 3600*24*20,       # 20天
-            }
+           # {
+           #     'fields': ['crawl_datetime'],
+           #     'expireAfterSeconds': 3600*24*20,       # 20天
+           # }
             ],
     }
 
@@ -424,6 +424,10 @@ class Order(db.Document):
         if rebot:
             rebot.remove_doing_order(self)
 
+        r = getRedisObj()
+        key = RK_ISSUEING_COUNT
+        r.sadd(key, self.order_no)
+
     def on_issue_success(self):
         if self.status != STATUS_ISSUE_SUCC:
             return
@@ -431,8 +435,10 @@ class Order(db.Document):
 
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
-
         r.delete(key)
+        key = RK_ISSUEING_COUNT
+        r.delete(key)
+
         rebot = self.get_rebot()
         if rebot:
             rebot.remove_doing_order(self)

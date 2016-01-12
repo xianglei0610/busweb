@@ -482,6 +482,13 @@ def wating_deal_order():
     order_nos = []
     r = getRedisObj()
     client = request.headers.get("type", 'web')
+
+    key = RK_ISSUEING_COUNT
+    order_ct = r.scard(key)
+    forbid = False
+    if order_ct >=3:
+        forbid = True
+
     if userObj.is_kefu:
         key = 'order_list:%s' % userObj.username
         for o in Order.objects.filter(order_no__in=r.smembers(key)):
@@ -494,8 +501,13 @@ def wating_deal_order():
             order_ct = r.scard(key)
             if order_ct < KF_ORDER_CT:
                 count = KF_ORDER_CT-order_ct
-                lock_order_list = r.zrange('lock_order_list', 0, count-1)
+                lock_order_list = r.zrange('lock_order_list', 0, -1)
                 for i in lock_order_list:
+                    if count<=0:
+                        break
+                    if forbid and Order.objects.get(order_no=i).crawl_source=="cbd":
+                        continue
+                    count -= 1
                     r.zrem('lock_order_list', i)
                     r.sadd(key, i)
                     refresh_kefu_order.apply_async((userObj.username, i))
