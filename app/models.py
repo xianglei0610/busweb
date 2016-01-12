@@ -17,6 +17,7 @@ from app.utils import md5, getRedisObj
 from app import rebot_log, order_status_log
 
 
+
 class AdminUser(db.Document):
     """
     后台管理员/客服
@@ -218,6 +219,10 @@ class Line(db.Document):
             "drv_time",
             "drv_datetime",
             "crawl_datetime",
+            {
+                'fields': ['crawl_datetime'],
+                'expireAfterSeconds': 3600*24*20,       # 20天
+            }
             ],
     }
 
