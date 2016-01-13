@@ -5,6 +5,7 @@ SOURCE_SCQCP = "scqcp"
 SOURCE_BUS100 = "bus100"
 SOURCE_CTRIP = "ctrip"
 SOURCE_CBD = "cbd"
+SOURCE_JSKY = "jsky"
 
 SOURCE_INFO = {
     SOURCE_SCQCP: {
@@ -91,13 +92,20 @@ SOURCE_INFO = {
             #"18684920073": ("123456", ""),
             #"13450027307": ("123456", ""),
         }
+    },
+    SOURCE_JSKY: {
+        "name": "江苏客运",
+        "website": "www.jskylwsp.com",
+        "accounts": {
+            "15575101324": ("fQPjVx7bgVrG60XZH3fxQw==", ''),
+        }
     }
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
 Bus100_DOMAIN = "http://wap.84100.com"
 
-ADMINS = ['xiangleilei@12308.com','luojunping@12308.com']
+ADMINS = ['xiangleilei@12308.com', 'luojunping@12308.com']
 
 REDIS_HOST = '127.0.0.1'
 REDIS_PASSWD = ""
@@ -134,11 +142,11 @@ BROWSER_USER_AGENT = [
 ]
 
 MOBILE_USER_AGENG = [
-    "Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
-    "Mozilla/5.0 (Linux; U; Android 4.0.3; de-ch; HTC Sensation Build/IML74K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
-    "Mozilla/5.0 (Linux; U; Android 2.3; en-us) AppleWebKit/999+ (KHTML, like Gecko) Safari/999.9",
-    "Mozilla/5.0 (Linux; U; Android 2.3.5; zh-cn; HTC_IncredibleS_S710e Build/GRJ90) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
-    "Mozilla/5.0 (Linux; U; Android 2.3.5; en-us; HTC Vision Build/GRI40) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
+    "Mozilla/5.0 (Linux; U; Android 4.0.3; zh-cn; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
+    "Mozilla/5.0 (Linux; U; Android 4.0.3; zh-cn; HTC Sensation Build/IML74K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
+    "Mozilla/5.0 (Linux; U; Android 3.3; zh-cn) AppleWebKit/999+ (KHTML, like Gecko) Safari/999.9",
+    "Mozilla/5.0 (Linux; U; Android 3.3.5; zh-cn; HTC_IncredibleS_S710e Build/GRJ90) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
+    "Mozilla/5.0 (Linux; U; Android 3.3.5; zh-cn; HTC Vision Build/GRI40) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
     "Dalvik/1.6.0 (Linux; U; Android 4.4.4; MI 4W MIUI/V7.0.5.0.KXDCNCI)",
 ]
 

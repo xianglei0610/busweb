@@ -22,7 +22,7 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 @manager.command
 def deploy(site):
-    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot, CBDRebot
+    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot, CBDRebot, JskyAppRebot
     if site == "ctrip":
         CTripRebot.login_all()
     elif site == "scqcp":
@@ -31,6 +31,8 @@ def deploy(site):
         Bus100Rebot.login_all()
     elif site == "cbd":
         CBDRebot.login_all()
+    elif site == "jskyapp":
+        JskyAppRebot.login_all()
 
 
 @manager.command
