@@ -674,7 +674,6 @@ class CBDRebot(Rebot):
         r = requests.post(log_url, data=data, headers=header)
         ret = r.json()
         if int(ret["response"]["header"]["rspCode"]) == 0:
-            self.is_active = True
             self.last_login_time = dte.now()
             self.user_agent = ua
             self.cookies = json.dumps(dict(r.cookies))
@@ -700,6 +699,7 @@ class CBDRebot(Rebot):
             pwd, _ = accounts[bot.telephone]
             bot.modify(password=pwd)
             if bot.login() == "OK":
+                bot.modify(is_active=True)
                 rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
 
@@ -712,6 +712,7 @@ class CBDRebot(Rebot):
                       password=pwd,)
             bot.save()
             if bot.login() == "OK":
+                bot.modify(is_active=True)
                 rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
         rebot_log.info(">>>> end login chebada.com, success %d", valid_cnt)
