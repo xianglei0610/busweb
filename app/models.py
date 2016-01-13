@@ -977,6 +977,7 @@ class Bus100Rebot(Rebot):
     def recrawl_func(self, queryline_url, payload):
         res = requests.post(queryline_url, data=payload)
         trainListInfo = res.json()
+        print trainListInfo
         if trainListInfo:
             nextPage = int(trainListInfo['nextPage'])
             pageNo = int(trainListInfo['pageNo'])
@@ -987,13 +988,23 @@ class Bus100Rebot(Rebot):
                 time = n.xpath('ul/li[@class="time"]/p/strong/text()')
                 item['drv_time'] = time[0]
                 departure_time = payload['sendDate']+' '+time[0]
-                banci = n.xpath('ul/li[@class="time"]/p[@class="banci"]/text()')
-                banci = banci[0]
+                banci = n.xpath('ul/li[@class="time"]/p[@class="carNum"]/text()')
+                banci = ''
+                if banci:
+                    banci = banci[0].replace('\r\n', '').replace(' ',  '')
+                else:
+                    ord_banci = n.xpath('ul/li[@class="time"]/p[@class="banci"]/text()')
+                    if ord_banci:
+                        banci = ord_banci[0]
+                item['banci'] = banci
                 price = n.xpath('ul/li[@class="price"]/strong/text()')
                 item["full_price"] = float(str(price[0]).split('￥')[-1])
-                infor = n.xpath('ul/li[@class="infor"]/p/text()')
-                distance = infor[1].replace('\r\n', '').replace(' ',  '')
-                item['distance'] = distance
+                infor = n.xpath('ul/li[@class="carriers"]/p[@class="info"]/text()')
+                distance = ''
+                if infor:
+                    print infor
+                    distance = infor[0].replace('\r\n', '').replace(' ',  '')
+                print distance
                 buyInfo = n.xpath('ul/li[@class="buy"]')
                 flag = 0
                 shiftid = '0'
@@ -1014,6 +1025,7 @@ class Bus100Rebot(Rebot):
                     (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'bus100'))
 
                 item['line_id'] = line_id
+                print item
                 try:
                     line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
                     line_obj.modify(**item)
