@@ -226,20 +226,18 @@ class Flow(BaseFlow):
             "ttsId": ''
         }
         now = dte.now()
-        try:
-            trainInfo = requests.post(url, data=payload, cookies=rebot.cookies)
-            trainInfo = trainInfo.json()
-            left_tickets = 0
-            if str(trainInfo['flag']) == '0':
-                sel = etree.HTML(trainInfo['msg'])
-                left_tickets = sel.xpath('//div[@class="ticketPrice"]/ul/li/strong[@id="leftSeatNum"]/text()')
-                if left_tickets:
-                    left_tickets = int(left_tickets[0])
-                result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now})
-            else:
-                line_log.info("[refresh-result] fail line:%s %s,result:%s ", line.crawl_source, line.line_id,trainInfo)
-        except:
-            result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        trainInfo = requests.post(url, data=payload, cookies=rebot.cookies)
+        trainInfo = trainInfo.json()
+        if str(trainInfo['flag']) == '0':
+#                 sel = etree.HTML(trainInfo['msg'])
+#                 left_tickets = sel.xpath('//div[@class="ticketPrice"]/ul/li/strong[@id="leftSeatNum"]/text()')
+#                 if left_tickets:
+#                     left_tickets = int(left_tickets[0])
+            result_info.update(result_msg="ok", update_attrs={"refresh_datetime": now})
+        elif str(trainInfo['flag']) == '1':
+            line_log.info("[refresh-result]  no left_tickets line:%s %s,result:%s ", line.crawl_source, line.line_id,trainInfo)
+            result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, **kwargs):
