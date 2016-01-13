@@ -190,19 +190,22 @@ class Flow(BaseFlow):
         url = "http://www.84100.com/orderInfo.shtml"
         r = requests.post(url, data=data, cookies=rebot.cookies)
         sel = etree.HTML(r.content)
-        orderDetailObj = sel.xpath('//div[@class="order-details"]/ul')
+        orderDetailObj = sel.xpath('//div[@class="ticketInfo"]')
+
         orderDetail = {}
         if orderDetailObj:
-            status = orderDetailObj[0].xpath('li')[1].xpath('em/text()')[0].replace('\r\n','').replace(' ','')
+            status = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[4]/span/text()')[0].replace('\r\n','').replace(' ','')
             if status == u'正在出票' or status == u'\xe6\xad\xa3\xe5\x9c\xa8\xe5\x87\xba\xe7\xa5\xa8':
                 orderDetail.update({'status': '6'})
             elif status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
                 orderDetail.update({'status': '4'})
-                matchObj = re.findall('<li>订单号：(.*)', r.content)
-                order_id = matchObj[0].replace(' ','')
+                order_id = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[@class="one"]/span/text()')[0].replace('\r\n','').replace(' ','')
+#                 matchObj = re.findall('<li>订单号：(.*)', r.content)
+#                 order_id = matchObj[0].replace(' ','')
                 orderDetail.update({'order_id': order_id})
             elif status == u"订单失效" or status == u'\xe8\xae\xa2\xe5\x8d\x95\xe5\xa4\xb1\xe6\x95\x88':
                 orderDetail.update({'status': '5'})
+        print orderDetail
         return orderDetail
 
     def mock_send_order_request(self, order, rebot):
@@ -250,44 +253,45 @@ class Flow(BaseFlow):
         # 验证码处理
         flag = False
         ret = {}
-        if code:
-            data = json.loads(session["bus100_pay_login_info"])
-            code_url = data["valid_url"]
-            headers = data["headers"]
-            cookies = data["cookies"]
-            flag = True
-        else:
-            login_form_url = "http://84100.com/login.shtml"
-            r = requests.get(login_form_url, headers=headers)
-            sel = etree.HTML(r.content)
-            cookies = dict(r.cookies)
-            code_url = sel.xpath("//img[@id='validateImg']/@src")[0]
-            code_url = 'http://84100.com'+code_url
-            r = requests.get(code_url, headers=headers, cookies=cookies)
-            cookies.update(dict(r.cookies))
-        if flag:
-            accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
-            passwd, _ = accounts[order.source_account]
-            data = {
-                "loginType": 0,
-                "backUrl": '',
-                "mobile": order.source_account,
-                "password": passwd,
-                "validateCode": code
-            }
-            r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
-            cookies.update(dict(r.cookies))
-            ret = r.json()
-        if ret.get("flag", '') == '0':
-            rebot = Bus100Rebot.objects.get(telephone=order.source_account)
-            rebot.cookies = cookies
-            print cookies
-            rebot.is_active = True
-            rebot.save()
-            if not pay_url:
-                flow = get_flow(order.crawl_source)
-                flow.lock_ticket(order)
-                pay_url = order.pay_url
+        if not pay_url:
+            if code:
+                data = json.loads(session["bus100_pay_login_info"])
+                code_url = data["valid_url"]
+                headers = data["headers"]
+                cookies = data["cookies"]
+                flag = True
+            else:
+                login_form_url = "http://84100.com/login.shtml"
+                r = requests.get(login_form_url, headers=headers)
+                sel = etree.HTML(r.content)
+                cookies = dict(r.cookies)
+                code_url = sel.xpath("//img[@id='validateImg']/@src")[0]
+                code_url = 'http://84100.com'+code_url
+                r = requests.get(code_url, headers=headers, cookies=cookies)
+                cookies.update(dict(r.cookies))
+            if flag:
+                accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
+                passwd, _ = accounts[order.source_account]
+                data = {
+                    "loginType": 0,
+                    "backUrl": '',
+                    "mobile": order.source_account,
+                    "password": passwd,
+                    "validateCode": code
+                }
+                r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
+                cookies.update(dict(r.cookies))
+                ret = r.json()
+            if ret.get("flag", '') == '0':
+                rebot = Bus100Rebot.objects.get(telephone=order.source_account)
+                rebot.cookies = cookies
+                print cookies
+                rebot.is_active = True
+                rebot.save()
+                if not pay_url:
+                    flow = get_flow(order.crawl_source)
+                    flow.lock_ticket(order)
+                    pay_url = order.pay_url
         if pay_url:
             r = requests.get(pay_url, headers=headers, verify=False)
             cookies = dict(r.cookies)
