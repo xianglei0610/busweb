@@ -122,6 +122,7 @@ def check_login_status(crawl_source):
             res = res.content
             sel = etree.HTML(res)
             userinfo = sel.xpath('//div[@class="operation"]/ul/li[@class="tel"]')
+            print userinfo
             if not userinfo:
                 i.is_active = False
                 i.save()
@@ -149,7 +150,7 @@ def main():
     #sched.add_cron_job(sync_crawl_to_api, hour=21, minute=10, args=['scqcp'])
     sched.add_cron_job(sync_crawl_to_api, hour=23, minute=50, args=['bus100'])
 
-    sched.add_interval_job(check_login_status, minutes=10, args=['bus100'])
+    sched.add_interval_job(check_login_status, minutes=5, args=['bus100'])
 #     sched.add_interval_job(polling_order_status, minutes=1)
 
     sched.start()
