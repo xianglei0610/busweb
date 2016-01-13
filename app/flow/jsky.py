@@ -10,12 +10,11 @@ import re
 
 from lxml import etree
 from bs4 import BeautifulSoup
-from collections import OrderedDict
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import JskyAppRebot, Line
 from datetime import datetime as dte
-from app.utils import chinese_week_day, md5
+from app.utils import md5
 from app import order_log
 
 
@@ -26,8 +25,6 @@ class Flow(BaseFlow):
     def do_lock_ticket(self, order):
         with JskyAppRebot.get_and_lock(order) as rebot:
             line = order.line
-            ticket_info = line.extra_info["raw_info"]
-            ticket_info.update(week=chinese_week_day(line.drv_datetime), optionType=1)
             rider_info = []
             for r in order.riders:
                 rider_info.append({
@@ -37,51 +34,60 @@ class Flow(BaseFlow):
                     "IDType": 1,
                     "passengerType": 0
                 })
-            data  = OrderedDict(
-                ticketsInfo=ticket_info,
-                dptStationCode=ticket_info["dptStationCode"],
-                passengersInfo=rider_info,
-                contactInfo={
+            body = {
+                "activityId": "0",
+                "activityType": "",
+                "childCount": "0",
+                "contactInfo": {
                     "name": order.contact_info["name"],
                     "mobileNo": order.contact_info["telephone"],
-                    "IDCard": order.contact_info["id_number"],
-                    "IDType": 1,
-                    "passengerType": 0
+                    "idCard": order.contact_info["id_number"],
+                    "idType": "0",
                 },
-                insuranceId="",
-                insuranceAmount="NaN",
-                totalAmount=str(line.real_price()*order.ticket_amount),
-                count=order.ticket_amount,
-                reductAmount="0",
-                activityType="",
-                activityId="0",
-                couponCode="",
-                couponAmount="0"
-            )
-
+                "count": str(order.ticket_amount),
+                "insuranceAmount": "0.0",
+                "insuranceId": "null",
+                "memberId": rebot.member_id,
+                "passengersInfo": rider_info,
+                "reductAmount": "0",
+                "sessionId": "",
+                "ticketsInfo": {
+                    "arrStation": line.destination.station_name,
+                    "childPrice": line.half_price,
+                    "coachNo": line.bus_num,
+                    "coachType": line.vehicle_type,
+                    "departure": line.starting.city_name,
+                    "destination": line.destination.city_name,
+                    "dptDate": line.drv_date,
+                    "dptDateTime": "%s %s:00.000" % (line.drv_date, line.drv_time),
+                    "dptStation": line.starting.station_name,
+                    "dptTime": line.drv_time,
+                    "remainChildNum": "0",
+                    "ticketFee": str(line.fee),
+                    "ticketPrice": str(line.full_price),
+                },
+                "totalAmount": str(line.real_price()*order.ticket_amount),
+            }
+            data = rebot.post_data_templ("createbusorder", body)
             ret = self.send_lock_request(order, rebot, data=data)
             res = ret["response"]
             lock_result = {
-                "lock_info": {"raw_return": ret},
+                "lock_info": ret,
                 "source_account": rebot.telephone,
-                "pay_money": 0,
+                "pay_money": line.real_price()*order.ticket_amount,
             }
-            if int(res["header"]["rspCode"]) == 0:
-                pay_url = res["body"]["PayUrl"]
-                pay_ret = self.send_pay_request(pay_url, rebot)
+            if res["header"]["rspCode"] == "0000":
                 lock_result.update({
                     "result_code": 1,
                     "result_reason": "",
-                    "pay_url": pay_url,
+                    "pay_url": "",
                     "raw_order_no": "",
-                    "expire_datetime": pay_ret["expire_time"],
-                    "pay_money": pay_ret["total_price"],
+                    "expire_datetime": res["body"]["payExpireDate"],
                 })
-                lock_result["lock_info"].update(order_detail_url=pay_ret["detail_url"])
             else:
                 lock_result.update({
                     "result_code": 0,
-                    "result_reason": res["header"]["rspDesc"],
+                    "result_reason": res["header"]["rspCode"],
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": None,
@@ -93,42 +99,15 @@ class Flow(BaseFlow):
         单纯向源站发请求
         """
         order_url = "http://api.jskylwsp.cn/ticket-interface/rest/order/createbusorder"
-        headers = {
-            "User-Agent": rebot.user_agent,
-            "Content-Type": "application/json",
-        }
-        for i in range(2):
-            r = requests.post(order_url, data=json.dumps(data), headers=headers, cookies=json.loads(rebot.cookies))
-            ret = r.json()
-            if self.check_login_by_resp(rebot, r) != "relogined":
-                break
+        headers = rebot.http_header()
+        r = requests.post(order_url, data=json.dumps(data), headers=headers)
+        ret = r.json()
         return ret
 
-    def send_pay_request(self, pay_url, rebot):
-        for i in range(2):
-            headers = {
-                "User-Agent": rebot.user_agent,
-            }
-            r = requests.get(pay_url, headers=headers, cookies=json.loads(rebot.cookies))
-            if self.check_login_by_resp(rebot, r) != "relogined":
-                break
-        sel = etree.HTML(r.content)
-        detail_url = sel.xpath("//a[@class='page-back touchable']/@href")[0]
-        total_price = sel.xpath("//span[@class='price']/text()")[0].split(u"元")[0]
-        expire_time = dte.now()+datetime.timedelta(seconds=20*60)
-        return {
-            "detail_url": detail_url,
-            "total_price": float(total_price),
-            "expire_time": expire_time,
-        }
-
     def send_order_request(self, order, rebot):
-        detail_url = order.lock_info["order_detail_url"]
-        for i in range(2):
-            headers = {"User-Agent": rebot.user_agent}
-            r = requests.get(detail_url, headers=headers, cookies=json.loads(rebot.cookies))
-            if self.check_login_by_resp(rebot, r) != "relogined":
-                break
+        detail_url = "http://api.jskylwsp.cn/ticket-interface/rest/order/getBusOrderDetail"
+        headers = rebot.http_header()
+        r = requests.get(detail_url, headers=headers, =json.loads(rebot.cookies))
         soup = BeautifulSoup(r.content, "lxml")
         state_element =soup.select(".orderDetail_state")[0]
         state = state_element.get_text().strip()
