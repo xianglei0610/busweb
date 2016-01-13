@@ -97,7 +97,10 @@ SOURCE_INFO = {
         "name": "江苏客运",
         "website": "www.jskylwsp.com",
         "accounts": {
-            "15575101324": ("fQPjVx7bgVrG60XZH3fxQw==", ''),
+            "15575101324": ("cibRpL", ''),
+        },
+        "pwd_encode": {
+            "cibRpL": "fQPjVx7bgVrG60XZH3fxQw==",
         }
     }
 }
@@ -196,7 +199,7 @@ RET_BUY_TIME_ERROR = 202    # 线路不在预售期
 RET_CITY_NOT_OPEN = 203     # 该城市未开放
 
 # 立即支付按钮变灰持续时间
-PAY_CLICK_EXPIR = 40
+PAY_CLICK_EXPIR = 45
 
 ISSUE_FAIL_WARNING = 3
 ISSUEING_WARNING = 3

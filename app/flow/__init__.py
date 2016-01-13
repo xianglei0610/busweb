@@ -9,7 +9,8 @@ def get_flow(site=""):
         import scqcp
         import ctrip
         import cbd
-        for mod in [bus100, scqcp, ctrip, cbd]:
+        import jsky
+        for mod in [bus100, scqcp, ctrip, cbd, jsky]:
             cls = mod.Flow
             if cls.name == site:
                 flow_list[cls.name] = cls()

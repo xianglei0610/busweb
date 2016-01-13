@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-import random
 import requests
-import datetime
 import json
-import urlparse
-import re
+import urllib
 
-from lxml import etree
-from bs4 import BeautifulSoup
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import JskyAppRebot, Line
+from app.models import JskyAppRebot, Line, JskyWebRebot
 from datetime import datetime as dte
 from app.utils import md5
-from app import order_log
+from bs4 import BeautifulSoup
 
 
 class Flow(BaseFlow):
@@ -30,9 +25,8 @@ class Flow(BaseFlow):
                 rider_info.append({
                     "name": r["name"],
                     "mobileNo": r["telephone"],
-                    "IDCard": r["id_number"],
-                    "IDType": 1,
-                    "passengerType": 0
+                    "idCard": r["id_number"],
+                    "idType": 1,
                 })
             body = {
                 "activityId": "0",
@@ -69,19 +63,20 @@ class Flow(BaseFlow):
                 "totalAmount": str(line.real_price()*order.ticket_amount),
             }
             data = rebot.post_data_templ("createbusorder", body)
-            ret = self.send_lock_request(order, rebot, data=data)
-            res = ret["response"]
+            res = self.send_lock_request(order, rebot, data=data)
+
             lock_result = {
-                "lock_info": ret,
+                "lock_info": res,
                 "source_account": rebot.telephone,
                 "pay_money": line.real_price()*order.ticket_amount,
             }
             if res["header"]["rspCode"] == "0000":
+                detail = self.send_order_request(rebot, lock_info=res)
                 lock_result.update({
                     "result_code": 1,
                     "result_reason": "",
                     "pay_url": "",
-                    "raw_order_no": "",
+                    "raw_order_no": detail["order_no"],
                     "expire_datetime": res["body"]["payExpireDate"],
                 })
             else:
@@ -104,28 +99,22 @@ class Flow(BaseFlow):
         ret = r.json()
         return ret
 
-    def send_order_request(self, order, rebot):
+    def send_order_request(self, rebot, order=None, lock_info=None):
         detail_url = "http://api.jskylwsp.cn/ticket-interface/rest/order/getBusOrderDetail"
         headers = rebot.http_header()
-        r = requests.get(detail_url, headers=headers, =json.loads(rebot.cookies))
-        soup = BeautifulSoup(r.content, "lxml")
-        state_element =soup.select(".orderDetail_state")[0]
-        state = state_element.get_text().strip()
-        order_no = soup.find_all(text=re.compile(u"订单号"))[0].split(u"订单号：")[1]
-
-        pick_no, pick_code = "", ""
-        for ele in soup.select(".ticket_info .mtop-10"):
-            label = ele.label.get_text().strip()
-            span = ele.span.get_text().strip()
-            if label == u"取票号：":
-                pick_no = span
-            elif label == u"取票密码：":
-                pick_code = span
-
+        body = {
+            "memberId": rebot.member_id,
+            "orderId": order.lock_info["body"]["orderId"] if order else lock_info["body"]["orderId"],
+        }
+        data = rebot.post_data_templ("getbusorderdetail", body)
+        r = requests.post(detail_url, headers=headers, data=json.dumps(data))
+        ret = r.json()
+        pick_info = ret["body"]["getTicketInfos"]
         return {
-            "order_no": order_no or order.raw_order_no,
-            "state": state,
-            "code_list": ["%s|%s" % (pick_no, pick_code)],
+            "order_no": ret["body"]["shortSerialId"],
+            "state": ret["body"]["orderStateName"],
+            "code_list": ["%s|%s" % (pick_info["getTicketNo"], pick_info["getTicketPassWord"])],
+            "msg_list": [pick_info["getTicketInfo"]],
         }
 
     def do_refresh_issue(self, order):
@@ -138,83 +127,87 @@ class Flow(BaseFlow):
         if not self.need_refresh_issue(order):
             result_info.update(result_msg="状态未变化")
             return result_info
-        rebot = CBDRebot.objects.get(telephone=order.source_account)
-        ret = self.send_order_request(order, rebot)
+        rebot = JskyAppRebot.objects.get(telephone=order.source_account)
+        ret = self.send_order_request(rebot, order=order)
         if not order.raw_order_no:
             order.modify(raw_order_no=ret["order_no"])
         state = ret["state"]
-        if "出票成功" in state:
-            msg_list = []
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CBD]
-            for info in ret["code_list"]:
-                no, code = info.split("|")
-                dx_info = {
-                    "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                    "start": order.line.starting.station_name,
-                    "end": order.line.destination.station_name,
-                    #"amount": order.ticket_amount,
-                    "code": code,
-                    "no": no,
-                    "raw_order": order.raw_order_no,
-                }
-                msg_list.append(dx_tmpl % dx_info)
+        if state=="出票成功":
             result_info.update({
                 "result_code": 1,
                 "result_msg": state,
                 "pick_code_list": ret["code_list"],
-                "pick_msg_list": msg_list,
+                "pick_msg_list": ret["msg_list"],
             })
-        elif "出票中" in state and "已支付" in state:
+        elif state=="出票中":
             result_info.update({
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif "已取消"  in state:
+        elif state=="已取消":
             result_info.update({
                 "result_code": 2,
                 "result_msg": state,
             })
-        elif "已退款"  in state:
-            result_info.update({
-                "result_code": 3,
-                "result_msg": state,
-            })
         return result_info
+
+    def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
+        rebot = JskyWebRebot.get_one()
+
+        pay_url = "http://www.jskylwsp.com/Order/OrderPay"
+        data = {
+            "OrderSerialid": order.lock_info["body"]["orderSerialId"],
+            "PayType": "1",
+            "defaultBank": "",
+            "MilliSecond": "900",
+            "payType": "on",
+        }
+        for i in range(2):
+            headers = {
+                "User-Agent": rebot.user_agent,
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.6,en;q=0.4",
+            }
+            data = urllib.urlencode(data)
+            r = requests.post(pay_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+            content = r.content.decode("gbk")
+            soup = BeautifulSoup(r.content, "lxml")
+            if soup.select("#mobile") and soup.select("#password"):
+                rebot.login()
+            else:
+                break
+        return {"flag": "html", "content": content}
 
     def do_refresh_line(self, line):
         result_info = {
             "result_msg": "",
             "update_attrs": {},
         }
-        line_url = "http://m.chebada.com/Schedule/GetBusSchedules"
-        params = dict(
-            departure=line.starting.city_name,
-            destination=line.destination.city_name,
-            departureDate=line.drv_date,
-            page="1",
-            pageSize="1025",
-            hasCategory="true",
-            category="0",
-            dptTimeSpan="0",
-            bookingType="0",
-        )
-        ua = random.choice(BROWSER_USER_AGENT)
-        headers = {"User-Agent": ua}
-        r = requests.post(line_url, data=params, headers=headers)
-        ret = r.json()
-        res = ret["response"]
+        line_url = "http://api.jskylwsp.cn/ticket-interface/rest/query/getbusschedule"
+        rebot = JskyAppRebot.get_one()
+        body = {
+            "departure": line.starting.city_name,
+            "destination": line.destination.city_name,
+            "dptDate": line.drv_date,
+            "pageIndex": 1,
+            "pageSize": 1025,
+        }
+        data = rebot.post_data_templ("getbusschedule", body)
+        headers = rebot.http_header()
+        r = requests.post(line_url, data=json.dumps(data), headers=headers)
+        res = r.json()
         now = dte.now()
-        if int(res["header"]["rspCode"]) != 0:
+        if res["header"]["rspCode"] != "0000":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
         update_attrs = {}
         for d in res["body"]["scheduleList"]:
-            line_id = md5("%s-%s-%s-%s-%s-cbd" % (d["departure"],
-                                                  d["destination"],
-                                                  d["dptStation"],
-                                                  d["arrStation"],
-                                                  d["dptDateTime"]))
+            line_id = md5("%s-%s-%s-%s-%s-jsky" % (d["departure"],
+                                                d["destination"],
+                                                d["dptStation"],
+                                                d["arrStation"],
+                                                d["dptDateTime"]))
             try:
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:
@@ -223,7 +216,7 @@ class Flow(BaseFlow):
             extra_info.update(raw_info=d)
             info = {
                 "full_price": d["ticketPrice"],
-                "fee": float(d["ticketFee"]),
+                "fee": 0,
                 "left_tickets": d["ticketLeft"],
                 "refresh_datetime": now,
                 "extra_info": extra_info,
@@ -237,25 +230,3 @@ class Flow(BaseFlow):
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
-
-    def check_login_by_resp(self, rebot, resp):
-        if urlparse.urlsplit(resp.url).path=="/Account/Login":
-            for i in range(2):
-                if rebot.login() == "OK":
-                    return "relogined"
-            rebot.modify(is_active=False)
-            return "fail"
-        try:
-            ret = json.loads(resp.content)
-            if ret["response"]["header"]["rspCode"] == "3100":
-                for i in range(2):
-                    if rebot.login() == "OK":
-                        return "relogined"
-                rebot.modify(is_active=False)
-                return "fail"
-        except:
-            pass
-        return "logined"
-
-    def get_pay_page(self, order, valid_code="", session=None, pay_channel="wy" ,**kwargs):
-        return {"flag": "url", "content": order.pay_url}

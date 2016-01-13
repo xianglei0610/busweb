@@ -505,7 +505,7 @@ class Rebot(db.Document):
     @classmethod
     def login_all(cls):
         # 登陆所有预设账号
-        rebot_log.info("== tart to login %s", cls.crawl_source)
+        rebot_log.info("== start to login %s", cls.crawl_source)
         valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
@@ -688,6 +688,42 @@ class CBDRebot(Rebot):
             rebot_log.error("登陆错误cbd %s, %s", self.telephone, str(ret))
         return "fail"
 
+
+class JskyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+    }
+    crawl_source = SOURCE_JSKY
+
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        login_url = "https://www.jskylwsp.com/Account/LoginIn"
+        data = {
+            "UserName": self.telephone,
+            "Password": self.password,
+        }
+        header = {
+            "User-Agent": ua,
+        }
+        r = requests.post(login_url, data=data, headers=header)
+        ret = r.json()
+        if ret["response"]["header"]["rspCode"] == "0000":
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.save()
+            rebot_log.info("登陆成功webjsky %s", self.telephone)
+            return "OK"
+        else:
+            rebot_log.error("登陆错误webjsky %s, %s", self.telephone, str(ret))
+        return "fail"
+
+
 class JskyAppRebot(Rebot):
     user_agent = db.StringField()
     member_id = db.StringField()
@@ -735,9 +771,10 @@ class JskyAppRebot(Rebot):
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
         log_url = "http://api.jskylwsp.cn/ticket-interface/rest/member/login"
+        pwd_info = SOURCE_INFO[SOURCE_JSKY]["pwd_encode"]
         body = {
             "mobileNo": self.telephone,
-            "password": self.password,
+            "password": pwd_info[self.password],
         }
         data = self.post_data_templ("login", body)
         header = self.http_header(ua=ua)

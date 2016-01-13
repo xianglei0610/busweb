@@ -266,6 +266,8 @@ def submit_order():
     locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
 
+    source = line.crawl_source
+
     order = Order()
     order.order_no = Order.generate_order_no()
     order.out_order_no = out_order_no
@@ -278,7 +280,7 @@ def submit_order():
     order.ticket_fee = line.fee
     order.contact_info = contact_info
     order.riders = rider_list
-    order.crawl_source = line.crawl_source
+    order.crawl_source = source
     order.locked_return_url = locked_return_url
     order.issued_return_url = issued_return_url
 
