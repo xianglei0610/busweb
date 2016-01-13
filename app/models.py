@@ -1000,8 +1000,8 @@ class Bus100Rebot(Rebot):
                 time = n.xpath('ul/li[@class="time"]/p/strong/text()')
                 item['drv_time'] = time[0]
                 departure_time = payload['sendDate']+' '+time[0]
-                banci = n.xpath('ul/li[@class="time"]/p[@class="carNum"]/text()')
                 banci = ''
+                banci = n.xpath('ul/li[@class="time"]/p[@class="carNum"]/text()')
                 if banci:
                     banci = banci[0].replace('\r\n', '').replace(' ',  '')
                 else:
