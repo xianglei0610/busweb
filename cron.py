@@ -121,7 +121,7 @@ def check_login_status(crawl_source):
             res = requests.post(url, cookies=i.cookies)
             res = res.content
             sel = etree.HTML(res)
-            userinfo = sel.xpath('//div[@class="operation"]/ul/li[@class="tel"]')
+            userinfo = sel.xpath('//div[@class="c_content"]/div/ul/li[@class="myOrder"]')
             print userinfo
             if not userinfo:
                 i.is_active = False
