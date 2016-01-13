@@ -17,6 +17,7 @@ from app.utils import md5, getRedisObj
 from app import rebot_log, order_status_log
 
 
+
 class AdminUser(db.Document):
     """
     后台管理员/客服
@@ -218,6 +219,10 @@ class Line(db.Document):
             "drv_time",
             "drv_datetime",
             "crawl_datetime",
+           # {
+           #     'fields': ['crawl_datetime'],
+           #     'expireAfterSeconds': 3600*24*20,       # 20天
+           # }
             ],
     }
 
@@ -419,6 +424,10 @@ class Order(db.Document):
         if rebot:
             rebot.remove_doing_order(self)
 
+        r = getRedisObj()
+        key = RK_ISSUEING_COUNT
+        r.sadd(key, self.order_no)
+
     def on_issue_success(self):
         if self.status != STATUS_ISSUE_SUCC:
             return
@@ -426,8 +435,10 @@ class Order(db.Document):
 
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
-
         r.delete(key)
+        key = RK_ISSUEING_COUNT
+        r.delete(key)
+
         rebot = self.get_rebot()
         if rebot:
             rebot.remove_doing_order(self)
@@ -663,7 +674,6 @@ class CBDRebot(Rebot):
         r = requests.post(log_url, data=data, headers=header)
         ret = r.json()
         if int(ret["response"]["header"]["rspCode"]) == 0:
-            self.is_active = True
             self.last_login_time = dte.now()
             self.user_agent = ua
             self.cookies = json.dumps(dict(r.cookies))
@@ -689,6 +699,7 @@ class CBDRebot(Rebot):
             pwd, _ = accounts[bot.telephone]
             bot.modify(password=pwd)
             if bot.login() == "OK":
+                bot.modify(is_active=True)
                 rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
 
@@ -701,6 +712,7 @@ class CBDRebot(Rebot):
                       password=pwd,)
             bot.save()
             if bot.login() == "OK":
+                bot.modify(is_active=True)
                 rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
         rebot_log.info(">>>> end login chebada.com, success %d", valid_cnt)

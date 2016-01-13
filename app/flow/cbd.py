@@ -262,7 +262,6 @@ class Flow(BaseFlow):
             for i in range(2):
                 if rebot.login() == "OK":
                     return "relogined"
-            rebot.modify(is_active=False)
             return "fail"
         try:
             ret = json.loads(resp.content)
@@ -270,7 +269,6 @@ class Flow(BaseFlow):
                 for i in range(2):
                     if rebot.login() == "OK":
                         return "relogined"
-                rebot.modify(is_active=False)
                 return "fail"
         except:
             pass
