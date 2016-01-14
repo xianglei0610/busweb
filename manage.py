@@ -158,7 +158,7 @@ def sync_open_city(province_name):
         openObj = OpenCity()
         openObj.province = province_name
         city_name = i
-        if city_name.endswith('市') or city_name.endswith('县') :
+        if len(city_name) > 2 and (city_name.endswith('市') or city_name.endswith('县')) :
             city_name = city_name[0:-1]
         openObj.city_name = city_name
         city_code = "".join(map(lambda w: w[0], lazy_pinyin(city_name.decode("utf-8"))))
