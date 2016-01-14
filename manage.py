@@ -5,6 +5,7 @@ import pymongo
 
 from app import setup_app, db
 from flask.ext.script import Manager, Shell
+from datetime import datetime as dte
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
@@ -22,7 +23,7 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 @manager.command
 def deploy(site):
-    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot, CBDRebot
+    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot, CBDRebot, JskyAppRebot, JskyWebRebot
     if site == "ctrip":
         CTripRebot.login_all()
     elif site == "scqcp":
@@ -31,6 +32,10 @@ def deploy(site):
         Bus100Rebot.login_all()
     elif site == "cbd":
         CBDRebot.login_all()
+    elif site == "jskyapp":
+        JskyAppRebot.login_all()
+    elif site == "jskyweb":
+        JskyWebRebot.login_all()
 
 
 @manager.command
@@ -120,17 +125,24 @@ def migrate_from_crawl(site, city=""):
     crawl_mongo = pymongo.MongoClient("mongodb://%s:%s" % (settings["host"], settings["port"]))
     crawl_db = crawl_mongo[settings["db"]]
 
-    from sync_data import migrate_bus100, migrate_scqcp, migrate_ctrip, migrate_cbd
+    from sync_data import migrate_bus100, migrate_scqcp, migrate_ctrip, migrate_cbd, migrate_jsky
     mappings = {
         "scqcp": migrate_scqcp,
         "bus100": migrate_bus100,
         "ctrip": migrate_ctrip,
         "cbd": migrate_cbd,
+        "jsky": migrate_jsky,
     }
     app.logger.info("start migrate data from crawldb to webdb:%s", site)
     mappings[site](crawl_db, city=city)
     app.logger.info("end migrate %s" % site)
 
+
+@manager.command
+def clear_expire_line():
+    from app.models import Line
+    now = dte.now()
+    print Line.objects.filter(crawl_datetime__lte=now).delete()
 
 if __name__ == '__main__':
     manager.run()

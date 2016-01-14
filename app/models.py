@@ -500,6 +500,39 @@ class Rebot(db.Document):
         "abstract": True,
     }
 
+    crawl_source = ""
+
+    @classmethod
+    def login_all(cls):
+        # 登陆所有预设账号
+        rebot_log.info("== start to login %s", cls.crawl_source)
+        valid_cnt = 0
+        has_checked = {}
+        accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd, _ = accounts[bot.telephone]
+            bot.modify(password=pwd)
+            if bot.login() == "OK":
+                rebot_log.info("%s 登陆成功" % bot.telephone)
+                valid_cnt += 1
+
+        for tele, (pwd, openid) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=False,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,)
+            bot.save()
+            if bot.login() == "OK":
+                rebot_log.info("%s 登陆成功" % bot.telephone)
+                valid_cnt += 1
+        rebot_log.info(">>>> end login %s, success %d", cls.crawl_source, valid_cnt)
+
     @classmethod
     def get_one(cls):
         qs = cls.objects.filter(is_active=True, is_locked=False)
@@ -568,6 +601,7 @@ class ScqcpRebot(Rebot):
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
     }
+    crawl_source =  SOURCE_SCQCP
 
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)
@@ -608,39 +642,6 @@ class ScqcpRebot(Rebot):
             self.save()
             return "OK"
 
-    @classmethod
-    def login_all(cls):
-        # 登陆所有预设账号
-        rebot_log.info(">>>> start to login scqcp.com:")
-        valid_cnt = 0
-        has_checked = {}
-        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
-        for bot in cls.objects:
-            has_checked[bot.telephone] = 1
-            if bot.telephone not in accounts:
-                bot.modify(is_active=False)
-                continue
-            pwd, is_encrypt = accounts[bot.telephone]
-            bot.modify(password=pwd, is_encrypt=is_encrypt)
-
-            if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-
-        for tele, (pwd, is_encrypt) in accounts.items():
-            if tele in has_checked:
-                continue
-            bot = cls(is_active=False,
-                      is_locked=False,
-                      telephone=tele,
-                      password=pwd,
-                      is_encrypt=is_encrypt)
-            bot .save()
-            if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-        rebot_log.info(">>>> end login scqcp.com, success %d", valid_cnt)
-
     def http_post(self, uri, data, user_agent="", token=""):
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         request = urllib2.Request(url)
@@ -652,6 +653,7 @@ class ScqcpRebot(Rebot):
         ret = json.loads(response.read())
         return ret
 
+
 class CBDRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
@@ -659,6 +661,7 @@ class CBDRebot(Rebot):
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
     }
+    crawl_source = SOURCE_CBD
 
 
     def login(self):
@@ -684,38 +687,109 @@ class CBDRebot(Rebot):
             rebot_log.error("登陆错误cbd %s, %s", self.telephone, str(ret))
         return "fail"
 
-    @classmethod
-    def login_all(cls):
-        # 登陆所有预设账号
-        rebot_log.info(">>>> start to login chebada.com:")
-        valid_cnt = 0
-        has_checked = {}
-        accounts = SOURCE_INFO[SOURCE_CBD]["accounts"]
-        for bot in cls.objects:
-            has_checked[bot.telephone] = 1
-            if bot.telephone not in accounts:
-                bot.modify(is_active=False)
-                continue
-            pwd, _ = accounts[bot.telephone]
-            bot.modify(password=pwd)
-            if bot.login() == "OK":
-                bot.modify(is_active=True)
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
+class JskyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
 
-        for tele, (pwd, openid) in accounts.items():
-            if tele in has_checked:
-                continue
-            bot = cls(is_active=False,
-                      is_locked=False,
-                      telephone=tele,
-                      password=pwd,)
-            bot.save()
-            if bot.login() == "OK":
-                bot.modify(is_active=True)
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-        rebot_log.info(">>>> end login chebada.com, success %d", valid_cnt)
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+    }
+    crawl_source = SOURCE_JSKY
+
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        login_url = "https://www.jskylwsp.com/Account/LoginIn"
+        data = {
+            "UserName": self.telephone,
+            "Password": self.password,
+        }
+        header = {
+            "User-Agent": ua,
+        }
+        r = requests.post(login_url, data=data, headers=header)
+        ret = r.json()
+        if ret["response"]["header"]["rspCode"] == "0000":
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.save()
+            rebot_log.info("登陆成功webjsky %s", self.telephone)
+            return "OK"
+        else:
+            rebot_log.error("登陆错误webjsky %s, %s", self.telephone, str(ret))
+        return "fail"
+
+
+class JskyAppRebot(Rebot):
+    user_agent = db.StringField()
+    member_id = db.StringField()
+    authorize_code = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+    }
+    crawl_source = SOURCE_JSKY
+
+    def post_data_templ(self, service_name, body):
+        stime = str(int(time.time()*1000))
+        tmpl = {
+            "body": body,
+            "clientInfo": {
+                "clientIp": "192.168.111.106",
+                "deviceId": "898fd52b362f6a9c",
+                "extend": "4^4.4.4,5^MI 4W,6^-1",
+                "macAddress": "14:f6:5a:b9:d1:4a",
+                "networkType": "wifi",
+                "platId": "20",
+                "pushInfo": "",
+                "refId": "82037323",
+                "versionNumber": "1.0.0",
+                "versionType": "1"
+            },
+            "header": {
+                "accountID": "d4a45219-f2f2-4a2a-ab7b-007ee848629d",
+                "digitalSign": md5(stime),
+                "reqTime": stime,
+                "serviceName": service_name,
+                "version": "20150526020002"
+            }
+        }
+        return tmpl
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/json; charset=UTF-8",
+            "reqdata": "c9e70e4f9d58df70b3f416d067895b13",
+            "User-Agent": ua or self.user_agent,
+        }
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        log_url = "http://api.jskylwsp.cn/ticket-interface/rest/member/login"
+        pwd_info = SOURCE_INFO[SOURCE_JSKY]["pwd_encode"]
+        body = {
+            "mobileNo": self.telephone,
+            "password": pwd_info[self.password],
+        }
+        data = self.post_data_templ("login", body)
+        header = self.http_header(ua=ua)
+        r = requests.post(log_url, data=json.dumps(data), headers=header)
+        ret = r.json()
+        if ret["header"]["rspCode"] == "0000":
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.member_id = ret["body"]["memberId"]
+            self.authorize_code = ret["body"]["authorizeCode"]
+            self.save()
+            rebot_log.info("登陆成功 jsky %s", self.telephone)
+            return "OK"
+        else:
+            rebot_log.error("登陆错误jsky %s, %s", self.telephone, str(ret))
+        return "fail"
 
 
 class CTripRebot(Rebot):
@@ -861,6 +935,7 @@ class Bus100Rebot(Rebot):
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
     }
+    crawl_source = SOURCE_BUS100
 
     @classmethod
     def get_random_rebot(cls):
