@@ -5,6 +5,8 @@ import requests
 import json
 import urllib
 
+import datetime
+
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import JskyAppRebot, Line, JskyWebRebot
@@ -72,12 +74,14 @@ class Flow(BaseFlow):
             }
             if res["header"]["rspCode"] == "0000":
                 detail = self.send_order_request(rebot, lock_info=res)
+                expire_time = dte.now()+datetime.timedelta(seconds=20*60)
                 lock_result.update({
                     "result_code": 1,
                     "result_reason": "",
                     "pay_url": "",
                     "raw_order_no": detail["order_no"],
-                    "expire_datetime": res["body"]["payExpireDate"],
+                    "expire_datetime": expire_time,
+
                 })
             else:
                 lock_result.update({
