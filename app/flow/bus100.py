@@ -12,7 +12,7 @@ from lxml import etree
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import Bus100Rebot, Line
+from app.models import Bus100Rebot, Line, Order
 from app.flow import get_flow
 from app import order_log, line_log
 
@@ -37,7 +37,21 @@ class Flow(BaseFlow):
         if order.source_account:
             rebot = Bus100Rebot.objects.get(telephone=order.source_account)
         else:
-            rebot = Bus100Rebot.get_random_rebot()
+            accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
+            now = datetime.datetime.now()
+            start = now.strftime("%Y-%m-%d")+' 00:00:00'
+            end = now.strftime("%Y-%m-%d")+' 23:59:59'
+            start = datetime.datetime.strptime(start, '%Y-%m-%d %H:%M:%S')
+            end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S')
+            source_account_list = []
+            for k, v in accounts.iteritems():
+                source_account_list.append(k)
+            random.shuffle(source_account_list)
+            for i in source_account_list:
+                count = Order.objects.filter(create_date_time__gt=start, create_date_time__lt = end,status=STATUS_ISSUE_SUCC,source_account = i).sum('ticket_amount')
+                if count + int(order.ticket_amount) <= 20:
+                    break
+            rebot = Bus100Rebot.objects.get(telephone=i)
         if not rebot.is_active:
             lock_result.update(result_code=2)
             lock_result.update(source_account=rebot.telephone)
