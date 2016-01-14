@@ -143,6 +143,40 @@ def clear_expire_line():
     from app.models import Line
     now = dte.now()
     print Line.objects.filter(crawl_datetime__lte=now).delete()
+    
+
+@manager.option('-p', '--province_name', dest='province_name',default='')
+def sync_open_city(province_name):
+    from app.models import Starting, OpenCity
+    from pypinyin import lazy_pinyin
+    if not province_name:
+        print 'province_name is null '
+#     province_name =u'辽宁'
+    #OpenCity.objects.filter(province=province_name).delete()
+    starObj = Starting.objects.filter(province_name=province_name).distinct('city_name')
+    for i in starObj:
+        openObj = OpenCity()
+        openObj.province = province_name
+        city_name = i
+        if len(city_name) > 2 and (city_name.endswith('市') or city_name.endswith('县')) :
+            city_name = city_name[0:-1]
+        openObj.city_name = city_name
+        city_code = "".join(map(lambda w: w[0], lazy_pinyin(city_name.decode("utf-8"))))
+        openObj.city_code = city_code
+        openObj.pre_sell_days = 10
+        openObj.open_time = "23:00"
+        openObj.end_time = "8:00"
+        openObj.advance_order_time = 0
+        openObj.max_ticket_per_order = 5
+        openObj.crawl_source = "bus100"
+        openObj.is_active = True
+        try:
+            openObj.save()
+            print openObj.city_name
+        except:
+            print '%s already existed'%city_name
+            pass
+
 
 if __name__ == '__main__':
     manager.run()

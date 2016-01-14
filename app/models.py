@@ -1064,7 +1064,6 @@ class Bus100Rebot(Rebot):
     def recrawl_func(self, queryline_url, payload):
         res = requests.post(queryline_url, data=payload)
         trainListInfo = res.json()
-        print trainListInfo
         if trainListInfo:
             nextPage = int(trainListInfo['nextPage'])
             pageNo = int(trainListInfo['pageNo'])
@@ -1088,9 +1087,7 @@ class Bus100Rebot(Rebot):
                 infor = n.xpath('ul/li[@class="carriers"]/p[@class="info"]/text()')
                 distance = ''
                 if infor:
-                    print infor
                     distance = infor[0].replace('\r\n', '').replace(' ',  '')
-                print distance
                 buyInfo = n.xpath('ul/li[@class="buy"]')
                 flag = 0
                 shiftid = '0'
@@ -1111,7 +1108,6 @@ class Bus100Rebot(Rebot):
                     (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'bus100'))
 
                 item['line_id'] = line_id
-                print item
                 try:
                     line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
                     line_obj.modify(**item)
