@@ -221,7 +221,7 @@ class Flow(BaseFlow):
             return result_info
         ret = rebot.recrawl_shiftid(line)
         line = Line.objects.get(line_id=line.line_id)
-        url = 'http://www.84100.com/getTrainInfo/ajax'
+        url = "http://www.84100.com/getTrainInfo/ajax"
         payload = {
             "shiftId": line.bus_num,
             "startId": line.starting.station_id,
