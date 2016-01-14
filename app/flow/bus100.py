@@ -175,15 +175,19 @@ class Flow(BaseFlow):
         status = tickets.get("status", None)
         if status == '4':
             dx_templ = DUAN_XIN_TEMPL[SOURCE_BUS100]
+            ticketPassword = ''
+            if tickets.get('ticketPassword', ''):
+                ticketPassword = "取票密码:%s;"%tickets.get('ticketPassword', '')
             dx_info = {
                 "amount": order.ticket_amount,
                 "start": "%s(%s)" % (order.line.starting.city_name, order.line.starting.station_name),
                 "end": order.line.destination.station_name,
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "order": tickets["order_id"],
+                "ticketPassword": ticketPassword,
             }
-            if order.lock_info.get('ticketPassword', ''):
-                code_list.append(order.lock_info.get('ticketPassword', ''))
+            if tickets.get('ticketPassword', ''):
+                code_list.append(tickets.get('ticketPassword', ''))
             else:
                 code_list.append('无需取票密码')
             msg_list.append(dx_templ % dx_info)
@@ -214,6 +218,10 @@ class Flow(BaseFlow):
             elif status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
                 orderDetail.update({'status': '4'})
                 order_id = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[@class="one"]/span/text()')[0].replace('\r\n','').replace(' ','')
+                ticketPassword = orderDetailObj[0].xpath('//div[@class="check_password"]/input[@id="pswd"]/@value')
+                if ticketPassword:
+                    ticketPassword = ticketPassword[0]
+                    orderDetail.update({'ticketPassword': ticketPassword})
 #                 matchObj = re.findall('<li>订单号：(.*)', r.content)
 #                 order_id = matchObj[0].replace(' ','')
                 orderDetail.update({'order_id': order_id})
