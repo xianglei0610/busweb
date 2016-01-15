@@ -159,7 +159,7 @@ def order_pay(order_no):
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
     if not ret:
-        return redirect(url_for("admin.wating_deal_order"))
+        return redirect(url_for("admin.index"))
     if ret["flag"] == "url":
         return redirect(ret["content"])
     elif ret["flag"] == "html":
