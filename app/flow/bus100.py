@@ -34,6 +34,65 @@ class Flow(BaseFlow):
         headers = {
                 'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0",
             }
+        rebot = self.request_get_rebot(order)
+        if not rebot.is_active:
+            lock_result.update(result_code=2)
+            lock_result.update(source_account=rebot.telephone)
+            lock_result.update(result_reason="第三方账号没有激活")
+            return lock_result
+
+        rebot.recrawl_shiftid(order.line)
+        line = Line.objects.get(line_id=order.line.line_id)
+        order.line = line
+        order.ticket_price = line.full_price
+        order.save()
+        lock_result.update(source_account=rebot.telephone)
+        pay_url = order.pay_url
+        orderPay = {}
+        if not pay_url:
+            if order.line.bus_num == 0 or not order.line.extra_info.get('flag', 0):
+                lock_result.update(result_reason="该条线路无法购买")
+                return lock_result
+            ticketType, ticketPassword = self.request_ticket_info(order, headers, rebot)
+            orderInfo = self.request_create_order(order, headers, rebot, ticketType, ticketPassword)
+            pay_url = ''
+            if orderInfo.get('flag') == '0':
+                orderId = orderInfo['orderId']
+                url = "http://www.84100.com/pay/ajax?orderId=%s" % orderId
+                orderPay = requests.post(url, headers=headers, cookies=rebot.cookies)
+                orderPay = orderPay.json()
+                if orderPay.get('flag') == '0':
+                    pay_url = orderPay['url']
+                order_log.info("[lock-result] query orderPay . order: %s,%s", order.order_no,orderPay) 
+            elif orderInfo.get('flag') == '2':
+                print orderInfo.get('msg',''),type(orderInfo.get('msg',''))
+                if u'同一出发日期限购6张' in orderInfo.get('msg',''):
+#                 if u'票种类型' in orderInfo.get('msg',''):
+                    order.source_account = ''
+                    order.save()
+                    return self.do_lock_ticket(order)
+        if pay_url:
+            pay_info = self.request_pay_info(pay_url)
+            order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info) 
+            expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
+            orderInfo['expire_datetime'] = expire_datetime
+            orderInfo['ticketPassword'] = ticketPassword
+            lock_result.update({
+                "result_code": 1,
+                "lock_info": orderInfo,
+                "pay_url": pay_url,
+                "raw_order_no": orderId,
+                "expire_datetime": expire_datetime,
+                "pay_money": pay_info["pay_money"]
+            })
+        else:
+            lock_result.update({
+                "lock_info": orderInfo,
+                "result_reason": orderInfo.get('msg', '') or orderPay.get('msg', ''),
+            })
+        return lock_result
+
+    def request_get_rebot(self, order):
         if order.source_account:
             rebot = Bus100Rebot.objects.get(telephone=order.source_account)
         else:
@@ -52,25 +111,11 @@ class Flow(BaseFlow):
                 if count + int(order.ticket_amount) <= 20:
                     break
             rebot = Bus100Rebot.objects.get(telephone=i)
-        if not rebot.is_active:
-            lock_result.update(result_code=2)
-            lock_result.update(source_account=rebot.telephone)
-            lock_result.update(result_reason="第三方账号没有激活")
-            return lock_result
-        rebot.recrawl_shiftid(order.line)
-        line = Line.objects.get(line_id=order.line.line_id)
-        order.line = line
-        order.ticket_price = line.full_price
-        order.save()
+        return rebot
 
-        lock_result.update(source_account=rebot.telephone)
-
-        if order.line.bus_num == 0 or not order.line.extra_info.get('flag', 0):
-            lock_result.update(result_reason="该条线路无法购买")
-            return lock_result
+    def request_ticket_info(self, order, headers, rebot):
         ticketType = u'全票'
         ticketPassword = ''
-
         url = 'http://www.84100.com/getTrainInfo/ajax'
         data = {
               "shiftId": order.line.bus_num,
@@ -94,9 +139,12 @@ class Flow(BaseFlow):
                     ticketPassword = str(random.randint(100000, 999999))
                 else:
                     ticketPassword = ''
-        except Exception,e:
+        except Exception:
             print traceback.format_exc()
             order_log.info("[lock-result] query trainInfo . order: %s,%s", order.order_no,trainInfo)
+        return ticketType, ticketPassword
+
+    def request_create_order(self, order, headers, rebot, ticketType, ticketPassword):
         url = 'http://www.84100.com/createOrder/ajax'
         idNos = []
         names = []
@@ -123,36 +171,8 @@ class Flow(BaseFlow):
         print data
         orderInfo = requests.post(url, data=data, headers=headers, cookies=rebot.cookies)
         orderInfo = orderInfo.json()
-        order_log.info("[lock-result] query orderInfo . order: %s,%s", order.order_no,orderInfo) 
-        pay_url = ''
-        if orderInfo.get('flag') == '0':
-            orderId = orderInfo['orderId']
-            url = "http://www.84100.com/pay/ajax?orderId=%s" % orderId
-            orderPay = requests.post(url, headers=headers, cookies=rebot.cookies)
-            orderPay = orderPay.json()
-            if orderPay.get('flag') == '0':
-                pay_url = orderPay['url']
-            order_log.info("[lock-result] query orderPay . order: %s,%s", order.order_no,orderPay) 
-        if pay_url:
-            pay_info = self.request_pay_info(pay_url)
-            order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info) 
-            expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
-            orderInfo['expire_datetime'] = expire_datetime
-            orderInfo['ticketPassword'] = ticketPassword
-            lock_result.update({
-                "result_code": 1,
-                "lock_info": orderInfo,
-                "pay_url": pay_url,
-                "raw_order_no": orderId,
-                "expire_datetime": expire_datetime,
-                "pay_money": pay_info["pay_money"]
-            })
-        else:
-            lock_result.update({
-                "lock_info": orderInfo,
-                "result_reason": orderInfo.get('msg', 'unknow'),
-            })
-        return lock_result
+        order_log.info("[lock-result] query orderInfo . order: %s,%s,%s", order.order_no,orderInfo,data)
+        return orderInfo
 
     def request_pay_info(self, pay_url):
         r = requests.get(pay_url, verify=False)
