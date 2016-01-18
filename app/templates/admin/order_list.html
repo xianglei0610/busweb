@@ -40,7 +40,7 @@
       
       <td class="center">
       {% if order.status ==3 %}
-      	{{order.lock_info.get('expire_datetime','')}} 过期
+      	{{order.lock_info.get('expire_datetime','')}}
       {%elif order.status ==5 %}
       	{{order.lock_info.get('returnMsg','') or order.lock_info.get('msg','')   }}
       {%elif order.status == 0%}

@@ -54,7 +54,7 @@ class Flow(BaseFlow):
                 lock_result.update(result_reason="该条线路无法购买")
                 return lock_result
             ticketType, ticketPassword = self.request_ticket_info(order, headers, rebot)
-            orderInfo = self.request_create_order(order, headers, rebot, ticketType, ticketPassword)
+            orderInfo = self.request_create_order(order, headers, rebot, ticketType,ticketPassword)
             pay_url = ''
             if orderInfo.get('flag') == '0':
                 orderId = orderInfo['orderId']
@@ -71,6 +71,12 @@ class Flow(BaseFlow):
                     order.source_account = ''
                     order.save()
                     return self.do_lock_ticket(order)
+                elif u'Could not return the resource to the pool' in orderInfo.get('msg',''):
+                    from tasks import async_lock_ticket
+                    lock_result.update(result_code=2)
+                    lock_result.update(result_reason="源站系统错误，1分钟过后再锁票重试")
+                    async_lock_ticket.apply_async((order.order_no,), countdown=1*60)
+                    return lock_result
         if pay_url:
             pay_info = self.request_pay_info(pay_url)
             order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info) 
@@ -159,8 +165,9 @@ class Flow(BaseFlow):
         data = {
             "startId": order.line.starting.station_id,
             "planId": order.line.bus_num,
-            "name": order.contact_info['name'],
-            "mobile": order.contact_info['telephone'],
+            "name": '',#order.contact_info['name'],
+            "mobile": '',#order.contact_info['telephone'],
+            'smsFlag': '',
             "ticketNo": '',
             "ticketPassword": ticketPassword,
             "idNos": ','.join(idNos),

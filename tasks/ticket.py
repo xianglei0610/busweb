@@ -12,8 +12,8 @@ from app.models import Order
 from app.flow import get_flow
 
 
-@celery.task(ignore_result=True)
-def async_lock_ticket(order_no):
+@celery.task(bind=True, ignore_result=True)
+def async_lock_ticket(self, order_no):
     """
     请求源网站锁票 + 锁票成功回调
 

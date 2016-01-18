@@ -503,7 +503,7 @@ def wating_deal_order():
                 count = KF_ORDER_CT-order_ct
                 lock_order_list = r.zrange('lock_order_list', 0, -1)
                 for i in lock_order_list:
-                    if count<=0:
+                    if count <= 0:
                         break
                     if forbid and Order.objects.get(order_no=i).crawl_source=="cbd":
                         continue
