@@ -144,11 +144,10 @@ def main():
     sched = Scheduler(daemonic=False)
 
     #sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
-#     sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['bus100', "450000"])
-#     sched.add_cron_job(bus_crawl, hour=20, minute=40, args=['bus100', "370000"])
-#     sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['bus100', "210000"])
-    #sched.add_cron_job(sync_crawl_to_api, hour=21, minute=10, args=['scqcp'])
-    sched.add_cron_job(sync_crawl_to_api, hour=1, minute=10, args=['bus100'])
+    #sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['bus100', "450000"])
+    #sched.add_cron_job(bus_crawl, hour=20, minute=40, args=['bus100', "370000"])
+    #sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['bus100', "210000"])
+    sched.add_cron_job(sync_crawl_to_api, hour=23, minute=50, args=['bus100'])
 
     sched.add_interval_job(check_login_status, minutes=5, args=['bus100'])
 #     sched.add_interval_job(polling_order_status, minutes=1)
@@ -158,5 +157,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-#     check_login_status('bus100')
+    #check_login_status('bus100')
     #bus_crawl('bus100')
