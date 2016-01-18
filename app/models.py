@@ -132,7 +132,7 @@ class Line(db.Document):
             "line_id",
             "s_province",
             "s_sta_name",
-            "s_city_name"
+            "s_city_name",
             "d_city_name",
             "d_sta_name",
             "crawl_source",

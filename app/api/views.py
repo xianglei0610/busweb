@@ -243,13 +243,6 @@ def submit_order():
         order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
 
-    now = dte.now()
-    if (line.drv_datetime-now).total_seconds()<= line.starting.advance_order_time*60:
-        order_log.info("[submit-fail] %s, 只能购买%d分钟内的票", out_order_no, line.starting.advance_order_time)
-        return jsonify({"code": RET_BUY_TIME_ERROR,
-                        "message": "只能购买%d分钟内的票" % line.starting.advance_order_time,
-                        "data": ""})
-
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
@@ -274,8 +267,8 @@ def submit_order():
 
     order.drv_datetime = line.drv_datetime
     order.bus_num = line.bus_num
-    order.starting_name = line.starting.city_name + ';' + line.starting.station_name
-    order.destination_name = line.destination.city_name + ';' + line.destination.station_name
+    order.starting_name = line.s_city_name + ';' + line.s_sta_name
+    order.destination_name = line.d_city_name + ';' + line.d_sta_name
     order.save()
     order.on_create()
 

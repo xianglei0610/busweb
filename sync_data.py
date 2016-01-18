@@ -2,7 +2,7 @@
 # -*- coding:utf-8 *-*
 from datetime import datetime
 from app.utils import md5
-from app.models import Line, Starting, Destination
+from app.models import Line
 
 def insert_or_update_line(line):
     now = datetime.now()
