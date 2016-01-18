@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 *-*
+import pypinyin
 from datetime import datetime
 from app.utils import md5
 from app.models import Line
@@ -119,6 +120,9 @@ def migrate_bus100(crawl_db, city=""):
         crawl_source = d["crawl_source"]
         target_city_name = d["target_city_name"]
         end_station = d["end_station"]
+        d_city_code = d["target_short_name"]
+        if not d_city_code:
+            d_city_code = "".join(map(lambda x:x[0], pypinyin.pinyin(unicode(target_city_name), style=pypinyin.FIRST_LETTER)))
 
         drv_date, drv_time = d["departure_time"].split(" ")
         attrs = {
@@ -131,7 +135,7 @@ def migrate_bus100(crawl_db, city=""):
             "s_sta_name": d["start_station"],
             "s_city_code": d["start_short_name"],
             "d_city_name": target_city_name,
-            "d_city_code": d["target_short_name"],
+            "d_city_code": d_city_code,
             "d_sta_name": end_station,
             "drv_date": drv_date,
             "drv_time": drv_time,
