@@ -83,6 +83,32 @@ class ApiProdConfig(Config):
     SENTRY_DSN = "http://0ab2a036d18f489d94a8dae384a3ea58:28e30d019c5a410696bad6e100efea5f@112.74.132.104:9000/4"
     CELERY_SENTRY_DSN = "http://fb965560e74c498b9d09ce05577592b4:c7cccc3c58f649b7aea3cbac59993b61@112.74.132.104:9000/6"
 
+    CELERY_BROKER_URL = 'redis://10.51.9.34:6379/10'
+    CELERY_RESULT_BACKEND = 'redis://10.51.9.34:6379/11'
+
+    # redis config
+    REDIS_HOST = "10.51.9.34"
+    REDIS_PORT = 6379
+    REDIS_SETTIGNS = {
+        "SESSION": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 9,
+        },
+    }
+
+    MONGODB_SETTINGS = {
+        'db': 'web12308',
+        'host': '10.51.9.34',
+        'port': 27017,
+    }
+
+    CRAWL_MONGODB_SETTINGS = {
+        'db': 'crawl12308',
+        'host': '10.51.9.34',
+        'port': 27017,
+    }
+
 
 class ApiLocalConfig(Config):
 
