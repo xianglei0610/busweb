@@ -281,11 +281,12 @@ class Flow(BaseFlow):
         trainInfo = requests.post(url, data=payload, cookies=rebot.cookies)
         trainInfo = trainInfo.json()
         if str(trainInfo['flag']) == '0':
-#                 sel = etree.HTML(trainInfo['msg'])
-#                 left_tickets = sel.xpath('//div[@class="ticketPrice"]/ul/li/strong[@id="leftSeatNum"]/text()')
-#                 if left_tickets:
-#                     left_tickets = int(left_tickets[0])
-            result_info.update(result_msg="ok", update_attrs={"refresh_datetime": now})
+            sel = etree.HTML(trainInfo['msg'])
+            full_price = sel.xpath('//div[@class="order_detail"]/div[@class="left"]/p[@class="price"]/em/text()')
+            print full_price
+            if full_price:
+                full_price = float(full_price[0])
+            result_info.update(result_msg="ok", update_attrs={"refresh_datetime": now,'full_price':full_price})
         elif str(trainInfo['flag']) == '1':
             line_log.info("[refresh-result]  no left_tickets line:%s %s,result:%s ", line.crawl_source, line.line_id,trainInfo)
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
