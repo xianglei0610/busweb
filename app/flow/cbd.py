@@ -169,8 +169,8 @@ class Flow(BaseFlow):
                 no, code = info.split("|")
                 dx_info = {
                     "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                    "start": order.line.starting.station_name,
-                    "end": order.line.destination.station_name,
+                    "start": order.line.s_sta_name,
+                    "end": order.line.d_sta_name,
                     #"amount": order.ticket_amount,
                     "code": code,
                     "no": no,
@@ -207,7 +207,7 @@ class Flow(BaseFlow):
         }
         line_url = "http://m.chebada.com/Schedule/GetBusSchedules"
         params = dict(
-            departure=line.starting.city_name,
+            departure=line.s_city_name,
             destination=line.destination.city_name,
             departureDate=line.drv_date,
             page="1",

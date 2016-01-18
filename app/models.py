@@ -5,7 +5,6 @@ import urllib
 import urllib2
 import re
 import time
-import cPickle
 
 from app.constants import *
 from datetime import datetime as dte
@@ -94,107 +93,24 @@ class OpenCity(db.Document):
     }
 
 
-class Starting(db.Document):
-    """
-    出发地
-    """
-
-    starting_id = db.StringField(unique=True)
-    province_name = db.StringField()
-    city_id = db.StringField()
-    city_name = db.StringField()
-    station_id = db.StringField()
-    station_name = db.StringField()
-    city_pinyin = db.StringField()
-    city_pinyin_prefix = db.StringField()
-    station_pinyin = db.StringField()
-    station_pinyin_prefix = db.StringField()
-    is_pre_sell = db.BooleanField(default=True)   # 是否预售
-    crawl_source = db.StringField()
-
-    meta = {
-        "indexes": [
-            "starting_id",
-            "city_name",
-            "station_name",
-            "city_pinyin_prefix",
-            "station_pinyin_prefix",
-            "crawl_source",
-            ],
-    }
-
-    @property
-    def pre_sell_days(self):
-        """
-        预售期
-        """
-        if not self.is_pre_sell:
-            return 0
-        if self.province_name == "四川" and self.crawl_source == "scqcp":
-            return 10
-        elif self.province_name == "广西" and self.crawl_source == "bus100":
-            return 15
-        return 0
-
-    @property
-    def open_time(self):
-        return "08:00:00"
-
-    @property
-    def end_time(self):
-        return "23:00:00"
-
-    @property
-    def advance_order_time(self):
-        "单位：分钟"
-        if self.crawl_source in ["scqcp", "ctrip"]:
-            return 120  # 2hour
-        return 0
-
-    @property
-    def max_ticket_per_order(self):
-        if self.crawl_source in ["scqcp", "ctrip"]:
-            return 5
-        return 3
-
-
-class Destination(db.Document):
-    """
-    目的地
-    """
-
-    destination_id = db.StringField(unique=True)
-    starting = db.ReferenceField(Starting)
-    city_id = db.StringField()
-    city_name = db.StringField()
-    city_pinyin = db.StringField()
-    city_pinyin_prefix = db.StringField()
-    station_id = db.StringField()
-    station_name = db.StringField()
-    station_pinyin = db.StringField()
-    station_pinyin_prefix = db.StringField()
-    crawl_source = db.StringField()
-
-    meta = {
-        "indexes": [
-            "destination_id",
-            "city_name",
-            "station_name",
-            "city_pinyin_prefix",
-            "station_pinyin_prefix",
-            "crawl_source",
-            ],
-    }
-
-
 class Line(db.Document):
-    """
-    线路表
-    """
-    line_id = db.StringField(unique=True)  # 路线id, 必须唯一
+    """线路表"""
+    line_id = db.StringField(unique=True)           # 路线id, 必须唯一
     crawl_source = db.StringField(required=True)     # 爬取来源
-    starting = db.ReferenceField(Starting)
-    destination = db.ReferenceField(Destination)
+
+    # starting
+    s_province = db.StringField(required=True)
+    s_city_id = db.StringField()
+    s_city_name = db.StringField(required=True)
+    s_sta_name = db.StringField(required=True)
+    s_sta_id = db.StringField()
+    s_city_code = db.StringField(required=True)
+
+    # destination
+    d_city_name = db.StringField(required=True)
+    d_city_code = db.StringField(required=True)
+    d_sta_name = db.StringField(required=True)
+
     drv_date = db.StringField(required=True)  # 开车日期 yyyy-MM-dd
     drv_time = db.StringField(required=True)  # 开车时间 hh:mm
     drv_datetime = db.DateTimeField()         # DateTime类型的开车时间
@@ -214,16 +130,21 @@ class Line(db.Document):
     meta = {
         "indexes": [
             "line_id",
+            "s_province",
+            "s_sta_name",
+            "s_city_name"
+            "d_city_name",
+            "d_sta_name",
             "crawl_source",
             "drv_date",
             "drv_time",
             "drv_datetime",
             "crawl_datetime",
-           # {
-           #     'fields': ['crawl_datetime'],
-           #     'expireAfterSeconds': 3600*24*20,       # 20天
-           # }
-            ],
+            {
+                'fields': ['crawl_datetime'],
+                'expireAfterSeconds': 3600*24*20,       # 20天
+            }
+        ],
     }
 
     def real_price(self):
@@ -235,10 +156,10 @@ class Line(db.Document):
         """
         return {
             "line_id": self.line_id,
-            "starting_city": self.starting.city_name,
-            "starting_station": self.starting.station_name,
-            "destination_city": self.destination.city_name,
-            "destination_station": self.destination.station_name,
+            "starting_city": self.s_city_name,
+            "starting_station": self.s_sta_name,
+            "destination_city": self.d_city_name,
+            "destination_station": self.d_sta_name,
             "bus_num": self.bus_num,
             "drv_date": self.drv_date,
             "drv_time": self.drv_time,
@@ -249,6 +170,7 @@ class Line(db.Document):
             "fee": self.fee,
             "distance": self.distance,
         }
+
 
 
 class Order(db.Document):
@@ -1033,9 +955,9 @@ class Bus100Rebot(Rebot):
         重新获取线路ID
         """
         queryline_url = 'http://www.84100.com/getTrainList/ajax'
-        start_city_id = line.starting.station_id
-        start_city_name = line.starting.city_name
-        target_city_name = line.destination.station_name
+        start_city_id = line.s_sta_id
+        start_city_name = line.s_city_name
+        target_city_name = line.d_sta_name
         sdate = line.drv_date
         drv_time = line.drv_time
         if drv_time > '00:00' and drv_time <= '12:00':

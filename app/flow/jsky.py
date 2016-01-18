@@ -48,15 +48,15 @@ class Flow(BaseFlow):
                 "reductAmount": "0",
                 "sessionId": "",
                 "ticketsInfo": {
-                    "arrStation": line.destination.station_name,
+                    "arrStation": line.d_sta_name,
                     "childPrice": line.half_price,
                     "coachNo": line.bus_num,
                     "coachType": line.vehicle_type,
-                    "departure": line.starting.city_name,
-                    "destination": line.destination.city_name,
+                    "departure": line.s_city_name,
+                    "destination": line.d_city_name,
                     "dptDate": line.drv_date,
                     "dptDateTime": "%s %s:00.000" % (line.drv_date, line.drv_time),
-                    "dptStation": line.starting.station_name,
+                    "dptStation": line.s_sta_name,
                     "dptTime": line.drv_time,
                     "remainChildNum": "0",
                     "ticketFee": str(line.fee),
@@ -190,8 +190,8 @@ class Flow(BaseFlow):
         line_url = "http://api.jskylwsp.cn/ticket-interface/rest/query/getbusschedule"
         rebot = JskyAppRebot.get_one()
         body = {
-            "departure": line.starting.city_name,
-            "destination": line.destination.city_name,
+            "departure": line.s_city_name,
+            "destination": line.d_city_name,
             "dptDate": line.drv_date,
             "pageIndex": 1,
             "pageSize": 1025,

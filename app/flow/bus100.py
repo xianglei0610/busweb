@@ -63,7 +63,7 @@ class Flow(BaseFlow):
                 orderPay = orderPay.json()
                 if orderPay.get('flag') == '0':
                     pay_url = orderPay['url']
-                order_log.info("[lock-result] query orderPay . order: %s,%s", order.order_no,orderPay) 
+                order_log.info("[lock-result] query orderPay . order: %s,%s", order.order_no,orderPay)
             elif orderInfo.get('flag') == '2':
                 print orderInfo.get('msg',''),type(orderInfo.get('msg',''))
                 if u'同一出发日期限购6张' in orderInfo.get('msg',''):
@@ -73,7 +73,7 @@ class Flow(BaseFlow):
                     return self.do_lock_ticket(order)
         if pay_url:
             pay_info = self.request_pay_info(pay_url)
-            order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info) 
+            order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info)
             expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
             orderInfo['expire_datetime'] = expire_datetime
             orderInfo['ticketPassword'] = ticketPassword
@@ -119,8 +119,8 @@ class Flow(BaseFlow):
         url = 'http://www.84100.com/getTrainInfo/ajax'
         data = {
               "shiftId": order.line.bus_num,
-              "startId": order.line.starting.station_id,
-              "startName": order.line.starting.station_name,
+              "startId": order.line.s_sta_id,
+              "startName": order.line.s_sta_name,
               "ttsId":  ''
         }
         try:
@@ -157,7 +157,7 @@ class Flow(BaseFlow):
             ticketTypes.append(ticketType)
 
         data = {
-            "startId": order.line.starting.station_id,
+            "startId": order.line.s_sta_id,
             "planId": order.line.bus_num,
             "name": order.contact_info['name'],
             "mobile": order.contact_info['telephone'],
@@ -200,8 +200,8 @@ class Flow(BaseFlow):
                 ticketPassword = "取票密码:%s;"%tickets.get('ticketPassword', '')
             dx_info = {
                 "amount": order.ticket_amount,
-                "start": "%s(%s)" % (order.line.starting.city_name, order.line.starting.station_name),
-                "end": order.line.destination.station_name,
+                "start": "%s(%s)" % (order.line.s_city_name, order.line.s_sta_name),
+                "end": order.line.d_sta_name,
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "order": tickets["order_id"],
                 "ticketPassword": ticketPassword,
@@ -266,8 +266,8 @@ class Flow(BaseFlow):
         url = "http://www.84100.com/getTrainInfo/ajax"
         payload = {
             "shiftId": line.bus_num,
-            "startId": line.starting.station_id,
-            "startName": line.starting.station_name,
+            "startId": line.s_sta_id,
+            "startName": line.s_sta_name,
             "ttsId": ''
         }
         now = dte.now()
