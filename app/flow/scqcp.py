@@ -28,7 +28,7 @@ class Flow(BaseFlow):
                 lst = [r["id_number"], r["name"], r["telephone"], "0", "0"]
                 tickets.append("|".join(lst))
             data = {
-                "carry_sta_id": order.line.starting.station_id,
+                "carry_sta_id": order.line.s_sta_id,
                 "stop_name": order.line.extra_info["stop_name_short"],
                 "str_date": "%s %s" % (order.line.drv_date, order.line.drv_time),
                 "sign_id": order.line.extra_info["sign_id"],
@@ -107,8 +107,8 @@ class Flow(BaseFlow):
                 dx_tmpl = DUAN_XIN_TEMPL[SOURCE_SCQCP]
                 dx_info = {
                     "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                    "start": order.line.starting.station_name,
-                    "end": order.line.destination.station_name,
+                    "start": order.line.s_sta_name,
+                    "end": order.line.d_sta_name,
                     "amount": order.ticket_amount,
                     "code": code,
                 }
@@ -167,7 +167,7 @@ class Flow(BaseFlow):
             "update_attrs": {},
         }
         params = dict(
-            carry_sta_id=line.starting.station_id,
+            carry_sta_id=line.s_sta_id,
             stop_name=line.extra_info["stop_name_short"],
             drv_date="%s %s" % (line.drv_date, line.drv_time),
             sign_id=line.extra_info["sign_id"],

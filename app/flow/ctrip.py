@@ -21,10 +21,10 @@ class Flow(BaseFlow):
             line = order.line
             data = {
                 "head": rebot.head,
-                "fromCityName": line.starting.city_name,
-                "toCityName": line.destination.city_name,
-                "fromStationName": line.starting.station_name,
-                "toStationName": line.destination.station_name,
+                "fromCityName": line.s_city_name,
+                "toCityName": line.d_city_name,
+                "fromStationName": line.s_sta_name,
+                "toStationName": line.d_sta_name,
                 "ticketDate": line.drv_date,
                 "ticketTime": line.drv_time,
                 "busNumber": line.bus_num,
@@ -119,8 +119,8 @@ class Flow(BaseFlow):
                     dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CTRIP]
                     dx_info = {
                         "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                        "start": order.line.starting.station_name,
-                        "end": order.line.destination.station_name,
+                        "start": order.line.s_sta_name,
+                        "end": order.line.d_sta_name,
                         "amount": order.ticket_amount,
                         "code": code,
                     }
@@ -176,11 +176,11 @@ class Flow(BaseFlow):
             ref="ctrip.h5",
             partner="ctrip.h5",
             clientType="Android--hybrid",
-            fromCity=line.starting.city_name,
-            toCity=line.destination.city_name,
+            fromCity=line.s_city_name,
+            toCity=line.d_city_name,
             busNumber=line.bus_num,
-            fromStation=line.starting.station_name,
-            toStation=line.destination.station_name,
+            fromStation=line.s_sta_name,
+            toStation=line.d_sta_name,
             fromDate=line.drv_date,
             fromTime=line.drv_time,
             contentType="json",

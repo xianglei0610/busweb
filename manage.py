@@ -147,14 +147,14 @@ def clear_expire_line():
 
 @manager.option('-p', '--province_name', dest='province_name',default='')
 def sync_open_city(province_name):
-    from app.models import Starting, OpenCity
+    from app.models import OpenCity, Line
     from pypinyin import lazy_pinyin
     if not province_name:
         print 'province_name is null '
 #     province_name =u'辽宁'
     #OpenCity.objects.filter(province=province_name).delete()
-    starObj = Starting.objects.filter(province_name=province_name).distinct('city_name')
-    for i in starObj:
+    lines = Line.objects.filter(s_province=province_name).distinct('s_city_name')
+    for i in lines:
         openObj = OpenCity()
         openObj.province = province_name
         city_name = i

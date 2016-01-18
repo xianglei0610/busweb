@@ -20,7 +20,7 @@ from logging import Formatter, StreamHandler
 
 mail = Mail()
 db = MongoEngine()
-celery = Celery(__name__, broker="redis://localhost:6379/10")
+celery = Celery(__name__, broker="redis://10.51.9.34:6379/10")
 login_manager = LoginManager()
 BASE_DIR = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 sentry = Sentry()

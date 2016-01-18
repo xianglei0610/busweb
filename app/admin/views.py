@@ -18,7 +18,7 @@ from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.admin import admin
 from app.utils import getRedisObj
-from app.models import Order, Line, Starting, Destination, AdminUser, PushUserList
+from app.models import Order, Line, AdminUser, PushUserList
 from tasks import refresh_kefu_order
 from tasks import check_order_completed, push_kefu_order
 from app.flow import get_flow
@@ -81,20 +81,15 @@ def line_list():
     lineid = request.args.get("line_id", "")
     starting_name = request.args.get("starting", "")
     dest_name = request.args.get("destination", "")
-    queryset = Line.objects
     query = {"drv_datetime__gt": dte.now()}
     if lineid:
         query.update(line_id=lineid)
     if starting_name:
-        qs_starting = Starting.objects(Q(city_name__startswith=starting_name) |
-                                       Q(station_name__startswith=starting_name))
-        query.update(starting__in=qs_starting)
+        query.update(s_city_name__startswith=starting_name)
     if dest_name:
-        qs_dest = Destination.objects(Q(city_name__startswith=dest_name) |
-                                      Q(station_name__startswith=dest_name))
-        query.update(destination__in=qs_dest)
-    print query
+        query.update(d_city_name__startswith=dest_name)
     queryset = Line.objects(**query).order_by("-crawl_datetime")
+
     return render_template('admin/line_list.html',
                            page=parse_page_data(queryset),
                            starting=starting_name,

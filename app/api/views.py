@@ -8,7 +8,7 @@ from app.constants import *
 from flask import request, jsonify
 from tasks import async_lock_ticket
 from app.api import api
-from app.models import Line, Starting, Destination, Order, OpenCity
+from app.models import Line, Order, OpenCity
 from app import order_log, line_log
 from app.flow import get_flow
 
@@ -92,15 +92,9 @@ def query_destination():
                         "message": "%s is not open" % starting_name,
                         "data": ""})
     crawl_source = open_city.crawl_source
-    query = {
-        "city_name__startswith": unicode(starting_name),
-        "crawl_source": crawl_source,
-    }
-    line_log.info("查询%s的目的地, 查询条件:%s", starting_name, str(query))
-    st_qs = Starting.objects(**query)
-    dest_list = Destination.objects(starting__in=st_qs)
-    data = list(set(map(lambda obj: "%s|%s" % (obj.station_name or obj.city_name, obj.station_pinyin_prefix or
-                obj.city_pinyin_prefix), dest_list)))
+    lines = Line.objects.filter(s_city_name__startswith=unicode(starting_name),
+                                crawl_source=crawl_source)
+    data = list(set(map(lambda obj: "%s|%s" % (obj.d_city_name, obj.d_city_code), lines)))
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
@@ -155,21 +149,15 @@ def query_line():
                         "message": "%s is not open" % starting_name,
                         "data": ""})
     crawl_source = open_city.crawl_source
-
-    qs_starting = Starting.objects(Q(crawl_source=crawl_source) &
-                                   (Q(city_name__startswith=starting_name) |
-                                   Q(station_name__startswith=starting_name)))
-    qs_dest = Destination.objects(Q(crawl_source=crawl_source) &
-                                  (Q(city_name__startswith=dest_name) |
-                                  Q(station_name__startswith=dest_name)))
-    qs_line = Line.objects(starting__in=qs_starting,
-                           destination__in=qs_dest,
-                           drv_date=start_date)
+    qs_line = Line.objects.filter(s_city_name__startswith=starting_name,
+                                  d_city_name__startswith=dest_name,
+                                  drv_date=start_date,
+                                  crawl_source=crawl_source)
 
     data = []
     for line in qs_line:
         # 过滤不在预售期的
-        if (line.drv_datetime-now).total_seconds <= line.starting.advance_order_time*60:
+        if (line.drv_datetime-now).total_seconds <= open_city.advance_order_time*60:
             continue
         data.append(line.get_json())
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
@@ -255,13 +243,6 @@ def submit_order():
         order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
 
-    now = dte.now()
-    if (line.drv_datetime-now).total_seconds()<= line.starting.advance_order_time*60:
-        order_log.info("[submit-fail] %s, 只能购买%d分钟内的票", out_order_no, line.starting.advance_order_time)
-        return jsonify({"code": RET_BUY_TIME_ERROR,
-                        "message": "只能购买%d分钟内的票" % line.starting.advance_order_time,
-                        "data": ""})
-
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
@@ -286,8 +267,8 @@ def submit_order():
 
     order.drv_datetime = line.drv_datetime
     order.bus_num = line.bus_num
-    order.starting_name = line.starting.city_name + ';' + line.starting.station_name
-    order.destination_name = line.destination.city_name + ';' + line.destination.station_name
+    order.starting_name = line.s_city_name + ';' + line.s_sta_name
+    order.destination_name = line.d_city_name + ';' + line.d_sta_name
     order.save()
     order.on_create()
 

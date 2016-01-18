@@ -42,6 +42,7 @@ def md5(msg):
 
 
 def getRedisObj(rdb=0, host=None, password=None):
+    host = "10.51.9.34"
     if host is None:
         host = REDIS_HOST
     if password is None:
