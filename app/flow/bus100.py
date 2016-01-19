@@ -50,7 +50,7 @@ class Flow(BaseFlow):
         pay_url = order.pay_url
         orderPay = {}
         if not pay_url:
-            if order.line.bus_num == 0 or not order.line.extra_info.get('flag', 0):
+            if order.line.shift_id == "0" or not order.line.extra_info.get('flag', 0):
                 lock_result.update(result_reason="该条线路无法购买")
                 return lock_result
             ticketType, ticketPassword = self.request_ticket_info(order, headers, rebot)
@@ -124,7 +124,7 @@ class Flow(BaseFlow):
         ticketPassword = ''
         url = 'http://www.84100.com/getTrainInfo/ajax'
         data = {
-              "shiftId": order.line.bus_num,
+              "shiftId": order.line.shift_id,
               "startId": order.line.s_sta_id,
               "startName": order.line.s_sta_name,
               "ttsId":  ''
@@ -164,7 +164,7 @@ class Flow(BaseFlow):
 
         data = {
             "startId": order.line.s_sta_id,
-            "planId": order.line.bus_num,
+            "planId": order.line.shift_id,
             "name": '',#order.contact_info['name'],
             "mobile": '',#order.contact_info['telephone'],
             'smsFlag': '',
@@ -272,7 +272,7 @@ class Flow(BaseFlow):
         line = Line.objects.get(line_id=line.line_id)
         url = "http://www.84100.com/getTrainInfo/ajax"
         payload = {
-            "shiftId": line.bus_num,
+            "shiftId": line.shift_id,
             "startId": line.s_sta_id,
             "startName": line.s_sta_name,
             "ttsId": ''

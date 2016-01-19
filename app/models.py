@@ -117,7 +117,7 @@ class Line(db.Document):
     distance = db.StringField()
     vehicle_type = db.StringField()  # 车型
     seat_type = db.StringField()     # 座位类型
-    bus_num = db.StringField()       # 车次/班次
+    bus_num = db.StringField()       # 班次
     full_price = db.FloatField()
     half_price = db.FloatField()
     fee = db.FloatField()                 # 手续费
@@ -126,6 +126,7 @@ class Line(db.Document):
     left_tickets = db.IntField()          # 剩余票数
     update_datetime = db.DateTimeField()  # 更新时间
     refresh_datetime = db.DateTimeField()   # 线路刷新时间
+    shift_id = db.StringField()       # 车次
 
     meta = {
         "indexes": [
@@ -224,7 +225,7 @@ class Order(db.Document):
     kefu_updatetime = db.DateTimeField()
 
     drv_datetime = db.DateTimeField()         # DateTime类型的开车时间
-    bus_num = db.StringField()       # 车次/班次
+    bus_num = db.StringField()       #班次
     starting_name = db.StringField()
     destination_name = db.StringField()
 
@@ -522,7 +523,7 @@ class ScqcpRebot(Rebot):
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
     }
-    crawl_source =  SOURCE_SCQCP
+    crawl_source = SOURCE_SCQCP
 
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)
@@ -1024,7 +1025,8 @@ class Bus100Rebot(Rebot):
                     else:
                         flag = '0'
                 item['extra_info'] = {"flag": flag}
-                item['bus_num'] = str(shiftid)
+                item['bus_num'] = str(banci)
+                item['shift_id'] = str(shiftid)
                 line_id = md5("%s-%s-%s-%s-%s-%s" % \
                     (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'bus100'))
 

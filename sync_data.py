@@ -143,7 +143,7 @@ def migrate_bus100(crawl_db, city=""):
             "distance": str(d["distance"]),
             "vehicle_type": '',
             "seat_type": '',
-            "bus_num": str(d["shiftid"]),
+            "bus_num": str(d["banci"]),
             "full_price": float(str(d["price"]).split('￥')[-1]),
             "half_price": 0,
             "crawl_datetime": d["crawl_time"],
@@ -151,6 +151,7 @@ def migrate_bus100(crawl_db, city=""):
             "left_tickets": 50 if d["flag"] else 0,
             "extra_info": {"flag": d["flag"]},
             'update_datetime': datetime.now(),
+            "shift_id": str(d["shiftid"]),
         }
         try:
             line_obj = Line.objects.get(line_id=attrs["line_id"])
