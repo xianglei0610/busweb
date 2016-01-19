@@ -127,7 +127,7 @@ class AdminLocalConfig(ApiLocalConfig):
 
     DEBUG = True
 
-config = {
+config_mapping = {
     'api_local': ApiLocalConfig,
     'api_dev': ApiDevConfig,
     'api_prod': ApiProdConfig,

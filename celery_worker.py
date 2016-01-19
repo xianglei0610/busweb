@@ -9,8 +9,7 @@ from app import setup_app, celery
 from raven import Client
 from raven.contrib.celery import register_signal, register_logger_signal
 
-app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
-                os.getenv('FLASK_SERVER') or 'api')
+app = setup_app()
 
 
 dsn = app.config["CELERY_SENTRY_DSN"]

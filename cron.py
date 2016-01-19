@@ -21,8 +21,7 @@ from app import setup_app
 from app.models import Order, Bus100Rebot
 
 
-app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
-                os.getenv('FLASK_SERVER') or 'api')
+app = setup_app()
 
 print app.config["DEBUG"]
 
