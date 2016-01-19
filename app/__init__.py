@@ -22,7 +22,7 @@ config_name = "%s_%s" % (os.getenv('FLASK_SERVER') or 'api', os.getenv('FLASK_CO
 config = config_mapping[config_name]
 mail = Mail()
 db = MongoEngine()
-celery = Celery(__name__, broker="redis://10.51.9.34:6379/10")
+celery = Celery(__name__, broker=config.CELERY_BROKER_URL)
 login_manager = LoginManager()
 BASE_DIR = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 sentry = Sentry()

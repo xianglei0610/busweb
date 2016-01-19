@@ -15,8 +15,8 @@ except ImportError:
     from PIL import ImageFont
     from PIL import ImageFilter
 from datetime import datetime as dte
-from app.constants import REDIS_HOST, REDIS_PASSWD
 from app import BASE_DIR
+from flask import current_app
 
 
 def idcard_birthday(idcard):
@@ -41,15 +41,14 @@ def md5(msg):
     return md5
 
 
-def getRedisObj(rdb=0, host=None, password=None):
-    host = "10.51.9.34"
-    if host is None:
-        host = REDIS_HOST
-    if password is None:
-        password = REDIS_PASSWD
+def getRedisObj(rdb=0):
+    host = current_app.config["REDIS_HOST"]
+    port = current_app.config["REDIS_PORT"]
 
-    pool = redis.ConnectionPool(
-            host=host, password=password, port=6379, db=rdb, socket_timeout=3)
+    pool = redis.ConnectionPool(host=host,
+                                port=port,
+                                db=rdb,
+                                socket_timeout=3)
     r = redis.Redis(connection_pool=pool)
     return r
 
