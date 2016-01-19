@@ -144,9 +144,10 @@ def main():
     sched = Scheduler(daemonic=False)
 
     #sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
-    #sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['bus100', "450000"])
-    #sched.add_cron_job(bus_crawl, hour=20, minute=40, args=['bus100', "370000"])
-    #sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['bus100', "210000"])
+    sched.add_cron_job(bus_crawl, hour=15, minute=10, args=['bus100', "450000"]) #广西
+    sched.add_cron_job(bus_crawl, hour=14, minute=56, args=['bus100', "370000"]) #山东 
+    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['bus100', "210000"]) #辽宁 
+    sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['bus100', "410000"]) #河南
     sched.add_cron_job(sync_crawl_to_api, hour=23, minute=50, args=['bus100'])
 
     sched.add_interval_job(check_login_status, minutes=5, args=['bus100'])
