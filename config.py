@@ -62,10 +62,6 @@ class ApiDevConfig(Config):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
-    SENTRY_DSN = "http://b611fc0179bc4950862f510e0f0b70b0:c4933230a2314e9c81f11fd09004444c@112.74.132.104:9000/2"
-    CELERY_SENTRY_DSN = "http://e883e9ca535c4e9a89a740f81d678d04:b58e45eb0dd84b5884d70b8674d433fb@112.74.132.104:9000/7"
-
-
     MONGODB_SETTINGS = {
         'db': 'web12308',
         'host': '192.168.1.202',
@@ -80,8 +76,8 @@ class ApiDevConfig(Config):
 
 
 class ApiProdConfig(Config):
-    SENTRY_DSN = "http://0ab2a036d18f489d94a8dae384a3ea58:28e30d019c5a410696bad6e100efea5f@112.74.132.104:9000/4"
-    CELERY_SENTRY_DSN = "http://fb965560e74c498b9d09ce05577592b4:c7cccc3c58f649b7aea3cbac59993b61@112.74.132.104:9000/6"
+    SENTRY_DSN = "http://1916f5873331434aa12af8cfef67bad5:647b983117a54618bdd2fb92ea91e486@120.27.150.94:9000/5"
+    CELERY_SENTRY_DSN = "http://38d90342880f41aaa8f4b8eed11c79ca:25101a5e37a04df882e2ff9c10d64b08@120.27.150.94:9000/4"
 
     CELERY_BROKER_URL = 'redis://10.51.9.34:6379/10'
     CELERY_RESULT_BACKEND = 'redis://10.51.9.34:6379/11'
@@ -116,11 +112,11 @@ class ApiLocalConfig(Config):
 
 
 class AdminDevConfig(ApiDevConfig):
-    SENTRY_DSN = "http://2cc0ca97e2e5456796de23c1ece3f9f3:6b99a5fea50c434182759494b9be569a@112.74.132.104:9000/3"
+    pass
 
 
 class AdminProdConfig(ApiProdConfig):
-    SENTRY_DSN = "http://c9469ae07fe94fdc842adb3b1e0bae52:f62e2e4d316c458c8a1d462a33dda573@112.74.132.104:9000/5"
+    SENTRY_DSN = "http://eb323c77f19a4ffda4532bf8a4d5000f:ecdb186f84d5425a86844b3073796938@120.27.150.94:9000/6"
 
 
 class AdminLocalConfig(ApiLocalConfig):
