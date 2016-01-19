@@ -72,10 +72,12 @@ class Flow(BaseFlow):
                     order.save()
                     return self.do_lock_ticket(order)
                 elif u'Could not return the resource to the pool' in orderInfo.get('msg',''):
-                    from tasks import async_lock_ticket
                     lock_result.update(result_code=2)
-                    lock_result.update(result_reason="源站系统错误，1分钟过后再锁票重试")
-                    async_lock_ticket.apply_async((order.order_no,), countdown=1*60)
+                    lock_result.update(result_reason="源站系统错误，锁票重试")
+                    return lock_result
+                elif u'订单信息重复' in orderInfo.get('msg',''): 
+                    lock_result.update(result_code=3)
+                    lock_result.update(result_reason="已经下单了，不需要重新锁票")
                     return lock_result
         if pay_url:
             pay_info = self.request_pay_info(pay_url)

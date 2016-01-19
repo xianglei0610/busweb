@@ -31,7 +31,7 @@
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 204px;">出发地</th>
 	<th class="sorting" role="columnheader" tabindex="0" rowspan="1" colspan="1" style="width: 197px;">目的地</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">开车时间</th>
-	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">车型/车次</th>
+	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">班次/车次</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">票价,手续费</th>
 	<th class="sorting" role="columnheader" tabindex="0"  rowspan="1" colspan="1" style="width: 120px;">爬取来源/时间</th>
 	</tr>
@@ -44,7 +44,7 @@
       <td class="center">{{line.s_city_name}}({{line.s_sta_name}})</td>
       <td class="center">{{line.d_city_name}}({{line.d_sta_name}})</td>
       <td class="center">{{line.drv_date}} {{line.drv_time}}</td>
-      <td class="center">{{line.vehicle_type}}/{{line.bus_num}}</td>
+      <td class="center">{{line.shift_id}}/{{line.bus_num}}</td>
       <td class="center">票价:{{line.full_price}}元, 手续费{{line.fee}}元</td>
       <td class="center">{{line.crawl_source}}/{{line.crawl_datetime|format_datetime}}</td>
 		</tr>

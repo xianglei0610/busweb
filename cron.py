@@ -62,7 +62,8 @@ def bus_crawl(crawl_source, province_id = None):
     if os.getenv('FLASK_CONFIG') == 'dev':
         url = "http://192.168.1.202:6800/schedule.json"
     elif os.getenv('FLASK_CONFIG') == 'prod':
-        url = "http://localhost:6800/schedule.json"
+#         url = "http://localhost:6800/schedule.json"
+        url = "http://120.27.150.94:6800/schedule.json"
     else:
         return
     data = {
@@ -126,15 +127,16 @@ def check_login_status(crawl_source):
                 i.is_active = False
                 i.save()
                 phone_list.append(i.telephone)
-        if not app.config["DEBUG"] and len(phone_list) == count:
-            with app.app_context():
-                subject = 'check_login_status'
-                content = ' check_login_status,crawl_source :%s ' % crawl_source
-                sender = 'dg@12308.com'
-                recipients = ADMINS
-                text_body = ''
-                html_body = content + ' '+','.join(phone_list)
-                send_email(subject, sender, recipients, text_body, html_body)
+        if os.getenv('FLASK_CONFIG') == 'prod':
+            if not app.config["DEBUG"] and len(phone_list) == count:
+                with app.app_context():
+                    subject = 'check_login_status'
+                    content = ' check_login_status,crawl_source :%s ' % crawl_source
+                    sender = 'dg@12308.com'
+                    recipients = ADMINS
+                    text_body = ''
+                    html_body = content + ' '+','.join(phone_list)
+                    send_email(subject, sender, recipients, text_body, html_body)
 
 
 def main():
@@ -143,13 +145,13 @@ def main():
     sched = Scheduler(daemonic=False)
 
     #sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
-    sched.add_cron_job(bus_crawl, hour=15, minute=10, args=['bus100', "450000"]) #广西
-    sched.add_cron_job(bus_crawl, hour=14, minute=56, args=['bus100', "370000"]) #山东 
-    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['bus100', "210000"]) #辽宁 
-    sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['bus100', "410000"]) #河南
+    sched.add_cron_job(bus_crawl, hour=13, minute=10, args=['bus100', "450000"]) #广西
+    sched.add_cron_job(bus_crawl, hour=14, minute=10, args=['bus100', "370000"]) #山东 
+    sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['bus100', "210000"]) #辽宁 
+    sched.add_cron_job(bus_crawl, hour=17, minute=29, args=['bus100', "410000"]) #河南
     sched.add_cron_job(sync_crawl_to_api, hour=23, minute=50, args=['bus100'])
 
-    sched.add_interval_job(check_login_status, minutes=5, args=['bus100'])
+    sched.add_interval_job(check_login_status, minutes=10, args=['bus100'])
 #     sched.add_interval_job(polling_order_status, minutes=1)
 
     sched.start()

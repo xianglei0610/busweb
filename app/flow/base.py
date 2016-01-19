@@ -53,6 +53,9 @@ class Flow(object):
             self.lock_ticket_retry(order)
             order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
             return
+        elif ret["result_code"] == 3:   # 订单信息重复
+            order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
+            return
         else:   # 锁票失败
             order.modify(status=STATUS_LOCK_FAIL,
                          lock_info=ret["lock_info"],

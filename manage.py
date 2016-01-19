@@ -142,17 +142,19 @@ def clear_expire_line():
     from app.models import Line
     now = dte.now()
     print Line.objects.filter(crawl_datetime__lte=now).delete()
+    
 
-
+@manager.option('-s', '--site', dest='site', default='')
 @manager.option('-p', '--province_name', dest='province_name',default='')
-def sync_open_city(province_name):
+def sync_open_city(site, province_name):
     from app.models import OpenCity, Line
     from pypinyin import lazy_pinyin
     if not province_name:
         print 'province_name is null '
 #     province_name =u'辽宁'
     #OpenCity.objects.filter(province=province_name).delete()
-    lines = Line.objects.filter(s_province=province_name).distinct('s_city_name')
+    lines = Line.objects.filter(crawl_source=site, s_province=province_name).distinct('s_city_name')
+    print lines
     for i in lines:
         openObj = OpenCity()
         openObj.province = province_name

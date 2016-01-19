@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 import random
+import datetime
 
 from app.constants import *
 from app import celery
@@ -8,6 +9,7 @@ from app.email import send_email
 from app.flow import get_flow
 from app.models import Order
 from app import order_log
+
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -80,17 +82,22 @@ def issue_fail_send_email(self, key):
 @celery.task(bind=True, ignore_result=True)
 def check_order_completed(self, username, key, order_no):
     """
-    超过三分钟订单未处理
+    订单有效期只有5分钟
     """
     from app.models import Order
     r = getRedisObj()
     flag = r.sismember(key, order_no)
     orderObj = Order.objects.get(order_no=order_no)
+    now = datetime.datetime.now()
     if flag:
-        subject = "超过三分钟有未处理订单"
-        content = '%s,超过三分钟有未处理订单:%s,下单时间:%s,12308订单号:%s' % (username, order_no, orderObj.create_date_time,orderObj.out_order_no)
-        sender = 'dg@12308.com'
-        recipients = ADMINS
-        text_body = ''
-        html_body = content
-        send_email(subject, sender, recipients, text_body, html_body)
+        try:
+            if (orderObj.lock_info['expire_datetime']-now).total_seconds < 300:
+                subject = "订单有效期只有5分钟了"
+                content = '%s,%s,订单快到有效期,下单时间:%s,12308订单号:%s' % (username, order_no, orderObj.create_date_time,orderObj.out_order_no)
+                sender = 'dg@12308.com'
+                recipients = ADMINS
+                text_body = ''
+                html_body = content
+                send_email(subject, sender, recipients, text_body, html_body)
+        except:
+            pass        
