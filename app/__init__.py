@@ -10,7 +10,7 @@ from flask import Flask
 from flask.ext.mail import Mail
 from flask.ext.mongoengine import MongoEngine
 from flask.ext.login import LoginManager
-from config import config
+from config import config_mapping
 from celery import Celery, platforms
 from redis_session import RedisSessionInterface
 platforms.C_FORCE_ROOT = True    # celery需要这样
@@ -18,9 +18,11 @@ from raven.contrib.flask import Sentry
 from logging.handlers import TimedRotatingFileHandler
 from logging import Formatter, StreamHandler
 
+config_name = "%s_%s" % (os.getenv('FLASK_SERVER') or 'api', os.getenv('FLASK_CONFIG') or 'local')
+config = config_mapping[config_name]
 mail = Mail()
 db = MongoEngine()
-celery = Celery(__name__, broker="redis://10.51.9.34:6379/10")
+celery = Celery(__name__, broker=config.CELERY_BROKER_URL)
 login_manager = LoginManager()
 BASE_DIR = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 sentry = Sentry()
@@ -63,12 +65,13 @@ def init_logging(app, server_type):
         logger.addHandler(file_hd)
 
 
-def setup_app(config_name, server_type="api"):
+def setup_app():
     servers = {
         "api": setup_api_app,
         "admin": setup_admin_app,
     }
-    app = servers[server_type](config_name)
+    server_type = config_name.split("_")[0]
+    app = servers[server_type]()
 
     rset = app.config["REDIS_SETTIGNS"]["SESSION"]
     r = redis.Redis(host=rset["host"], port=rset["port"], db=rset["db"])
@@ -79,12 +82,11 @@ def setup_app(config_name, server_type="api"):
     return app
 
 
-def setup_api_app(config_name):
+def setup_api_app():
     app = Flask(__name__)
-    config_name = "api_%s" % config_name
-    app.config.from_object(config[config_name])
-    config[config_name].init_app(app)
-    print ">>> run api server, use", config[config_name].__name__
+    app.config.from_object(config)
+    config.init_app(app)
+    print ">>> run api server, use", config.__name__
 
     mail.init_app(app)
     db.init_app(app)
@@ -96,12 +98,11 @@ def setup_api_app(config_name):
     return app
 
 
-def setup_admin_app(config_name):
-    config_name = "admin_%s" % config_name
+def setup_admin_app():
     app = Flask(__name__)
-    app.config.from_object(config[config_name])
-    config[config_name].init_app(app)
-    print ">>> run admin server, use", config[config_name].__name__
+    app.config.from_object(config)
+    config.init_app(app)
+    print ">>> run admin server, use", config.__name__
 
     mail.init_app(app)
     db.init_app(app)

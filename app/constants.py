@@ -37,7 +37,7 @@ SOURCE_INFO = {
             "13760232870": ("a112308", '1'),
             "18588468517": ("lxy12308", '1'),
             "15626025673": ("lxy12308", '1'),
-            
+
             "17095467255": ("123456", '1'),
             "13087921341": ("123456", '1'),
             "13291407375": ("123456", '1'),
@@ -157,9 +157,6 @@ Bus100_DOMAIN = "http://wap.84100.com"
 
 ADMINS = ['xiangleilei@12308.com', 'luojunping@12308.com']
 
-REDIS_HOST = '127.0.0.1'
-REDIS_PASSWD = ""
-REDIS_PORT = 6379
 KF_ORDER_CT = 3
 
 TOKEN = '303fed16373c61a9ee8bdc27f9b6ca4e' #代购token

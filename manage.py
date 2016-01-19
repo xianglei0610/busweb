@@ -8,8 +8,7 @@ from flask.ext.script import Manager, Shell
 from datetime import datetime as dte
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
-                os.getenv('FLASK_SERVER') or 'api')
+app = setup_app()
 manager = Manager(app)
 
 

@@ -9,8 +9,7 @@ from app.models import ScqcpRebot, Order
 
 class RebotTestCase(TestCase):
     def create_app(self):
-        app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
-                        os.getenv('FLASK_SERVER') or 'api')
+        app = setup_app()
         app.config['TESTING'] = True
         return app
 

@@ -17,8 +17,7 @@ class CommonAPITestCase(TestCase):
     """
 
     def create_app(self):
-        app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
-                        os.getenv('FLASK_SERVER') or 'api')
+        app = setup_app()
         app.config['TESTING'] = True
         return app
 
@@ -44,8 +43,7 @@ class CommonAPITestCase(TestCase):
 
 class ScqcpAPITestCase(TestCase):
     def create_app(self):
-        app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
-                        os.getenv('FLASK_SERVER') or 'api')
+        app = setup_app()
         app.config['TESTING'] = True
         return app
 
@@ -128,8 +126,7 @@ class ScqcpAPITestCase(TestCase):
 
 class Bus100APITestCase(TestCase):
     def create_app(self):
-        app = setup_app(os.getenv('FLASK_CONFIG') or 'local',
-                        os.getenv('FLASK_SERVER') or 'api')
+        app = setup_app()
         app.config['TESTING'] = True
         return app
 
