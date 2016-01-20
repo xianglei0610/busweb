@@ -135,6 +135,7 @@ class Line(db.Document):
             "s_sta_name",
             "s_city_name",
             "d_city_name",
+            "d_city_code",
             "d_sta_name",
             "crawl_source",
             "drv_date",
