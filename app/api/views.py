@@ -92,11 +92,8 @@ def query_destination():
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
                         "data": ""})
-    qs = m.Line.objects.filter(s_city_name__startswith=starting_name)
-                       .aggregate({"$group": {"_id": {"city_name": "$d_city_name", "city_code": "$d_city_code"}}})
     crawl_source = open_city.crawl_source
-    line_qs = Line.objects.filter(s_city_name__startswith=starting_name,
-                                  crawl_source=crawl_source)
+    qs = Line.objects.filter(crawl_source=crawl_source, s_city_name__startswith=starting_name).aggregate({"$group": {"_id": {"city_name": "$d_city_name", "city_code": "$d_city_code"}}})
     data = map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs)
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
