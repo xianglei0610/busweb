@@ -237,16 +237,16 @@ class Flow(BaseFlow):
                 "checkCode": valid_code,
                 "rememberMe": "yes",
             }
-            print params, 1111111111
             custom_headers = {}
             custom_headers.update(headers)
             custom_headers.update({"Content-Type": "application/x-www-form-urlencoded"})
             r = requests.post("http://www.bababus.com/baba/login.htm",
-                              data=urllib.urlencode(params), headers=custom_headers, cookies=cookies)
-            print r.content, 22222222
+                              data=urllib.urlencode(params),
+                              headers=custom_headers,
+                              cookies=cookies)
             is_login = self.check_login_status(r)
             if is_login:
-                cookies = cookies.update(dict(r.cookies))
+                cookies.update(dict(r.cookies))
                 rebot.modify(cookies=json.dumps(cookies))
         else:
             # 检查是否处于登陆状态
