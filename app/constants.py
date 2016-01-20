@@ -6,6 +6,7 @@ SOURCE_BUS100 = "bus100"
 SOURCE_CTRIP = "ctrip"
 SOURCE_CBD = "cbd"
 SOURCE_JSKY = "jsky"
+SOURCE_BABA = "baba"
 
 SOURCE_INFO = {
     SOURCE_SCQCP: {
@@ -149,6 +150,13 @@ SOURCE_INFO = {
             "cibRpL": "fQPjVx7bgVrG60XZH3fxQw==",
             "123456": "RH0iLaK7awGTnhWzWtWEaw==",
         }
+    },
+    SOURCE_BABA: {
+        "name": "巴巴快巴",
+        "website": "http://www.bababus.com/",
+        "accounts": {
+            "15575101324": ("cibRpL", ''),
+        },
     }
 }
 
