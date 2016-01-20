@@ -11,6 +11,7 @@ from app.api import api
 from app.models import Line, Order, OpenCity
 from app import order_log, line_log
 from app.flow import get_flow
+from app.utils import getRedisObj
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -79,7 +80,7 @@ def query_destination():
     """
     try:
         post = json.loads(request.get_data())
-        starting_name = post["starting_name"]
+        starting_name = unicode(post["starting_name"])
         assert starting_name != ""
     except Exception, e:
         return jsonify({"code": RET_PARAM_ERROR,
@@ -91,10 +92,12 @@ def query_destination():
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
                         "data": ""})
+    qs = m.Line.objects.filter(s_city_name__startswith=starting_name)
+                       .aggregate({"$group": {"_id": {"city_name": "$d_city_name", "city_code": "$d_city_code"}}})
     crawl_source = open_city.crawl_source
-    lines = Line.objects.filter(s_city_name__startswith=unicode(starting_name),
-                                crawl_source=crawl_source)
-    data = list(set(map(lambda obj: "%s|%s" % (obj.d_city_name, obj.d_city_code), lines)))
+    line_qs = Line.objects.filter(s_city_name__startswith=starting_name,
+                                  crawl_source=crawl_source)
+    data = map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs)
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
