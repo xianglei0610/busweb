@@ -19,6 +19,8 @@ from app.email import send_email
 from app.constants import ADMINS, STATUS_WAITING_ISSUE
 from app import setup_app
 from app.models import Order, Bus100Rebot
+from sms import send_msg
+from app.constants import sms_phone_list
 
 
 app = setup_app()
@@ -129,6 +131,11 @@ def check_login_status(crawl_source):
                 phone_list.append(i.telephone)
         if os.getenv('FLASK_CONFIG') == 'prod':
             if not app.config["DEBUG"] and len(phone_list) == count:
+                msg = u'【乐程票务】巴士100所有登录账号的cookie过期了'
+                try:
+                    send_msg(sms_phone_list, msg)
+                except:
+                    pass
                 with app.app_context():
                     subject = 'check_login_status'
                     content = ' check_login_status,crawl_source :%s ' % crawl_source
@@ -149,9 +156,10 @@ def main():
     sched.add_cron_job(bus_crawl, hour=14, minute=10, args=['bus100', "370000"]) #山东 
     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['bus100', "210000"]) #辽宁 
     sched.add_cron_job(bus_crawl, hour=17, minute=29, args=['bus100', "410000"]) #河南
-    sched.add_cron_job(sync_crawl_to_api, hour=23, minute=50, args=['bus100'])
+    sched.add_cron_job(sync_crawl_to_api, hour=21, minute=10, args=['bus100'])
 
-    sched.add_interval_job(check_login_status, minutes=10, args=['bus100'])
+    sched.add_cron_job(check_login_status, hour='8-23', minute='*/5',args=['bus100'])
+#     sched.add_interval_job(check_login_status, minutes=10, args=['bus100'])
 #     sched.add_interval_job(polling_order_status, minutes=1)
 
     sched.start()
@@ -159,5 +167,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-    #check_login_status('bus100')
+#     check_login_status('bus100')
     #bus_crawl('bus100')

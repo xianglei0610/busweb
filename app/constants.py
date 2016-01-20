@@ -165,6 +165,8 @@ Bus100_DOMAIN = "http://wap.84100.com"
 
 ADMINS = ['xiangleilei@12308.com', 'luojunping@12308.com']
 
+sms_phone_list = ['13267109876','15575101324']
+
 KF_ORDER_CT = 3
 
 TOKEN = '303fed16373c61a9ee8bdc27f9b6ca4e' #代购token
