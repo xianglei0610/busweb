@@ -5,6 +5,7 @@ import urllib
 import urllib2
 import re
 import time
+import urlparse
 
 from app.constants import *
 from datetime import datetime as dte
@@ -629,7 +630,7 @@ class BabaWebRebot(Rebot):
     crawl_source = SOURCE_BABA
 
     def login(self):
-        ua = random.choice(MOBILE_USER_AGENG)
+        ua = random.choice(BROWSER_USER_AGENT)
         self.last_login_time = dte.now()
         self.user_agent = ua
         self.is_active=True
@@ -637,6 +638,19 @@ class BabaWebRebot(Rebot):
         self.save()
         rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
+
+    def check_login_by_resp(self, resp):
+        result = urlparse.urlparse(resp.url)
+        if "login" in result.path:
+            return 0
+        return 1
+
+    def test_login_status(self):
+        undone_order_url = "http://www.bababus.com/baba/order/list.htm?billStatus=0&currentLeft=11"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = requests.get(undone_order_url, headers=headers, cookies=cookies)
+        return self.check_login_by_resp(resp)
 
 
 class JskyWebRebot(Rebot):

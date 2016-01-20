@@ -5,7 +5,7 @@ import random
 import requests
 import json
 import urllib
-import urlparse
+import datetime
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -19,16 +19,10 @@ class Flow(BaseFlow):
 
     name = "baba"
 
-    def check_login_status(self, resp):
-        result = urlparse.urlparse(resp.url)
-        if "login" in result.path:
-            return 0
-        return 1
-
     def do_lock_ticket(self, order):
         lock_result = {
             "lock_info": {},
-            "source_account": '',
+            "source_account": order.source_account,
             "result_code": 0,
             "result_reason": "",
             "pay_url": "",
@@ -55,7 +49,7 @@ class Flow(BaseFlow):
                              cookies=cookies)
 
             # 未登录
-            if not self.check_login_status(r):
+            if not rebot.check_login_by_resp(r):
                 lock_result.update({
                     "result_code": 2,
                     "source_account": rebot.telephone,
@@ -132,6 +126,7 @@ class Flow(BaseFlow):
                     "pay_url": "",
                     "raw_order_no": ret["billNo"],
                     "expire_datetime": expire_time,
+                    "source_account": rebot.telephone,
                 })
             else:
                 lock_result.update({
@@ -140,6 +135,7 @@ class Flow(BaseFlow):
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": None,
+                    "source_account": rebot.telephone,
                 })
             return lock_result
 
@@ -147,18 +143,18 @@ class Flow(BaseFlow):
         """
         单纯向源站发请求
         """
-        return {
-            "billNo": "1600060416",
-            "msgType": "",
-            "success": True,
-        }
+        #return {
+        #    "billNo": "1600060416",
+        #    "msgType": "",
+        #    "success": True,
+        #}
         submit_url = "http://www.bababus.com//baba/order/createorder.htm"
         headers = {
             "User-Agent": rebot.user_agent,
-            "Content-Type": "application/json;charset=UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded",
         }
         cookies = json.loads(rebot.cookies)
-        resp = requests.post(submit_url, data=data, headers=headers, cookies=cookies)
+        resp = requests.post(submit_url, data=data, headers=headers, cookies=cookies, proxies={"http": "http://localhost:8888"})
         ret = resp.json()
         return ret
 
@@ -168,12 +164,22 @@ class Flow(BaseFlow):
             "User-Agent": rebot.user_agent,
         }
         cookies = json.loads(rebot.cookies)
-        r = requests.post(detail_url, headers=headers, cookies=cookies)
+        r = requests.get(detail_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
+        no, code ,site = "", "", ""
+        for tag in soup.select(".details_taketicket .details_passenger_num"):
+            s = tag.get_text().strip()
+            if s.startswith("取票号:"):
+                no = s.lstrip("取票号:")
+            elif s.startswith("取票密码:"):
+                code = s.lstrip("取票密码:")
+            elif s.startswith("取票地点:"):
+                site = s.lstrip("取票地点:")
         return {
             "state": soup.select(".pay_success")[0].get_text().split(u"：")[1].strip(),
-            "code_list": [],
-            "msg_list": [],
+            "pick_no": no,
+            "pick_code": code,
+            "pick_site": site,
         }
 
     def do_refresh_issue(self, order):
@@ -199,30 +205,48 @@ class Flow(BaseFlow):
                 "result_code": 2,
                 "result_msg": state,
             })
-        elif state=="出票中":
+        elif state=="购票中":
             result_info.update({
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif state=="出票成功":
+        elif state=="购票成功":
+            no, code, site = ret["pick_no"], ret["pick_code"], ret["pick_site"]
+            dx_info = {
+                "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                "start": order.line.s_sta_name,
+                "end": order.line.d_sta_name,
+                "code": code,
+                "no": no,
+                "site": site,
+            }
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_BABA]
+            code_list = ["%s|%s" % (no, code)]
+            msg_list = [dx_tmpl % dx_info]
             result_info.update({
                 "result_code": 1,
                 "result_msg": state,
-                "pick_code_list": ret["code_list"],
-                "pick_msg_list": ret["msg_list"],
+                "pick_code_list": code_list,
+                "pick_msg_list": msg_list,
             })
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = BabaWebRebot.objects.get(telephone=order.source_account)
 
-        def _get_page():
+        def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
                 pay_url = "http://www.bababus.com/baba/order/bankpay.htm"
+                headers = {
+                    "User-Agent": rebot.user_agent,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                }
                 params = {
+                    "userCouponId": "",
                     "bankId": 1402,
                     "billNo": order.raw_order_no,
                 }
+                cookies = json.loads(rebot.cookies)
                 r = requests.post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
                 return {"flag": "html", "content": r.content}
 
@@ -243,25 +267,18 @@ class Flow(BaseFlow):
             r = requests.post("http://www.bababus.com/baba/login.htm",
                               data=urllib.urlencode(params),
                               headers=custom_headers,
+                              allow_redirects=False,
                               cookies=cookies)
-            is_login = self.check_login_status(r)
-            if is_login:
-                cookies.update(dict(r.cookies))
-                rebot.modify(cookies=json.dumps(cookies))
-        else:
-            # 检查是否处于登陆状态
-            undone_order_url = "http://www.bababus.com/baba/order/list.htm?billStatus=0&currentLeft=11"
-            headers = {"User-Agent": rebot.user_agent}
-            cookies = json.loads(rebot.cookies)
-            r = requests.get(undone_order_url, headers=headers, cookies=cookies)
-            is_login = self.check_login_status(r)
+            cookies.update(dict(r.cookies))
+            rebot.modify(cookies=json.dumps(cookies))
+        is_login = rebot.test_login_status()
 
         if is_login:
             if order.status == STATUS_LOCK_RETRY:
                 from app.flow import get_flow
                 flow = get_flow(order.crawl_source)
                 flow.lock_ticket(order)
-            return _get_page()
+            return _get_page(rebot)
         else:
             login_form = "http://www.bababus.com/baba/login.htm"
             ua = random.choice(BROWSER_USER_AGENT)
@@ -276,7 +293,6 @@ class Flow(BaseFlow):
             }
             session["pay_login_info"] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
-
 
     def do_refresh_line(self, line):
         result_info = {
