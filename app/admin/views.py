@@ -102,7 +102,7 @@ def line_list():
 @login_required
 def src_code_img(order_no):
     order = Order.objects.get(order_no=order_no)
-    if order.crawl_source == "scqcp":
+    if order.crawl_source in ["scqcp", "baba"]:
         data = json.loads(session["pay_login_info"])
         code_url = data.get("valid_url")
         headers = data.get("headers")

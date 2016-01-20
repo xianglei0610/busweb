@@ -35,6 +35,9 @@ def deploy(site):
         JskyAppRebot.login_all()
     elif site == "jskyweb":
         JskyWebRebot.login_all()
+    elif site == "babaweb":
+        from app.models import BabaWebRebot
+        BabaWebRebot.login_all()
 
 
 @manager.command
@@ -142,7 +145,7 @@ def clear_expire_line():
     from app.models import Line
     now = dte.now()
     print Line.objects.filter(crawl_datetime__lte=now).delete()
-    
+
 
 @manager.option('-s', '--site', dest='site', default='')
 @manager.option('-p', '--province_name', dest='province_name',default='')

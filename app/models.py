@@ -108,8 +108,10 @@ class Line(db.Document):
 
     # destination
     d_city_name = db.StringField(required=True)
+    d_city_id = db.StringField()
     d_city_code = db.StringField(required=True)
     d_sta_name = db.StringField(required=True)
+    d_sta_id = db.StringField()
 
     drv_date = db.StringField(required=True)  # 开车日期 yyyy-MM-dd
     drv_time = db.StringField(required=True)  # 开车时间 hh:mm
@@ -117,7 +119,7 @@ class Line(db.Document):
     distance = db.StringField()
     vehicle_type = db.StringField()  # 车型
     seat_type = db.StringField()     # 座位类型
-    bus_num = db.StringField()       # 班次
+    bus_num = db.StringField(required=True)       # 班次
     full_price = db.FloatField()
     half_price = db.FloatField()
     fee = db.FloatField()                 # 手续费
@@ -629,6 +631,7 @@ class BabaWebRebot(Rebot):
         ua = random.choice(MOBILE_USER_AGENG)
         self.last_login_time = dte.now()
         self.user_agent = ua
+        self.is_active=True
         self.cookies = "{}"
         self.save()
         rebot_log.info("创建成功 %s", self.telephone)
