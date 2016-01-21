@@ -157,7 +157,9 @@ Bus100_DOMAIN = "http://wap.84100.com"
 
 ADMINS = ['xiangleilei@12308.com', 'luojunping@12308.com']
 
-sms_phone_list = ['13267109876','15575101324']
+
+sms_phone_list = ['13267109876','15575101324','18575593355']
+
 
 KF_ORDER_CT = 3
 

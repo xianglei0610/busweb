@@ -65,8 +65,8 @@ class Flow(BaseFlow):
                     pay_url = orderPay['url']
                 order_log.info("[lock-result] query orderPay . order: %s,%s", order.order_no,orderPay)
             elif orderInfo.get('flag') == '2':
-                print orderInfo.get('msg',''),type(orderInfo.get('msg',''))
-                if u'同一出发日期限购6张' in orderInfo.get('msg',''):
+                print orderInfo.get('msg', ''), type(orderInfo.get('msg', ''))
+                if u'同一出发日期限购6张' in orderInfo.get('msg', ''):
 #                 if u'票种类型' in orderInfo.get('msg',''):
                     order.source_account = ''
                     order.save()
@@ -75,10 +75,10 @@ class Flow(BaseFlow):
                     lock_result.update(result_code=2)
                     lock_result.update(result_reason="源站系统错误，锁票重试")
                     return lock_result
-                elif u'订单信息重复' in orderInfo.get('msg',''): 
-                    lock_result.update(result_code=3)
-                    lock_result.update(result_reason="已经下单了，不需要重新锁票")
-                    return lock_result
+            if u'订单信息重复' in orderInfo.get('msg', ''):
+                lock_result.update(result_code=3)
+                lock_result.update(result_reason="已经下单了，不需要重新锁票")
+                return lock_result
         if pay_url:
             pay_info = self.request_pay_info(pay_url)
             order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info)
@@ -89,7 +89,7 @@ class Flow(BaseFlow):
                 "result_code": 1,
                 "lock_info": orderInfo,
                 "pay_url": pay_url,
-                "raw_order_no": orderId,
+                "raw_order_no": '',
                 "expire_datetime": expire_datetime,
                 "pay_money": pay_info["pay_money"]
             })
@@ -233,7 +233,7 @@ class Flow(BaseFlow):
         return result_info
 
     def send_order_request(self, order, rebot):
-        data = {"orderId": order.raw_order_no}
+        data = {"orderId": order.lock_info['orderId']}
         url = "http://www.84100.com/orderInfo.shtml"
         r = requests.post(url, data=data, cookies=rebot.cookies)
         sel = etree.HTML(r.content)
@@ -242,20 +242,24 @@ class Flow(BaseFlow):
         orderDetail = {}
         if orderDetailObj:
             status = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[4]/span/text()')[0].replace('\r\n','').replace(' ','')
-            if status == u'正在出票' or status == u'\xe6\xad\xa3\xe5\x9c\xa8\xe5\x87\xba\xe7\xa5\xa8':
-                orderDetail.update({'status': '6'})
-            elif status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
-                orderDetail.update({'status': '4'})
-                order_id = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[@class="one"]/span/text()')[0].replace('\r\n','').replace(' ','')
-                ticketPassword = orderDetailObj[0].xpath('//div[@class="check_password"]/input[@id="pswd"]/@value')
-                if ticketPassword:
-                    ticketPassword = ticketPassword[0]
-                    orderDetail.update({'ticketPassword': ticketPassword})
-#                 matchObj = re.findall('<li>订单号：(.*)', r.content)
-#                 order_id = matchObj[0].replace(' ','')
+            order_id = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[@class="one"]/span/text()')[0].replace('\r\n','').replace(' ','')
+            print '111111111111111', status
+            if order_id:
+                if not order.raw_order_no:
+                    order.modify(raw_order_no=order_id)
                 orderDetail.update({'order_id': order_id})
-            elif status == u"订单失效" or status == u'\xe8\xae\xa2\xe5\x8d\x95\xe5\xa4\xb1\xe6\x95\x88':
-                orderDetail.update({'status': '5'})
+                if status == u'正在出票' or status == u'\xe6\xad\xa3\xe5\x9c\xa8\xe5\x87\xba\xe7\xa5\xa8':
+                    orderDetail.update({'status': '6'})
+                elif status == u"购票成功" or status == u'\xe8\xb4\xad\xe7\xa5\xa8\xe6\x88\x90\xe5\x8a\x9f':
+                    orderDetail.update({'status': '4'})
+                    ticketPassword = orderDetailObj[0].xpath('//div[@class="check_password"]/input[@id="pswd"]/@value')
+                    if ticketPassword:
+                        ticketPassword = ticketPassword[0]
+                        orderDetail.update({'ticketPassword': ticketPassword})
+    #                 matchObj = re.findall('<li>订单号：(.*)', r.content)
+    #                 order_id = matchObj[0].replace(' ','')
+                elif status == u"订单失效" or status == u'\xe8\xae\xa2\xe5\x8d\x95\xe5\xa4\xb1\xe6\x95\x88' or not status:
+                    orderDetail.update({'status': '5'})
         print orderDetail
         return orderDetail
 
