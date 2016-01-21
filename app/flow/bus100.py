@@ -54,7 +54,12 @@ class Flow(BaseFlow):
                 lock_result.update(result_reason="该条线路无法购买")
                 return lock_result
             ticketType, ticketPassword = self.request_ticket_info(order, headers, rebot)
-            orderInfo = self.request_create_order(order, headers, rebot, ticketType,ticketPassword)
+            try:
+                orderInfo = self.request_create_order(order, headers, rebot, ticketType,ticketPassword)
+            except:
+                lock_result.update(result_code=2)
+                lock_result.update(result_reason="源站系统下单接口报错，锁票重试")
+                return lock_result
             pay_url = ''
             if orderInfo.get('flag') == '0':
                 orderId = orderInfo['orderId']
@@ -82,7 +87,10 @@ class Flow(BaseFlow):
                 return lock_result
 
         if pay_url:
-            pay_info = self.request_pay_info(pay_url)
+            try:
+                pay_info = self.request_pay_info(pay_url)
+            except:
+                pay_info = {'pay_money': order.order_price}
             order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info)
             expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
             orderInfo['expire_datetime'] = expire_datetime
