@@ -5,6 +5,7 @@ import urllib
 import urllib2
 import re
 import time
+import urlparse
 
 from app.constants import *
 from datetime import datetime as dte
@@ -108,8 +109,10 @@ class Line(db.Document):
 
     # destination
     d_city_name = db.StringField(required=True)
+    d_city_id = db.StringField()
     d_city_code = db.StringField(required=True)
     d_sta_name = db.StringField(required=True)
+    d_sta_id = db.StringField()
 
     drv_date = db.StringField(required=True)  # 开车日期 yyyy-MM-dd
     drv_time = db.StringField(required=True)  # 开车时间 hh:mm
@@ -117,7 +120,7 @@ class Line(db.Document):
     distance = db.StringField()
     vehicle_type = db.StringField()  # 车型
     seat_type = db.StringField()     # 座位类型
-    bus_num = db.StringField()       # 班次
+    bus_num = db.StringField(required=True)       # 班次
     full_price = db.FloatField()
     half_price = db.FloatField()
     fee = db.FloatField()                 # 手续费
@@ -260,6 +263,9 @@ class Order(db.Document):
             return rebot
         elif self.crawl_source == "cbd":
             rebot = CBDRebot.objects.get(telephone=self.source_account)
+            return rebot
+        elif self.crawl_source == "baba":
+            rebot = BabaWebRebot.objects.get(telephone=self.source_account)
             return rebot
         return None
 
@@ -468,7 +474,10 @@ class Rebot(db.Document):
     @classmethod
     @contextmanager
     def get_and_lock(cls, order):
-        obj = cls.get_one()
+        if order.source_account:
+            obj = cls.objects.get(telephone=order.source_account)
+        else:
+            obj = cls.get_one()
         if obj:
             obj.add_doing_order(order)
             rebot_log.info("[get_and_lock] succ. tele: %s, order: %s", obj.telephone, order.order_no)
@@ -523,6 +532,7 @@ class ScqcpRebot(Rebot):
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "scqcp_rebot",
     }
     crawl_source = SOURCE_SCQCP
 
@@ -583,6 +593,7 @@ class CBDRebot(Rebot):
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "cbd_rebot",
     }
     crawl_source = SOURCE_CBD
 
@@ -610,12 +621,56 @@ class CBDRebot(Rebot):
             rebot_log.error("登陆错误cbd %s, %s", self.telephone, str(ret))
         return "fail"
 
+
+class BabaWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "babaweb_rebot",
+    }
+    crawl_source = SOURCE_BABA
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[baba] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[baba] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active=True
+        self.cookies = "{}"
+        self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+    def check_login_by_resp(self, resp):
+        result = urlparse.urlparse(resp.url)
+        if "login" in result.path:
+            return 0
+        return 1
+
+    def test_login_status(self):
+        undone_order_url = "http://www.bababus.com/baba/order/list.htm?billStatus=0&currentLeft=11"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = requests.get(undone_order_url, headers=headers, cookies=cookies)
+        return self.check_login_by_resp(resp)
+
+
 class JskyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "jskyweb_rebot",
     }
     crawl_source = SOURCE_JSKY
 
@@ -652,6 +707,7 @@ class JskyAppRebot(Rebot):
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "jskyapp_rebot",
     }
     crawl_source = SOURCE_JSKY
 
@@ -721,6 +777,7 @@ class CTripRebot(Rebot):
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "ctrip_rebot",
     }
 
     #@classmethod
