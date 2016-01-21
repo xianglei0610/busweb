@@ -100,7 +100,7 @@ class ApiProdConfig(Config):
     }
 
     CRAWL_MONGODB_SETTINGS = {
-        'db': 'crawl12308',
+        'db': 'web12308',
         'host': '10.51.9.34',
         'port': 27017,
     }
