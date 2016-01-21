@@ -152,10 +152,10 @@ def main():
     sched = Scheduler(daemonic=False)
 
     #sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
-    sched.add_cron_job(bus_crawl, hour=13, minute=10, args=['bus100', "450000"]) #广西
+    sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['bus100', "450000"]) #广西
     sched.add_cron_job(bus_crawl, hour=14, minute=10, args=['bus100', "370000"]) #山东 
 #     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['bus100', "210000"]) #辽宁 
-    sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['bus100', "410000"]) #河南
+    sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['bus100', "410000"]) #河南
     sched.add_cron_job(sync_crawl_to_api, hour=18, minute=10, args=['bus100'])
 
     sched.add_cron_job(check_login_status, hour='8-23', minute='*/10',args=['bus100'])
