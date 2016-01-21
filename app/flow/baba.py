@@ -143,18 +143,13 @@ class Flow(BaseFlow):
         """
         单纯向源站发请求
         """
-        #return {
-        #    "billNo": "1600060416",
-        #    "msgType": "",
-        #    "success": True,
-        #}
         submit_url = "http://www.bababus.com//baba/order/createorder.htm"
         headers = {
             "User-Agent": rebot.user_agent,
             "Content-Type": "application/x-www-form-urlencoded",
         }
         cookies = json.loads(rebot.cookies)
-        resp = requests.post(submit_url, data=data, headers=headers, cookies=cookies, proxies={"http": "http://localhost:8888"})
+        resp = requests.post(submit_url, data=data, headers=headers, cookies=cookies)
         ret = resp.json()
         return ret
 

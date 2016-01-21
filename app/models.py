@@ -264,6 +264,9 @@ class Order(db.Document):
         elif self.crawl_source == "cbd":
             rebot = CBDRebot.objects.get(telephone=self.source_account)
             return rebot
+        elif self.crawl_source == "baba":
+            rebot = BabaWebRebot.objects.get(telephone=self.source_account)
+            return rebot
         return None
 
     def complete_by(self, user_obj):
@@ -628,6 +631,14 @@ class BabaWebRebot(Rebot):
         "collection": "babaweb_rebot",
     }
     crawl_source = SOURCE_BABA
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[baba] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[baba] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
 
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
