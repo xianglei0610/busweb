@@ -283,8 +283,13 @@ class Flow(BaseFlow):
         rebot = Bus100Rebot.get_random_active_rebot()
         if not rebot:
             return result_info
+        now = dte.now()
         ret = rebot.recrawl_shiftid(line)
         line = Line.objects.get(line_id=line.line_id)
+        if line.shift_id == "0" or not line.extra_info.get('flag', 0):
+            line_log.info("[refresh-result]  no left_tickets line:%s %s ", line.crawl_source, line.line_id)
+            result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            return result_info
         url = "http://www.84100.com/getTrainInfo/ajax"
         payload = {
             "shiftId": line.shift_id,
@@ -292,7 +297,6 @@ class Flow(BaseFlow):
             "startName": line.s_sta_name,
             "ttsId": ''
         }
-        now = dte.now()
         trainInfo = requests.post(url, data=payload, cookies=rebot.cookies)
         trainInfo = trainInfo.json()
         if str(trainInfo['flag']) == '0':
