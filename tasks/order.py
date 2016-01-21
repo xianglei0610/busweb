@@ -9,7 +9,7 @@ from app.email import send_email
 from app.flow import get_flow
 from app.models import Order
 from app import order_log
-
+from flask import current_app
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -71,12 +71,13 @@ def issue_fail_send_email(self, key):
     r = getRedisObj()
     order_nos = r.smembers(key)
     order_nos = ','.join(list(order_nos))
-    subject = '连续3个单失败'
-    sender = 'dg@12308.com'
-    recipients = ADMINS
-    text_body = ''
-    html_body = subject + '</br>' + 'order :%s error' % order_nos
-    send_email(subject, sender, recipients, text_body, html_body)
+    if not current_app.config['DEBUG']:
+        subject = '连续3个单失败'
+        sender = 'dg@12308.com'
+        recipients = ADMINS
+        text_body = ''
+        html_body = subject + '</br>' + 'order :%s error' % order_nos
+        send_email(subject, sender, recipients, text_body, html_body)
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -89,15 +90,18 @@ def check_order_completed(self, username, key, order_no):
     flag = r.sismember(key, order_no)
     orderObj = Order.objects.get(order_no=order_no)
     now = datetime.datetime.now()
-    if flag:
-        try:
-            if (orderObj.lock_info['expire_datetime']-now).total_seconds < 300:
-                subject = "订单有效期只有5分钟了"
-                content = '%s,%s,订单快到有效期,下单时间:%s,12308订单号:%s' % (username, order_no, orderObj.create_date_time,orderObj.out_order_no)
-                sender = 'dg@12308.com'
-                recipients = ADMINS
-                text_body = ''
-                html_body = content
-                send_email(subject, sender, recipients, text_body, html_body)
-        except:
-            pass        
+    if not current_app.config['DEBUG']:
+        if flag:
+            try:
+                if (orderObj.lock_info['expire_datetime']-now).total_seconds() < 300:
+                    subject = "订单有效期只有5分钟了"
+                    content = '%s,%s,订单快到有效期,下单时间:%s,12308订单号:%s' % (username, order_no, orderObj.create_date_time,orderObj.out_order_no)
+                    sender = 'dg@12308.com'
+                    recipients = ADMINS
+                    text_body = ''
+                    html_body = content
+                    send_email(subject, sender, recipients, text_body, html_body)
+            except:
+                pass
+        if orderObj.status == STATUS_WAITING_ISSUE:
+            self.retry(countdown=30+random.random()*10%3, max_retries=200)
