@@ -81,7 +81,7 @@ def issue_fail_send_email(self, key):
 
 
 @celery.task(bind=True, ignore_result=True)
-def check_order_completed(self, username, key, order_no):
+def check_order_completed(self, username, key, order_no, is_send=False):
     """
     订单有效期只有5分钟
     """
@@ -91,7 +91,7 @@ def check_order_completed(self, username, key, order_no):
     orderObj = Order.objects.get(order_no=order_no)
     now = datetime.datetime.now()
     if not current_app.config['DEBUG']:
-        if flag:
+        if flag and not is_send:
             try:
                 if (orderObj.lock_info['expire_datetime']-now).total_seconds() < 300:
                     subject = "订单有效期只有5分钟了"
@@ -101,7 +101,8 @@ def check_order_completed(self, username, key, order_no):
                     text_body = ''
                     html_body = content
                     send_email(subject, sender, recipients, text_body, html_body)
+                    is_send = True
             except:
                 pass
         if orderObj.status == STATUS_WAITING_ISSUE:
-            self.retry(countdown=30+random.random()*10%3, max_retries=200)
+            self.retry(kwargs={"is_send": is_send},countdown=30+random.random()*10%3, max_retries=200)
