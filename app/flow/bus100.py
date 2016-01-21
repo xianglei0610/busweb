@@ -254,7 +254,7 @@ class Flow(BaseFlow):
             status = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[4]/span/text()')[0].replace('\r\n','').replace(' ','')
             order_id = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[@class="one"]/span/text()')[0].replace('\r\n','').replace(' ','')
             if order_id:
-                if not order.raw_order_no:
+                if not order.raw_order_no or order.raw_order_no != order_id:
                     order.modify(raw_order_no=order_id)
                 orderDetail.update({'order_id': order_id})
                 if status == u'正在出票' or status == u'\xe6\xad\xa3\xe5\x9c\xa8\xe5\x87\xba\xe7\xa5\xa8':
