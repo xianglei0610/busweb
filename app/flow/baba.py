@@ -64,7 +64,7 @@ class Flow(BaseFlow):
                 inf = wrong_info[0].get_text()
                 tip = soup.select(".wrong_body .wrong_tip")[1].get_text()
                 lock_result.update({
-                    "result_code": 2,
+                    "result_code": 0,
                     "source_account": rebot.telephone,
                     "result_reason": "%s %s" % (inf, tip),
                 })
