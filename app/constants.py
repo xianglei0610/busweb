@@ -152,7 +152,7 @@ SOURCE_INFO = {
         }
     },
     SOURCE_BABA: {
-        "name": "巴巴快巴",
+        "name": "巴巴",
         "website": "http://www.bababus.com/",
         "accounts": {
             "15575101324": ("cibRpL", ''),
