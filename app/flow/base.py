@@ -11,6 +11,11 @@ from tasks import check_order_expire, issued_callback, refresh_issueing_order
 class Flow(object):
     name = "flow"
 
+    def check_lock_condition(self, order):
+        if order.status not in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+            return "%s状态不允许再发起锁票" % STATUS_MSG[order.status]
+        return ""
+
     def lock_ticket(self, order):
         """
         锁票主流程, 子类不用复写此方法
@@ -26,6 +31,11 @@ class Flow(object):
             "raw_order_no": order.raw_order_no,
         }
         order_log.info("[lock-start] order: %s", order.order_no)
+        fail_msg = self.check_lock_condition(order)
+        if fail_msg:  # 防止重复下单
+            order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
+            return
+
         ret = self.do_lock_ticket(order)
         now = dte.now()
         if ret["result_code"] == 1:   # 锁票成功

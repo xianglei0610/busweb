@@ -75,10 +75,12 @@ class Flow(BaseFlow):
                     lock_result.update(result_code=2)
                     lock_result.update(result_reason="源站系统错误，锁票重试")
                     return lock_result
+
             if u'订单信息重复' in orderInfo.get('msg', ''):
                 lock_result.update(result_code=3)
                 lock_result.update(result_reason="已经下单了，不需要重新锁票")
                 return lock_result
+
         if pay_url:
             pay_info = self.request_pay_info(pay_url)
             order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info)
@@ -243,7 +245,6 @@ class Flow(BaseFlow):
         if orderDetailObj:
             status = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[4]/span/text()')[0].replace('\r\n','').replace(' ','')
             order_id = orderDetailObj[0].xpath('div[@class="box02"]/ul/li[@class="one"]/span/text()')[0].replace('\r\n','').replace(' ','')
-            print '111111111111111', status
             if order_id:
                 if not order.raw_order_no:
                     order.modify(raw_order_no=order_id)

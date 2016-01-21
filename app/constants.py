@@ -6,6 +6,7 @@ SOURCE_BUS100 = "bus100"
 SOURCE_CTRIP = "ctrip"
 SOURCE_CBD = "cbd"
 SOURCE_JSKY = "jsky"
+SOURCE_BABA = "baba"
 
 SOURCE_INFO = {
     SOURCE_SCQCP: {
@@ -149,6 +150,13 @@ SOURCE_INFO = {
             "cibRpL": "fQPjVx7bgVrG60XZH3fxQw==",
             "123456": "RH0iLaK7awGTnhWzWtWEaw==",
         }
+    },
+    SOURCE_BABA: {
+        "name": "巴巴快巴",
+        "website": "http://www.bababus.com/",
+        "accounts": {
+            "15575101324": ("cibRpL", ''),
+        },
     }
 }
 
@@ -247,7 +255,8 @@ RET_BUY_TIME_ERROR = 202    # 线路不在预售期
 RET_CITY_NOT_OPEN = 203     # 该城市未开放
 
 # 立即支付按钮变灰持续时间
-PAY_CLICK_EXPIR = 45
+# PAY_CLICK_EXPIR = 45
+PAY_CLICK_EXPIR = 4
 
 ISSUE_FAIL_WARNING = 3
 ISSUEING_WARNING = 3
@@ -266,6 +275,6 @@ DUAN_XIN_TEMPL = {
     SOURCE_SCQCP: "您已购买%(time)s%(start)s至%(end)s的汽车票%(amount)s张，取票验证码%(code)s，请在发车时间前乘车",
     SOURCE_BUS100: "温馨提醒：您有%(amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order)s；%(ticketPassword)s请在发车前两小时内凭乘车人身份证取票。祝您旅途愉快！",
     SOURCE_CTRIP: "%(time)s，%(start)s--%(end)s 共%(amount)s张成功出票。取票验证码%(code)s，请在发车时间前乘车",
-    # SOURCE_CBD: "%(time)s，%(start)s--%(end)s 共%(amount)s张成功出票。取票号%(no)s, 取票密码%(code)s，请在发车时间前乘车",
     SOURCE_CBD: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
+    SOURCE_BABA: "购票成功,取票号:%(no)s,密码:%(code)s,取票点:%(site)s,(%(start)s-%(end)s %(time)s),请旅客尽早到车站取票.",
 }
