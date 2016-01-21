@@ -102,12 +102,15 @@ def line_list():
 @login_required
 def src_code_img(order_no):
     order = Order.objects.get(order_no=order_no)
-    if order.crawl_source == "scqcp":
+    if order.crawl_source in ["scqcp", "baba"]:
         data = json.loads(session["pay_login_info"])
         code_url = data.get("valid_url")
         headers = data.get("headers")
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
+        cookies.update(dict(r.cookies))
+        data["cookies"] = cookies
+        session["pay_login_info"] = json.dumps(data)
         return r.content
     elif order.crawl_source == "bus100":
         data = json.loads(session["bus100_pay_login_info"])

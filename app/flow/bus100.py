@@ -75,7 +75,7 @@ class Flow(BaseFlow):
                     lock_result.update(result_code=2)
                     lock_result.update(result_reason="源站系统错误，锁票重试")
                     return lock_result
-                elif u'订单信息重复' in orderInfo.get('msg',''): 
+                elif u'订单信息重复' in orderInfo.get('msg',''):
                     lock_result.update(result_code=3)
                     lock_result.update(result_reason="已经下单了，不需要重新锁票")
                     return lock_result
