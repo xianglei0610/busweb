@@ -39,7 +39,7 @@
                 <li><a href="javascript:search(1,'14');" {% if condition.status=='14' %}class="selected" {% endif %}>出票成功({{stat.status_count[14]}})</a></li>
                 <li><a href="javascript:search(1,'12');" {% if condition.status=='12' %}class="selected" {% endif %}>正在出票({{stat.status_count[12]}})</a></li>
                 <li><a href="javascript:search(1,'13');" {% if condition.status=='13' %}class="selected" {% endif %}>出票失败({{stat.status_count[13]}})</a></li>
-                <li><a href="javascript:search(1,'6');" {% if condition.status=='6' %}class="selected" {% endif %}>源站已退款({{stat.status_count[6]}})</a></li>
+                <li><a href="javascript:search(1,'6');" {% if condition.status=='6' %}class="selected" {% endif %}>已退款({{stat.status_count[6]}})</a></li>
             </ul>
           <input id="id-status" type="hidden" name="status" value="{{condition.status}}" />
           <input id="id-page" type="hidden" name="page" value="{{page.page}}" />
@@ -50,7 +50,7 @@
     <li>
     <div class="vocation">
     <select id="id-source" name="source" class="select3">
-    <option value="">来自代购网站</option> 
+    <option value="">选择源站</option> 
     {% for i,v in source_info.items() %}
     <option value="{{i}}" {%if condition.source==i %} selected {% endif %}>{{v["name"]}}</option>
     {% endfor %}
@@ -62,14 +62,14 @@
     <div class="vocation">
       <div class='src_acc_blank'>
         <select class="select3" name="">
-          <option value="" >第三方账户</option>
+          <option value="" >源站账号</option>
       </select>
       </div>
     
     {% for i,v in source_info.items() %}
     <div class='src_acc' id="id-{{i}}">
       <select class="select3" name="">
-        <option value="" >第三方账户</option>
+        <option value="" >源站账号</option>
         {% for u,t in v["accounts"].items() %}
           <option value="{{u}}" {%if condition.source_account==u %} selected {%endif%}>{{u}}</option>
         {% endfor %}
@@ -114,6 +114,7 @@
     <select class="select3" name="q_key">
                 <option value="contact_phone" {%if condition.q_key=='contact_phone' %} selected {%endif%}>取票人手机号</option>
                 <option value="sys_order_no" {%if condition.q_key=='sys_order_no' %} selected {%endif%}>系统订单号</option>
+                <option value="raw_order_no" {%if condition.q_key=='raw_order_no' %} selected {%endif%}>源站订单号</option>
                 <option value="out_order_no" {%if condition.q_key=='out_order_no' %} selected {%endif%}>12308订单号</option>
                 <option value="contact_name" {%if condition.q_key=='contact_name' %} selected {%endif%}>取票人姓名</option>
     </select>
@@ -141,12 +142,11 @@
     	<thead>
     	<tr>
         <th><input type="checkbox"  name="test[]" class="chkID" value="1" id="checkall"/></th>
-        <th>12308订单号</th>
-        <th>系统订单号</th>
-        <th>下单人（联系电话）</th>
+        <th>系统/12308/源站订单号</th>
+        <th>下单人信息</th>
         <th>下单/出发时间<i class="sort"><img src="{{url_for('static', filename='admin-new/images/px.gif')}}" /></i></th>
         <th>车次号/行程</th>
-        <th>源网站</th>
+        <th>源站信息</th>
         <th>订票数</th>
         <th>订单金额（元）</th>
         <th>订单状态</th>
@@ -157,12 +157,11 @@
         {% for d in page["items"] %}
         <tr>
          <td><input type="checkbox"  name="test[]" class="chkID" value="6"/></td>
-         <td>{{d.out_order_no}}</td>
-         <td>{{d.order_no}}</td>
-         <td>{{d.contact_info["name"]}}<br />{{d.contact_info["telephone"]}}</td>
+         <td>{{d.order_no}}</br>{{d.out_order_no}}</br>{{d.raw_order_no}}</td>
+         <td>{{d.contact_info["name"]}}<br />{{d.contact_info["telephone"]}}</br>{{d.contact_info["id_number"]}}</td>
          <td>{{d.create_date_time|format_datetime}}<br>{{d.drv_datetime|format_datetime}}</td>
          <td>{{d.bus_num}}<br>{{d.starting_name.split(';')[0]}} ({{ d.starting_name.split(';')[1]}}) - {{d.destination_name.split(';')[0] or d.destination_name.split(';')[1]}}</td>
-         <td>{{source_info[d.crawl_source]["name"]}}<br></td>
+         <td>{{source_info[d.crawl_source]["name"]}}<br>{{d.source_account}}</br>{{d.source_account_pass}}</td>
          <td>{{d.riders|count}}张</td>
          <td class="m">￥{{d.order_price}}</td>
          <td class="color4">{{status_msg[d.status]}}</td>
