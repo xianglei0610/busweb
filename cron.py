@@ -14,7 +14,7 @@ from lxml import etree
 from apscheduler.scheduler import Scheduler
 
 
-from manage import migrate_from_crawl
+from manage import migrate_from_crawl, del_bus100_people
 from app.email import send_email
 from app.constants import ADMINS, STATUS_WAITING_ISSUE
 from app import setup_app
@@ -105,13 +105,6 @@ def sync_crawl_to_api(crawl_source):
             send_email(subject, sender, recipients, text_body, html_body)
 
 
-@check
-def polling_order_status():
-    orderObj = Order.objects.filter(status=STATUS_WAITING_ISSUE)
-    for order in orderObj:
-        order.refresh_status()
-
-
 def check_login_status(crawl_source):
     if crawl_source == 'bus100':
         obj = Bus100Rebot.objects.all()
@@ -146,21 +139,23 @@ def check_login_status(crawl_source):
                     send_email(subject, sender, recipients, text_body, html_body)
 
 
+def del_people(crawl_source):
+    del_bus100_people(crawl_source)
+
+
 def main():
     """ 定时任务处理 """
 
     sched = Scheduler(daemonic=False)
 
-    #sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['scqcp'])
     sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['bus100', "450000"]) #广西
     sched.add_cron_job(bus_crawl, hour=14, minute=10, args=['bus100', "370000"]) #山东 
 #     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['bus100', "210000"]) #辽宁 
     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['bus100', "410000"]) #河南
-    sched.add_cron_job(sync_crawl_to_api, hour=18, minute=10, args=['bus100'])
-
+    sched.add_cron_job(sync_crawl_to_api, hour=18, minute=10, args=['bus100']) #同步爬虫数据到web
+    sched.add_cron_job(del_people, hour=22, minute=40, args=['bus100']) #删除源站常用联系人
     sched.add_cron_job(check_login_status, hour='8-23', minute='*/10',args=['bus100'])
 #     sched.add_interval_job(check_login_status, minutes=10, args=['bus100'])
-#     sched.add_interval_job(polling_order_status, minutes=1)
 
     sched.start()
 
