@@ -89,6 +89,10 @@ class Flow(BaseFlow):
                 lock_result.update(result_code=3)
                 lock_result.update(result_reason="已经下单了，不需要重新锁票")
                 return lock_result
+            if u'班次信息错误' in orderInfo.get('msg', ''):
+                lock_result.update(result_code=2)
+                lock_result.update(result_reason="班次信息错误，锁票重试")
+                return lock_result
 
         if pay_url:
             try:
