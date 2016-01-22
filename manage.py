@@ -154,15 +154,14 @@ def sync_open_city(site, province_name):
     from pypinyin import lazy_pinyin
     if not province_name:
         print 'province_name is null '
-#     province_name =u'辽宁'
-    #OpenCity.objects.filter(province=province_name).delete()
+        return
     lines = Line.objects.filter(crawl_source=site, s_province=province_name).distinct('s_city_name')
     print lines
     for i in lines:
         openObj = OpenCity()
         openObj.province = province_name
         city_name = i
-        if len(city_name) > 2 and (city_name.endswith('市') or city_name.endswith('县')) :
+        if len(city_name) > 2 and (city_name.endswith('市') or city_name.endswith('县')):
             city_name = city_name[0:-1]
         openObj.city_name = city_name
         city_code = "".join(map(lambda w: w[0], lazy_pinyin(city_name.decode("utf-8"))))
@@ -172,7 +171,7 @@ def sync_open_city(site, province_name):
         openObj.end_time = "8:00"
         openObj.advance_order_time = 0
         openObj.max_ticket_per_order = 5
-        openObj.crawl_source = "bus100"
+        openObj.crawl_source = site
         openObj.is_active = True
         try:
             openObj.save()
