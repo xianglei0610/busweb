@@ -376,7 +376,7 @@ def all_order():
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
     q_key = request.args.get("q_key", "")
-    q_value = request.args.get("q_value", "")
+    q_value = request.args.get("q_value", "").strip()
     if q_key and q_value:
         if q_key == "contact_phone":
             query.update(contact_info__telephone=q_value)
@@ -386,6 +386,8 @@ def all_order():
             query.update(order_no=q_value)
         elif q_key == "out_order_no":
             query.update(out_order_no=q_value)
+        elif q_key == "raw_order_no":
+            query.update(raw_order_no=q_value)
     kefu_name = request.args.get("kefu_name", "")
     if kefu_name:
         if kefu_name == "None":

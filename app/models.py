@@ -87,6 +87,7 @@ class OpenCity(db.Document):
 
     meta = {
         "indexes": [
+            "province",
             "city_name",
             "crawl_source",
             "is_active",
