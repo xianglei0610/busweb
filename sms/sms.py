@@ -86,7 +86,7 @@ def logout():
 def send_msg(sms_phone_list, content):
 #     sms_phone_list = ['13267109876']
 #     content = u'【乐程票务】你好23，你的3码为128989'
-    id = regist_ex()
+#     id = regist_ex()
     print sms_phone_list, content,type(content)
     send_sms(sms_phone_list, content, 1452444)
 #     logout()
