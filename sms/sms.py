@@ -89,7 +89,7 @@ def send_msg(sms_phone_list, content):
     id = regist_ex()
     print sms_phone_list, content,type(content)
     send_sms(sms_phone_list, content, 1452444)
-    logout()
+#     logout()
 if __name__ == '__main__':
     # 注册
     id = regist_ex()
