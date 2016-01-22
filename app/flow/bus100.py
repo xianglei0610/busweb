@@ -40,8 +40,12 @@ class Flow(BaseFlow):
             lock_result.update(source_account=rebot.telephone)
             lock_result.update(result_reason="第三方账号没有激活")
             return lock_result
-
-        rebot.recrawl_shiftid(order.line)
+        try:
+            rebot.recrawl_shiftid(order.line)
+        except:
+            lock_result.update(result_code=2)
+            lock_result.update(result_reason="源站刷新线路错误，锁票重试")
+            return lock_result
         line = Line.objects.get(line_id=order.line.line_id)
         order.line = line
         order.ticket_price = line.full_price
