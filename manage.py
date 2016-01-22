@@ -172,7 +172,7 @@ def sync_open_city(site, province_name):
         openObj.end_time = "8:00"
         openObj.advance_order_time = 0
         openObj.max_ticket_per_order = 5
-        openObj.crawl_source = "bus100"
+        openObj.crawl_source = site
         openObj.is_active = True
         try:
             openObj.save()
