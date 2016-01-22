@@ -180,7 +180,7 @@ def sync_open_city(site, province_name):
             print '%s already existed'%city_name
             pass
 
-
+@manager.command
 def del_bus100_people():
     from app.models import Bus100Rebot
     import requests
