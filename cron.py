@@ -14,7 +14,7 @@ from lxml import etree
 from apscheduler.scheduler import Scheduler
 
 
-from manage import migrate_from_crawl, del_bus100_people
+from manage import migrate_from_crawl, del_source_people
 from app.email import send_email
 from app.constants import ADMINS, STATUS_WAITING_ISSUE
 from app import setup_app
@@ -140,7 +140,7 @@ def check_login_status(crawl_source):
 
 
 def del_people(crawl_source):
-    del_bus100_people(crawl_source)
+    del_source_people(crawl_source)
 
 
 def main():
@@ -164,3 +164,4 @@ if __name__ == '__main__':
     main()
 #     check_login_status('bus100')
     #bus_crawl('bus100')
+#     del_people('bus100')
