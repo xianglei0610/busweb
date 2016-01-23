@@ -205,7 +205,6 @@ class Flow(object):
                       ret["result_msg"],
                       str(update))
 
-
     def do_refresh_line(self, line):
         """
         线路信息刷新, 各子类单独实现
@@ -222,6 +221,16 @@ class Flow(object):
         }
         """
         raise Exception("Not Implemented")
+
+    def close_line(self, line, reason=""):
+        """
+        关闭线路
+        """
+        if not line:
+            return
+        line_log.info("close line:%s %s, reason:%s", line.crawl_source, line.line_id)
+        now = dte.now()
+        line.modify(left_tickets=0, update_datetime=now, refresh_datetime=now)
 
     def lock_ticket_retry(self, order):
         order.modify(status=STATUS_LOCK_RETRY)
