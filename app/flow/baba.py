@@ -122,7 +122,7 @@ class Flow(BaseFlow):
                 expire_time = dte.now()+datetime.timedelta(seconds=15*60)
                 lock_result.update({
                     "result_code": 1,
-                    "result_reason": ret["msgType"],
+                    "result_reason": "%s %s" % (ret["msgType"], ret.get("errorMsg", "")),
                     "pay_url": "",
                     "raw_order_no": ret["billNo"],
                     "expire_datetime": expire_time,
