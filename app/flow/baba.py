@@ -131,7 +131,7 @@ class Flow(BaseFlow):
             else:
                 lock_result.update({
                     "result_code": 0,
-                    "result_reason": ret["msgType"],
+                    "result_reason": "%s %s" % (ret["msgType"], ret.get("errorMsg", "")),
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": None,
