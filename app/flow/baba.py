@@ -129,9 +129,12 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                 })
             else:
+                errmsg = ret.get("errorMsg", "").replace("\r\n", " ")
+                if "车次停班" in errmsg:
+                    self.close_line(line, reason=errmsg)
                 lock_result.update({
                     "result_code": 0,
-                    "result_reason": "%s %s" % (ret["msgType"], ret.get("errorMsg", "")),
+                    "result_reason": "%s %s" % (ret["msgType"], errmsg),
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": None,
