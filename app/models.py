@@ -152,6 +152,9 @@ class Line(db.Document):
         ],
     }
 
+    def __str__(self):
+        return "[Line object %s]" % self.line_id
+
     def real_price(self):
         return self.fee+self.full_price
 
@@ -245,6 +248,9 @@ class Order(db.Document):
             "-create_date_time",
         ],
     }
+
+    def __str__(self):
+        return "[Order object %s]" % self.order_no
 
     @property
     def source_account_pass(self):

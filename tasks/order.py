@@ -22,9 +22,11 @@ def check_order_expire(self, order_no):
     if order.status != STATUS_WAITING_ISSUE:
         return
     flow = get_flow(order.crawl_source)
-    flow.refresh_issue(order)
-    if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=30, max_retries=30)
+    try:
+        flow.refresh_issue(order)
+    finally:
+        if order.status == STATUS_WAITING_ISSUE:
+            self.retry(countdown=30, max_retries=30)
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -37,9 +39,11 @@ def refresh_kefu_order(self, username, order_no):
     if order.status not in (STATUS_WAITING_ISSUE, STATUS_ISSUE_ING):
         return
     flow = get_flow(order.crawl_source)
-    flow.refresh_issue(order)
-    if order.status == STATUS_WAITING_ISSUE:
-        self.retry(countdown=3+random.random()*10%3, max_retries=200)
+    try:
+        flow.refresh_issue(order)
+    finally:
+        if order.status == STATUS_WAITING_ISSUE:
+            self.retry(countdown=3+random.random()*10%3, max_retries=200)
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -52,15 +56,17 @@ def refresh_issueing_order(self, order_no, retry_seq=1):
     if order.status != STATUS_ISSUE_ING:
         return
     flow = get_flow(order.crawl_source)
-    flow.refresh_issue(order)
-    if order.status == STATUS_ISSUE_ING:
-        if retry_seq < 30:      # 前40次,每3~5s刷新一次
-            seconds = random.randint(3, 5)
-        elif retry_seq < 100:   # 前40~100次
-            seconds = random.randint(30, 40)
-        else:
-            seconds = random.randint(60, 90)
-        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=seconds, max_retries=60*12)
+    try:
+        flow.refresh_issue(order)
+    finally:
+        if order.status == STATUS_ISSUE_ING:
+            if retry_seq < 30:      # 前40次,每3~5s刷新一次
+                seconds = random.randint(3, 5)
+            elif retry_seq < 100:   # 前40~100次
+                seconds = random.randint(30, 40)
+            else:
+                seconds = random.randint(60, 90)
+            self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=seconds, max_retries=60*12)
 
 
 @celery.task(bind=True, ignore_result=True)
