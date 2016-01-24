@@ -29,7 +29,7 @@ class Flow(BaseFlow):
                 tickets.append("|".join(lst))
             data = {
                 "carry_sta_id": order.line.s_sta_id,
-                "stop_name": order.line.extra_info["stop_name_short"],
+                "stop_name": order.line.d_city_name,
                 "str_date": "%s %s" % (order.line.drv_date, order.line.drv_time),
                 "sign_id": order.line.extra_info["sign_id"],
                 "phone_num": order.contact_info["telephone"],
@@ -168,7 +168,7 @@ class Flow(BaseFlow):
         }
         params = dict(
             carry_sta_id=line.s_sta_id,
-            stop_name=line.extra_info["stop_name_short"],
+            stop_name=line.d_city_name,
             drv_date="%s %s" % (line.drv_date, line.drv_time),
             sign_id=line.extra_info["sign_id"],
         )

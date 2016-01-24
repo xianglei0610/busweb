@@ -127,13 +127,9 @@ def migrate_from_crawl(site, city=""):
     crawl_mongo = pymongo.MongoClient("mongodb://%s:%s" % (settings["host"], settings["port"]))
     crawl_db = crawl_mongo[settings["db"]]
 
-    from sync_data import migrate_bus100, migrate_scqcp, migrate_ctrip, migrate_cbd, migrate_jsky
+    from sync_data import migrate_bus100
     mappings = {
-        "scqcp": migrate_scqcp,
         "bus100": migrate_bus100,
-        "ctrip": migrate_ctrip,
-        "cbd": migrate_cbd,
-        "jsky": migrate_jsky,
     }
     app.logger.info("start migrate data from crawldb to webdb:%s", site)
     mappings[site](crawl_db, city=city)
