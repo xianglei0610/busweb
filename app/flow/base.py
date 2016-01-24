@@ -4,6 +4,7 @@ import json
 
 from app.constants import *
 from app import order_log, line_log
+from app.models import Order
 from datetime import datetime as dte
 from tasks import check_order_expire, issued_callback, refresh_issueing_order
 
@@ -24,6 +25,7 @@ class Flow(object):
             expire_time: "2015-11-11 11:11:11",     # 订单过期时间
             total_price: 322，          # 车票价格
         """
+        order = Order.objects.get(order_no=order.order_no)
         notify_url = order.locked_return_url
         data = {
             "sys_order_no": order.order_no,
