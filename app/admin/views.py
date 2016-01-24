@@ -42,6 +42,7 @@ def parse_page_data(qs):
         query_dict[k] = request.args.get(k)
     query_string = urllib.urlencode(query_dict)
 
+    old_range = range(max(1, page-8),  min(max(1, page-8)+16, pageNum))
     return {
         "total": total,
         "pageCount": pageCount,
@@ -53,6 +54,7 @@ def parse_page_data(qs):
         "items": qs[skip: skip+pageCount],
         "req_path": "%s?%s" % (request.path, query_string),
         "req_path2": "%s?" % request.path,
+        "old_range": old_range,     # 旧管理系统用到
     }
 
 

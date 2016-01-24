@@ -58,7 +58,7 @@
 							{%else%}
 							<li class="prev"><a href="{{page.req_path}}&page={{page.previous}}">← Previous</a></li>
 							{%endif%}
-							{%for n in page.range %}
+							{%for n in page.old_range %}
 							<li class="{%if n == page.page %} active {%endif%}"><a href="{{page.req_path}}&page={{n}}">{{n}}</a></li>
 							{%endfor%}
 							{%if page.page >= page.pageNum %}
