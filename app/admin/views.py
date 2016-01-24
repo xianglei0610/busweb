@@ -507,8 +507,12 @@ def wating_deal_order():
                         break
                     if forbid and Order.objects.get(order_no=i).crawl_source=="cbd":
                         continue
+                    order = Order.objects.get(order_no=i)
                     count -= 1
                     r.zrem('lock_order_list', i)
+                    if order.kefu_username:
+                        continue
+                    order.update(kefu_username=userObj.username)
                     r.sadd(key, i)
                     refresh_kefu_order.apply_async((userObj.username, i))
                     check_order_completed.apply_async((userObj.username, key, i), countdown=4*60)  # 4分钟后执行
