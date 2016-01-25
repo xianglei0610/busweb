@@ -19,6 +19,14 @@ from app import BASE_DIR
 from flask import current_app
 
 
+def weight_choice(weights):
+    rnd = random.random() * sum(weights.values())
+    for k, w in weights.items():
+        rnd -= w
+        if rnd < 0:
+            return k
+
+
 def idcard_birthday(idcard):
     return dte.strptime(idcard[6:14], "%Y%m%d")
 
