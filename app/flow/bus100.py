@@ -1,13 +1,10 @@
 # -*- coding:utf-8 -*-
 import random
-import urllib2
 import requests
 import datetime
 import json
 import re
-import traceback
 from datetime import datetime as dte
-from flask import render_template, request, redirect
 from lxml import etree
 
 from app.constants import *
@@ -24,7 +21,7 @@ class Flow(BaseFlow):
         lock_result = {
             "lock_info": {},
             "source_account": '',
-            "result_code": 0,
+            "result_code": -1,
             "result_reason": "",
             "pay_url": "",
             "raw_order_no": "",
@@ -55,15 +52,10 @@ class Flow(BaseFlow):
         orderPay = {}
         if not pay_url:
             if order.line.shift_id == "0" or not order.line.extra_info.get('flag', 0):
-                lock_result.update(result_reason="该条线路无法购买")
+                lock_result.update(result_reason="该条线路无法购买", result_code=0)
                 return lock_result
             ticketType, ticketPassword = self.request_ticket_info(order, headers, rebot)
-            try:
-                orderInfo = self.request_create_order(order, headers, rebot, ticketType,ticketPassword)
-            except:
-                lock_result.update(result_code=2)
-                lock_result.update(result_reason="源站系统下单接口报错，锁票重试")
-                return lock_result
+            orderInfo = self.request_create_order(order, headers, rebot, ticketType,ticketPassword)
             pay_url = ''
             if orderInfo.get('flag') == '0':
                 orderId = orderInfo['orderId']
@@ -74,7 +66,6 @@ class Flow(BaseFlow):
                     pay_url = orderPay['url']
                 order_log.info("[lock-result] query orderPay . order: %s,%s", order.order_no,orderPay)
             elif orderInfo.get('flag') == '2':
-                print orderInfo.get('msg', ''), type(orderInfo.get('msg', ''))
                 if u'同一出发日期限购6张' in orderInfo.get('msg', ''):
 #                 if u'票种类型' in orderInfo.get('msg',''):
                     order.source_account = ''
@@ -84,22 +75,15 @@ class Flow(BaseFlow):
                     lock_result.update(result_code=2)
                     lock_result.update(result_reason="源站系统错误，锁票重试")
                     return lock_result
-
-            if u'订单信息重复' in orderInfo.get('msg', ''):
-                lock_result.update(result_code=3)
-                lock_result.update(result_reason="已经下单了，不需要重新锁票")
-                return lock_result
             if u'班次信息错误' in orderInfo.get('msg', ''):
                 lock_result.update(result_code=2)
                 lock_result.update(result_reason="班次信息错误，锁票重试")
                 return lock_result
-
         if pay_url:
             try:
                 pay_info = self.request_pay_info(pay_url)
             except:
                 pay_info = {'pay_money': order.order_price}
-            order_log.info("[lock-result] query pay_info . order: %s,%s", order.order_no,pay_info)
             expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
             orderInfo['expire_datetime'] = expire_datetime
             orderInfo['ticketPassword'] = ticketPassword
@@ -113,6 +97,7 @@ class Flow(BaseFlow):
             })
         else:
             lock_result.update({
+                "result_code": 0,
                 "lock_info": orderInfo,
                 "result_reason": orderInfo.get('msg', '') or orderPay.get('msg', ''),
             })
@@ -153,7 +138,6 @@ class Flow(BaseFlow):
             trainInfo = requests.post(url, data=data, headers=headers, cookies=rebot.cookies)
             trainInfo = trainInfo.json()
             tickType = trainInfo.get('tickType', '')
-            print tickType
             if tickType:
                 if re.findall(u'全票', tickType) or re.findall('\u5168\u7968', tickType):
                     ticketType = u'全票'
@@ -166,7 +150,6 @@ class Flow(BaseFlow):
                 else:
                     ticketPassword = ''
         except Exception:
-            print traceback.format_exc()
             order_log.info("[lock-result] query trainInfo . order: %s,%s", order.order_no,trainInfo)
         return ticketType, ticketPassword
 
@@ -195,10 +178,12 @@ class Flow(BaseFlow):
             "idTypes": ','.join(idTypes),
             "names": ','.join(names),
         }
-        print data
         orderInfo = requests.post(url, data=data, headers=headers, cookies=rebot.cookies)
-        orderInfo = orderInfo.json()
-        order_log.info("[lock-result] query orderInfo . order: %s,%s,%s", order.order_no,orderInfo,data)
+        try:
+            orderInfo = orderInfo.json()
+        except Exception,e:
+            order_log.exception("[lock] exception order:%s %s", order.order_no, orderInfo.content)
+            raise e
         return orderInfo
 
     def request_pay_info(self, pay_url):
@@ -277,7 +262,6 @@ class Flow(BaseFlow):
     #                 order_id = matchObj[0].replace(' ','')
                 elif status == u"订单失效" or status == u'\xe8\xae\xa2\xe5\x8d\x95\xe5\xa4\xb1\xe6\x95\x88' or not status:
                     orderDetail.update({'status': '5'})
-        print orderDetail
         return orderDetail
 
     def mock_send_order_request(self, order, rebot):
@@ -310,7 +294,6 @@ class Flow(BaseFlow):
         if str(trainInfo['flag']) == '0':
             sel = etree.HTML(trainInfo['msg'])
             full_price = sel.xpath('//div[@class="order_detail"]/div[@class="left"]/p[@class="price"]/em/text()')
-            print full_price
             if full_price:
                 full_price = float(full_price[0])
             result_info.update(result_msg="ok", update_attrs={"refresh_datetime": now,'full_price':full_price})
@@ -362,7 +345,6 @@ class Flow(BaseFlow):
             if ret.get("flag", '') == '0':
                 rebot = Bus100Rebot.objects.get(telephone=order.source_account)
                 rebot.cookies = cookies
-                print cookies
                 rebot.is_active = True
                 rebot.save()
                 if not pay_url:
@@ -386,7 +368,6 @@ class Flow(BaseFlow):
                         produceType=sel.xpath('//form[@id="alipayForm"]/input[@name="produceType"]/@value')[0],
                         payment=payment
                     )
-                print data
                 info_url = "http://pay.84100.com/payment/payment/gateWayPay.do"
                 r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
                 return {"flag": "html", "content": r.content}
