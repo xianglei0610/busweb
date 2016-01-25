@@ -98,7 +98,8 @@ class OpenCity(db.Document):
 class Line(db.Document):
     """线路表"""
     line_id = db.StringField(unique=True)           # 路线id, 必须唯一
-    crawl_source = db.StringField(required=True)     # 爬取来源
+    crawl_source = db.StringField(required=True)    # 爬取来源
+    compatible_lines = db.DictField()               # 兼容的路线
 
     # starting
     s_province = db.StringField(required=True)
@@ -142,6 +143,7 @@ class Line(db.Document):
             "d_city_code",
             "d_sta_name",
             "crawl_source",
+            "bus_num",
             "drv_date",
             "drv_time",
             "drv_datetime",
@@ -151,6 +153,9 @@ class Line(db.Document):
             }
         ],
     }
+
+    def __str__(self):
+        return "[Line object %s]" % self.line_id
 
     def real_price(self):
         return self.fee+self.full_price
@@ -176,6 +181,16 @@ class Line(db.Document):
             "distance": self.distance,
         }
 
+    def check_compatible_lines(self, reload=False):
+        if not reload and self.compatible_lines:
+            return
+        qs = Line.objects.filter(s_city_name=self.s_city_name,
+                                 d_city_name=self.d_city_name,
+                                 drv_datetime=self.drv_datetime,
+                                 bus_num=self.bus_num)
+        d_line = {obj.crawl_source: obj.line_id for obj in qs}
+        for obj in qs:
+            self.modify(compatible_lines=d_line)
 
 
 class Order(db.Document):
@@ -245,6 +260,9 @@ class Order(db.Document):
             "-create_date_time",
         ],
     }
+
+    def __str__(self):
+        return "[Order object %s]" % self.order_no
 
     @property
     def source_account_pass(self):

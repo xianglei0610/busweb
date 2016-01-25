@@ -42,6 +42,7 @@ def parse_page_data(qs):
         query_dict[k] = request.args.get(k)
     query_string = urllib.urlencode(query_dict)
 
+    old_range = range(max(1, page-8),  min(max(1, page-8)+16, pageNum))
     return {
         "total": total,
         "pageCount": pageCount,
@@ -53,6 +54,7 @@ def parse_page_data(qs):
         "items": qs[skip: skip+pageCount],
         "req_path": "%s?%s" % (request.path, query_string),
         "req_path2": "%s?" % request.path,
+        "old_range": old_range,     # 旧管理系统用到
     }
 
 
@@ -78,9 +80,10 @@ def order_list():
 @admin.route('/lines', methods=['GET'])
 @login_required
 def line_list():
-    lineid = request.args.get("line_id", "")
-    starting_name = request.args.get("starting", "")
-    dest_name = request.args.get("destination", "")
+    lineid = request.args.get("line_id", "").strip()
+    starting_name = request.args.get("starting", "").strip()
+    dest_name = request.args.get("destination", "").strip()
+    crawl_source = request.args.get("crawl_source", "").strip()
     query = {"drv_datetime__gt": dte.now()}
     if lineid:
         query.update(line_id=lineid)
@@ -88,13 +91,16 @@ def line_list():
         query.update(s_city_name__startswith=starting_name)
     if dest_name:
         query.update(d_city_name__startswith=dest_name)
-    queryset = Line.objects(**query).order_by("-crawl_datetime")
+    if crawl_source:
+        query.update(crawl_source=crawl_source)
+    queryset = Line.objects(**query).order_by("full_price")
 
     return render_template('admin/line_list.html',
                            page=parse_page_data(queryset),
                            starting=starting_name,
                            destination=dest_name,
                            line_id=lineid,
+                           crawl_source=crawl_source,
                            )
 
 

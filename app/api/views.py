@@ -2,16 +2,13 @@
 import json
 
 from datetime import datetime as dte
-from mongoengine import Q
-
 from app.constants import *
 from flask import request, jsonify
 from tasks import async_lock_ticket
 from app.api import api
 from app.models import Line, Order, OpenCity
-from app import order_log, line_log
-from app.flow import get_flow
-from app.utils import getRedisObj
+from app.flow import get_compatible_flow
+from app import order_log
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -178,9 +175,9 @@ def query_line_detail():
         line = Line.objects.get(line_id=post["line_id"])
     except Line.DoesNotExist:
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
-    flow = get_flow(line.crawl_source)
-    flow.refresh_line(line)
-    return jsonify({"code": RET_OK, "message": "OK", "data": line.get_json()})
+    flow, new_line = get_compatible_flow(line)
+    flow.refresh_line(new_line)
+    return jsonify({"code": RET_OK, "message": "OK", "data": new_line.get_json()})
 
 
 @api.route('/orders/submit', methods=['POST'])
@@ -354,7 +351,7 @@ def query_order_detail():
             pick_info.append({
                 "pick_code": code,
                 "pick_msg": order.pick_msg_list[i]
-                })
+            })
         data = {
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
