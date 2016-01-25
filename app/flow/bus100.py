@@ -71,7 +71,11 @@ class Flow(BaseFlow):
                     lock_result.update(result_code=2)
                     lock_result.update(result_reason="源站系统错误，锁票重试")
                     return lock_result
-        if pay_url:
+            elif orderInfo.get('flag') == '99':
+                lock_result.update(result_code=2)
+                lock_result.update(result_reason=orderInfo.get("msg", ""))
+                return lock_result
+        else:
             try:
                 pay_info = self.request_pay_info(pay_url)
             except:
@@ -171,11 +175,9 @@ class Flow(BaseFlow):
             "names": ','.join(names),
         }
         orderInfo = requests.post(url, data=data, headers=headers, cookies=rebot.cookies)
-        try:
-            orderInfo = orderInfo.json()
-        except Exception,e:
-            order_log.exception("[lock] exception order:%s %s", order.order_no, orderInfo.content)
-            raise e
+        if orderInfo.status_code == 404:
+            return {"flag": "99", "msg": "请求下单页面404"}
+        orderInfo = orderInfo.json()
         return orderInfo
 
     def request_pay_info(self, pay_url):
