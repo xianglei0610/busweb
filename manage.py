@@ -181,5 +181,30 @@ def sync_open_city(site, province_name):
             pass
 
 
+@manager.option('-s', '--site', dest='site', default='')
+def del_source_people(site):
+    if site == 'bus100':
+        from app.models import Bus100Rebot
+        import requests
+        from lxml import etree
+        import re
+        rebots = Bus100Rebot.objects.filter(is_active=True)
+        url = "http://84100.com/people.shtml"
+        for rebot in rebots:
+            try:
+                response = requests.post(url, cookies=rebot.cookies) 
+                sel = etree.HTML(response.content)
+                people_list = sel.xpath('//div[@class="p-edu"]')
+                for i in people_list:
+                    res = i.xpath('a[@class="del trans"]/@onclick')[0]
+            #         print res
+                    userid = re.findall('del\(\'(.*)\'\);', res)[0]
+                    print userid
+                    del_url = "http://84100.com/user/delPeople/ajax?id=%s"%userid
+                    response = requests.get(del_url, cookies=rebot.cookies)
+                print rebot.telephone, 'over'
+            except:
+                pass
+
 if __name__ == '__main__':
     manager.run()
