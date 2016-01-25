@@ -79,7 +79,8 @@ class Flow(BaseFlow):
                 lock_result.update(result_code=2)
                 lock_result.update(result_reason=orderInfo.get("msg", ""))
                 return lock_result
-        else:
+
+        if pay_url:
             try:
                 pay_info = self.request_pay_info(pay_url)
             except:
