@@ -130,8 +130,10 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = ret.get("errorMsg", "").replace("\r\n", " ")
-                if "车次停班" in errmsg:
-                    self.close_line(line, reason=errmsg)
+                for s in ["车次停班", "余票不足"]:
+                    if s in errmsg:
+                        self.close_line(line, reason=errmsg)
+                        break
                 lock_result.update({
                     "result_code": 0,
                     "result_reason": "%s %s" % (ret["msgType"], errmsg),
