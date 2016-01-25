@@ -39,6 +39,12 @@ class Flow(object):
             return
 
         ret = self.do_lock_ticket(order)
+        order = Order.objects.get(order_no=order.order_no)
+        fail_msg = self.check_lock_condition(order)
+        if fail_msg:  # 再次检查, 防止重复支付
+            order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
+            return
+
         now = dte.now()
         if ret["result_code"] == 1:   # 锁票成功
             order.modify(status=STATUS_WAITING_ISSUE,
@@ -65,10 +71,7 @@ class Flow(object):
             self.lock_ticket_retry(order)
             order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
             return
-        elif ret["result_code"] == 3:   # 订单信息重复
-            order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
-            return
-        else:   # 锁票失败
+        elif ret["result_code"] == 0:   # 锁票失败
             order.modify(status=STATUS_LOCK_FAIL,
                          lock_info=ret["lock_info"],
                          lock_datetime=dte.now(),
@@ -76,6 +79,9 @@ class Flow(object):
             order.on_lock_fail()
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["result_reason"], "data": data})
             order_log.info("[lock-result] fail. order: %s, reason: %s", order.order_no, ret["result_reason"])
+        else:
+            order_log.info("[lock-result] unrecognize. order: %s, reason: %s", order.order_no, ret["result_reason"])
+            return
 
         if notify_url:
             order_log.info("[lock-callback] order:%s, %s %s", order.order_no, notify_url, json_str)

@@ -1,0 +1,43 @@
+打包爬虫程序命令 scrapyd-deploy  BusCrawl  -p  BusCrawl  
+
+
+
+1,列出所有的项目
+curl http://localhost:6800/listprojects.json
+
+返回{"status": "ok", "projects": ["BusCrawl"], "node_name": "localhost.localdomain"}
+
+2，列出某一项目中的爬虫
+curl http://localhost:6800/listspiders.json?project=BusCrawl
+
+返回{"status": "ok", "spiders": ["gx84100", "scqcp"], "node_name": "localhost.localdomain"}
+
+
+3，启动某个爬虫
+curl http://localhost:6800/schedule.json -d project=BusCrawl -d spider=bus100 -d province_id=410000
+
+
+返回 {"status": "ok", "running": [{"start_time": "2015-12-04 13:47:23.685576", "id": "7b340e629a4a11e5ad370800272575f1", "spider": "gx84100"}], "finished": [], "pending": [], "node_name": "localhost.localdomain"}
+
+
+4，取消正在运行的爬虫
+
+curl http://localhost:6800/cancel.json -d project=myproject -d job=7b340e629a4a11e5ad370800272575f1
+
+
+返回{"status": "ok", "prevstate": "running", "node_name": "localhost.localdomain"}
+
+
+5 返回项目的版本
+
+curl http://localhost:6800/listversions.json?project=BusCrawl
+
+{"status": "ok", "versions": ["1449204526"], "node_name": "localhost.localdomain"}
+
+
+6，返回某项目的工作列表
+
+curl http://localhost:6800/listjobs.json?project=BusCrawl
+
+
+{"status": "ok", "running": [], "finished": [{"start_time": "2015-12-04 13:47:23.685576", "end_time": "2015-12-04 14:07:35.305714", "id": "7b340e629a4a11e5ad370800272575f1", "spider": "gx84100"}], "pending": [], "node_name": "localhost.localdomain"}
