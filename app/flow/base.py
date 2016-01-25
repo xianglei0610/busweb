@@ -39,6 +39,12 @@ class Flow(object):
             return
 
         ret = self.do_lock_ticket(order)
+        order = Order.objects.get(order_no=order.order_no)
+        fail_msg = self.check_lock_condition(order)
+        if fail_msg:  # 再次检查, 防止重复支付
+            order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
+            return
+
         now = dte.now()
         if ret["result_code"] == 1:   # 锁票成功
             order.modify(status=STATUS_WAITING_ISSUE,
