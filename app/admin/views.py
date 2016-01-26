@@ -152,30 +152,29 @@ def order_pay(order_no):
         else:
             return redirect(url_for("admin.wating_deal_order"))
     r = getRedisObj()
-    try:
-        r.set(LAST_PAY_CLICK_TIME % order_no, time.time(), ex=PAY_CLICK_EXPIR)
-    except:
-        r.set(LAST_PAY_CLICK_TIME % order_no, time.time())
-        r.expire(LAST_PAY_CLICK_TIME % order_no, PAY_CLICK_EXPIR)
+    limit_key = LAST_PAY_CLICK_TIME % order_no
+    click_time = r.get(limit_key)
+    if click_time:
+        sec = time.time()-click_time
+        return "点击支付按钮频率太快, 请%s秒后再试!" % sec
+    r.set(limit_key, time.time())
+    r.expire(limit_key, PAY_CLICK_EXPIR)
 
     code = request.args.get("valid_code", "")
     channel = request.args.get("channel", "alipay")
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
-    if not ret:
-        return redirect(url_for("admin.index"))
-    if ret["flag"] == "url":
+    flag = ret.get("flag", "")
+    if flag == "url":
         return redirect(ret["content"])
-    elif ret["flag"] == "html":
+    elif flag == "html":
         return ret["content"]
-    elif ret["flag"] == "input_code":
+    elif flag == "input_code":
         if token and token == TOKEN:
             return redirect(url_for("admin.src_code_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
         else:
             return redirect(url_for("admin.src_code_input", order_no=order_no))
-    elif ret["flag"] == "refuse":
-        pass
-    return redirect(url_for("admin.wating_deal_order"))
+    return "异常页面 %s" % str(ret)
 
 
 @admin.route('/orders/<order_no>/refresh', methods=['GET'])
