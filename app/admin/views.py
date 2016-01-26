@@ -155,8 +155,8 @@ def order_pay(order_no):
     limit_key = LAST_PAY_CLICK_TIME % order_no
     click_time = r.get(limit_key)
     if click_time:
-        sec = time.time()-click_time
-        return "点击支付按钮频率太快, 请%s秒后再试!" % sec
+        sec = time.time()-float(click_time)
+        return "点击支付按钮频率太快, 请%s秒后再试!" % (PAY_CLICK_EXPIR-sec)
     r.set(limit_key, time.time())
     r.expire(limit_key, PAY_CLICK_EXPIR)
 
