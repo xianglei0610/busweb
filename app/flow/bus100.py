@@ -295,7 +295,7 @@ class Flow(BaseFlow):
             full_price = sel.xpath('//div[@class="order_detail"]/div[@class="left"]/p[@class="price"]/em/text()')
             if full_price:
                 full_price = float(full_price[0])
-            result_info.update(result_msg="ok", update_attrs={"refresh_datetime": now,'full_price':full_price})
+            result_info.update(result_msg="ok", update_attrs={"left_tickets": 45, "refresh_datetime": now,'full_price':full_price})
         elif str(trainInfo['flag']) == '1':
             line_log.info("[refresh-result]  no left_tickets line:%s %s,result:%s ", line.crawl_source, line.line_id,trainInfo)
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})

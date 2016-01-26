@@ -1069,6 +1069,10 @@ class Bus100Rebot(Rebot):
             sel = etree.HTML(trainListInfo['msg'])
             trains = sel.xpath('//div[@class="trainList"]')
             for n in trains:
+                d_str = n.xpath("@data-list")[0]
+                d_str = d_str[d_str.index("id=")+3:]
+                shiftid = d_str[:d_str.index(",")]
+
                 item = {}
                 time = n.xpath('ul/li[@class="time"]/p/strong/text()')
                 item['drv_time'] = time[0]
@@ -1089,16 +1093,10 @@ class Bus100Rebot(Rebot):
                     distance = infor[0].replace('\r\n', '').replace(' ',  '')
                 buyInfo = n.xpath('ul/li[@class="buy"]')
                 flag = 0
-                shiftid = '0'
                 for buy in buyInfo:
                     flag = buy.xpath('a[@class="btn"]/text()')   #判断可以买票
                     if flag:
                         flag = 1
-                        shiftInfo = buy.xpath('a[@class="btn"]/@onclick')
-                        if shiftInfo:
-                            shift = re.findall("('(.*)')", shiftInfo[0])
-                            if shift:
-                                shiftid = shift[0][1]
                     else:
                         flag = '0'
                 item['extra_info'] = {"flag": flag}
