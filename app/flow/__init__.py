@@ -25,7 +25,7 @@ def get_compatible_flow(line):
     line.check_compatible_lines()
     weights = {}
     for src, line_id in line.compatible_lines.items():
-        weights[src] = WEIGHTS[src]
+        weights[src] = WEIGHTS.get(src, 500)
     choose = weight_choice(weights)
     from app.models import Line
     new_line = Line.objects.get(line_id=line.compatible_lines[choose])
