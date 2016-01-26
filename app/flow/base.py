@@ -33,7 +33,7 @@ class Flow(object):
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
         }
-        call_from = traceback.format_stack()[-1]
+        call_from = traceback.format_stack()[-2]
         order_log.info("[lock-start] order: %s call from: %s", order.order_no, call_from)
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 防止重复下单
