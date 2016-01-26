@@ -164,6 +164,7 @@ def order_pay(order_no):
     channel = request.args.get("channel", "alipay")
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
+    if not ret: ret= {}
     flag = ret.get("flag", "")
     if flag == "url":
         return redirect(ret["content"])
