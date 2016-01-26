@@ -146,6 +146,7 @@ def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     token = request.args.get("token", "")
     username = request.args.get("username",'')
+    code = request.args.get("valid_code", "")
     if order.status != STATUS_WAITING_ISSUE:
         if order.status == STATUS_LOCK_RETRY:
             pass
@@ -154,13 +155,12 @@ def order_pay(order_no):
     r = getRedisObj()
     limit_key = LAST_PAY_CLICK_TIME % order_no
     click_time = r.get(limit_key)
-    if click_time:
+    if click_time and not code:
         sec = time.time()-float(click_time)
         return "点击支付按钮频率太快, 请%s秒后再试!" % (PAY_CLICK_EXPIR-sec)
     r.set(limit_key, time.time())
     r.expire(limit_key, PAY_CLICK_EXPIR)
 
-    code = request.args.get("valid_code", "")
     channel = request.args.get("channel", "alipay")
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
