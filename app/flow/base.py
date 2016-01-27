@@ -107,21 +107,23 @@ class Flow(object):
         """
         raise Exception("Not Implemented")
 
-    def need_refresh_issue(self, order):
+    def need_refresh_issue(self, order, force=False):
         """
         是否有必要刷新出票
         """
+        if force:
+            return True
         if order.status not in (STATUS_ISSUE_ING, STATUS_WAITING_ISSUE):
             return False
         return True
 
-    def refresh_issue(self, order):
+    def refresh_issue(self, order, force=False):
         """
         出票刷新主流程，子类不用重写
         """
         old_status = order.status
-#         if not self.need_refresh_issue(order):
-#             return
+        if not self.need_refresh_issue(order, force=force):
+            return
         order_log.info("[issue-refresh-start] order:%s", order.order_no)
         ret = self.do_refresh_issue(order)
         code = ret["result_code"]
@@ -137,7 +139,7 @@ class Flow(object):
             return
         if code == 0:
             return
-        elif code == 1:
+        elif code == 1:         # 出票成功
             msg_list = ret["pick_msg_list"]
             msg = msg_list and msg_list[0] or ""
             order_log.info("[issue-refresh-result] order: %s succ. msg:%s, pick_msg: %s",
@@ -150,17 +152,17 @@ class Flow(object):
                     pick_msg_list=msg_list)
             order.on_issue_success()
             issued_callback.delay(order.order_no)
-        elif code == 2:
+        elif code == 2:         # 出票失败
             order_log.info("[issue-refresh-result] order: %s fail. msg:%s", order.order_no, ret["result_msg"])
             order.modify(status=STATUS_ISSUE_FAIL)
             order.on_issue_fail(ret["result_msg"])
             issued_callback.delay(order.order_no)
-        elif code == 3:
+        elif code == 3:         # 源站已退款
             order_log.info("[issue-refresh-result] order: %s give back. msg:%s", order.order_no, ret["result_msg"])
             order.modify(status=STATUS_GIVE_BACK)
             issued_callback.delay(order.order_no)
             order.on_give_back()
-        elif code == 4:
+        elif code == 4:         # 正在出票
             order_log.info("[issue-refresh-result] order: %s issueing. msg:%s", order.order_no, ret["result_msg"])
             order.modify(status=STATUS_ISSUE_ING)
             refresh_issueing_order.delay(order.order_no)
