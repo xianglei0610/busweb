@@ -936,6 +936,16 @@ class Bus100Rebot(Rebot):
     }
     crawl_source = SOURCE_BUS100
 
+    def test_login_status(self):
+        url = "http://www.84100.com/user.shtml"
+        res = requests.post(url, cookies=self.cookies)
+        res = res.content
+        sel = etree.HTML(res)
+        userinfo = sel.xpath('//div[@class="c_content"]/div/ul/li[@class="myOrder"]')
+        if not userinfo:
+            return 0
+        return 1
+
     @classmethod
     def get_random_rebot(cls):
         qs = cls.objects.all()

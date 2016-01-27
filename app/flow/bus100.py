@@ -10,7 +10,6 @@ from lxml import etree
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import Bus100Rebot, Line, Order
-from app.flow import get_flow
 from app import order_log, line_log
 
 
@@ -303,77 +302,42 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, **kwargs):
+        rebot = Bus100Rebot.objects.get(telephone=order.source_account)
+        if valid_code:      #  登陆
+            data = json.loads(session["bus100_pay_login_info"])
+            code_url = data["valid_url"]
+            headers = data["headers"]
+            cookies = data["cookies"]
+            data = {
+                "loginType": 0,
+                "backUrl": '',
+                "mobile": rebot.telephone,
+                "password": rebot.password,
+                "validateCode": valid_code
+            }
+            r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            rebot.modify(cookies=cookies, is_active=True)
 
-        headers = {
-            'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
-        }
-        pay_url = order.pay_url
-        code = valid_code
-        # 验证码处理
-        flag = False
-        ret = {}
-        if not pay_url:
-            if code:
-                data = json.loads(session["bus100_pay_login_info"])
-                code_url = data["valid_url"]
-                headers = data["headers"]
-                cookies = data["cookies"]
-                flag = True
-            else:
-                login_form_url = "http://84100.com/login.shtml"
-                r = requests.get(login_form_url, headers=headers)
-                sel = etree.HTML(r.content)
-                cookies = dict(r.cookies)
-                code_url = sel.xpath("//img[@id='validateImg']/@src")[0]
-                code_url = 'http://84100.com'+code_url
-                r = requests.get(code_url, headers=headers, cookies=cookies)
-                cookies.update(dict(r.cookies))
-            if flag:
-                accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
-                passwd, _ = accounts[order.source_account]
-                data = {
-                    "loginType": 0,
-                    "backUrl": '',
-                    "mobile": order.source_account,
-                    "password": passwd,
-                    "validateCode": code
-                }
-                r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
-                cookies.update(dict(r.cookies))
-                ret = r.json()
-            if ret.get("flag", '') == '0':
-                rebot = Bus100Rebot.objects.get(telephone=order.source_account)
-                rebot.cookies = cookies
-                rebot.is_active = True
-                rebot.save()
-                if not pay_url:
-                    flow = get_flow(order.crawl_source)
-                    flow.lock_ticket(order)
-                    pay_url = order.pay_url
-        if pay_url:
-            r = requests.get(pay_url, headers=headers, verify=False)
-            cookies = dict(r.cookies)
+        is_login = rebot.test_login_status()
+        if is_login:
+            if order.status == STATUS_LOCK_RETRY:
+                self.lock_ticket(order)
+            if order.status == STATUS_WAITING_ISSUE:
+                headers = {"User-Agent": rebot.user_agent}
+                r = requests.get(order.pay_url, headers=headers, verify=False)
+                return {"flag": "url", "content": order.pay_url}
+        else:
+            login_form_url = "http://84100.com/login.shtml"
+            ua = random.choice(BROWSER_USER_AGENT)
+            headers = {"User-Agent": ua}
+            r = requests.get(login_form_url, headers=headers)
             sel = etree.HTML(r.content)
-            try:
-                paySource = sel.xpath('//input[@id="paySource"]/@value')[0]
-                if paySource == '84100YK':
-                    payment = '10'
-                else:
-                    payment = '5'
-                data = dict(
-                        userIdentifier=sel.xpath('//form[@id="alipayForm"]/input[@name="userIdentifier"]/@value')[0],
-                        orderNo=sel.xpath('//form[@id="alipayForm"]/input[@name="orderNo"]/@value')[0],
-                        couponId=sel.xpath('//form[@id="alipayForm"]/input[@name="couponId"]/@value')[0],
-                        produceType=sel.xpath('//form[@id="alipayForm"]/input[@name="produceType"]/@value')[0],
-                        payment=payment
-                    )
-                info_url = "http://pay.84100.com/payment/payment/gateWayPay.do"
-                r = requests.post(info_url, data=data, headers=headers, cookies=cookies, verify=False)
-                return {"flag": "html", "content": r.content}
-            except:
-                return {"flag": "url", "content": pay_url}
-
-        if ret.get("msg", '') == "验证码不正确" or not flag:
+            cookies = dict(r.cookies)
+            code_url = sel.xpath("//img[@id='validateImg']/@src")[0]
+            code_url = 'http://84100.com'+code_url
+            r = requests.get(code_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
             data = {
                 "cookies": cookies,
                 "headers": headers,
@@ -381,4 +345,3 @@ class Flow(BaseFlow):
             }
             session["bus100_pay_login_info"] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
-
