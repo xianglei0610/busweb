@@ -5,7 +5,6 @@ import traceback
 
 from app.constants import *
 from app import order_log, line_log
-from app.models import Order
 from datetime import datetime as dte
 from tasks import check_order_expire, issued_callback, refresh_issueing_order
 
@@ -26,7 +25,7 @@ class Flow(object):
             expire_time: "2015-11-11 11:11:11",     # 订单过期时间
             total_price: 322，          # 车票价格
         """
-        order = Order.objects.get(order_no=order.order_no)
+        order.reload()
         notify_url = order.locked_return_url
         data = {
             "sys_order_no": order.order_no,
@@ -41,7 +40,7 @@ class Flow(object):
             return
 
         ret = self.do_lock_ticket(order)
-        order = Order.objects.get(order_no=order.order_no)
+        order.reload()
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 再次检查, 防止重复支付
             order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
@@ -107,21 +106,23 @@ class Flow(object):
         """
         raise Exception("Not Implemented")
 
-    def need_refresh_issue(self, order):
+    def need_refresh_issue(self, order, force=False):
         """
         是否有必要刷新出票
         """
+        if force:
+            return True
         if order.status not in (STATUS_ISSUE_ING, STATUS_WAITING_ISSUE):
             return False
         return True
 
-    def refresh_issue(self, order):
+    def refresh_issue(self, order, force=False):
         """
         出票刷新主流程，子类不用重写
         """
         old_status = order.status
-#         if not self.need_refresh_issue(order):
-#             return
+        if not self.need_refresh_issue(order, force=force):
+            return
         order_log.info("[issue-refresh-start] order:%s", order.order_no)
         ret = self.do_refresh_issue(order)
         code = ret["result_code"]
@@ -133,38 +134,40 @@ class Flow(object):
             3: STATUS_GIVE_BACK,
             4: STATUS_ISSUE_ING,
         }
-        if code_status_mapping.get(code, None) == old_status:
+        if code_status_mapping.get(code, "") == old_status:
             return
         if code == 0:
             return
-        elif code == 1:
+        elif code == 1:         # 出票成功
             msg_list = ret["pick_msg_list"]
             msg = msg_list and msg_list[0] or ""
             order_log.info("[issue-refresh-result] order: %s succ. msg:%s, pick_msg: %s",
                             order.order_no,
                             ret["result_msg"],
                             msg)
-            order.modify(
-                    status=STATUS_ISSUE_SUCC,
-                    pick_code_list=ret["pick_code_list"],
-                    pick_msg_list=msg_list)
+            order.modify(status=STATUS_ISSUE_SUCC,
+                         pick_code_list=ret["pick_code_list"],
+                         pick_msg_list=msg_list)
             order.on_issue_success()
             issued_callback.delay(order.order_no)
-        elif code == 2:
+        elif code == 2:         # 出票失败
             order_log.info("[issue-refresh-result] order: %s fail. msg:%s", order.order_no, ret["result_msg"])
             order.modify(status=STATUS_ISSUE_FAIL)
             order.on_issue_fail(ret["result_msg"])
             issued_callback.delay(order.order_no)
-        elif code == 3:
+        elif code == 3:         # 源站已退款
             order_log.info("[issue-refresh-result] order: %s give back. msg:%s", order.order_no, ret["result_msg"])
             order.modify(status=STATUS_GIVE_BACK)
             issued_callback.delay(order.order_no)
             order.on_give_back()
-        elif code == 4:
+        elif code == 4:         # 正在出票
             order_log.info("[issue-refresh-result] order: %s issueing. msg:%s", order.order_no, ret["result_msg"])
             order.modify(status=STATUS_ISSUE_ING)
             refresh_issueing_order.delay(order.order_no)
             order.on_issueing()
+        elif code == 5:         # 超时过期, 进入锁票重试
+            order_log.info("[issue-refresh-result] order: %s expire. msg:%s", order.order_no, ret["result_msg"])
+            self.lock_ticket_retry(order)
         else:
             order_log.error("[issue-refresh-result] order: %s error, 未处理状态 status:%s", order.order_no, code)
 

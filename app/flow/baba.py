@@ -197,7 +197,7 @@ class Flow(BaseFlow):
         state = ret["state"]
         if state == "支付超时作废":
             result_info.update({
-                "result_code": 2,
+                "result_code": 5,
                 "result_msg": state,
             })
         elif state == "已作废":

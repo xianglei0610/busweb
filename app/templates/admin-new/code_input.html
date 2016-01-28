@@ -13,19 +13,13 @@
 <body>
     <div id="btsizebox">
         <div class="regbox_bd">
-            <div class="signup_hd">
-                <h2>选择登陆账号<span>账号登陆不进，直接<a>登陆官网</a></span></h2>
-            </div>
             <div class="signup_box">
               <form method="get" action="{{url_for('admin.order_pay', order_no=order.order_no)}}" id="pay-form">
                     <div class="pub-form reg-form">
                         <div class="fm-li pbot-5">
                             <span class="fm-label">
-                                <label for="txt_userName">我的账号：</label></span>
-                            <select name="levelName" id="levelName" datatype="*" sucmsg=" " class="single-select">
-                              <option value="2">{{order.source_account}}</option>
-                            </select>
-
+                                <label for="txt_userName">我的账号： {{order.source_account}}</label>
+                            </span>
                         </div>
 
                         <div class="fm-li pbot-5">

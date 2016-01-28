@@ -249,7 +249,7 @@ STATUS_MSG = {
     STATUS_ISSUE_SUCC: "出票成功",
     STATUS_GIVE_BACK: "已退款",
     STATUS_ISSUE_ING: "正在出票",
-    STATUS_LOCK_RETRY: "锁票重试",
+    STATUS_LOCK_RETRY: "下单重试",
 }
 
 # 证件类型
