@@ -79,7 +79,7 @@ class Flow(BaseFlow):
                 raw_form[name] = val
 
             submit_data = {
-                "p": raw_form["p"],
+                "p": raw_form.get("p", ""),
                 "sbId": raw_form["sbId"],
                 "stId": raw_form["stId"],
                 "busId": raw_form["busId"],
