@@ -651,6 +651,31 @@ class BabaWebRebot(Rebot):
     }
     crawl_source = SOURCE_BABA
 
+    def clear_riders(self):
+        is_login = self.test_login_status()
+        if not is_login:
+            return
+        rider_url = "http://www.bababus.com/baba/passenger/list.htm"
+        del_url = "http://www.bababus.com/baba/passenger/del.htm"
+        headers = {"User-Agent": self.user_agent}
+        post_headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        cookies = json.loads(rebot.cookies)
+        for i in range(3):          #删前3页
+            r = requests.get(rider_url, headers=headers, cookies=cookies)
+            sel = etree.HTML(r.content)
+            id_lst = sel.xpath("//input[@name='c_passengerId']/@value")
+            if not id_lst:
+                break
+            lst = [
+                "passengerIds=%s" % ",".join(id_lst),
+            ]
+            lst.extend(map(lambda s: "c_passengerId=%s" % s, id_lst))
+            data = "&".join(lst)
+            requests.post(del_url, data=data, headers=post_headers, cookies=cookies)
+
     def on_add_doing_order(self, order):
         rebot_log.info("[baba] %s locked", self.telephone)
         self.modify(is_locked=True)

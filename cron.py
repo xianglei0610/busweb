@@ -18,8 +18,8 @@ from manage import migrate_from_crawl, del_source_people
 from app.email import send_email
 from app.constants import ADMINS, STATUS_WAITING_ISSUE
 from app import setup_app
-from app.models import Order, Bus100Rebot
-from sms import send_msg
+from app.models import Order, Bus100Rebot, BabaWebRebot
+#from sms import send_msg
 from app.constants import sms_phone_list
 
 
@@ -141,6 +141,9 @@ def check_login_status(crawl_source):
 
 def del_people(crawl_source):
     del_source_people(crawl_source)
+    for rebot in BabaWebRebot.objects.all():
+        print rebot.telephone
+        rebot.clear_riders()
 
 
 def main():
@@ -165,4 +168,4 @@ if __name__ == '__main__':
     main()
 #     check_login_status('bus100')
     #bus_crawl('bus100')
-#     del_people('bus100')
+    #del_people('bus100')
