@@ -876,10 +876,8 @@ class CTripRebot(Rebot):
                 self.head = head
                 self.save()
                 driver.quit()
-                print "OK", self.head, self.telephone
                 return "OK"
         driver.quit()
-        print 'fail', self.telephone
         rebot_log.info("%s 登陆失败" % self.telephone)
         return "fail"
 
@@ -935,6 +933,23 @@ class Bus100Rebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
     }
     crawl_source = SOURCE_BUS100
+
+    @classmethod
+    def get_one(cls):
+        now = dte.now()
+        start = now.strftime("%Y-%m-%d")+' 00:00:00'
+        start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
+        all_accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"].keys()
+        used = Order.objects.filter(crawl_source='bus100',
+                                    status=STATUS_ISSUE_SUCC,
+                                    create_date_time__gt=start) \
+                            .item_frequencies("source_account")
+        accounts_list = filter(lambda k: used.get(k, 0)<20, all_accounts)
+        for i in range(100):
+            choose = random.choice(accounts_list)
+            rebot = cls.objects.get(telephone=choose)
+            if rebot.is_active:
+                return  rebot
 
     def test_login_status(self):
         url = "http://www.84100.com/user.shtml"
@@ -1025,7 +1040,6 @@ class Bus100Rebot(Rebot):
 #             if bot.login() == "OK":
 #                 rebot_log.info("%s 登陆成功" % bot.telephone)
             valid_cnt += 1
-        print valid_cnt
         rebot_log.info(">>>> end init 84100 success %d", valid_cnt)
 
     def http_post(self, uri, data, user_agent=None, token=None):

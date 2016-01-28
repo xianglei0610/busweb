@@ -67,7 +67,7 @@ class Flow(object):
                 "total_price": order.order_price,
             })
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-            order_log.info("[lock-result] succ. order: %s", order.order_no)
+            order_log.info("[lock-result] succ. order: %s source_account:%s", order.order_no, order.source_account)
         elif ret["result_code"] == 2:   # 锁票失败,进入锁票重试
             order.modify(source_account=ret["source_account"])
             self.lock_ticket_retry(order)

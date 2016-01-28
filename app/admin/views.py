@@ -175,6 +175,8 @@ def order_pay(order_no):
             return redirect(url_for("admin.src_code_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
         else:
             return redirect(url_for("admin.src_code_input", order_no=order_no))
+    elif flag == "error":
+        return ret["content"]
     return "异常页面 %s" % str(ret)
 
 
