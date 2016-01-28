@@ -9,7 +9,7 @@ from app import celery
 from app.utils import getRedisObj
 from app.email import send_email
 from app.flow import get_flow, get_compatible_flow
-from app.models import Order
+from app.models import Order, AdminUser
 from app import order_log
 from flask import current_app
 
@@ -117,7 +117,7 @@ def check_order_completed(self, username, key, order_no, is_send=False):
 
 
 @celery.task(bind=True, ignore_result=True)
-def async_lock_ticket(self, order_no):
+def async_lock_ticket(self, order_no, retry_seq=1):
     """
     请求源网站锁票 + 锁票成功回调
 
@@ -125,10 +125,24 @@ def async_lock_ticket(self, order_no):
         expire_time: "2015-11-11 11:11:11",     # 订单过期时间
         total_price: 322，          # 车票价格
     """
+    order_log.info("[async_lock_ticket] order:%s retry_seq: %s", order_no, retry_seq)
     order = Order.objects.get(order_no=order_no)
-    flow, new_line = get_compatible_flow(order.line)
-    order.modify(line=new_line)
-    flow.lock_ticket(order)
+    if order.status != STATUS_WAITING_LOCK:
+        return
+    has_kefu_free = False
+    rds = getRedisObj()
+    for kefu in AdminUser.objects.filter(is_switch=1):
+        dealing_cnt = rds.scard('order_list:%s' % kefu.username)
+        if dealing_cnt < 3:
+            has_kefu_free = True
+            break
+
+    if has_kefu_free:       # 有客服闲着, 发起自动锁票
+        flow, new_line = get_compatible_flow(order.line)
+        order.modify(line=new_line)
+        flow.lock_ticket(order)
+    else:                   # 没客服闲着, 延迟锁票
+        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=30, max_retries=120)
 
 
 @celery.task(ignore_result=True)

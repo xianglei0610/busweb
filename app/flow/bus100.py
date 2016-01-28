@@ -285,6 +285,7 @@ class Flow(BaseFlow):
         if is_login:
             if order.status == STATUS_LOCK_RETRY:
                 self.lock_ticket(order)
+
             if order.status == STATUS_WAITING_ISSUE:
                 if not order.pay_url:
                     url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
