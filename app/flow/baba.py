@@ -275,9 +275,7 @@ class Flow(BaseFlow):
 
         if is_login:
             if order.status == STATUS_LOCK_RETRY:
-                from app.flow import get_flow
-                flow = get_flow(order.crawl_source)
-                flow.lock_ticket(order)
+                self.lock_ticket(order)
             return _get_page(rebot)
         else:
             login_form = "http://www.bababus.com/baba/login.htm"
