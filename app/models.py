@@ -662,7 +662,7 @@ class BabaWebRebot(Rebot):
             "User-Agent": self.user_agent,
             "Content-Type": "application/x-www-form-urlencoded",
         }
-        cookies = json.loads(rebot.cookies)
+        cookies = json.loads(self.cookies)
         for i in range(3):          #删前3页
             r = requests.get(rider_url, headers=headers, cookies=cookies)
             sel = etree.HTML(r.content)
