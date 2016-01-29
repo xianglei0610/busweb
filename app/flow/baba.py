@@ -328,16 +328,16 @@ class Flow(BaseFlow):
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
-        line_id_args = {
-            "s_city_name": line.s_city_name,
-            "d_city_name": line.d_city_name,
-            "bus_num": line.bus_num,
-            "crawl_source": line.crawl_source,
-        }
         update_attrs = {}
         for d in res["content"]["busList"]:
             drv_datetime = dte.strptime("%s %s" % (d["leaveDate"], d["leaveTime"]), "%Y-%m-%d %H:%M")
-            line_id_args.update(drv_datetime=drv_datetime)
+            line_id_args = {
+                "s_city_name": line.s_city_name,
+                "d_city_name": line.d_city_name,
+                "bus_num": d["busId"],
+                "crawl_source": line.crawl_source,
+                "drv_datetime": drv_datetime,
+            }
             line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
             try:
                 obj = Line.objects.get(line_id=line_id)
