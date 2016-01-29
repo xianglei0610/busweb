@@ -7,6 +7,7 @@ SOURCE_CTRIP = "ctrip"
 SOURCE_CBD = "cbd"
 SOURCE_JSKY = "jsky"
 SOURCE_BABA = "baba"
+SOURCE_TC = "tongcheng"
 
 SOURCE_INFO = {
     SOURCE_SCQCP: {
@@ -179,7 +180,14 @@ SOURCE_INFO = {
             "15574335669": ("123456", ""),
             "18673582670": ("123456", ""),
         },
-    }
+    },
+    SOURCE_TC: {
+        "name": "同程",
+        "website": "http://www.ly.com/",
+        "accounts": {
+            "15575101324": ("cibRpL0", ''),
+        },
+    },
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
