@@ -21,23 +21,12 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 
 @manager.command
-def deploy(site):
-    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot, CBDRebot, JskyAppRebot, JskyWebRebot
-    if site == "ctrip":
-        CTripRebot.login_all()
-    elif site == "scqcp":
-        ScqcpRebot.login_all()
-    elif site == "bus100":
-        Bus100Rebot.login_all()
-    elif site == "cbd":
-        CBDRebot.login_all()
-    elif site == "jskyapp":
-        JskyAppRebot.login_all()
-    elif site == "jskyweb":
-        JskyWebRebot.login_all()
-    elif site == "babaweb":
-        from app.models import BabaWebRebot
-        BabaWebRebot.login_all()
+def init_account(site):
+    from app.models import get_rebot_class
+    for client in ["web", "wap", "app"]:
+        cls = get_rebot_class(site, client)
+        if cls:
+            cls.login_all()
 
 
 @manager.command

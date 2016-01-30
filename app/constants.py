@@ -1,4 +1,8 @@
 # -*- coding:utf-8 -*-
+# 客户端类型
+CLIENT_WEB = "web"          # pc网站
+CLIENT_WAP = "wap"          # wap网
+CLIENT_APP = "app"          # 移动端
 
 # 爬取来源
 SOURCE_SCQCP = "scqcp"
@@ -187,6 +191,9 @@ SOURCE_INFO = {
         "accounts": {
             "15575101324": ("cibRpL0", ''),
         },
+        "pwd_encode": {
+            "cibRpL0": "d17bc469b36817893ff0cdae06b5422f",
+        }
     },
 }
 
