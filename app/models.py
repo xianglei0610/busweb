@@ -3,7 +3,6 @@ import random
 import requests
 import urllib
 import urllib2
-import re
 import time
 import urlparse
 
@@ -896,10 +895,11 @@ class TCWebRebot(Rebot):
             "pass": pwd_info[self.password],
             "action": "login",
         }
-        header.update({
+        header = {
+            "User-Agent": random.choice(BROWSER_USER_AGENT),
             "Content-Type": "application/x-www-form-urlencoded",
-        })
-        r = requests.post(login_url, data=urllib.urlencode(data), headers=header, cookies=cookies)
+        }
+        r = requests.post(login_url, data=urllib.urlencode(data), headers=header)
         cookies = dict(r.cookies)
         ret = r.json()
         if int(ret["state"]) == 100:    # 登录成功
