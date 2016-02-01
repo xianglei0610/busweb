@@ -112,8 +112,8 @@ class Flow(BaseFlow):
                     "psgTicketType": 1,
                     "psgBabyFlg": 0,
                     "psgInsuranceTypeId": "",       # 保险
-                    "saveToName": "on",
-                    "isSave":1,
+                    "saveToName": "",
+                    "isSave": 0,
                 }
                 encode_list.append(urllib.urlencode(d))
             encode_str = "&".join(encode_list)
