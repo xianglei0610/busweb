@@ -339,17 +339,7 @@ def index():
 @admin.route('/top', methods=['GET'])
 @login_required
 def top_page():
-    key = 'lock_order_list'
-    r = getRedisObj()
-    count = r.zcard(key)
-    sum = count
-    userObjs = AdminUser.objects.filter(is_kefu=1)
-    for userObj in userObjs:
-        username = userObj.username
-        kf_key = 'order_list:%s' % username
-        order_ct = r.scard(kf_key)
-        sum += order_ct
-    return render_template("admin-new/top.html", sum=sum)
+    return render_template("admin-new/top.html")
 
 
 @admin.route('/left', methods=['GET'])
