@@ -3,9 +3,9 @@ import random
 import requests
 import urllib
 import urllib2
-import re
 import time
 import urlparse
+import assign
 
 from app.constants import *
 from datetime import datetime as dte
@@ -15,7 +15,6 @@ from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj
 from app import rebot_log, order_status_log
-
 
 
 class AdminUser(db.Document):
@@ -292,13 +291,10 @@ class Order(db.Document):
         self.kefu_order_status = 1
         self.kefu_updatetime = dte.now()
         self.kefu_username = user_obj.username
-        self.modify(
-                kefu_order_status=1,
-                kefu_updatetime=dte.now(),
-                kefu_username=user_obj.username)
-        r = getRedisObj()
-        key = 'order_list:%s' % user_obj.username
-        r.srem(key, self.order_no)
+        self.modify(kefu_order_status=1,
+                    kefu_updatetime=dte.now(),
+                    kefu_username=user_obj.username)
+        assign.remove_dealing(self, user_obj)
 
     def on_create(self):
         if self.status != STATUS_WAITING_LOCK:
@@ -310,9 +306,6 @@ class Order(db.Document):
             return
         order_status_log.info("[on_lock_fail] order: %s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        r = getRedisObj()
-        r.zrem('lock_order_list', self.order_no)
-
         rebot = self.get_rebot()
         if rebot:
             rebot.remove_doing_order(self)
@@ -322,16 +315,13 @@ class Order(db.Document):
             return
         order_status_log.info("[on_lock_success] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
 
-        r = getRedisObj()
-        r.zadd('lock_order_list', self.order_no, time.time())
+        from tasks import async_refresh_order
+        async_refresh_order.apply_async((self.order_no,), countdown=10)
 
     def on_lock_retry(self):
         if self.status != STATUS_LOCK_RETRY:
             return
         order_status_log.info("[on_lock_retry] order:%s", self.order_no)
-
-        r = getRedisObj()
-        r.zadd('lock_order_list', self.order_no, time.time())
 
     def on_give_back(self, reason=""):
         if self.status != STATUS_GIVE_BACK:

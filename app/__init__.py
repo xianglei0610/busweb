@@ -18,8 +18,10 @@ from raven.contrib.flask import Sentry
 from logging.handlers import TimedRotatingFileHandler
 from logging import Formatter, StreamHandler
 
+
 config_name = "%s_%s" % (os.getenv('FLASK_SERVER') or 'api', os.getenv('FLASK_CONFIG') or 'local')
 config = config_mapping[config_name]
+
 mail = Mail()
 db = MongoEngine()
 celery = Celery(__name__, broker=config.CELERY_BROKER_URL)
@@ -73,7 +75,7 @@ def setup_app():
     server_type = config_name.split("_")[0]
     app = servers[server_type]()
 
-    rset = app.config["REDIS_SETTIGNS"]["SESSION"]
+    rset = app.config["REDIS_SETTIGNS"]["session"]
     r = redis.Redis(host=rset["host"], port=rset["port"], db=rset["db"])
     app.session_interface = RedisSessionInterface(redis=r)
 

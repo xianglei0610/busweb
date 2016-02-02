@@ -19,6 +19,7 @@ class Config:
     CELERY_RESULT_BACKEND = 'redis://localhost:6379/11'
     CELERY_TASK_SERIALIZER = 'pickle'
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+    CELERY_IMPORTS=("tasks")
 
     PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
 
@@ -26,10 +27,20 @@ class Config:
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
     REDIS_SETTIGNS = {
-        "SESSION": {
+        "session": {
             "host": REDIS_HOST,
             "port": REDIS_PORT,
             "db": 9,
+        },
+        "order": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 1,
+        },
+        "default": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 0,
         },
     }
 
@@ -86,10 +97,20 @@ class ApiProdConfig(Config):
     REDIS_HOST = "10.51.9.34"
     REDIS_PORT = 6379
     REDIS_SETTIGNS = {
-        "SESSION": {
+        "session": {
             "host": REDIS_HOST,
             "port": REDIS_PORT,
             "db": 9,
+        },
+        "order": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 1,
+        },
+        "default": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 0,
         },
     }
 

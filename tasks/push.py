@@ -70,7 +70,10 @@ def TransmissionTemplateDemo(order_no):
 
 @celery.task(bind=True, ignore_result=True)
 def push_kefu_order(self, username, order_no):
-    pushobj = PushUserList.objects.get(username=username)
+    try:
+        pushobj = PushUserList.objects.get(username=username)
+    except PushUserList.DoesNotExist:
+        return
     order = Order.objects.get(order_no=order_no)
     push = IGeTui(HOST, AppKey, MasterSecret)
     # 消息模版：
@@ -95,13 +98,7 @@ def push_kefu_order(self, username, order_no):
     target.clientId = pushobj.push_id
 
     try:
-        ret = push.pushMessageToSingle(message, target)
-        print ret
+        push.pushMessageToSingle(message, target)
     except RequestException, e:
         requstId = e.getRequestId()
-        ret = push.pushMessageToSingle(message, target, requstId)
-        print ret
-
-
-
-
+        push.pushMessageToSingle(message, target, requstId)

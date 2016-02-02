@@ -6,7 +6,7 @@ import traceback
 from app.constants import *
 from app import order_log, line_log
 from datetime import datetime as dte
-from tasks import check_order_expire, issued_callback, refresh_issueing_order
+from tasks import issued_callback
 
 
 class Flow(object):
@@ -46,7 +46,6 @@ class Flow(object):
             order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
             return
 
-        now = dte.now()
         if ret["result_code"] == 1:   # 锁票成功
             order.modify(status=STATUS_WAITING_ISSUE,
                          lock_info=ret["lock_info"],
@@ -57,8 +56,6 @@ class Flow(object):
                          pay_money=ret["pay_money"],
                          )
             order.on_lock_success()
-            seconds_left = max(0, (ret["expire_datetime"]-now).total_seconds())
-            check_order_expire.apply_async((order.order_no,), countdown=seconds_left+5)
 
             data.update({
                 "raw_order_no": order.raw_order_no,
@@ -163,7 +160,6 @@ class Flow(object):
         elif code == 4:         # 正在出票
             order_log.info("[issue-refresh-result] order: %s issueing. msg:%s", order.order_no, ret["result_msg"])
             order.modify(status=STATUS_ISSUE_ING)
-            refresh_issueing_order.delay(order.order_no)
             order.on_issueing()
         elif code == 5:         # 超时过期, 进入锁票重试
             order_log.info("[issue-refresh-result] order: %s expire. msg:%s", order.order_no, ret["result_msg"])
