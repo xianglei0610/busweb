@@ -1,4 +1,7 @@
 # -*- coding:utf-8 -*-
+import os
+import importlib
+
 from app.utils import weight_choice
 from app.constants import *
 
@@ -6,18 +9,20 @@ flow_list = {}
 
 
 def get_flow(site=""):
-    if site not in flow_list:
-        import bus100
-        import scqcp
-        import ctrip
-        import cbd
-        import jsky
-        import baba
-        for mod in [bus100, scqcp, ctrip, cbd, jsky, baba]:
-            cls = mod.Flow
-            if cls.name == site:
-                flow_list[cls.name] = cls()
-                break
+    cur_dir = os.path.abspath(os.path.dirname(__file__))
+    for par, dirs, files in os.walk(cur_dir):
+        for f in files:
+            if not f.endswith(".py"):
+                continue
+            if f in ["base.py", "__init__.py"]:
+                continue
+            print f[:-3]
+        #mod = __import__(f[:-3])
+        mod=importlib.import_module(f[:-3])
+        cls = mod.Flow
+        if cls.name == site:
+            flow_list[cls.name] = cls()
+            break
     return flow_list[site]
 
 

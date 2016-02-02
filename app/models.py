@@ -886,7 +886,7 @@ class TCWebRebot(Rebot):
     crawl_source = SOURCE_TC
     client_type = CLIENT_WEB
 
-    def login(self):
+    def login(self, headers=None, cookies={}, valid_code=""):
         login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
         pwd_info = SOURCE_INFO[self.crawl_source]["pwd_encode"]
         data = {
@@ -894,13 +894,18 @@ class TCWebRebot(Rebot):
             "name": self.telephone,
             "pass": pwd_info[self.password],
             "action": "login",
+            "validCode": valid_code,
         }
-        header = {
-            "User-Agent": random.choice(BROWSER_USER_AGENT),
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
-        r = requests.post(login_url, data=urllib.urlencode(data), headers=header)
-        cookies = dict(r.cookies)
+        if not headers:
+            headers = {
+                "User-Agent": random.choice(BROWSER_USER_AGENT),
+            }
+        headers.update({"Content-Type": "application/x-www-form-urlencoded"})
+        r = requests.post(login_url,
+                          data=urllib.urlencode(data),
+                          headers=headers,
+                          cookies=cookies)
+        cookies.update(dict(r.cookies))
         ret = r.json()
         if int(ret["state"]) == 100:    # 登录成功
             self.last_login_time = dte.now()
