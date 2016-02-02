@@ -304,6 +304,8 @@ CURRENT_ACCOUNT = "current_account"
 RK_ISSUE_FAIL_COUNT = "%s_issue_fail"
 RK_ISSUEING_COUNT = "issueing_count"
 
+RK_WATING_LOCK_ORDERS = "wating_lock_orders"       # 等待下单的订单
+RK_DEALING_ORDERS = "dealing_orders:%s"            # 客服正在处理的订单
 
 # 短信模版
 

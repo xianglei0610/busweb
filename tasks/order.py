@@ -15,60 +15,32 @@ from flask import current_app
 
 
 @celery.task(bind=True, ignore_result=True)
-def check_order_expire(self, order_no):
+def async_refresh_order(self, order_no, retry_seq=1):
     """
-    定时检查订单过期情况
+    定时刷新订单状态
     """
-    order_log.info("[check_order_expire] order:%s", order_no)
+    order_log.info("[async_refresh_order] order:%s retry_seq: %s", order_no, retry_seq)
     order = Order.objects.get(order_no=order_no)
-    if order.status != STATUS_WAITING_ISSUE:
+    status = order.status
+    if status not in [STATUS_ISSUE_ING, STATUS_WAITING_ISSUE]:
         return
     flow = get_flow(order.crawl_source)
     try:
         flow.refresh_issue(order)
     finally:
-        if order.status == STATUS_WAITING_ISSUE:
-            self.retry(countdown=30, max_retries=30)
-
-
-@celery.task(bind=True, ignore_result=True)
-def refresh_kefu_order(self, username, order_no):
-    """
-    刷新客服订单状态
-    """
-    order_log.info("[refresh_kefu_order] order:%s, kefu:%s", order_no, username)
-    order = Order.objects.get(order_no=order_no)
-    if order.status not in (STATUS_WAITING_ISSUE, STATUS_ISSUE_ING):
-        return
-    flow = get_flow(order.crawl_source)
-    try:
-        flow.refresh_issue(order)
-    finally:
-        if order.status == STATUS_WAITING_ISSUE:
-            self.retry(countdown=3+random.random()*10%3, max_retries=200)
-
-
-@celery.task(bind=True, ignore_result=True)
-def refresh_issueing_order(self, order_no, retry_seq=1):
-    """
-    刷新正在出票订单状态
-    """
-    order_log.info("[refresh_issueing_order] order:%s retry_seq: %s", order_no, retry_seq)
-    order = Order.objects.get(order_no=order_no)
-    if order.status != STATUS_ISSUE_ING:
-        return
-    flow = get_flow(order.crawl_source)
-    try:
-        flow.refresh_issue(order)
-    finally:
-        if order.status == STATUS_ISSUE_ING:
-            if retry_seq < 30:      # 前40次,每3~5s刷新一次
+        if status == STATUS_WAITING_ISSUE:
+            if retry_seq < 100:
                 seconds = random.randint(3, 5)
-            elif retry_seq < 100:   # 前40~100次
-                seconds = random.randint(30, 40)
+            elif retry_seq < 200:
+                seconds = random.randint(10, 20)
             else:
                 seconds = random.randint(60, 90)
-            self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=seconds, max_retries=60*12)
+        else:
+            if retry_seq < 100:
+                seconds = random.randint(10, 15)
+            else:
+                seconds = random.randint(90, 120)
+        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=seconds, max_retries=60*12)
 
 
 @celery.task(bind=True, ignore_result=True)
@@ -129,20 +101,9 @@ def async_lock_ticket(self, order_no, retry_seq=1):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_LOCK:
         return
-    has_kefu_free = False
-    rds = getRedisObj()
-    for kefu in AdminUser.objects.filter(is_switch=1):
-        dealing_cnt = rds.scard('order_list:%s' % kefu.username)
-        if dealing_cnt < 3:
-            has_kefu_free = True
-            break
-
-    if has_kefu_free:       # 有客服闲着, 发起自动锁票
-        flow, new_line = get_compatible_flow(order.line)
-        order.modify(line=new_line)
-        flow.lock_ticket(order)
-    else:                   # 没客服闲着, 延迟锁票
-        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=30, max_retries=120)
+    flow, new_line = get_compatible_flow(order.line)
+    order.modify(line=new_line)
+    flow.lock_ticket(order)
 
 
 @celery.task(ignore_result=True)
