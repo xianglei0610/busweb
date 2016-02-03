@@ -17,12 +17,12 @@ def get_flow(site=""):
             if f in ["base.py", "__init__.py"]:
                 continue
             print f[:-3]
-        #mod = __import__(f[:-3])
-        mod=importlib.import_module(f[:-3])
-        cls = mod.Flow
-        if cls.name == site:
-            flow_list[cls.name] = cls()
-            break
+            #mod = __import__(f[:-3])
+            mod=importlib.import_module("app.flow.%s" % f[:-3])
+            cls = mod.Flow
+            if cls.name == site:
+                flow_list[cls.name] = cls()
+                break
     return flow_list[site]
 
 

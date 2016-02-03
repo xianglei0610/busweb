@@ -238,8 +238,6 @@ class Order(db.Document):
 
     # 下单时使用的源网站账号
     source_account = db.StringField()
-    # 下单所使用的源站客户端, pcweb or wap or app
-    source_client = db.StringField()
 
     kefu_username = db.StringField()
     kefu_order_status = db.IntField()   # 1表示已处理
@@ -276,8 +274,15 @@ class Order(db.Document):
         """
         获取用于锁票的rebot
         """
-        cls = get_rebot_class(self.crawl_source, self.source_client)
-        return cls.objects.get(telephone=self.source_account)
+        if not self.source_account:
+            return None
+        cls_lst = get_rebot_class(self.crawl_source)
+        rebot_cls = None
+        for cls in cls_lst:
+            if cls.is_for_lock:
+                rebot_cls = cls
+                break
+        return rebot_cls.objects.get(telephone=self.source_account)
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
@@ -431,6 +436,7 @@ class Rebot(db.Document):
     }
 
     crawl_source = ""
+    is_for_lock = False         # 是否为用于发起锁票的账号
 
     @classmethod
     def login_all(cls):
@@ -536,7 +542,7 @@ class ScqcpRebot(Rebot):
         "collection": "scqcp_rebot",
     }
     crawl_source = SOURCE_SCQCP
-    client_type = CLIENT_APP
+    is_for_lock = True
 
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)
@@ -598,7 +604,7 @@ class CBDRebot(Rebot):
         "collection": "cbd_rebot",
     }
     crawl_source = SOURCE_CBD
-    client_type = CLIENT_WAP
+    is_for_lock = True
 
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
@@ -634,7 +640,7 @@ class BabaWebRebot(Rebot):
         "collection": "babaweb_rebot",
     }
     crawl_source = SOURCE_BABA
-    client_type = CLIENT_WEB
+    is_for_lock = True
 
     def clear_riders(self):
         is_login = self.test_login_status()
@@ -702,7 +708,6 @@ class JskyWebRebot(Rebot):
         "collection": "jskyweb_rebot",
     }
     crawl_source = SOURCE_JSKY
-    client_type = CLIENT_WEB
 
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
@@ -739,7 +744,7 @@ class JskyAppRebot(Rebot):
         "collection": "jskyapp_rebot",
     }
     crawl_source = SOURCE_JSKY
-    client_type = CLIENT_APP
+    is_for_lock = True
 
     def post_data_templ(self, service_name, body):
         stime = str(int(time.time()*1000))
@@ -810,7 +815,7 @@ class CTripRebot(Rebot):
         "collection": "ctrip_rebot",
     }
     crawl_source = SOURCE_CTRIP
-    client_type = CLIENT_WEB
+    is_for_lock = True
 
     def login(self):
         from selenium import webdriver
@@ -868,14 +873,15 @@ class CTripRebot(Rebot):
 
 class TCWebRebot(Rebot):
     user_agent = db.StringField()
-    cookies = db.StringField()
+    cookies = db.StringField(default="{}")
+    user_id = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
         "collection": "tc_rebot",
     }
     crawl_source = SOURCE_TC
-    client_type = CLIENT_WEB
+    is_for_lock = True
 
     def login(self, headers=None, cookies={}, valid_code=""):
         login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
@@ -900,15 +906,20 @@ class TCWebRebot(Rebot):
         ret = r.json()
         if int(ret["state"]) == 100:    # 登录成功
             self.last_login_time = dte.now()
-            self.user_agent = ua
+            self.user_agent = headers["User-Agent"]
             self.cookies = json.dumps(cookies)
+            for s in cookies["us"].split("&"):
+                k,v = s.split("=")
+                if k == "userid":
+                    self.user_id = v
+                    break
             self.save()
             rebot_log.info("登陆成功 %s %s", self.crawl_source, self.telephone)
             return "OK"
         else:
             self.modify(is_active=True)
             rebot_log.error("登陆失败 %s %s, %s", self.crawl_source, self.telephone, str(ret))
-        return "fail"
+            return "fail"
 
     def check_login_by_resp(self, resp):
         result = urlparse.urlparse(resp.url)
@@ -935,7 +946,7 @@ class Bus100Rebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
     }
     crawl_source = SOURCE_BUS100
-    client_type = CLIENT_WEB
+    is_for_lock = True
 
     @classmethod
     def get_one(cls):
@@ -1148,12 +1159,12 @@ if not "_rebot_class" in globals():
         if name == "Rebot":
             continue
         cls = globals()[name]
-        source, client = cls.crawl_source, cls.client_type
+        source = cls.crawl_source
         if not source:
             continue
         if source not in _rebot_class:
-            _rebot_class[source] = {}
-        _rebot_class[source][client] = cls
+            _rebot_class[source] = []
+        _rebot_class[source].append(cls)
 
-def get_rebot_class(source, client):
-    return _rebot_class.get(source, {}).get(client, None)
+def get_rebot_class(source):
+    return _rebot_class.get(source, {})

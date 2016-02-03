@@ -13,6 +13,7 @@ from app.models import Line, TCWebRebot, Order
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
+from app import order_log
 
 
 class Flow(BaseFlow):
@@ -48,19 +49,18 @@ class Flow(BaseFlow):
 
 
             # 构造表单参数
-            cookies = json.loads(rebot.cookies)
             riders = []
             for r in order.riders:
                 riders.append({
-                    "name": r["name"],
+                    "name": unicode(r["name"]),
                     "IDType": "1",
                     "IDCard": r["id_number"],
                     "passengersType": "1",
                     "IsLinker": False,
                 })
             data = {
-                "MemberId": cookies["us"],
-                "TotalAmount": order.order_price,
+                "MemberId": rebot.user_id,
+                "TotalAmount": line.real_price()*order.ticket_amount,
                 "InsuranceId": "",
                 "InsuranceAmount": 0,
                 "TicketsInfo": [
@@ -91,8 +91,8 @@ class Flow(BaseFlow):
             }
             ret = self.send_lock_request(order, rebot, data)
             ret = ret["response"]
-            desc = ret["body"]["RspCode_0000"]
-            if ret["header"]["rspDesc"] == "0000":
+            desc = ret["header"]["rspDesc"]
+            if ret["header"]["rspCode"] == "0000":
                 expire_time = dte.now()+datetime.timedelta(seconds=20*60)
                 lock_result.update({
                     "result_code": 1,
@@ -127,7 +127,9 @@ class Flow(BaseFlow):
         resp = requests.post(submit_url,
                              data=json.dumps(data),
                              headers=headers,
-                             cookies=cookies)
+                             cookies=cookies,
+                             proxies={"http": "http://192.168.1.99:8888"},
+                             )
         ret = resp.json()
         return ret
 
@@ -139,9 +141,10 @@ class Flow(BaseFlow):
         headers = {"User-Agent": rebot.user_agent}
         cookies = json.loads(rebot.cookies)
         r = requests.get(url, headers=headers, cookies=cookies)
+        order_log.debug("[query_order_no] order:%s %s", order.order_no, r.content)
         res = r.json()
         line = order.line
-        for info in res["OrderDetailList"]:
+        for info in res["ReturnValue"]["OrderDetailList"]:
             order_no = info["SerialId"]
             bus_num = info["CoachNo"]
             if bus_num != line.bus_num:
@@ -170,13 +173,13 @@ class Flow(BaseFlow):
         cookies = json.loads(rebot.cookies)
         r = requests.get(detail_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
-
+        order_log.debug("[send_order_request] raw_order:%s %s", raw_order_no, r.content)
         state = soup.select(".paystate")[0].get_text().strip()
         sdate = soup.select(".list01_info table")[0].findAll("tr")[2].get_text().strip()
         drv_datetime = dte.strptime(sdate, "%Y-%m-%d %H:%M:%S")
         contact_lst = soup.select(".list01_info table")[3].select("td")
-        contact_name = contact_lst[0].lstrip("姓名：").strip()
-        contact_phone = contact_lst[1].lstrip("手机：").strip()
+        contact_name = contact_lst[0].get_text().lstrip("姓名：").strip()
+        contact_phone = contact_lst[1].get_text().lstrip("手机：").strip()
 
         return {
             "state": state,
@@ -200,40 +203,13 @@ class Flow(BaseFlow):
         rebot = TCWebRebot.objects.get(telephone=order.source_account)
         ret = self.send_order_request(rebot, order=order)
         state = ret["state"]
-        if state == "支付超时作废":
+        if state == "出票中":
             result_info.update({
-                "result_code": 5,
+                "result_code": 4,
                 "result_msg": state,
             })
-        elif state == "已作废":
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
-        elif state=="出票异常":
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
-        elif state=="购票成功":
-            no, code, site = ret["pick_no"], ret["pick_code"], ret["pick_site"]
-            dx_info = {
-                "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "start": order.line.s_sta_name,
-                "end": order.line.d_sta_name,
-                "code": code,
-                "no": no,
-                "site": site,
-            }
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_BABA]
-            code_list = ["%s|%s" % (no, code)]
-            msg_list = [dx_tmpl % dx_info]
-            result_info.update({
-                "result_code": 1,
-                "result_msg": state,
-                "pick_code_list": code_list,
-                "pick_msg_list": msg_list,
-            })
+        elif state=="出票成功":
+            pass
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
