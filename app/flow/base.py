@@ -180,7 +180,7 @@ class Flow(object):
         """
         raise Exception("Not Implemented")
 
-    def is_need_refresh(self, line, force=False):
+    def need_refresh_line(self, line, force=False):
         """
         检查线路是否需要刷新, 用来控制不要太过于频繁刷新
         """
@@ -201,7 +201,7 @@ class Flow(object):
         线路信息刷新主流程, 不用子类重写
         """
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-        if not self.is_need_refresh(line, force=force):
+        if not self.need_refresh_line(line, force=force):
             line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
             return
         ret = self.do_refresh_line(line)
@@ -221,7 +221,7 @@ class Flow(object):
         Returns:
         {
             "result_msg": "",
-            "update_attrs":{    # 要修改的model属性
+            "update_attrs":{    # 要修改的Document属性
                 "left_tickets": 1,
                 "fee": 0,
                 ....

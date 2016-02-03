@@ -265,27 +265,24 @@ class Order(db.Document):
 
     @property
     def source_account_pass(self):
-        accounts = SOURCE_INFO.get(self.crawl_source, {}).get("accounts", {})
-        pass_info = accounts.get(self.source_account, [])
-        if not pass_info:
-            return ""
-        return pass_info[0]
+        rebot = self.get_lock_rebot()
+        if rebot:
+            return rebot.password
+        return ""
 
-    def get_rebot(self, type="app"):  # type: app or wap or web
-        if self.crawl_source == "scqcp":
-            if type == "app":
-                rebot = ScqcpRebot.objects.get(telephone=self.source_account)
-                return rebot
-        elif self.crawl_source == "ctrip":
-            rebot = CTripRebot.objects.get(telephone=self.source_account)
-            return rebot
-        elif self.crawl_source == "cbd":
-            rebot = CBDRebot.objects.get(telephone=self.source_account)
-            return rebot
-        elif self.crawl_source == "baba":
-            rebot = BabaWebRebot.objects.get(telephone=self.source_account)
-            return rebot
-        return None
+    def get_lock_rebot(self):
+        """
+        获取用于锁票的rebot
+        """
+        if not self.source_account:
+            return None
+        cls_lst = get_rebot_class(self.crawl_source)
+        rebot_cls = None
+        for cls in cls_lst:
+            if cls.is_for_lock:
+                rebot_cls = cls
+                break
+        return rebot_cls.objects.get(telephone=self.source_account)
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
@@ -306,7 +303,7 @@ class Order(db.Document):
             return
         order_status_log.info("[on_lock_fail] order: %s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -328,7 +325,7 @@ class Order(db.Document):
             return
         order_status_log.info("[on_give_back] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -341,7 +338,7 @@ class Order(db.Document):
             return
         order_status_log.info("[on_issue_fail] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -358,7 +355,7 @@ class Order(db.Document):
             return
         order_status_log.info("[on_issueing] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -377,7 +374,7 @@ class Order(db.Document):
         key = RK_ISSUEING_COUNT
         r.delete(key)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -439,6 +436,7 @@ class Rebot(db.Document):
     }
 
     crawl_source = ""
+    is_for_lock = False         # 是否为用于发起锁票的账号
 
     @classmethod
     def login_all(cls):
@@ -520,11 +518,11 @@ class Rebot(db.Document):
     def on_remove_doing_order(self, order):
         pass
 
-    def valid(self):
+    def test_login_status(self):
         """
-        验证此账号是否有效
+        验证此账号是否已经登录
         """
-        return True
+        raise Exception("Not Implemented")
 
     def login(self):
         """
@@ -544,6 +542,7 @@ class ScqcpRebot(Rebot):
         "collection": "scqcp_rebot",
     }
     crawl_source = SOURCE_SCQCP
+    is_for_lock = True
 
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)
@@ -605,7 +604,7 @@ class CBDRebot(Rebot):
         "collection": "cbd_rebot",
     }
     crawl_source = SOURCE_CBD
-
+    is_for_lock = True
 
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
@@ -613,6 +612,7 @@ class CBDRebot(Rebot):
         data = {
             "MobileNo": self.telephone,
             "Password": self.password,
+            "TokenId": "eltdiqrzcvdijpyybpxxgn42",
         }
         header = {
             "User-Agent": ua,
@@ -640,6 +640,7 @@ class BabaWebRebot(Rebot):
         "collection": "babaweb_rebot",
     }
     crawl_source = SOURCE_BABA
+    is_for_lock = True
 
     def clear_riders(self):
         is_login = self.test_login_status()
@@ -708,7 +709,6 @@ class JskyWebRebot(Rebot):
     }
     crawl_source = SOURCE_JSKY
 
-
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
         login_url = "https://www.jskylwsp.com/Account/LoginIn"
@@ -744,6 +744,7 @@ class JskyAppRebot(Rebot):
         "collection": "jskyapp_rebot",
     }
     crawl_source = SOURCE_JSKY
+    is_for_lock = True
 
     def post_data_templ(self, service_name, body):
         stime = str(int(time.time()*1000))
@@ -813,44 +814,8 @@ class CTripRebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
         "collection": "ctrip_rebot",
     }
-
-    #@classmethod
-    #def get_one(cls):
-    #    r = getRedisObj()
-
-    #    def _check_current():
-    #        current = r.hget(CURRENT_ACCOUNT, "ctrip")
-    #        if current:
-    #            used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % current)
-    #            if not used or (used and int(used) < 20):
-    #                r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % current, int(used)+1)
-    #                return cls.objects.get(telephone=current)
-    #        return None
-
-    #    def _choose_new():
-    #        ids = []
-    #        for obj in cls.objects:
-    #            used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone)
-    #            ids.append(obj.telephone)
-    #            if used and int(used) >= 20:
-    #                continue
-    #            r.hset(CURRENT_ACCOUNT, "ctrip", obj.telephone)
-    #            r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone, 1)
-    #            return obj, ids
-    #        return None, []
-
-    #    obj = _check_current()
-    #    if obj:
-    #        return obj
-
-    #    obj, ids = _choose_new()
-    #    if obj:
-    #        return obj
-
-    #    r.hdel(CURRENT_ACCOUNT, "ctrip")
-    #    map(lambda k: r.hdel(ACCOUNT_ORDER_COUNT, "ctrip%s" % k), ids)
-    #    new, _ = _choose_new()
-    #    return new
+    crawl_source = SOURCE_CTRIP
+    is_for_lock = True
 
     def login(self):
         from selenium import webdriver
@@ -896,37 +861,6 @@ class CTripRebot(Rebot):
         rebot_log.info("%s 登陆失败" % self.telephone)
         return "fail"
 
-    @classmethod
-    def login_all(cls):
-        # 登陆所有预设账号
-        rebot_log.info(">>>> start to login ctrip.com:")
-        valid_cnt = 0
-        has_checked = {}
-        accounts = SOURCE_INFO[SOURCE_CTRIP]["accounts"]
-        for bot in cls.objects:
-            has_checked[bot.telephone] = 1
-            if bot.telephone not in accounts:
-                bot.modify(is_active=False)
-                continue
-            pwd, _ = accounts[bot.telephone]
-            bot.modify(password=pwd)
-            if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-
-        for tele, (pwd, openid) in accounts.items():
-            if tele in has_checked:
-                continue
-            bot = cls(is_active=False,
-                      is_locked=False,
-                      telephone=tele,
-                      password=pwd,)
-            bot.save()
-            if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-        rebot_log.info(">>>> end login ctrip.com, success %d", valid_cnt)
-
     def http_post(self, url, data):
         request = urllib2.Request(url)
         request.add_header('User-Agent', self.user_agent)
@@ -935,6 +869,70 @@ class CTripRebot(Rebot):
         response = urllib2.urlopen(request, qstr, timeout=30)
         ret = json.loads(response.read())
         return ret
+
+
+class TCWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    user_id = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "tc_rebot",
+    }
+    crawl_source = SOURCE_TC
+    is_for_lock = True
+
+    def login(self, headers=None, cookies={}, valid_code=""):
+        login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
+        pwd_info = SOURCE_INFO[self.crawl_source]["pwd_encode"]
+        data = {
+            "remember":30,
+            "name": self.telephone,
+            "pass": pwd_info[self.password],
+            "action": "login",
+            "validCode": valid_code,
+        }
+        if not headers:
+            headers = {
+                "User-Agent": random.choice(BROWSER_USER_AGENT),
+            }
+        headers.update({"Content-Type": "application/x-www-form-urlencoded"})
+        r = requests.post(login_url,
+                          data=urllib.urlencode(data),
+                          headers=headers,
+                          cookies=cookies)
+        cookies.update(dict(r.cookies))
+        ret = r.json()
+        if int(ret["state"]) == 100:    # 登录成功
+            self.last_login_time = dte.now()
+            self.user_agent = headers["User-Agent"]
+            self.cookies = json.dumps(cookies)
+            for s in cookies["us"].split("&"):
+                k,v = s.split("=")
+                if k == "userid":
+                    self.user_id = v
+                    break
+            self.save()
+            rebot_log.info("登陆成功 %s %s", self.crawl_source, self.telephone)
+            return "OK"
+        else:
+            self.modify(is_active=True)
+            rebot_log.error("登陆失败 %s %s, %s", self.crawl_source, self.telephone, str(ret))
+            return "fail"
+
+    def check_login_by_resp(self, resp):
+        result = urlparse.urlparse(resp.url)
+        if result.netloc == u"passport.ly.com":
+            return 0
+        return 1
+
+    def test_login_status(self):
+        user_url = "http://member.ly.com/Member/MemberInfomation.aspx"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = requests.get(user_url, headers=headers, cookies=cookies)
+        return self.check_login_by_resp(resp)
 
 
 class Bus100Rebot(Rebot):
@@ -948,6 +946,7 @@ class Bus100Rebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
     }
     crawl_source = SOURCE_BUS100
+    is_for_lock = True
 
     @classmethod
     def get_one(cls):
@@ -1153,3 +1152,19 @@ class Bus100Rebot(Rebot):
             if nextPage > pageNo:
                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
                 self.recrawl_func(url, payload)
+
+if not "_rebot_class" in globals():
+    _rebot_class = {}
+    for name in Rebot._subclasses:
+        if name == "Rebot":
+            continue
+        cls = globals()[name]
+        source = cls.crawl_source
+        if not source:
+            continue
+        if source not in _rebot_class:
+            _rebot_class[source] = []
+        _rebot_class[source].append(cls)
+
+def get_rebot_class(source):
+    return _rebot_class.get(source, {})
