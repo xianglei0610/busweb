@@ -206,16 +206,22 @@ class Order(db.Document):
 
     # 车票信息
     line = db.ReferenceField(Line)
-
-    seat_no_list = db.ListField(db.StringField(max_length=10))
     ticket_price = db.FloatField()          # 单张车票价格
     ticket_amount = db.IntField()
     ticket_fee = db.FloatField()            # 单张车票手续费
-    discount = db.FloatField(default=0)     # 单张车票优惠金额
+    drv_datetime = db.DateTimeField()       # DateTime类型的开车时间
+    bus_num = db.StringField()              # 班次
+    starting_name = db.StringField()        # 出发地
+    destination_name = db.StringField()     # 目的地
 
     # 支付信息
-    pay_money = db.FloatField()     # 实际要支付的金额
+    pay_trade_no = db.StringField() # 支付交易号
+    pay_money = db.FloatField()     # 实际支付的金额
     pay_url = db.StringField()      # 支付链接
+    pay_status = db.IntField(default=PAY_STATUS_NONE)   # 支付状态
+    pay_channel = db.StringField()  # 支付渠道, wy-网银 wx-微信 alipay-支付宝
+    pay_account = db.StringField()  # 支付账号
+    refund_money = db.FloatField()   # 退款金额
 
     # 乘客和联系人信息
     # 包含字段: name, telephone, id_type,id_number,age_level
@@ -228,25 +234,21 @@ class Order(db.Document):
 
     # 取票信息
     pick_code_list = db.ListField(db.StringField(max_length=30))     # 取票密码
-    pick_msg_list = db.ListField(db.StringField(max_length=300))      # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
+    pick_msg_list = db.ListField(db.StringField(max_length=300))     # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
 
-    # 其他
-    crawl_source = db.StringField()     # 源网站
-    extra_info = db.DictField()         # 额外信息
+    # 回调地址
     locked_return_url = db.URLField()   # 锁票成功回调
     issued_return_url = db.URLField()   # 出票成功回调
 
-    # 下单时使用的源网站账号
+    # 源站账号
     source_account = db.StringField()
+    crawl_source = db.StringField()     # 源网站
+    extra_info = db.DictField()         # 额外信息
 
+    # 代购人员信息
     kefu_username = db.StringField()
     kefu_order_status = db.IntField()   # 1表示已处理
     kefu_updatetime = db.DateTimeField()
-
-    drv_datetime = db.DateTimeField()         # DateTime类型的开车时间
-    bus_num = db.StringField()       #班次
-    starting_name = db.StringField()
-    destination_name = db.StringField()
 
 
     meta = {

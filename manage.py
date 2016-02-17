@@ -133,6 +133,12 @@ def clear_expire_line():
     app.logger.info("%s line deleted", cnt)
 
 
+@manager.command
+def add_pay_record(filename):
+    from pay import import_alipay_record
+    import_alipay_record(filename)
+
+
 @manager.option('-s', '--site', dest='site', default='')
 @manager.option('-p', '--province_name', dest='province_name',default='')
 def sync_open_city(site, province_name):

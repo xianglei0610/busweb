@@ -367,6 +367,9 @@ def all_order():
                 query.update(source_account=source_account)
     if status:
         query.update(status=int(status))
+    pay_status = request.args.get("pay_status", "")
+    if pay_status:
+        query.update(pay_status=int(pay_status))
 
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
@@ -418,6 +421,7 @@ def all_order():
         return render_template('admin-new/allticket_order.html',
                                page=parse_page_data(qs),
                                status_msg=STATUS_MSG,
+                               pay_status_msg = PAY_STATUS_MSG,
                                source_info=SOURCE_INFO,
                                condition=request.args,
                                stat=stat,
@@ -461,6 +465,7 @@ def detail_order(order_no):
                             order=order,
                             status_msg=STATUS_MSG,
                             source_info=SOURCE_INFO,
+                            pay_status_msg=PAY_STATUS_MSG,
                            )
 
 

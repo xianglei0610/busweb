@@ -102,7 +102,33 @@
             <td>￥{{order.ticket_fee}}</td>
             <td>￥{{(order.ticket_price+order.ticket_fee)*order.ticket_amount}}</td>
             <td><label class="f14 yellow">￥{{(order.ticket_price+order.ticket_fee)*order.ticket_amount}}</label></td>
-          </tr>          
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+     <div class="h15"></div>
+     <!--支付信息-->
+     <div>
+     <div class="tableh1"><span>支付信息</span></div>
+     <table class="tablelist">
+        <thead>
+          <tr>
+            <th>支付状态</th>
+            <th>支付账号</th>
+            <th>支付金额</th>
+            <th>退款金额</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="td_c">
+            <td>
+                {{pay_status_msg[order.pay_status] or "未知"}}
+            </td>
+            <td>{{order.pay_account}}</td>
+            <td>￥{{order.pay_money}}</td>
+            <td>￥{{order.refund_money}}</td>
+          </tr>
         </tbody>
       </table>
       </div>
