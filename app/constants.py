@@ -267,6 +267,20 @@ STATUS_MSG = {
     STATUS_LOCK_RETRY: "下单重试",
 }
 
+
+# 支付状态
+PAY_STATUS_NONE = 0          # 未知
+PAY_STATUS_UNPAID = 1        # 未支付
+PAY_STATUS_PAID = 2          # 已支付
+PAY_STATUS_REFUND = 3        # 已退款
+
+PAY_STATUS_MSG = {
+    PAY_STATUS_UNPAID: "未支付",
+    PAY_STATUS_NONE: "未知",
+    PAY_STATUS_PAID: "已支付",
+    PAY_STATUS_REFUND: "已退款",
+}
+
 # 证件类型
 IDTYPE_IDCARD = 1   # 身份证
 
