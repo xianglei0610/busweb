@@ -47,6 +47,7 @@ def dealing_size(user):
     key = RK_DEALING_ORDERS % user.username
     return rds.scard(key)
 
+
 def dealing_orders(user):
     rds = get_redis("order")
     key = RK_DEALING_ORDERS % user.username

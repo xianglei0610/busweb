@@ -1138,12 +1138,12 @@ class Bus100Rebot(Rebot):
                     if flag:
                         flag = 1
                     else:
-                        flag = '0'
+                        flag = 0
                 item['extra_info'] = {"flag": flag}
                 item['bus_num'] = str(banci)
                 item['shift_id'] = str(shiftid)
                 line_id = md5("%s-%s-%s-%s-%s-%s" % \
-                    (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'bus100'))
+                    (payload['startName'], payload['startId'], payload['endName'], departure_time, str(banci), 'bus100'))
 
                 item['line_id'] = line_id
                 try:
@@ -1152,7 +1152,8 @@ class Bus100Rebot(Rebot):
                 except Line.DoesNotExist:
                     continue
             if nextPage > pageNo:
-                url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
+                url = 'http://84100.com/getBusShift/ajax'+'?pageNo=%s' % nextPage
+#                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
                 self.recrawl_func(url, payload)
 
 if not "_rebot_class" in globals():
