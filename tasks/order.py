@@ -8,7 +8,7 @@ from app.constants import *
 from app import celery
 from app.utils import getRedisObj
 from app.email import send_email
-from app.flow import get_flow, get_compatible_flow
+from app.flow import get_flow
 from app.models import Order, AdminUser
 from app import order_log
 from flask import current_app
@@ -22,8 +22,11 @@ def async_refresh_order(self, order_no, retry_seq=1):
     order_log.info("[async_refresh_order] order:%s retry_seq: %s", order_no, retry_seq)
     order = Order.objects.get(order_no=order_no)
     status = order.status
+    if order.crawl_source == SOURCE_FB:
+        return
     if status not in [STATUS_ISSUE_ING, STATUS_WAITING_ISSUE]:
         return
+
     flow = get_flow(order.crawl_source)
     try:
         flow.refresh_issue(order)
@@ -101,8 +104,7 @@ def async_lock_ticket(self, order_no, retry_seq=1):
     order = Order.objects.get(order_no=order_no)
     if order.status != STATUS_WAITING_LOCK:
         return
-    flow, new_line = get_compatible_flow(order.line)
-    order.modify(line=new_line)
+    flow = get_flow(order.crawl_source)
     flow.lock_ticket(order)
 
 

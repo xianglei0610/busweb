@@ -547,5 +547,10 @@ def kefu_on_off():
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
 
 
+@admin.route('/fangbian/callback', methods=['POST'])
+@login_required
+def fangbian_callback():
+    print request.args
+
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
 admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))

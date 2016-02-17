@@ -12,8 +12,14 @@ SOURCE_CBD = "cbd"
 SOURCE_JSKY = "jsky"
 SOURCE_BABA = "baba"
 SOURCE_TC = "tongcheng"
+SOURCE_FB = "fangbian"
 
 SOURCE_INFO = {
+    SOURCE_FB: {
+        "name": "方便网",
+        "website": "www.fangbian.com",
+        "accounts": {}
+    },
     SOURCE_SCQCP: {
         "name": "四川汽车票务网",
         "website": "www.scqcp.com",
@@ -340,3 +346,7 @@ WEIGHTS = {
 
     SOURCE_BUS100: 1000,
 }
+
+# 方便网接口地址
+FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"
+# FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
