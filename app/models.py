@@ -196,10 +196,10 @@ class Line(db.Document):
     def check_compatible_lines(self, reload=False):
         if not reload and self.compatible_lines:
             return
-        qs = Line.objects.filter(s_city_name=self.s_city_name,
-                                 d_city_name=self.d_city_name,
+        qs = Line.objects.filter(s_city_name__startswith=unicode(self.s_city_name),
+                                 d_city_name__startswith=unicode(self.d_city_name),
                                  drv_datetime=self.drv_datetime,
-                                 bus_num=self.bus_num)
+                                 bus_num__startswith=unicode(self.bus_num)),
         d_line = {obj.crawl_source: obj.line_id for obj in qs}
         for obj in qs:
             self.modify(compatible_lines=d_line)
