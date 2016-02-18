@@ -73,6 +73,9 @@ class Flow(BaseFlow):
                 elif u'Could not return the resource to the pool' in lock_msg:
                     lock_result.update(result_code=2,
                                        result_reason="源站系统错误，锁票重试")
+                else:
+                    lock_result.update(result_code=0,
+                                       result_reason=lock_msg)
             elif lock_flag == '99' or u'班次信息错误' in lock_msg:
                 lock_result.update(result_code=2,
                                    result_reason=lock_msg)
@@ -232,7 +235,11 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        rebot = Bus100Rebot.get_random_active_rebot()
+        rebot =None
+        for i in Bus100Rebot.objects.filter(is_active=True):
+            if  i.test_login_status():
+                rebot = i
+                break
         if not rebot:
             return result_info
         now = dte.now()
