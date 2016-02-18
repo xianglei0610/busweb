@@ -243,9 +243,23 @@ class Flow(BaseFlow):
                 rebot = i
                 break
         if not rebot:
-            return result_info
+            rebot = Bus100Rebot.get_random_rebot()
+            data = {
+                "loginType": 0,
+                "backUrl": '',
+                "mobile": rebot.telephone,
+                "password": rebot.password,
+                "validateCode": '1234'
+            }
+            r = requests.post("http://84100.com/doLogin/ajax", data=data)
+            if r.json().get('flag', '') == '0':
+                rebot.modify(cookies=dict(r.cookies), is_active=True)
+                if not rebot.test_login_status():
+                    return result_info
+            else:
+                return result_info
         now = dte.now()
-        ret = rebot.recrawl_shiftid(line)
+        rebot.recrawl_shiftid(line)
         line = Line.objects.get(line_id=line.line_id)
         if line.shift_id == "0" or not line.extra_info.get('flag', 0):
             line_log.info("[refresh-result]  no left_tickets line:%s %s ", line.crawl_source, line.line_id)
