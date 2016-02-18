@@ -122,6 +122,7 @@ class Flow(object):
             return
         order_log.info("[issue-refresh-start] order:%s", order.order_no)
         ret = self.do_refresh_issue(order)
+        order.reload()
         code = ret["result_code"]
 
         code_status_mapping = {
@@ -201,9 +202,9 @@ class Flow(object):
         线路信息刷新主流程, 不用子类重写
         """
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-        if not self.need_refresh_line(line, force=force):
-            line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
-            return
+        #if not self.need_refresh_line(line, force=force):
+        #    line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
+        #    return
         ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
         if update:

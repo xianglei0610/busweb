@@ -9,6 +9,7 @@ from app.api import api
 from app.models import Line, Order, OpenCity
 from app.flow import get_compatible_flow
 from app import order_log
+from tasks import async_lock_ticket
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -239,6 +240,7 @@ def submit_order():
     except Line.DoesNotExist:
         order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
+    flow, line = get_compatible_flow(line)
 
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
@@ -272,7 +274,10 @@ def submit_order():
         "data": {"sys_order_no": order.order_no}
     }
     order_log.info("[submit-response] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret)
-    enqueue_wating_lock(order)
+    if order.crawl_source == SOURCE_FB:
+        async_lock_ticket.delay(order.order_no)
+    else:
+        enqueue_wating_lock(order)
     return jsonify(ret)
 
 
