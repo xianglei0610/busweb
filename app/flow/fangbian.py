@@ -84,7 +84,7 @@ class Flow(BaseFlow):
             "passengersInfo": riders,
             "exData1": line.extra_info["exData1"],
             "exData2": line.extra_info["exData2"],
-            "callBackUrl": "http://d.12308.com:8200/fangbian/callback"
+            "callBackUrl": "http://d.12308.com/fangbian/callback"
         }
         fd = self.post_data_templ("U0201", json.dumps(params))
         url = FANGBIAN_API_URL + "/Order"
