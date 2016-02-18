@@ -20,7 +20,8 @@ from app.admin import admin
 from app.utils import getRedisObj
 from app.models import Order, Line, AdminUser, PushUserList
 from app.flow import get_flow
-from tasks import push_kefu_order, async_lock_ticket
+from tasks import push_kefu_order, async_lock_ticket, issued_callback
+from app import order_log
 
 
 def parse_page_data(qs):
@@ -550,7 +551,33 @@ def kefu_on_off():
 @admin.route('/fangbian/callback', methods=['POST'])
 @login_required
 def fangbian_callback():
-    print request.args
+    args = request.args
+    order_log.info("[fanbian-callback] %s", args)
+    data = args["data"]
+    service_id = args["serviceID"]
+    code = args["code"]
+    order = Order.objects.get(order_no=data["merchantOrderNo"])
+    if service_id == "B001":    # 锁票回调
+        raw_order = data["ticketOrderNo"]
+        if code == 2100:
+            order.modify(status=STATUS_ISSUE_ING, raw_order_no=raw_order)
+            order.on_issueing(reason="code:%s, message:%s" % (code, args["message"]))
+        else:
+            order.modify(status=STATUS_ISSUE_FAIL, raw_order_no=raw_order)
+            order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
+            issued_callback.delay(order.order_no)
+    elif service_id == "B002":
+        if code == 2102:
+            order.modify(status=STATUS_ISSUE_SUCC,
+                         pick_code_list=[""],
+                         pick_msg_list=[data["exData"]])
+            order.on_issue_success()
+        else:
+            order.modify(status=STATUS_ISSUE_FAIL)
+            order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
+            issued_callback.delay(order.order_no)
+
+
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
 admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
