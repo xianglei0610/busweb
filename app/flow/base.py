@@ -78,7 +78,7 @@ class Flow(object):
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["result_reason"], "data": data})
             order_log.info("[lock-result] fail. order: %s, reason: %s", order.order_no, ret["result_reason"])
         else:
-            order_log.info("[lock-result] unrecognize. order: %s, reason: %s", order.order_no, ret["result_reason"])
+            order_log.info("[lock-result] unrecognize. order: %s, reason: %s code:%s", order.order_no, ret["result_reason"], ret["result_code"])
             return
 
         if notify_url:
