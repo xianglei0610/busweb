@@ -156,7 +156,7 @@ class Line(db.Document):
     }
 
     def get_open_city(self):
-        city = self.s_city_name
+        city = CITY_NAME_TRANS.get(self.s_city_name, city)
         if len(city)>2 and (city.endswith("市") or city.endswith("县")):
             city = city[:-1]
         try:
