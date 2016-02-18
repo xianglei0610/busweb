@@ -1071,7 +1071,7 @@ class Bus100Rebot(Rebot):
         """
         重新获取线路ID
         """
-        queryline_url = 'http://www.84100.com/getTrainList/ajax'
+        queryline_url = 'http://www.84100.com/getBusShift/ajax'
         start_city_id = line.s_sta_id
         start_city_name = line.s_city_name
         target_city_name = line.d_sta_name
@@ -1116,7 +1116,7 @@ class Bus100Rebot(Rebot):
                 item = {}
                 time = n.xpath('ul/li[@class="time"]/p/strong/text()')
                 item['drv_time'] = time[0]
-                departure_time = payload['sendDate']+' '+time[0]
+                drv_datetime = dte.strptime(payload['sendDate']+' '+time[0], "%Y-%m-%d %H:%M")
                 banci = ''
                 banci = n.xpath('ul/li[@class="time"]/p[@class="carNum"]/text()')
                 if banci:
@@ -1127,10 +1127,6 @@ class Bus100Rebot(Rebot):
                         banci = ord_banci[0]
 #                 price = n.xpath('ul/li[@class="price"]/strong/text()')
 #                 item["full_price"] = float(str(price[0]).split('￥')[-1])
-                infor = n.xpath('ul/li[@class="carriers"]/p[@class="info"]/text()')
-                distance = ''
-                if infor:
-                    distance = infor[0].replace('\r\n', '').replace(' ',  '')
                 buyInfo = n.xpath('ul/li[@class="buy"]')
                 flag = 0
                 for buy in buyInfo:
@@ -1142,15 +1138,14 @@ class Bus100Rebot(Rebot):
                 item['extra_info'] = {"flag": flag}
                 item['bus_num'] = str(banci)
                 item['shift_id'] = str(shiftid)
-                line_id = md5("%s-%s-%s-%s-%s-%s" % \
-                    (payload['startName'], payload['startId'], payload['endName'], departure_time, str(banci), 'bus100'))
-
+                item["refresh_datetime"] = dte.now()
+                line_id = md5("%s-%s-%s-%s-%s" % \
+                    (payload['startName'], payload['endName'], drv_datetime, str(banci), 'bus100'))
                 item['line_id'] = line_id
-                try:
-                    line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
-                    line_obj.modify(**item)
-                except Line.DoesNotExist:
-                    continue
+
+                line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
+                line_obj.modify(**item)
+
             if nextPage > pageNo:
                 url = 'http://84100.com/getBusShift/ajax'+'?pageNo=%s' % nextPage
 #                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage

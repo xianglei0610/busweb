@@ -38,8 +38,9 @@ class Flow(BaseFlow):
             try:
                 rebot.recrawl_shiftid(order.line)
             except:
-                lock_result.update(result_code=2)
-                lock_result.update(result_reason="源站刷新线路错误，锁票重试")
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="源站刷新线路错误，锁票重试")
                 return lock_result
 
             line = Line.objects.get(line_id=order.line.line_id)
@@ -52,7 +53,7 @@ class Flow(BaseFlow):
                 lock_result.update(result_reason="该条线路无法购买", result_code=0)
                 return lock_result
 
-            ttype, ttpwd= self.request_ticket_info(order, rebot)
+            ttype, ttpwd = self.request_ticket_info(order, rebot)
             lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
             lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
             if lock_flag == '0':    # 锁票成功
@@ -72,6 +73,7 @@ class Flow(BaseFlow):
                                        result_reason="账号被限购，锁票重试")
                 elif u'Could not return the resource to the pool' in lock_msg:
                     lock_result.update(result_code=2,
+                                       source_account="",
                                        result_reason="源站系统错误，锁票重试")
                 else:
                     lock_result.update(result_code=0,
@@ -235,9 +237,9 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        rebot =None
+        rebot = None
         for i in Bus100Rebot.objects.filter(is_active=True):
-            if  i.test_login_status():
+            if i.test_login_status():
                 rebot = i
                 break
         if not rebot:
@@ -271,7 +273,10 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, **kwargs):
-        rebot = Bus100Rebot.objects.get(telephone=order.source_account)
+        if order.source_account:
+            rebot = Bus100Rebot.objects.get(telephone=order.source_account)
+        else:
+            rebot = Bus100Rebot.get_random_rebot()
         if valid_code:      #  登陆
             data = json.loads(session["bus100_pay_login_info"])
             code_url = data["valid_url"]
