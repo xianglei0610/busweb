@@ -84,7 +84,7 @@ class Flow(BaseFlow):
             "passengersInfo": riders,
             "exData1": line.extra_info["exData1"],
             "exData2": line.extra_info["exData2"],
-            "callBackUrl": "http://d.12308.com/fangbian/callback"
+            "callBackUrl": "http://d.12308.com:8200/fangbian/callback"
         }
         fd = self.post_data_templ("U0201", json.dumps(params))
         url = FANGBIAN_API_URL + "/Order"
@@ -114,6 +114,13 @@ class Flow(BaseFlow):
             })
         return lock_result
 
+    def request_order_detail(self, order):
+        url = FANGBIAN_API_URL + "/Order"
+        fd = self.post_data_templ("U0202", order.order_no)
+        r = requests.post(url, headers=self.post_headers(), data=urllib.urlencode(fd))
+        ret = r.json()
+        return ret
+
     def do_refresh_issue(self, order):
         result_info = {
             "result_code": 0,
@@ -125,10 +132,7 @@ class Flow(BaseFlow):
             result_info.update(result_msg="状态未变化")
             return result_info
 
-        url = FANGBIAN_API_URL + "/Order"
-        fd = self.post_data_templ("U0202", order.order_no)
-        r = requests.post(url, headers=self.post_headers(), data=urllib.urlencode(fd))
-        ret = r.json()
+        ret = self.request_order_detail(order)
         if ret["code"] != 2103:
             return
         detail = ret["data"]

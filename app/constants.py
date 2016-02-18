@@ -348,5 +348,5 @@ WEIGHTS = {
 }
 
 # 方便网接口地址
-FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"
-# FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
+# FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"
+FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
