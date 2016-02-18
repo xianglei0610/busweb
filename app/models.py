@@ -14,7 +14,7 @@ from lxml import etree
 from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj
-from app import rebot_log, order_status_log
+from app import rebot_log, order_status_log, line_log
 
 
 class AdminUser(db.Document):
@@ -83,6 +83,8 @@ class OpenCity(db.Document):
     crawl_source = db.StringField()
     max_ticket_per_order = db.IntField()
     is_active = db.BooleanField(default=True)
+    source_weight = db.DictField()          # 源站分配权重
+    source_order_limit = db.DictField()     # 源站分配单数限制
 
     meta = {
         "indexes": [
@@ -152,6 +154,17 @@ class Line(db.Document):
             }
         ],
     }
+
+    def get_open_city(self):
+        city = self.s_city_name
+        if len(city)>2 and (city.endswith("市") or city.endswith("县")):
+            city = city[:-1]
+        try:
+            open_city = OpenCity.objects.get(city_name=city)
+            return open_city
+        except OpenCity.DoesNotExist:
+            line_log.error("[opencity] %s %s not matched open city", self.line_id, self.s_city_name)
+            return None
 
     def __str__(self):
         return "[Line object %s]" % self.line_id

@@ -26,9 +26,15 @@ def get_flow(site):
 
 def get_compatible_flow(line):
     line.check_compatible_lines()
-    weights = {}
-    for src, line_id in line.compatible_lines.items():
-        weights[src] = WEIGHTS.get(src, 500)
+
+    weights = dict.fromkeys(line.compatible_lines.keys(), 1000/len(line.compatible_lines))
+    open_city = line.get_open_city()
+    if open_city:
+        weight_config = open_city.source_weight
+        for src, w in weight_config.items():
+            if src in weights:
+                weights[src] = w
+
     choose = weight_choice(weights)
     from app.models import Line
     new_line = Line.objects.get(line_id=line.compatible_lines[choose])

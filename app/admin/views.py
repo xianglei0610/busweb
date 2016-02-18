@@ -202,12 +202,12 @@ class SubmitOrder(MethodView):
         #}
         contact = {
             "name": "范月芹",
-            "phone": "18620857607",
+            "phone": "15575101324",
             "idcard": "510106199909235149",
         }
         rider1 = {
             "name": "范月芹",
-            "phone": "18620857607",
+            "phone": "15575101324",
             "idcard": "510106199909235149",
         }
 

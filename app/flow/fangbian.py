@@ -8,6 +8,7 @@ import random
 import datetime
 
 from app.constants import *
+from app import config
 from app.flow.base import Flow as BaseFlow
 from app.utils import md5
 from datetime import datetime as dte
@@ -87,7 +88,7 @@ class Flow(BaseFlow):
             "callBackUrl": "http://d.12308.com/fangbian/callback"
         }
         fd = self.post_data_templ("U0201", json.dumps(params))
-        url = FANGBIAN_API_URL + "/Order"
+        url = config.FANGBIAN_API_URL + "/Order"
         r = requests.post(url, data=urllib.urlencode(fd), headers=self.post_headers())
         ret = r.json()
         code = ret["code"]
@@ -115,7 +116,7 @@ class Flow(BaseFlow):
         return lock_result
 
     def request_order_detail(self, order):
-        url = FANGBIAN_API_URL + "/Order"
+        url = config.FANGBIAN_API_URL + "/Order"
         fd = self.post_data_templ("U0202", order.order_no)
         r = requests.post(url, headers=self.post_headers(), data=urllib.urlencode(fd))
         ret = r.json()
@@ -169,7 +170,7 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        line_url = FANGBIAN_API_URL + "/Query"
+        line_url = config.FANGBIAN_API_URL + "/Query"
         params = {
             "departure": line.s_city_name,
             "dptCode": line.s_city_code,

@@ -23,6 +23,10 @@ class Config:
 
     PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
 
+    # 方便网接口地址
+    FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"
+    # FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
+
     # redis config
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
@@ -92,6 +96,9 @@ class ApiProdConfig(Config):
 
     CELERY_BROKER_URL = 'redis://10.51.9.34:6379/10'
     CELERY_RESULT_BACKEND = 'redis://10.51.9.34:6379/11'
+
+    # 方便网接口地址
+    FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
 
     # redis config
     REDIS_HOST = "10.51.9.34"

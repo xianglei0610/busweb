@@ -336,17 +336,3 @@ DUAN_XIN_TEMPL = {
     SOURCE_CBD: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
     SOURCE_BABA: "购票成功,取票号:%(no)s,密码:%(code)s,取票点:%(site)s,(%(start)s-%(end)s %(time)s),请旅客尽早到车站取票.",
 }
-
-WEIGHTS = {
-    SOURCE_CBD: 200,
-    SOURCE_JSKY: 800,
-
-    SOURCE_CTRIP: 500,
-    SOURCE_SCQCP: 500,
-
-    SOURCE_BUS100: 1000,
-}
-
-# 方便网接口地址
-# FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"
-FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
