@@ -549,10 +549,9 @@ def kefu_on_off():
 
 
 @admin.route('/fangbian/callback', methods=['POST'])
-@login_required
 def fangbian_callback():
+    order_log.info("[fanbian-callback] %s", request.get_data())
     args = json.loads(request.get_data())
-    order_log.info("[fanbian-callback] %s", args)
     data = args["data"]
     service_id = args["serviceID"]
     code = args["code"]
@@ -577,7 +576,6 @@ def fangbian_callback():
             order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
             issued_callback.delay(order.order_no)
     return "callback success"
-
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
