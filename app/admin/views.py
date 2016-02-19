@@ -575,7 +575,7 @@ def fangbian_callback():
             order.modify(status=STATUS_ISSUE_FAIL)
             order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
             issued_callback.delay(order.order_no)
-    return "callback success"
+    return "resultHtml:success"
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
