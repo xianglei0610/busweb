@@ -238,14 +238,29 @@ class Flow(BaseFlow):
             "update_attrs": {},
         }
         rebot = None
-        for i in Bus100Rebot.objects.filter(is_active=True):
+        for i in Bus100Rebot.objects.filter(is_active=True).order_by('-last_login_time')[0:5]:
+            print '1111111111', i.telephone, i.last_login_time
             if i.test_login_status():
                 rebot = i
                 break
         if not rebot:
-            return result_info
+            rebot = Bus100Rebot.get_random_rebot()
+            data = {
+                "loginType": 0,
+                "backUrl": '',
+                "mobile": rebot.telephone,
+                "password": rebot.password,
+                "validateCode": '1234'
+            }
+            r = requests.post("http://84100.com/doLogin/ajax", data=data)
+            if r.json().get('flag', '') == '0':
+                rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now())
+                if not rebot.test_login_status():
+                    return result_info
+            else:
+                return result_info
         now = dte.now()
-        ret = rebot.recrawl_shiftid(line)
+        rebot.recrawl_shiftid(line)
         line = Line.objects.get(line_id=line.line_id)
         if line.shift_id == "0" or not line.extra_info.get('flag', 0):
             line_log.info("[refresh-result]  no left_tickets line:%s %s ", line.crawl_source, line.line_id)
@@ -291,7 +306,7 @@ class Flow(BaseFlow):
             }
             r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
-            rebot.modify(cookies=cookies, is_active=True)
+            rebot.modify(cookies=cookies, is_active=True, last_login_time=dte.now())
 
         is_login = rebot.test_login_status()
         if is_login:
