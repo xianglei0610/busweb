@@ -238,7 +238,7 @@ class Flow(object):
         """
         if not line:
             return
-        line_log.info("close line:%s %s, reason:%s", line.crawl_source, line.line_id)
+        line_log.info("[close] line:%s %s, reason:%s", line.crawl_source, line.line_id, reason)
         now = dte.now()
         line.modify(left_tickets=0, update_datetime=now, refresh_datetime=now)
 
