@@ -165,7 +165,7 @@ class Line(db.Document):
             open_city = OpenCity.objects.get(city_name=city)
             return open_city
         except OpenCity.DoesNotExist:
-            line_log.error("[opencity] %s %s not matched open city", self.line_id, self.s_city_name)
+            line_log.error("[opencity] %s %s not matched open city", self.line_id, city)
             return None
 
     def __str__(self):
@@ -198,10 +198,13 @@ class Line(db.Document):
     def check_compatible_lines(self, reload=False):
         if not reload and self.compatible_lines:
             return
-        qs = Line.objects.filter(s_city_name__startswith=unicode(self.s_city_name),
-                                 d_city_name__startswith=unicode(self.d_city_name),
+        s_city = CITY_NAME_TRANS.get(self.s_city_name, self.s_city_name)
+        d_city = CITY_NAME_TRANS.get(self.d_city_name, self.d_city_name)
+        bus_num = self.bus_num.strip().rstrip("次")
+        qs = Line.objects.filter(s_city_name__startswith=unicode(s_city),
+                                 d_city_name__startswith=unicode(d_city),
                                  drv_datetime=self.drv_datetime,
-                                 bus_num__startswith=unicode(self.bus_num))
+                                 bus_num__startswith=unicode(bus_num))
         d_line = {obj.crawl_source: obj.line_id for obj in qs}
         for obj in qs:
             self.modify(compatible_lines=d_line)
