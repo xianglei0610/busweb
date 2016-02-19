@@ -116,6 +116,12 @@ class Flow(BaseFlow):
         return lock_result
 
     def request_order_detail(self, order):
+        """
+        3：锁票成功
+        14：出票成功
+        13：出票失败
+        2：正在出票
+        """
         url = config.FANGBIAN_API_URL + "/Order"
         fd = self.post_data_templ("U0202", order.order_no)
         r = requests.post(url, headers=self.post_headers(), data=urllib.urlencode(fd))
