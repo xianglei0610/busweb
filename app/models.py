@@ -313,7 +313,7 @@ class Order(db.Document):
                     kefu_username=user_obj.username)
         assign.remove_dealing(self, user_obj)
 
-    def on_create(self):
+    def on_create(self, reason=""):
         if self.status != STATUS_WAITING_LOCK:
             return
         order_status_log.info("[on_create] out_order_no: %s", self.out_order_no)
@@ -327,7 +327,7 @@ class Order(db.Document):
         if rebot:
             rebot.remove_doing_order(self)
 
-    def on_lock_success(self):
+    def on_lock_success(self, reason=""):
         if self.status != STATUS_WAITING_ISSUE:
             return
         order_status_log.info("[on_lock_success] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
@@ -335,7 +335,7 @@ class Order(db.Document):
         from tasks import async_refresh_order
         async_refresh_order.apply_async((self.order_no,), countdown=10)
 
-    def on_lock_retry(self):
+    def on_lock_retry(self, reason=""):
         if self.status != STATUS_LOCK_RETRY:
             return
         order_status_log.info("[on_lock_retry] order:%s", self.order_no)
@@ -370,7 +370,7 @@ class Order(db.Document):
         if order_ct > ISSUE_FAIL_WARNING:
             issue_fail_send_email.delay(key)
 
-    def on_issueing(self):
+    def on_issueing(self, reason=""):
         if self.status != STATUS_ISSUE_ING:
             return
         order_status_log.info("[on_issueing] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
@@ -383,7 +383,7 @@ class Order(db.Document):
         key = RK_ISSUEING_COUNT
         r.sadd(key, self.order_no)
 
-    def on_issue_success(self):
+    def on_issue_success(self, reason=""):
         if self.status != STATUS_ISSUE_SUCC:
             return
         order_status_log.info("[on_issue_sucess] order:%s, out_order_no: %s", self.order_no, self.out_order_no)

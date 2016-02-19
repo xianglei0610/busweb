@@ -9,6 +9,7 @@ import json
 import cStringIO
 import flask.ext.login as flask_login
 import assign
+import traceback
 
 from datetime import datetime as dte, timedelta
 from app.utils import md5, create_validate_code
@@ -550,32 +551,37 @@ def kefu_on_off():
 
 @admin.route('/fangbian/callback', methods=['POST'])
 def fangbian_callback():
-    order_log.info("[fanbian-callback] %s", request.get_data())
-    args = json.loads(request.get_data())
-    data = args["data"]
-    service_id = args["serviceID"]
-    code = args["code"]
-    order = Order.objects.get(order_no=data["merchantOrderNo"])
-    if service_id == "B001":    # 锁票回调
-        raw_order = data["ticketOrderNo"]
-        if code == 2100:
-            order.modify(status=STATUS_ISSUE_ING, raw_order_no=raw_order)
-            order.on_issueing(reason="code:%s, message:%s" % (code, args["message"]))
-        else:
-            order.modify(status=STATUS_ISSUE_FAIL, raw_order_no=raw_order)
-            order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
-            issued_callback.delay(order.order_no)
-    elif service_id == "B002":
-        if code == 2102:
-            order.modify(status=STATUS_ISSUE_SUCC,
-                         pick_code_list=[""],
-                         pick_msg_list=[data["exData"]])
-            order.on_issue_success()
-        else:
-            order.modify(status=STATUS_ISSUE_FAIL)
-            order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
-            issued_callback.delay(order.order_no)
-    return "resultHtml:success"
+    try:
+        order_log.info("[fanbian-callback] %s", request.get_data())
+        args = json.loads(request.get_data())
+        data = args["data"]
+        service_id = args["serviceID"]
+        code = args["code"]
+        order = Order.objects.get(order_no=data["merchantOrderNo"])
+        if service_id == "B001":    # 锁票回调
+            raw_order = data["ticketOrderNo"]
+            if code == 2100:
+                order.modify(status=STATUS_ISSUE_ING, raw_order_no=raw_order)
+                order.on_issueing(reason="code:%s, message:%s" % (code, args["message"]))
+            else:
+                order.modify(status=STATUS_ISSUE_FAIL, raw_order_no=raw_order)
+                order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
+                # issued_callback.delay(order.order_no)
+        elif service_id == "B002":
+            if code == 2102:
+                order.modify(status=STATUS_ISSUE_SUCC,
+                            pick_code_list=[""],
+                            pick_msg_list=[data["exData"]])
+                order.on_issue_success()
+                # issued_callback.delay(order.order_no)
+            else:
+                order.modify(status=STATUS_ISSUE_FAIL)
+                order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
+                # issued_callback.delay(order.order_no)
+    except:
+        order_log.error("".join(traceback.format_exc()))
+        return "error"
+    return "success"
 
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))

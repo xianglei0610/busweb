@@ -79,7 +79,7 @@ def setup_app():
     r = redis.Redis(host=rset["host"], port=rset["port"], db=rset["db"])
     app.session_interface = RedisSessionInterface(redis=r)
 
-    sentry.init_app(app)
+    sentry.init_app(app, logging=True, level=logging.ERROR)
     init_logging(app, server_type)
     return app
 

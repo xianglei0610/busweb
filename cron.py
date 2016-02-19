@@ -64,8 +64,8 @@ def bus_crawl(crawl_source, province_id = None):
     if os.getenv('FLASK_CONFIG') == 'dev':
         url = "http://192.168.1.202:6800/schedule.json"
     elif os.getenv('FLASK_CONFIG') == 'prod':
-#         url = "http://localhost:6800/schedule.json"
-        url = "http://120.27.150.94:6800/schedule.json"
+        url = "http://localhost:6800/schedule.json"
+        # url = "http://120.27.150.94:6800/schedule.json"
     else:
         return
     data = {
@@ -160,6 +160,10 @@ def main():
 #     sched.add_cron_job(del_people, hour=22, minute=40, args=['bus100']) #删除源站常用联系人
     #sched.add_cron_job(check_login_status, hour='8-23', minute='*/10',args=['bus100'])
 #     sched.add_interval_job(check_login_status, minutes=10, args=['bus100'])
+    sched.add_cron_job(bus_crawl, hour=22, minute=36, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "山东"}})
+    sched.add_cron_job(bus_crawl, hour=22, minute=35, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "河南"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=35, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "广西"}})
+
 
     sched.start()
 
