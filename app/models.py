@@ -156,8 +156,10 @@ class Line(db.Document):
     }
 
     def get_open_city(self):
-        city = CITY_NAME_TRANS.get(self.s_city_name, city)
-        if len(city)>2 and (city.endswith("市") or city.endswith("县")):
+        city = self.s_city_name
+        if city in CITY_NAME_TRANS:
+            city = CITY_NAME_TRANS[city]
+        elif len(city)>2 and (city.endswith("市") or city.endswith("县")):
             city = city[:-1]
         try:
             open_city = OpenCity.objects.get(city_name=city)
@@ -199,7 +201,7 @@ class Line(db.Document):
         qs = Line.objects.filter(s_city_name__startswith=unicode(self.s_city_name),
                                  d_city_name__startswith=unicode(self.d_city_name),
                                  drv_datetime=self.drv_datetime,
-                                 bus_num__startswith=unicode(self.bus_num)),
+                                 bus_num__startswith=unicode(self.bus_num))
         d_line = {obj.crawl_source: obj.line_id for obj in qs}
         for obj in qs:
             self.modify(compatible_lines=d_line)
