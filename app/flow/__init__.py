@@ -9,18 +9,19 @@ flow_list = {}
 
 
 def get_flow(site):
-    cur_dir = os.path.abspath(os.path.dirname(__file__))
-    for par, dirs, files in os.walk(cur_dir):
-        for f in files:
-            if not f.endswith(".py"):
-                continue
-            if f in ["base.py", "__init__.py"]:
-                continue
-            mod=importlib.import_module("app.flow.%s" % f[:-3])
-            cls = mod.Flow
-            if cls.name == site:
-                flow_list[cls.name] = cls()
-                break
+    if not flow_list:
+        cur_dir = os.path.abspath(os.path.dirname(__file__))
+        for par, dirs, files in os.walk(cur_dir):
+            for f in files:
+                if not f.endswith(".py"):
+                    continue
+                if f in ["base.py", "__init__.py"]:
+                    continue
+                mod=importlib.import_module("app.flow.%s" % f[:-3])
+                cls = mod.Flow
+                if cls.name == site:
+                    flow_list[cls.name] = cls()
+                    break
     return flow_list[site]
 
 
