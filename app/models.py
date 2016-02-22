@@ -1183,4 +1183,4 @@ if not "_rebot_class" in globals():
         _rebot_class[source].append(cls)
 
 def get_rebot_class(source):
-    return _rebot_class.get(source, {})
+    return _rebot_class.get(source, [])
