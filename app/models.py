@@ -1143,6 +1143,7 @@ class Bus100Rebot(Rebot):
                     ord_banci = n.xpath('ul/li[@class="time"]/p[@class="banci"]/text()')
                     if ord_banci:
                         banci = ord_banci[0]
+                banci = banci.decode("utf-8").strip().rstrip(u"次")
 #                 price = n.xpath('ul/li[@class="price"]/strong/text()')
 #                 item["full_price"] = float(str(price[0]).split('￥')[-1])
                 buyInfo = n.xpath('ul/li[@class="buy"]')
