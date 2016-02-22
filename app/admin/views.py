@@ -566,20 +566,21 @@ def fangbian_callback():
             else:
                 order.modify(status=STATUS_ISSUE_FAIL, raw_order_no=raw_order)
                 order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
-                # issued_callback.delay(order.order_no)
+                issued_callback.delay(order.order_no)
         elif service_id == "B002":
             if code == 2102:
+                msg = urllib.unquote(data["exData"].decode("gbk").encode('utf-8')).replace(u"【", "").replace(u"】", " ")
                 order.modify(status=STATUS_ISSUE_SUCC,
                             pick_code_list=[""],
-                            pick_msg_list=[data["exData"]])
+                            pick_msg_list=[msg])
                 order.on_issue_success()
-                # issued_callback.delay(order.order_no)
+                issued_callback.delay(order.order_no)
             else:
                 order.modify(status=STATUS_ISSUE_FAIL)
                 order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
-                # issued_callback.delay(order.order_no)
+                issued_callback.delay(order.order_no)
     except:
-        order_log.error("".join(traceback.format_exc()))
+        order_log.error("%s\n%s", "".join(traceback.format_exc()), locals())
         return "error"
     return "success"
 

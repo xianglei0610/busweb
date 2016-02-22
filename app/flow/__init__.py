@@ -9,7 +9,7 @@ flow_list = {}
 
 
 def get_flow(site):
-    if not flow_list:
+    if site not in flow_list:
         cur_dir = os.path.abspath(os.path.dirname(__file__))
         for par, dirs, files in os.walk(cur_dir):
             for f in files:
