@@ -6,7 +6,7 @@ import traceback
 from app.constants import *
 from app import order_log, line_log
 from datetime import datetime as dte
-from tasks import check_order_expire, issued_callback, refresh_issueing_order
+from tasks import issued_callback
 
 
 class Flow(object):
@@ -46,7 +46,6 @@ class Flow(object):
             order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
             return
 
-        now = dte.now()
         if ret["result_code"] == 1:   # 锁票成功
             order.modify(status=STATUS_WAITING_ISSUE,
                          lock_info=ret["lock_info"],
@@ -57,8 +56,6 @@ class Flow(object):
                          pay_money=ret["pay_money"],
                          )
             order.on_lock_success()
-            seconds_left = max(0, (ret["expire_datetime"]-now).total_seconds())
-            check_order_expire.apply_async((order.order_no,), countdown=seconds_left+5)
 
             data.update({
                 "raw_order_no": order.raw_order_no,
@@ -81,7 +78,7 @@ class Flow(object):
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["result_reason"], "data": data})
             order_log.info("[lock-result] fail. order: %s, reason: %s", order.order_no, ret["result_reason"])
         else:
-            order_log.info("[lock-result] unrecognize. order: %s, reason: %s", order.order_no, ret["result_reason"])
+            order_log.info("[lock-result] unrecognize. order: %s, reason: %s code:%s", order.order_no, ret["result_reason"], ret["result_code"])
             return
 
         if notify_url:
@@ -125,6 +122,7 @@ class Flow(object):
             return
         order_log.info("[issue-refresh-start] order:%s", order.order_no)
         ret = self.do_refresh_issue(order)
+        order.reload()
         code = ret["result_code"]
 
         code_status_mapping = {
@@ -163,7 +161,6 @@ class Flow(object):
         elif code == 4:         # 正在出票
             order_log.info("[issue-refresh-result] order: %s issueing. msg:%s", order.order_no, ret["result_msg"])
             order.modify(status=STATUS_ISSUE_ING)
-            refresh_issueing_order.delay(order.order_no)
             order.on_issueing()
         elif code == 5:         # 超时过期, 进入锁票重试
             order_log.info("[issue-refresh-result] order: %s expire. msg:%s", order.order_no, ret["result_msg"])
@@ -184,7 +181,7 @@ class Flow(object):
         """
         raise Exception("Not Implemented")
 
-    def is_need_refresh(self, line, force=False):
+    def need_refresh_line(self, line, force=False):
         """
         检查线路是否需要刷新, 用来控制不要太过于频繁刷新
         """
@@ -205,9 +202,9 @@ class Flow(object):
         线路信息刷新主流程, 不用子类重写
         """
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-        if not self.is_need_refresh(line, force=force):
-            line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
-            return
+        #if not self.need_refresh_line(line, force=force):
+        #    line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
+        #    return
         ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
         if update:
@@ -225,7 +222,7 @@ class Flow(object):
         Returns:
         {
             "result_msg": "",
-            "update_attrs":{    # 要修改的model属性
+            "update_attrs":{    # 要修改的Document属性
                 "left_tickets": 1,
                 "fee": 0,
                 ....
@@ -241,7 +238,7 @@ class Flow(object):
         """
         if not line:
             return
-        line_log.info("close line:%s %s, reason:%s", line.crawl_source, line.line_id)
+        line_log.info("[close] line:%s %s, reason:%s", line.crawl_source, line.line_id, reason)
         now = dte.now()
         line.modify(left_tickets=0, update_datetime=now, refresh_datetime=now)
 

@@ -18,8 +18,10 @@ from raven.contrib.flask import Sentry
 from logging.handlers import TimedRotatingFileHandler
 from logging import Formatter, StreamHandler
 
+
 config_name = "%s_%s" % (os.getenv('FLASK_SERVER') or 'api', os.getenv('FLASK_CONFIG') or 'local')
 config = config_mapping[config_name]
+
 mail = Mail()
 db = MongoEngine()
 celery = Celery(__name__, broker=config.CELERY_BROKER_URL)
@@ -53,7 +55,7 @@ def init_logging(app, server_type):
     stdout_fhd = StreamHandler()
     stdout_fhd.setLevel(logging.DEBUG)
     stdout_fhd.setFormatter(fmt)
-    for logger in [line_log, order_log, kefu_log, access_log, rebot_log]:
+    for logger in [line_log, order_log, kefu_log, access_log, rebot_log, order_status_log]:
         logger.setLevel(logging.DEBUG)
         s = logger.name
         f = "logs/%s.log" % s
@@ -73,11 +75,11 @@ def setup_app():
     server_type = config_name.split("_")[0]
     app = servers[server_type]()
 
-    rset = app.config["REDIS_SETTIGNS"]["SESSION"]
+    rset = app.config["REDIS_SETTIGNS"]["session"]
     r = redis.Redis(host=rset["host"], port=rset["port"], db=rset["db"])
     app.session_interface = RedisSessionInterface(redis=r)
 
-    sentry.init_app(app)
+    sentry.init_app(app, logging=True, level=logging.ERROR)
     init_logging(app, server_type)
     return app
 

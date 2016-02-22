@@ -92,6 +92,16 @@
     </div>
     </li>
 
+   <li>
+    <div class="vocation">
+    <select class="select3" name="pay_status">
+    <option value="">支付状态</option>
+        {% for k,v in pay_status_msg.items() %}
+        <option value="{{k}}" {%if condition.pay_status==k|string%} selected {%endif%}>{{v}}</option>
+        {% endfor %}
+    </select>
+    </div>
+    </li>
     
     <li><label>起时日期</label>
        <div class="input-date">
@@ -150,7 +160,7 @@
         <th>源站信息</th>
         <th>订票数</th>
         <th>订单金额（元）</th>
-        <th>订单状态</th>
+        <th>订单/支付状态</th>
         <th>操作</th>
         </tr>
         </thead>
@@ -165,7 +175,7 @@
          <td>{{source_info[d.crawl_source]["name"]}}<br>{{d.source_account}}</br>{{d.source_account_pass}}</td>
          <td>{{d.riders|count}}张</td>
          <td class="m">￥{{d.order_price}}</td>
-         <td class="color4">{{status_msg[d.status]}}</td>
+         <td><span class="{%if d.status == 14 %} color4 {%else%} color3 {%endif%}">{{status_msg[d.status]}}</span></br><span class="color2">{{pay_status_msg[d.pay_status] or "未知"}}</span> </td>
          <td><a href="/orders/{{d.order_no}}" class="tablelink">查看</a></td>
         </tr>
         {% endfor %}

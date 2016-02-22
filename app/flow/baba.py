@@ -112,8 +112,8 @@ class Flow(BaseFlow):
                     "psgTicketType": 1,
                     "psgBabyFlg": 0,
                     "psgInsuranceTypeId": "",       # 保险
-                    "saveToName": "on",
-                    "isSave":1,
+                    "saveToName": "",
+                    "isSave": 0,
                 }
                 encode_list.append(urllib.urlencode(d))
             encode_str = "&".join(encode_list)
@@ -203,6 +203,11 @@ class Flow(BaseFlow):
         elif state == "已作废":
             result_info.update({
                 "result_code": 2,
+                "result_msg": state,
+            })
+        elif state == "待出票":
+            result_info.update({
+                "result_code": 4,
                 "result_msg": state,
             })
         elif state=="出票异常":

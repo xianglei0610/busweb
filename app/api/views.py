@@ -4,11 +4,12 @@ import json
 from datetime import datetime as dte
 from app.constants import *
 from flask import request, jsonify
-from tasks import async_lock_ticket
+from assign import enqueue_wating_lock
 from app.api import api
 from app.models import Line, Order, OpenCity
 from app.flow import get_compatible_flow
 from app import order_log
+from tasks import async_lock_ticket
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -239,12 +240,11 @@ def submit_order():
     except Line.DoesNotExist:
         order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
+    flow, line = get_compatible_flow(line)
 
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
-
-    source = line.crawl_source
 
     order = Order()
     order.order_no = Order.generate_order_no()
@@ -258,10 +258,9 @@ def submit_order():
     order.ticket_fee = line.fee
     order.contact_info = contact_info
     order.riders = rider_list
-    order.crawl_source = source
+    order.crawl_source = line.crawl_source
     order.locked_return_url = locked_return_url
     order.issued_return_url = issued_return_url
-
     order.drv_datetime = line.drv_datetime
     order.bus_num = line.bus_num
     order.starting_name = line.s_city_name + ';' + line.s_sta_name
@@ -269,19 +268,17 @@ def submit_order():
     order.save()
     order.on_create()
 
-    #should_pay = ticket_amount*line.real_price()
-    ret_code = RET_OK
-    ret_msg = "OK"
-    # if should_pay > order_price:
-    #     ret_code = RET_PRICE_WRONG
-    #     ret_msg = "订单金额不能小于实际票价, received: %s real: %s" % (order_price, should_pay)
-
-    order_log.info("[submit-response] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret_msg)
-    if ret_code == RET_OK:
+    ret = {
+        "code": RET_OK,
+        "message": "ok",
+        "data": {"sys_order_no": order.order_no}
+    }
+    order_log.info("[submit-response] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret)
+    if order.crawl_source == SOURCE_FB:
         async_lock_ticket.delay(order.order_no)
-    return jsonify({"code": ret_code,
-                    "message": ret_msg,
-                    "data": {"sys_order_no": order.order_no}})
+    else:
+        enqueue_wating_lock(order)
+    return jsonify(ret)
 
 
 @api.route('/orders/detail', methods=['POST'])

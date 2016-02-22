@@ -19,17 +19,32 @@ class Config:
     CELERY_RESULT_BACKEND = 'redis://localhost:6379/11'
     CELERY_TASK_SERIALIZER = 'pickle'
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+    CELERY_IMPORTS=("tasks")
 
     PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
+
+    # 方便网接口地址
+    FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"
+    # FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
 
     # redis config
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
     REDIS_SETTIGNS = {
-        "SESSION": {
+        "session": {
             "host": REDIS_HOST,
             "port": REDIS_PORT,
             "db": 9,
+        },
+        "order": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 1,
+        },
+        "default": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 0,
         },
     }
 
@@ -82,14 +97,27 @@ class ApiProdConfig(Config):
     CELERY_BROKER_URL = 'redis://10.51.9.34:6379/10'
     CELERY_RESULT_BACKEND = 'redis://10.51.9.34:6379/11'
 
+    # 方便网接口地址
+    FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
+
     # redis config
     REDIS_HOST = "10.51.9.34"
     REDIS_PORT = 6379
     REDIS_SETTIGNS = {
-        "SESSION": {
+        "session": {
             "host": REDIS_HOST,
             "port": REDIS_PORT,
             "db": 9,
+        },
+        "order": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 1,
+        },
+        "default": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 0,
         },
     }
 

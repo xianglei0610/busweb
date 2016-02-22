@@ -3,9 +3,9 @@ import random
 import requests
 import urllib
 import urllib2
-import re
 import time
 import urlparse
+import assign
 
 from app.constants import *
 from datetime import datetime as dte
@@ -14,8 +14,7 @@ from lxml import etree
 from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj
-from app import rebot_log, order_status_log
-
+from app import rebot_log, order_status_log, line_log
 
 
 class AdminUser(db.Document):
@@ -84,6 +83,8 @@ class OpenCity(db.Document):
     crawl_source = db.StringField()
     max_ticket_per_order = db.IntField()
     is_active = db.BooleanField(default=True)
+    source_weight = db.DictField()          # 源站分配权重
+    source_order_limit = db.DictField()     # 源站分配单数限制
 
     meta = {
         "indexes": [
@@ -154,6 +155,19 @@ class Line(db.Document):
         ],
     }
 
+    def get_open_city(self):
+        city = self.s_city_name
+        if city in CITY_NAME_TRANS:
+            city = CITY_NAME_TRANS[city]
+        elif len(city)>2 and (city.endswith("市") or city.endswith("县")):
+            city = city[:-1]
+        try:
+            open_city = OpenCity.objects.get(city_name=city)
+            return open_city
+        except OpenCity.DoesNotExist:
+            line_log.error("[opencity] %s %s not matched open city", self.line_id, city)
+            return None
+
     def __str__(self):
         return "[Line object %s]" % self.line_id
 
@@ -184,10 +198,13 @@ class Line(db.Document):
     def check_compatible_lines(self, reload=False):
         if not reload and self.compatible_lines:
             return
-        qs = Line.objects.filter(s_city_name=self.s_city_name,
-                                 d_city_name=self.d_city_name,
+        s_city = CITY_NAME_TRANS.get(self.s_city_name, self.s_city_name)
+        d_city = CITY_NAME_TRANS.get(self.d_city_name, self.d_city_name)
+        bus_num = self.bus_num.strip().rstrip("次")
+        qs = Line.objects.filter(s_city_name__startswith=unicode(s_city),
+                                 d_city_name__startswith=unicode(d_city),
                                  drv_datetime=self.drv_datetime,
-                                 bus_num=self.bus_num)
+                                 bus_num__startswith=unicode(bus_num))
         d_line = {obj.crawl_source: obj.line_id for obj in qs}
         for obj in qs:
             self.modify(compatible_lines=d_line)
@@ -207,16 +224,22 @@ class Order(db.Document):
 
     # 车票信息
     line = db.ReferenceField(Line)
-
-    seat_no_list = db.ListField(db.StringField(max_length=10))
     ticket_price = db.FloatField()          # 单张车票价格
     ticket_amount = db.IntField()
     ticket_fee = db.FloatField()            # 单张车票手续费
-    discount = db.FloatField(default=0)     # 单张车票优惠金额
+    drv_datetime = db.DateTimeField()       # DateTime类型的开车时间
+    bus_num = db.StringField()              # 班次
+    starting_name = db.StringField()        # 出发地
+    destination_name = db.StringField()     # 目的地
 
     # 支付信息
-    pay_money = db.FloatField()     # 实际要支付的金额
+    pay_trade_no = db.StringField() # 支付交易号
+    pay_money = db.FloatField()     # 实际支付的金额
     pay_url = db.StringField()      # 支付链接
+    pay_status = db.IntField(default=PAY_STATUS_NONE)   # 支付状态
+    pay_channel = db.StringField()  # 支付渠道, wy-网银 wx-微信 alipay-支付宝
+    pay_account = db.StringField()  # 支付账号
+    refund_money = db.FloatField()   # 退款金额
 
     # 乘客和联系人信息
     # 包含字段: name, telephone, id_type,id_number,age_level
@@ -229,25 +252,21 @@ class Order(db.Document):
 
     # 取票信息
     pick_code_list = db.ListField(db.StringField(max_length=30))     # 取票密码
-    pick_msg_list = db.ListField(db.StringField(max_length=300))      # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
+    pick_msg_list = db.ListField(db.StringField(max_length=300))     # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
 
-    # 其他
-    crawl_source = db.StringField()     # 源网站
-    extra_info = db.DictField()         # 额外信息
+    # 回调地址
     locked_return_url = db.URLField()   # 锁票成功回调
     issued_return_url = db.URLField()   # 出票成功回调
 
-    # 下单时使用的源网站账号
+    # 源站账号
     source_account = db.StringField()
+    crawl_source = db.StringField()     # 源网站
+    extra_info = db.DictField()         # 额外信息
 
+    # 代购人员信息
     kefu_username = db.StringField()
     kefu_order_status = db.IntField()   # 1表示已处理
     kefu_updatetime = db.DateTimeField()
-
-    drv_datetime = db.DateTimeField()         # DateTime类型的开车时间
-    bus_num = db.StringField()       #班次
-    starting_name = db.StringField()
-    destination_name = db.StringField()
 
 
     meta = {
@@ -266,41 +285,35 @@ class Order(db.Document):
 
     @property
     def source_account_pass(self):
-        accounts = SOURCE_INFO.get(self.crawl_source, {}).get("accounts", {})
-        pass_info = accounts.get(self.source_account, [])
-        if not pass_info:
-            return ""
-        return pass_info[0]
+        rebot = self.get_lock_rebot()
+        if rebot:
+            return rebot.password
+        return ""
 
-    def get_rebot(self, type="app"):  # type: app or wap or web
-        if self.crawl_source == "scqcp":
-            if type == "app":
-                rebot = ScqcpRebot.objects.get(telephone=self.source_account)
-                return rebot
-        elif self.crawl_source == "ctrip":
-            rebot = CTripRebot.objects.get(telephone=self.source_account)
-            return rebot
-        elif self.crawl_source == "cbd":
-            rebot = CBDRebot.objects.get(telephone=self.source_account)
-            return rebot
-        elif self.crawl_source == "baba":
-            rebot = BabaWebRebot.objects.get(telephone=self.source_account)
-            return rebot
-        return None
+    def get_lock_rebot(self):
+        """
+        获取用于锁票的rebot
+        """
+        if not self.source_account:
+            return None
+        cls_lst = get_rebot_class(self.crawl_source)
+        rebot_cls = None
+        for cls in cls_lst:
+            if cls.is_for_lock:
+                rebot_cls = cls
+                break
+        return rebot_cls.objects.get(telephone=self.source_account)
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
         self.kefu_updatetime = dte.now()
         self.kefu_username = user_obj.username
-        self.modify(
-                kefu_order_status=1,
-                kefu_updatetime=dte.now(),
-                kefu_username=user_obj.username)
-        r = getRedisObj()
-        key = 'order_list:%s' % user_obj.username
-        r.srem(key, self.order_no)
+        self.modify(kefu_order_status=1,
+                    kefu_updatetime=dte.now(),
+                    kefu_username=user_obj.username)
+        assign.remove_dealing(self, user_obj)
 
-    def on_create(self):
+    def on_create(self, reason=""):
         if self.status != STATUS_WAITING_LOCK:
             return
         order_status_log.info("[on_create] out_order_no: %s", self.out_order_no)
@@ -310,35 +323,29 @@ class Order(db.Document):
             return
         order_status_log.info("[on_lock_fail] order: %s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        r = getRedisObj()
-        r.zrem('lock_order_list', self.order_no)
-
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
-    def on_lock_success(self):
+    def on_lock_success(self, reason=""):
         if self.status != STATUS_WAITING_ISSUE:
             return
         order_status_log.info("[on_lock_success] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
 
-        r = getRedisObj()
-        r.zadd('lock_order_list', self.order_no, time.time())
+        from tasks import async_refresh_order
+        async_refresh_order.apply_async((self.order_no,), countdown=10)
 
-    def on_lock_retry(self):
+    def on_lock_retry(self, reason=""):
         if self.status != STATUS_LOCK_RETRY:
             return
         order_status_log.info("[on_lock_retry] order:%s", self.order_no)
-
-        r = getRedisObj()
-        r.zadd('lock_order_list', self.order_no, time.time())
 
     def on_give_back(self, reason=""):
         if self.status != STATUS_GIVE_BACK:
             return
         order_status_log.info("[on_give_back] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -351,7 +358,7 @@ class Order(db.Document):
             return
         order_status_log.info("[on_issue_fail] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -363,12 +370,12 @@ class Order(db.Document):
         if order_ct > ISSUE_FAIL_WARNING:
             issue_fail_send_email.delay(key)
 
-    def on_issueing(self):
+    def on_issueing(self, reason=""):
         if self.status != STATUS_ISSUE_ING:
             return
         order_status_log.info("[on_issueing] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -376,7 +383,7 @@ class Order(db.Document):
         key = RK_ISSUEING_COUNT
         r.sadd(key, self.order_no)
 
-    def on_issue_success(self):
+    def on_issue_success(self, reason=""):
         if self.status != STATUS_ISSUE_SUCC:
             return
         order_status_log.info("[on_issue_sucess] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
@@ -387,7 +394,7 @@ class Order(db.Document):
         key = RK_ISSUEING_COUNT
         r.delete(key)
 
-        rebot = self.get_rebot()
+        rebot = self.get_lock_rebot()
         if rebot:
             rebot.remove_doing_order(self)
 
@@ -449,6 +456,7 @@ class Rebot(db.Document):
     }
 
     crawl_source = ""
+    is_for_lock = False         # 是否为用于发起锁票的账号
 
     @classmethod
     def login_all(cls):
@@ -530,11 +538,11 @@ class Rebot(db.Document):
     def on_remove_doing_order(self, order):
         pass
 
-    def valid(self):
+    def test_login_status(self):
         """
-        验证此账号是否有效
+        验证此账号是否已经登录
         """
-        return True
+        raise Exception("Not Implemented")
 
     def login(self):
         """
@@ -554,6 +562,7 @@ class ScqcpRebot(Rebot):
         "collection": "scqcp_rebot",
     }
     crawl_source = SOURCE_SCQCP
+    is_for_lock = True
 
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)
@@ -615,7 +624,7 @@ class CBDRebot(Rebot):
         "collection": "cbd_rebot",
     }
     crawl_source = SOURCE_CBD
-
+    is_for_lock = True
 
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
@@ -623,6 +632,7 @@ class CBDRebot(Rebot):
         data = {
             "MobileNo": self.telephone,
             "Password": self.password,
+            "TokenId": "eltdiqrzcvdijpyybpxxgn42",
         }
         header = {
             "User-Agent": ua,
@@ -650,6 +660,7 @@ class BabaWebRebot(Rebot):
         "collection": "babaweb_rebot",
     }
     crawl_source = SOURCE_BABA
+    is_for_lock = True
 
     def clear_riders(self):
         is_login = self.test_login_status()
@@ -718,7 +729,6 @@ class JskyWebRebot(Rebot):
     }
     crawl_source = SOURCE_JSKY
 
-
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
         login_url = "https://www.jskylwsp.com/Account/LoginIn"
@@ -754,6 +764,7 @@ class JskyAppRebot(Rebot):
         "collection": "jskyapp_rebot",
     }
     crawl_source = SOURCE_JSKY
+    is_for_lock = True
 
     def post_data_templ(self, service_name, body):
         stime = str(int(time.time()*1000))
@@ -823,44 +834,8 @@ class CTripRebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
         "collection": "ctrip_rebot",
     }
-
-    #@classmethod
-    #def get_one(cls):
-    #    r = getRedisObj()
-
-    #    def _check_current():
-    #        current = r.hget(CURRENT_ACCOUNT, "ctrip")
-    #        if current:
-    #            used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % current)
-    #            if not used or (used and int(used) < 20):
-    #                r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % current, int(used)+1)
-    #                return cls.objects.get(telephone=current)
-    #        return None
-
-    #    def _choose_new():
-    #        ids = []
-    #        for obj in cls.objects:
-    #            used = r.hget(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone)
-    #            ids.append(obj.telephone)
-    #            if used and int(used) >= 20:
-    #                continue
-    #            r.hset(CURRENT_ACCOUNT, "ctrip", obj.telephone)
-    #            r.hset(ACCOUNT_ORDER_COUNT, "ctrip%s" % obj.telephone, 1)
-    #            return obj, ids
-    #        return None, []
-
-    #    obj = _check_current()
-    #    if obj:
-    #        return obj
-
-    #    obj, ids = _choose_new()
-    #    if obj:
-    #        return obj
-
-    #    r.hdel(CURRENT_ACCOUNT, "ctrip")
-    #    map(lambda k: r.hdel(ACCOUNT_ORDER_COUNT, "ctrip%s" % k), ids)
-    #    new, _ = _choose_new()
-    #    return new
+    crawl_source = SOURCE_CTRIP
+    is_for_lock = True
 
     def login(self):
         from selenium import webdriver
@@ -906,37 +881,6 @@ class CTripRebot(Rebot):
         rebot_log.info("%s 登陆失败" % self.telephone)
         return "fail"
 
-    @classmethod
-    def login_all(cls):
-        # 登陆所有预设账号
-        rebot_log.info(">>>> start to login ctrip.com:")
-        valid_cnt = 0
-        has_checked = {}
-        accounts = SOURCE_INFO[SOURCE_CTRIP]["accounts"]
-        for bot in cls.objects:
-            has_checked[bot.telephone] = 1
-            if bot.telephone not in accounts:
-                bot.modify(is_active=False)
-                continue
-            pwd, _ = accounts[bot.telephone]
-            bot.modify(password=pwd)
-            if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-
-        for tele, (pwd, openid) in accounts.items():
-            if tele in has_checked:
-                continue
-            bot = cls(is_active=False,
-                      is_locked=False,
-                      telephone=tele,
-                      password=pwd,)
-            bot.save()
-            if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-        rebot_log.info(">>>> end login ctrip.com, success %d", valid_cnt)
-
     def http_post(self, url, data):
         request = urllib2.Request(url)
         request.add_header('User-Agent', self.user_agent)
@@ -945,6 +889,70 @@ class CTripRebot(Rebot):
         response = urllib2.urlopen(request, qstr, timeout=30)
         ret = json.loads(response.read())
         return ret
+
+
+class TCWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    user_id = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "tc_rebot",
+    }
+    crawl_source = SOURCE_TC
+    is_for_lock = True
+
+    def login(self, headers=None, cookies={}, valid_code=""):
+        login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
+        pwd_info = SOURCE_INFO[self.crawl_source]["pwd_encode"]
+        data = {
+            "remember":30,
+            "name": self.telephone,
+            "pass": pwd_info[self.password],
+            "action": "login",
+            "validCode": valid_code,
+        }
+        if not headers:
+            headers = {
+                "User-Agent": random.choice(BROWSER_USER_AGENT),
+            }
+        headers.update({"Content-Type": "application/x-www-form-urlencoded"})
+        r = requests.post(login_url,
+                          data=urllib.urlencode(data),
+                          headers=headers,
+                          cookies=cookies)
+        cookies.update(dict(r.cookies))
+        ret = r.json()
+        if int(ret["state"]) == 100:    # 登录成功
+            self.last_login_time = dte.now()
+            self.user_agent = headers["User-Agent"]
+            self.cookies = json.dumps(cookies)
+            for s in cookies["us"].split("&"):
+                k,v = s.split("=")
+                if k == "userid":
+                    self.user_id = v
+                    break
+            self.save()
+            rebot_log.info("登陆成功 %s %s", self.crawl_source, self.telephone)
+            return "OK"
+        else:
+            self.modify(is_active=True)
+            rebot_log.error("登陆失败 %s %s, %s", self.crawl_source, self.telephone, str(ret))
+            return "fail"
+
+    def check_login_by_resp(self, resp):
+        result = urlparse.urlparse(resp.url)
+        if result.netloc == u"passport.ly.com":
+            return 0
+        return 1
+
+    def test_login_status(self):
+        user_url = "http://member.ly.com/Member/MemberInfomation.aspx"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = requests.get(user_url, headers=headers, cookies=cookies)
+        return self.check_login_by_resp(resp)
 
 
 class Bus100Rebot(Rebot):
@@ -958,6 +966,7 @@ class Bus100Rebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
     }
     crawl_source = SOURCE_BUS100
+    is_for_lock = True
 
     @classmethod
     def get_one(cls):
@@ -1080,7 +1089,7 @@ class Bus100Rebot(Rebot):
         """
         重新获取线路ID
         """
-        queryline_url = 'http://www.84100.com/getTrainList/ajax'
+        queryline_url = 'http://www.84100.com/getBusShift/ajax'
         start_city_id = line.s_sta_id
         start_city_name = line.s_city_name
         target_city_name = line.d_sta_name
@@ -1125,7 +1134,7 @@ class Bus100Rebot(Rebot):
                 item = {}
                 time = n.xpath('ul/li[@class="time"]/p/strong/text()')
                 item['drv_time'] = time[0]
-                departure_time = payload['sendDate']+' '+time[0]
+                drv_datetime = dte.strptime(payload['sendDate']+' '+time[0], "%Y-%m-%d %H:%M")
                 banci = ''
                 banci = n.xpath('ul/li[@class="time"]/p[@class="carNum"]/text()')
                 if banci:
@@ -1134,12 +1143,9 @@ class Bus100Rebot(Rebot):
                     ord_banci = n.xpath('ul/li[@class="time"]/p[@class="banci"]/text()')
                     if ord_banci:
                         banci = ord_banci[0]
+                banci = banci.decode("utf-8").strip().rstrip(u"次")
 #                 price = n.xpath('ul/li[@class="price"]/strong/text()')
 #                 item["full_price"] = float(str(price[0]).split('￥')[-1])
-                infor = n.xpath('ul/li[@class="carriers"]/p[@class="info"]/text()')
-                distance = ''
-                if infor:
-                    distance = infor[0].replace('\r\n', '').replace(' ',  '')
                 buyInfo = n.xpath('ul/li[@class="buy"]')
                 flag = 0
                 for buy in buyInfo:
@@ -1147,19 +1153,35 @@ class Bus100Rebot(Rebot):
                     if flag:
                         flag = 1
                     else:
-                        flag = '0'
+                        flag = 0
                 item['extra_info'] = {"flag": flag}
                 item['bus_num'] = str(banci)
                 item['shift_id'] = str(shiftid)
-                line_id = md5("%s-%s-%s-%s-%s-%s" % \
-                    (payload['startName'], payload['startId'], payload['endName'], departure_time, banci, 'bus100'))
-
+                item["refresh_datetime"] = dte.now()
+                line_id = md5("%s-%s-%s-%s-%s" % \
+                    (payload['startName'], payload['endName'], drv_datetime, str(banci), 'bus100'))
                 item['line_id'] = line_id
-                try:
-                    line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
-                    line_obj.modify(**item)
-                except Line.DoesNotExist:
-                    continue
+
+                line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
+                line_obj.modify(**item)
+
             if nextPage > pageNo:
-                url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
+                url = 'http://84100.com/getBusShift/ajax'+'?pageNo=%s' % nextPage
+#                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
                 self.recrawl_func(url, payload)
+
+if not "_rebot_class" in globals():
+    _rebot_class = {}
+    for name in Rebot._subclasses:
+        if name == "Rebot":
+            continue
+        cls = globals()[name]
+        source = cls.crawl_source
+        if not source:
+            continue
+        if source not in _rebot_class:
+            _rebot_class[source] = []
+        _rebot_class[source].append(cls)
+
+def get_rebot_class(source):
+    return _rebot_class.get(source, {})

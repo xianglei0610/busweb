@@ -54,7 +54,7 @@
             <td class="center">{{line.drv_date}}</br>{{line.drv_time}}</td>
             <td class="center">{{line.shift_id}}</br>{{line.bus_num}}</td>
             <td class="center">票价:{{line.full_price}}元</br> 手续费{{line.fee}}元</td>
-            <td class="center">{{line.crawl_source}}</td>
+            <td class="center">{{line.crawl_source}}/{{line.refresh_datetime|format_datetime('%Y-%m-%d %H:%M:%S')}}</td>
 		</tr>
 	{%endfor%}
 </tbody>

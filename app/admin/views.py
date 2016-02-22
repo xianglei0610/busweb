@@ -8,20 +8,21 @@ import requests
 import json
 import cStringIO
 import flask.ext.login as flask_login
+import assign
+import traceback
 
 from datetime import datetime as dte, timedelta
 from app.utils import md5, create_validate_code
 from app.constants import *
-from mongoengine import Q
 from flask import render_template, request, redirect, url_for, jsonify, session, make_response
 from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.admin import admin
 from app.utils import getRedisObj
 from app.models import Order, Line, AdminUser, PushUserList
-from tasks import refresh_kefu_order
-from tasks import check_order_completed, push_kefu_order
 from app.flow import get_flow
+from tasks import push_kefu_order, async_lock_ticket, issued_callback
+from app import order_log
 
 
 def parse_page_data(qs):
@@ -108,7 +109,14 @@ def line_list():
 @login_required
 def src_code_img(order_no):
     order = Order.objects.get(order_no=order_no)
-    if order.crawl_source in ["scqcp", "baba"]:
+    if order.crawl_source == "bus100":
+        data = json.loads(session["bus100_pay_login_info"])
+        code_url = data.get("valid_url")
+        headers = data.get("headers")
+        cookies = data.get("cookies")
+        r = requests.get(code_url, headers=headers, cookies=cookies)
+        return r.content
+    else:
         data = json.loads(session["pay_login_info"])
         code_url = data.get("valid_url")
         headers = data.get("headers")
@@ -117,13 +125,6 @@ def src_code_img(order_no):
         cookies.update(dict(r.cookies))
         data["cookies"] = cookies
         session["pay_login_info"] = json.dumps(data)
-        return r.content
-    elif order.crawl_source == "bus100":
-        data = json.loads(session["bus100_pay_login_info"])
-        code_url = data.get("valid_url")
-        headers = data.get("headers")
-        cookies = data.get("cookies")
-        r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
 
 
@@ -147,11 +148,8 @@ def order_pay(order_no):
     token = request.args.get("token", "")
     username = request.args.get("username",'')
     code = request.args.get("valid_code", "")
-    if order.status != STATUS_WAITING_ISSUE:
-        if order.status == STATUS_LOCK_RETRY:
-            pass
-        else:
-            return redirect(url_for("admin.wating_deal_order"))
+    if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY]:
+        return redirect(url_for("admin.wating_deal_order"))
     r = getRedisObj()
     limit_key = LAST_PAY_CLICK_TIME % order_no
     click_time = r.get(limit_key)
@@ -205,12 +203,12 @@ class SubmitOrder(MethodView):
         #}
         contact = {
             "name": "范月芹",
-            "phone": "18620857607",
+            "phone": "15575101324",
             "idcard": "510106199909235149",
         }
         rider1 = {
             "name": "范月芹",
-            "phone": "18620857607",
+            "phone": "15575101324",
             "idcard": "510106199909235149",
         }
 
@@ -343,17 +341,7 @@ def index():
 @admin.route('/top', methods=['GET'])
 @login_required
 def top_page():
-    key = 'lock_order_list'
-    r = getRedisObj()
-    count = r.zcard(key)
-    sum = count
-    userObjs = AdminUser.objects.filter(is_kefu=1)
-    for userObj in userObjs:
-        username = userObj.username
-        kf_key = 'order_list:%s' % username
-        order_ct = r.scard(kf_key)
-        sum += order_ct
-    return render_template("admin-new/top.html", sum=sum)
+    return render_template("admin-new/top.html")
 
 
 @admin.route('/left', methods=['GET'])
@@ -381,6 +369,9 @@ def all_order():
                 query.update(source_account=source_account)
     if status:
         query.update(status=int(status))
+    pay_status = request.args.get("pay_status", "")
+    if pay_status:
+        query.update(pay_status=int(pay_status))
 
     str_date = request.args.get("str_date", "")
     end_date = request.args.get("end_date", "")
@@ -432,6 +423,7 @@ def all_order():
         return render_template('admin-new/allticket_order.html',
                                page=parse_page_data(qs),
                                status_msg=STATUS_MSG,
+                               pay_status_msg = PAY_STATUS_MSG,
                                source_info=SOURCE_INFO,
                                condition=request.args,
                                stat=stat,
@@ -460,9 +452,6 @@ def all_order():
         pageNum = order_info['pageNum']
         return jsonify({"status": 0,"total":total,"page":page,"pageCount":pageCount,"pageNum":pageNum, "stat":stat, "data": data})
 
-admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
-admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
-
 
 @admin.route('/myorder', methods=['GET'])
 @login_required
@@ -478,6 +467,7 @@ def detail_order(order_no):
                             order=order,
                             status_msg=STATUS_MSG,
                             source_info=SOURCE_INFO,
+                            pay_status_msg=PAY_STATUS_MSG,
                            )
 
 
@@ -487,68 +477,41 @@ def wating_deal_order():
     """
     等待处理订单列表
     """
-    userObj = current_user
-    order_nos = []
-    r = getRedisObj()
     client = request.headers.get("type", 'web')
+    if current_user.is_kefu:
+        for o in assign.dealing_orders(current_user):
+            if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
+                continue
+            o.complete_by(current_user)
 
-    key = RK_ISSUEING_COUNT
-    order_ct = r.scard(key)
-    forbid = False
-    if order_ct >=3:
-        forbid = True
+        if current_user.is_switch:
+            order_ct = assign.dealing_size(current_user)
+            for i in range(max(0, KF_ORDER_CT-order_ct)):
+                order = assign.dequeue_wating_lock()
+                if not order:
+                    continue
+                if order.kefu_username:
+                    continue
+                order.update(kefu_username=current_user.username)
+                assign.add_dealing(order, current_user)
+                if order.status == STATUS_WAITING_LOCK:
+                    async_lock_ticket.delay(order.order_no)
+                push_kefu_order.apply_async((current_user.username, order.order_no))
+    qs = assign.dealing_orders(current_user).order_by("create_date_time")
 
-    if userObj.is_kefu:
-        key = 'order_list:%s' % userObj.username
-        for o in Order.objects.filter(order_no__in=r.smembers(key)):
-            if o.status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING, STATUS_GIVE_BACK]:
-                o.complete_by(current_user)
-#             elif o.status == STATUS_WAITING_LOCK:
-#                 r.srem(key, o.order_no)
-
-        if userObj.is_switch:
-            order_ct = r.scard(key)
-            if order_ct < KF_ORDER_CT:
-                count = KF_ORDER_CT-order_ct
-                lock_order_list = r.zrange('lock_order_list', 0, -1)
-                for i in lock_order_list:
-                    if count <= 0:
-                        break
-                    if forbid and Order.objects.get(order_no=i).crawl_source=="cbd":
-                        continue
-                    order = Order.objects.get(order_no=i)
-                    count -= 1
-                    r.zrem('lock_order_list', i)
-                    if order.kefu_username:
-                        continue
-                    order.update(kefu_username=userObj.username)
-                    r.sadd(key, i)
-                    refresh_kefu_order.apply_async((userObj.username, i))
-                    check_order_completed.apply_async((userObj.username, key, i), countdown=4*60)  # 4分钟后执行
-                    try:
-                        push_kefu_order.apply_async((userObj.username, i))
-                    except:
-                        pass
-        order_nos = r.smembers(key)
-
-    qs = Order.objects.filter(order_no__in=order_nos)
-    qs = qs.order_by("-create_date_time")
+    r = getRedisObj()
     if client == 'web':
         expire_seconds = {}
-        t = time.time()
         for o in qs:
             click_time = r.get(LAST_PAY_CLICK_TIME % o.order_no)
-            if not click_time:
-                expire_seconds[o.order_no] = 0
-                continue
-            click_time = float(click_time)
-            expire_seconds[o.order_no] = max(0, PAY_CLICK_EXPIR-int(t-click_time))
+            expire_seconds[o.order_no] = 0
+            if click_time or o.status == STATUS_WAITING_LOCK:
+                expire_seconds[o.order_no] = 5
         return render_template("admin-new/waiting_deal_order.html",
                                page=parse_page_data(qs),
                                status_msg=STATUS_MSG,
                                source_info=SOURCE_INFO,
-                               expire_seconds=expire_seconds,
-                               )
+                               expire_seconds=expire_seconds)
     elif client in ['android', 'ios']:
         data = []
         for i in qs:
@@ -570,21 +533,56 @@ def wating_deal_order():
 @admin.route('/kefu_complete', methods=['POST'])
 @login_required
 def kefu_complete():
-    userObj = current_user
     order_no = request.form.get("order_no", '')
     if not (order_no):
         return jsonify({"status": -1, "msg": "参数错误"})
     orderObj = Order.objects.get(order_no=order_no)
-    orderObj.complete_by(userObj)
+    orderObj.complete_by(current_user)
     return jsonify({"status": 0, "msg": "处理完成"})
 
 
 @admin.route('/kefu_on_off', methods=['POST'])
 @login_required
 def kefu_on_off():
-    userObj = AdminUser.objects.get(username=current_user.username)
     is_switch = int(request.form.get('is_switch', 0))
-
-    userObj.is_switch = is_switch
-    userObj.save()
+    current_user.modify(is_switch=is_switch)
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
+
+
+@admin.route('/fangbian/callback', methods=['POST'])
+def fangbian_callback():
+    try:
+        order_log.info("[fanbian-callback] %s", request.get_data())
+        args = json.loads(request.get_data())
+        data = args["data"]
+        service_id = args["serviceID"]
+        code = args["code"]
+        order = Order.objects.get(order_no=data["merchantOrderNo"])
+        if service_id == "B001":    # 锁票回调
+            raw_order = data["ticketOrderNo"]
+            if code == 2100:
+                order.modify(status=STATUS_ISSUE_ING, raw_order_no=raw_order)
+                order.on_issueing(reason="code:%s, message:%s" % (code, args["message"]))
+            else:
+                order.modify(status=STATUS_ISSUE_FAIL, raw_order_no=raw_order)
+                order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
+                # issued_callback.delay(order.order_no)
+        elif service_id == "B002":
+            if code == 2102:
+                order.modify(status=STATUS_ISSUE_SUCC,
+                            pick_code_list=[""],
+                            pick_msg_list=[data["exData"]])
+                order.on_issue_success()
+                # issued_callback.delay(order.order_no)
+            else:
+                order.modify(status=STATUS_ISSUE_FAIL)
+                order.on_issue_fail(reason="code:%s, message:%s" % (code, args["message"]))
+                # issued_callback.delay(order.order_no)
+    except:
+        order_log.error("".join(traceback.format_exc()))
+        return "error"
+    return "success"
+
+
+admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
+admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))

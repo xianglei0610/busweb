@@ -21,23 +21,12 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 
 
 @manager.command
-def deploy(site):
-    from app.models import ScqcpRebot, Bus100Rebot, CTripRebot, CBDRebot, JskyAppRebot, JskyWebRebot
-    if site == "ctrip":
-        CTripRebot.login_all()
-    elif site == "scqcp":
-        ScqcpRebot.login_all()
-    elif site == "bus100":
-        Bus100Rebot.login_all()
-    elif site == "cbd":
-        CBDRebot.login_all()
-    elif site == "jskyapp":
-        JskyAppRebot.login_all()
-    elif site == "jskyweb":
-        JskyWebRebot.login_all()
-    elif site == "babaweb":
-        from app.models import BabaWebRebot
-        BabaWebRebot.login_all()
+def init_account(site):
+    from app.models import get_rebot_class
+    for client in ["web", "wap", "app"]:
+        cls = get_rebot_class(site, client)
+        if cls:
+            cls.login_all()
 
 
 @manager.command
@@ -139,8 +128,15 @@ def migrate_from_crawl(site, city=""):
 @manager.command
 def clear_expire_line():
     from app.models import Line
-    now = dte.now()
-    print Line.objects.filter(crawl_datetime__lte=now).delete()
+    today = dte.now().strftime("%Y-%m-%d")
+    cnt = Line.objects.filter(drv_date__lt=today).delete()
+    app.logger.info("%s line deleted", cnt)
+
+
+@manager.command
+def add_pay_record(filename):
+    from pay import import_alipay_record
+    import_alipay_record(filename)
 
 
 @manager.option('-s', '--site', dest='site', default='')
@@ -175,48 +171,6 @@ def sync_open_city(site, province_name):
         except:
             print '%s already existed'%city_name
             pass
-
-
-@manager.command
-def bus100_fail(order_no):
-    from app.models import Order
-    from tasks import issued_callback
-    from app.constants import STATUS_ISSUE_FAIL
-    order = Order.objects.get(order_no=order_no)
-    order.modify(status=STATUS_ISSUE_FAIL)
-    order.on_issue_fail()
-    issued_callback(order.order_no)
-
-@manager.command
-def bus100_succ(order_no, raw_no, code):
-    from app.constants import DUAN_XIN_TEMPL, SOURCE_BUS100, STATUS_ISSUE_SUCC
-    from app.models import Order
-    from tasks import issued_callback
-    dx_templ = DUAN_XIN_TEMPL[SOURCE_BUS100]
-    ticketPassword = ''
-    if code:
-        ticketPassword = "取票密码:%s;" % code
-    order = Order.objects.get(order_no=order_no)
-    dx_info = {
-        "amount": order.ticket_amount,
-        "start": "%s(%s)" % (order.line.s_city_name, order.line.s_sta_name),
-        "end": order.line.d_sta_name,
-        "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-        "order": raw_no,
-        "ticketPassword": ticketPassword,
-    }
-    code_list, msg_list = [], []
-    if code:
-        code_list.append(code)
-    else:
-        code_list.append('无需取票密码')
-    msg_list.append(dx_templ % dx_info)
-    order.modify(
-            status=STATUS_ISSUE_SUCC,
-            pick_code_list=code_list,
-            pick_msg_list=msg_list)
-    order.on_issue_success()
-    issued_callback(order.order_no)
 
 
 @manager.option('-s', '--site', dest='site', default='')

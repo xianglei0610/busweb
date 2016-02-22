@@ -38,8 +38,9 @@ class Flow(BaseFlow):
             try:
                 rebot.recrawl_shiftid(order.line)
             except:
-                lock_result.update(result_code=2)
-                lock_result.update(result_reason="源站刷新线路错误，锁票重试")
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="源站刷新线路错误，锁票重试")
                 return lock_result
 
             line = Line.objects.get(line_id=order.line.line_id)
@@ -52,7 +53,7 @@ class Flow(BaseFlow):
                 lock_result.update(result_reason="该条线路无法购买", result_code=0)
                 return lock_result
 
-            ttype, ttpwd= self.request_ticket_info(order, rebot)
+            ttype, ttpwd = self.request_ticket_info(order, rebot)
             lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
             lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
             if lock_flag == '0':    # 锁票成功
@@ -72,7 +73,11 @@ class Flow(BaseFlow):
                                        result_reason="账号被限购，锁票重试")
                 elif u'Could not return the resource to the pool' in lock_msg:
                     lock_result.update(result_code=2,
+                                       source_account="",
                                        result_reason="源站系统错误，锁票重试")
+                else:
+                    lock_result.update(result_code=0,
+                                       result_reason=lock_msg)
             elif lock_flag == '99' or u'班次信息错误' in lock_msg:
                 lock_result.update(result_code=2,
                                    result_reason=lock_msg)
@@ -232,11 +237,30 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        rebot = Bus100Rebot.get_random_active_rebot()
+        rebot = None
+        for i in Bus100Rebot.objects.filter(is_active=True).order_by('-last_login_time')[0:5]:
+            print '1111111111', i.telephone, i.last_login_time
+            if i.test_login_status():
+                rebot = i
+                break
         if not rebot:
-            return result_info
+            rebot = Bus100Rebot.get_random_rebot()
+            data = {
+                "loginType": 0,
+                "backUrl": '',
+                "mobile": rebot.telephone,
+                "password": rebot.password,
+                "validateCode": '1234'
+            }
+            r = requests.post("http://84100.com/doLogin/ajax", data=data)
+            if r.json().get('flag', '') == '0':
+                rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now())
+                if not rebot.test_login_status():
+                    return result_info
+            else:
+                return result_info
         now = dte.now()
-        ret = rebot.recrawl_shiftid(line)
+        rebot.recrawl_shiftid(line)
         line = Line.objects.get(line_id=line.line_id)
         if line.shift_id == "0" or not line.extra_info.get('flag', 0):
             line_log.info("[refresh-result]  no left_tickets line:%s %s ", line.crawl_source, line.line_id)
@@ -264,7 +288,10 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, **kwargs):
-        rebot = Bus100Rebot.objects.get(telephone=order.source_account)
+        if order.source_account:
+            rebot = Bus100Rebot.objects.get(telephone=order.source_account)
+        else:
+            rebot = Bus100Rebot.get_random_rebot()
         if valid_code:      #  登陆
             data = json.loads(session["bus100_pay_login_info"])
             code_url = data["valid_url"]
@@ -279,7 +306,7 @@ class Flow(BaseFlow):
             }
             r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
-            rebot.modify(cookies=cookies, is_active=True)
+            rebot.modify(cookies=cookies, is_active=True, last_login_time=dte.now())
 
         is_login = rebot.test_login_status()
         if is_login:

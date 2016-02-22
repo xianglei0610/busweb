@@ -1,4 +1,8 @@
 # -*- coding:utf-8 -*-
+# 客户端类型
+CLIENT_WEB = "web"          # pc网站
+CLIENT_WAP = "wap"          # wap网
+CLIENT_APP = "app"          # 移动端
 
 # 爬取来源
 SOURCE_SCQCP = "scqcp"
@@ -7,8 +11,15 @@ SOURCE_CTRIP = "ctrip"
 SOURCE_CBD = "cbd"
 SOURCE_JSKY = "jsky"
 SOURCE_BABA = "baba"
+SOURCE_TC = "tongcheng"
+SOURCE_FB = "fangbian"
 
 SOURCE_INFO = {
+    SOURCE_FB: {
+        "name": "方便网",
+        "website": "www.fangbian.com",
+        "accounts": {}
+    },
     SOURCE_SCQCP: {
         "name": "四川汽车票务网",
         "website": "www.scqcp.com",
@@ -179,7 +190,17 @@ SOURCE_INFO = {
             "15574335669": ("123456", ""),
             "18673582670": ("123456", ""),
         },
-    }
+    },
+    SOURCE_TC: {
+        "name": "同程",
+        "website": "http://www.ly.com/",
+        "accounts": {
+            "15575101324": ("cibRpL0", ''),
+        },
+        "pwd_encode": {
+            "cibRpL0": "d17bc469b36817893ff0cdae06b5422f",
+        }
+    },
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
@@ -252,6 +273,20 @@ STATUS_MSG = {
     STATUS_LOCK_RETRY: "下单重试",
 }
 
+
+# 支付状态
+PAY_STATUS_NONE = 0          # 未知
+PAY_STATUS_UNPAID = 1        # 未支付
+PAY_STATUS_PAID = 2          # 已支付
+PAY_STATUS_REFUND = 3        # 已退款
+
+PAY_STATUS_MSG = {
+    PAY_STATUS_UNPAID: "未支付",
+    PAY_STATUS_NONE: "未知",
+    PAY_STATUS_PAID: "已支付",
+    PAY_STATUS_REFUND: "已退款",
+}
+
 # 证件类型
 IDTYPE_IDCARD = 1   # 身份证
 
@@ -289,6 +324,8 @@ CURRENT_ACCOUNT = "current_account"
 RK_ISSUE_FAIL_COUNT = "%s_issue_fail"
 RK_ISSUEING_COUNT = "issueing_count"
 
+RK_WATING_LOCK_ORDERS = "wating_lock_orders"       # 等待下单的订单
+RK_DEALING_ORDERS = "dealing_orders:%s"            # 客服正在处理的订单
 
 # 短信模版
 
@@ -300,12 +337,9 @@ DUAN_XIN_TEMPL = {
     SOURCE_BABA: "购票成功,取票号:%(no)s,密码:%(code)s,取票点:%(site)s,(%(start)s-%(end)s %(time)s),请旅客尽早到车站取票.",
 }
 
-WEIGHTS = {
-    SOURCE_CBD: 200,
-    SOURCE_JSKY: 800,
-
-    SOURCE_CTRIP: 500,
-    SOURCE_SCQCP: 500,
-
-    SOURCE_BUS100: 1000,
+CITY_NAME_TRANS = {
+    u"南宁琅东": "南宁",
+    u"南宁江南": "南宁",
+    u"南宁安吉": "南宁",
+    u"南宁金桥": "南宁",
 }
