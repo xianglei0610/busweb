@@ -14,7 +14,7 @@ from lxml import etree
 from apscheduler.scheduler import Scheduler
 
 
-from manage import migrate_from_crawl, del_source_people
+from manage import del_source_people
 from app.email import send_email
 from app.constants import ADMINS, STATUS_WAITING_ISSUE
 from app import setup_app
@@ -60,7 +60,7 @@ def check(func):
 
 
 @check
-def bus_crawl(crawl_source, province_id = None):
+def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
     if os.getenv('FLASK_CONFIG') == 'dev':
         url = "http://192.168.1.202:6800/schedule.json"
     elif os.getenv('FLASK_CONFIG') == 'prod':
@@ -74,6 +74,7 @@ def bus_crawl(crawl_source, province_id = None):
           }
     if province_id:
         data.update(province_id=province_id)
+    data.update(crawl_kwargs)
     print url
     res = requests.post(url, data=data)
     res = res.json()
@@ -88,61 +89,9 @@ def bus_crawl(crawl_source, province_id = None):
             send_email(subject, sender, recipients, text_body, html_body)
 
 
-@check
-def sync_crawl_to_api(crawl_source):
-    start = time.time()
-    migrate_from_crawl(crawl_source)
-    end = time.time()
-    logstr = "sync_crawl_to_api ,%s spend %s" % (crawl_source, end - start)
-    print logstr
-    if not app.config["DEBUG"]:
-        with app.app_context():
-            subject = str(datetime.datetime.now())[0:19] + '  start sync_crawl_to_api,crawl_source :%s ' % crawl_source
-            sender = 'dg@12308.com'
-            recipients = ADMINS
-            text_body = ''
-            html_body = subject + '</br>' + 'logstr:%s' % logstr
-            send_email(subject, sender, recipients, text_body, html_body)
-
-
-def check_login_status(crawl_source):
-    if crawl_source == 'bus100':
-        obj = Bus100Rebot.objects.all()
-        count = obj.count()
-        url = "http://www.84100.com/user.shtml"
-        phone_list = []
-        for i in obj:
-            print i.telephone
-            res = requests.post(url, cookies=i.cookies)
-            res = res.content
-            sel = etree.HTML(res)
-            userinfo = sel.xpath('//div[@class="c_content"]/div/ul/li[@class="myOrder"]')
-            print userinfo
-            if not userinfo:
-                i.is_active = False
-                i.save()
-                phone_list.append(i.telephone)
-        if os.getenv('FLASK_CONFIG') == 'prod':
-            if not app.config["DEBUG"] and len(phone_list) == count:
-                msg = u'【乐程票务】巴士100所有登录账号的cookie过期了'
-                try:
-                    send_msg(sms_phone_list, msg)
-                except:
-                    pass
-                with app.app_context():
-                    subject = 'check_login_status'
-                    content = ' check_login_status,crawl_source :%s ' % crawl_source
-                    sender = 'dg@12308.com'
-                    recipients = ADMINS
-                    text_body = ''
-                    html_body = content + ' '+','.join(phone_list)
-                    send_email(subject, sender, recipients, text_body, html_body)
-
-
 def del_people(crawl_source):
     del_source_people(crawl_source)
     for rebot in BabaWebRebot.objects.all():
-        print rebot.telephone
         rebot.clear_riders()
 
 
@@ -151,19 +100,22 @@ def main():
 
     sched = Scheduler(daemonic=False)
 
-    #sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['baba'])
+    # 巴士壹佰
     sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['bus100', "450000"]) #广西
     sched.add_cron_job(bus_crawl, hour=18, minute=20, args=['bus100', "370000"]) #山东
-#     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['bus100', "210000"]) #辽宁
     sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['bus100', "410000"]) #河南
-    sched.add_cron_job(sync_crawl_to_api, hour=18, minute=10, args=['bus100']) #同步爬虫数据到web
-#     sched.add_cron_job(del_people, hour=22, minute=40, args=['bus100']) #删除源站常用联系人
-    #sched.add_cron_job(check_login_status, hour='8-23', minute='*/10',args=['bus100'])
-#     sched.add_interval_job(check_login_status, minutes=10, args=['bus100'])
-    sched.add_cron_job(bus_crawl, hour=22, minute=36, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "山东"}})
-    sched.add_cron_job(bus_crawl, hour=22, minute=35, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "河南"}})
-    sched.add_cron_job(bus_crawl, hour=21, minute=35, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "广西"}})
 
+    # 巴巴快巴
+    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['baba'])
+
+    # 方便网
+    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "山东"}})
+    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "河南"}})
+    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "广西"}})
+
+
+    # 其他
+    sched.add_cron_job(del_people, hour=22, minute=40, args=['bus100']) #删除源站常用联系人
 
     sched.start()
 
