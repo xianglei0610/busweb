@@ -35,6 +35,7 @@ order_status_log = logging.getLogger("order_status")
 kefu_log = logging.getLogger("kefu")
 access_log = logging.getLogger("access")
 rebot_log = logging.getLogger("rebot")
+cron_log = logging.getLogger("cron")
 
 
 def init_celery(app):
@@ -55,7 +56,7 @@ def init_logging(app, server_type):
     stdout_fhd = StreamHandler()
     stdout_fhd.setLevel(logging.DEBUG)
     stdout_fhd.setFormatter(fmt)
-    for logger in [line_log, order_log, kefu_log, access_log, rebot_log, order_status_log]:
+    for logger in [line_log, order_log, kefu_log, access_log, rebot_log, order_status_log, cron_log]:
         logger.setLevel(logging.DEBUG)
         s = logger.name
         f = "logs/%s.log" % s

@@ -27,6 +27,11 @@ class Config:
     FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"
     # FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
 
+    # scrapyd 地址
+    SCRAPYD_URLS = [
+        "http://localhost:6800/schedule.json",
+    ]
+
     # redis config
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
@@ -77,6 +82,11 @@ class ApiDevConfig(Config):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
+    # scrapyd 地址
+    SCRAPYD_URLS = [
+        "http://192.168.1.202:6800/schedule.json",
+    ]
+
     MONGODB_SETTINGS = {
         'db': 'web12308',
         'host': '192.168.1.202',
@@ -99,6 +109,11 @@ class ApiProdConfig(Config):
 
     # 方便网接口地址
     FANGBIAN_API_URL = "http://qcapi.fangbian.com/fbapi.asmx"
+
+    # scrapyd 地址
+    SCRAPYD_URLS = [
+        "http://120.27.150.94:6800/schedule.json"
+    ]
 
     # redis config
     REDIS_HOST = "10.51.9.34"
