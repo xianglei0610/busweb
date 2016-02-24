@@ -6,6 +6,7 @@ import urllib2
 import time
 import urlparse
 import assign
+import re
 
 from app.constants import *
 from datetime import datetime as dte
@@ -1169,6 +1170,20 @@ class Bus100Rebot(Rebot):
                 url = 'http://84100.com/getBusShift/ajax'+'?pageNo=%s' % nextPage
 #                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
                 self.recrawl_func(url, payload)
+
+    def clear_riders(self):
+        url = "http://84100.com/people.shtml"
+        try:
+            response = requests.post(url, cookies=self.cookies)
+            sel = etree.HTML(response.content)
+            people_list = sel.xpath('//div[@class="p-edu"]')
+            for i in people_list:
+                res = i.xpath('a[@class="del trans"]/@onclick')[0]
+                userid = re.findall('del\(\'(.*)\'\);', res)[0]
+                del_url = "http://84100.com/user/delPeople/ajax?id=%s"%userid
+                response = requests.get(del_url, cookies=self.cookies)
+        except:
+            pass
 
 if not "_rebot_class" in globals():
     _rebot_class = {}
