@@ -44,6 +44,7 @@ def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
         data.update(province_id=province_id)
     data.update(crawl_kwargs)
 
+    res_lst = []
     for url in url_list:
         res = requests.post(url, data=data)
         res_lst.append("%s: %s" % (url, res.content))
