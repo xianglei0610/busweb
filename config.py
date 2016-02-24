@@ -112,7 +112,7 @@ class ApiProdConfig(Config):
 
     # scrapyd 地址
     SCRAPYD_URLS = [
-        "http://120.27.150.94:6800/schedule.json"
+        "http://localhost:6800/schedule.json"
     ]
 
     # redis config
