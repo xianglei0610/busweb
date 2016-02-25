@@ -43,15 +43,15 @@ def parse_page_data(qs):
         query_dict[k] = request.args.get(k)
     query_string = urllib.urlencode(query_dict)
 
-    old_range = range(max(1, page-8),  min(max(1, page-8)+16, pageNum))
+    old_range = range(max(1, page-8),  min(max(1, page-8)+16, pageNum+1))
     return {
         "total": total,
         "pageCount": pageCount,
         "pageNum": pageNum,
         "page": page,
         "skip": skip,
-        "previous": page-1,
-        "next": page+1,
+        "previous": max(1, page-1),
+        "next": min(page+1, pageNum),
         "items": qs[skip: skip+pageCount],
         "req_path": "%s?%s" % (request.path, query_string),
         "req_path2": "%s?" % request.path,
@@ -394,16 +394,13 @@ def all_order():
             kefu_name=None
         query.update(kefu_username=kefu_name)
 
-    if str_date:
-        query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
-    else:
+    if not str_date:
         str_date = dte.now().strftime("%Y-%m-%d")
-        query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
-    if end_date:
-        query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
-    else:
-        end_date = (dte.now()+timedelta(1)).strftime("%Y-%m-%d")
-        query.update(create_date_time__lte=dte.strptime(end_date, "%Y-%m-%d"))
+    query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
+
+    if not end_date:
+        end_date = dte.now().strftime("%Y-%m-%d")
+    query.update(create_date_time__lte=dte.strptime(end_date+" 23:59", "%Y-%m-%d %H:%M"))
     qs = Order.objects.filter(**query).order_by("-create_date_time")
 
     kefu_count = {str(k): v for k,v in Order.objects.item_frequencies('kefu_username', normalize=False).items()}
