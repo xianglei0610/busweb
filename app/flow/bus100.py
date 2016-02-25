@@ -320,7 +320,13 @@ class Flow(BaseFlow):
                 self.lock_ticket(order)
 
             if order.status == STATUS_WAITING_ISSUE:
-                url = "http://pay.84100.com/payment/payment/gateWayPay.do"
+                headers = {
+                    "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
+                    "Content-Type": "application/x-www-form-urlencoded",
+                }
+                url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
+                requests.post(url, headers=headers, cookies=rebot.cookies)      # 这步不能删
+
                 params = dict(
                     userIdentifier=rebot.telephone,
                     orderNo=order.lock_info["orderId"],
@@ -328,16 +334,14 @@ class Flow(BaseFlow):
                     payment=5,
                     produceType="",
                 )
-                headers = {
-                    "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
-                    "Content-Type": "application/x-www-form-urlencoded",
-                }
-                r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params), proxies={"http": "http://192.168.1.99:8888"})
+                url = "http://pay.84100.com/payment/payment/gateWayPay.do"
+                r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params))
                 sel = etree.HTML(r.content)
                 pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
                 if order.pay_order_no != pay_order_no:
                     order.update(pay_order_no=pay_order_no)
                 return {"flag": "html", "content": r.content}
+
                 #if not order.pay_url:
                 #    url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
                 #    headers = {"User-Agent": rebot.user_agent}
