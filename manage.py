@@ -2,6 +2,7 @@
 # -*- coding:utf-8 *-*
 import os
 import pymongo
+import zipfile
 
 from app import setup_app, db
 from flask.ext.script import Manager, Shell
@@ -133,9 +134,19 @@ def clear_expire_line():
 
 
 @manager.command
-def add_pay_record(filename):
+def add_pay_record(directory):
     from pay import import_alipay_record
-    import_alipay_record(filename)
+    for par, dirs, files in os.walk(directory):
+        for name in files:
+            filename = os.path.join(par, name)
+            if filename.endswith(".zip"):
+                z = zipfile.ZipFile(filename, "r")
+                for filename in z.namelist():
+                    with z.open(filename) as f:
+                        import_alipay_record(f)
+            else:
+                with open(filename, "r") as f:
+                    import_alipay_record(f)
 
 
 @manager.option('-s', '--site', dest='site', default='')

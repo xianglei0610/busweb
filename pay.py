@@ -12,32 +12,31 @@ COMPANY_TO_SOURCE = {
     "车巴达(苏州)网络科技有限公司": SOURCE_CBD,
 }
 
-def parse_alipay_record(filename):
+def parse_alipay_record(f):
     """
     交易号 收/支 服务费（元） 最近修改时间 交易来源地 类型 成功退款（元） 金额（元） 商户订单号 商品名称 交易对方 交易状态 付款时间 交易创建时间 备注
     """
     my_decode = lambda i: i.decode("gbk").encode("utf-8")
     account = ""
     trade_list = []
-    with open(filename, "r") as f:
-        for i in range(4):
-            s = f.next()
-            if not s:
-                continue
-            s = my_decode(s)
-            if s.startswith("账号"):
-                i, j = s.index("["), s.index("]")
-                account = s[i + 1:j]
+    for i in range(4):
+        s = f.next()
+        if not s:
+            continue
+        s = my_decode(s)
+        if s.startswith("账号"):
+            i, j = s.index("["), s.index("]")
+            account = s[i + 1:j]
 
-        for l in csv.DictReader(f):
-            d = {}
-            for k, v in l.items():
-                if v is None:
-                    break
-                d[my_decode(k).strip()]=my_decode(v).strip()
-            if not d:
-                continue
-            trade_list.append(d)
+    for l in csv.DictReader(f):
+        d = {}
+        for k, v in l.items():
+            if v is None:
+                break
+            d[my_decode(k).strip()]=my_decode(v).strip()
+        if not d:
+            continue
+        trade_list.append(d)
     return account, trade_list
 
 
@@ -57,6 +56,7 @@ def match_alipay_order(trade_info):
 
 def import_alipay_record(filename):
     account, trade_list = parse_alipay_record(filename)
+
     cnt = 0
     for trade_info in trade_list:
         order = match_alipay_order(trade_info)
