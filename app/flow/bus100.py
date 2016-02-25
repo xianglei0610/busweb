@@ -4,9 +4,10 @@ import requests
 import datetime
 import json
 import re
+import urllib
+
 from datetime import datetime as dte
 from lxml import etree
-
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import Bus100Rebot, Line
@@ -306,7 +307,7 @@ class Flow(BaseFlow):
             }
             r = requests.post("http://84100.com/doLogin/ajax", data=data, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
-            rebot.modify(cookies=cookies, is_active=True, last_login_time=dte.now())
+            rebot.modify(cookies=cookies, is_active=True, last_login_time=dte.now(), user_agent=headers.get("User-Agent", ""))
 
         is_login = rebot.test_login_status()
         if is_login:
@@ -314,15 +315,33 @@ class Flow(BaseFlow):
                 self.lock_ticket(order)
 
             if order.status == STATUS_WAITING_ISSUE:
-                if not order.pay_url:
-                    url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
-                    headers = {"User-Agent": rebot.user_agent}
-                    r = requests.post(url, headers=headers, cookies=rebot.cookies)
-                    pay_info = r.json()
-                    order.modify(pay_url=pay_info.get('url', ""))
-                if not order.pay_url:
-                    return {"flag": "error", "content": "没有获取到支付连接,请重试!"}
-                return {"flag": "url", "content": order.pay_url}
+                url = "http://pay.84100.com/payment/payment/gateWayPay.do"
+                params = dict(
+                    userIdentifier=rebot.telephone,
+                    orderNo=order.lock_info["orderId"],
+                    couponId="",
+                    payment=5,
+                    produceType="",
+                )
+                headers = {
+                    "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
+                    "Content-Type": "application/x-www-form-urlencoded",
+                }
+                r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params), proxies={"http": "http://192.168.1.99:8888"})
+                sel = etree.HTML(r.content)
+                pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
+                if order.pay_order_no != pay_order_no:
+                    order.update(pay_order_no=pay_order_no)
+                return {"flag": "html", "content": r.content}
+                #if not order.pay_url:
+                #    url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
+                #    headers = {"User-Agent": rebot.user_agent}
+                #    r = requests.post(url, headers=headers, cookies=rebot.cookies)
+                #    pay_info = r.json()
+                #    order.modify(pay_url=pay_info.get('url', ""))
+                #if not order.pay_url:
+                #    return {"flag": "error", "content": "没有获取到支付连接,请重试!"}
+                #return {"flag": "url", "content": order.pay_url}
         else:
             login_form_url = "http://84100.com/login.shtml"
             ua = random.choice(BROWSER_USER_AGENT)
