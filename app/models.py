@@ -235,6 +235,7 @@ class Order(db.Document):
 
     # 支付信息
     pay_trade_no = db.StringField() # 支付交易号
+    pay_order_no = db.StringField() # 源站传给支付宝的商户订单号
     pay_money = db.FloatField()     # 实际支付的金额
     pay_url = db.StringField()      # 支付链接
     pay_status = db.IntField(default=PAY_STATUS_NONE)   # 支付状态
