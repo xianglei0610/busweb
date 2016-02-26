@@ -304,7 +304,10 @@ class Order(db.Document):
             if cls.is_for_lock:
                 rebot_cls = cls
                 break
-        return rebot_cls.objects.get(telephone=self.source_account)
+        try:
+            return rebot_cls.objects.get(telephone=self.source_account)
+        except rebot_cls.DoesNotExist:
+            return None
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
@@ -481,7 +484,7 @@ class Rebot(db.Document):
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
                 continue
-            bot = cls(is_active=False,
+            bot = cls(is_active=True,
                       is_locked=False,
                       telephone=tele,
                       password=pwd,)
