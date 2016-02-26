@@ -5,11 +5,14 @@ import json
 
 from app.constants import *
 from app.models import Order
-from app import kefu_log
+from app import kefu_log, db
+from datetime import datetime as dte, timedelta
 
 COMPANY_TO_SOURCE = {
     "浙江恒生长运网络科技有限公司": SOURCE_BABA,
     "车巴达(苏州)网络科技有限公司": SOURCE_CBD,
+    "北京巴士壹佰网络科技有限公司": SOURCE_BUS100,
+    "上海华程西南国际旅行社有限公司": SOURCE_CTRIP,
 }
 
 def parse_alipay_record(f):
@@ -46,12 +49,28 @@ def match_alipay_order(trade_info):
     """
     site = trade_info["交易对方"]
     merchant_order = trade_info["商户订单号"]
+    pay_money = float(trade_info["金额（元）"])
+    pay_datetime = dte.strptime(trade_info["交易创建时间"], "%Y-%m-%d %H:%M:%S")
+    trade_no = trade_info["交易号"]
 
+    # 通过商户订单号匹配
     crawl_source = COMPANY_TO_SOURCE.get(site, "")
     try:
-        return Order.objects.get(crawl_source=crawl_source, raw_order_no=merchant_order)
+        order = Order.objects.get(db.Q(pay_order_no=merchant_order)| \
+                                  db.Q(raw_order_no=merchant_order),
+                                  crawl_source=crawl_source)
     except Order.DoesNotExist:
-        return None
+        order = None
+
+    if not order:
+        # 通过金额和下单时间匹配,应该避免走到这一步,因为有可能匹配到多个或者匹配错
+        qs = Order.objects.filter(order_price=pay_money,
+                                  lock_datetime__gte=pay_datetime-timedelta(seconds=120),
+                                  lock_datetime__lte=pay_datetime+timedelta(seconds=60))
+        qs = qs.filter(db.Q(pay_order_no="")|db.Q(pay_order_no=None)|db.Q(pay_order_no=trade_no))
+        if qs:
+            order = qs.first()
+    return order
 
 
 def import_alipay_record(filename):
