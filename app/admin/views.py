@@ -22,7 +22,7 @@ from app.utils import getRedisObj
 from app.models import Order, Line, AdminUser, PushUserList
 from app.flow import get_flow
 from tasks import push_kefu_order, async_lock_ticket, issued_callback
-from app import order_log
+from app import order_log, db
 
 
 def parse_page_data(qs):
@@ -377,6 +377,7 @@ def all_order():
     end_date = request.args.get("end_date", "")
     q_key = request.args.get("q_key", "")
     q_value = request.args.get("q_value", "").strip()
+    Q_query = None
     if q_key and q_value:
         if q_key == "contact_phone":
             query.update(contact_info__telephone=q_value)
@@ -388,6 +389,9 @@ def all_order():
             query.update(out_order_no=q_value)
         elif q_key == "raw_order_no":
             query.update(raw_order_no=q_value)
+        elif q_key == "trade_no":
+            Q_query = (db.Q(pay_trade_no=q_value)|db.Q(refund_trade_no=q_value))
+
     kefu_name = request.args.get("kefu_name", "")
     if kefu_name:
         if kefu_name == "None":
@@ -400,10 +404,15 @@ def all_order():
 
     if not end_date:
         end_date = dte.now().strftime("%Y-%m-%d")
-    query.update(create_date_time__lte=dte.strptime(end_date+" 23:59", "%Y-%m-%d %H:%M"))
-    qs = Order.objects.filter(**query).order_by("-create_date_time")
 
-    kefu_count = {str(k): v for k,v in Order.objects.item_frequencies('kefu_username', normalize=False).items()}
+    pay_account = request.args.get("pay_account", "")
+    if pay_account:
+        query.update(pay_account=pay_account)
+
+    query.update(create_date_time__lte=dte.strptime(end_date+" 23:59", "%Y-%m-%d %H:%M"))
+    qs = Order.objects.filter(Q_query, **query).order_by("-create_date_time")
+
+    kefu_count = {str(k): v for k,v in qs.item_frequencies('kefu_username', normalize=False).items()}
 
     status_count = {}
     for st in STATUS_MSG.keys():
@@ -417,6 +426,7 @@ def all_order():
         "kefu_count": kefu_count,
     }
     if client == 'web':
+        pay_accounts = qs.distinct("pay_account")
         return render_template('admin-new/allticket_order.html',
                                page=parse_page_data(qs),
                                status_msg=STATUS_MSG,
@@ -425,7 +435,8 @@ def all_order():
                                condition=request.args,
                                stat=stat,
                                str_date=str_date,
-                               end_date=end_date
+                               end_date=end_date,
+                               pay_account_list=pay_accounts,
                                )
     elif client in ['android', 'ios']:
         order_info = parse_page_data(qs)
