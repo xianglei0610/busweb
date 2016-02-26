@@ -52,6 +52,7 @@ def match_alipay_order(trade_info):
     pay_money = float(trade_info["金额（元）"])
     pay_datetime = dte.strptime(trade_info["交易创建时间"], "%Y-%m-%d %H:%M:%S")
     trade_no = trade_info["交易号"]
+    trade_status = trade_info["交易状态"]
 
     # 通过商户订单号匹配
     crawl_source = COMPANY_TO_SOURCE.get(site, "")
@@ -78,11 +79,22 @@ def match_alipay_order(trade_info):
                                                     crawl_source=crawl_source)
                 except Order.DoesNotExist:
                     has_matched = None
+                lst = []
                 for i in qs:
                     if has_matched and has_matched.order_no != i.order_no:
                         continue
-                    order = i
-                    break
+                    lst.append(i)
+
+                for i in lst:
+                    if i.status == 14 and trade_status == "交易成功":
+                        order = i
+                        break
+                    elif i.status in [13, 6] and trade_status == "退款成功":
+                        order = i
+                        break
+
+                if not order and lst:
+                    order = lst[0]
     return order
 
 
@@ -93,7 +105,10 @@ def import_alipay_record(filename):
     cnt = 0
     for trade_info in trade_list:
         order = match_alipay_order(trade_info)
-        if not order:
+        site = trade_info["交易对方"]
+        if site == "深圳市一二三零八网络科技有限公司":
+            continue
+        if not order :
             kefu_log.error("not found order %s", json.dumps(trade_info, ensure_ascii=False))
             continue
         trade_no = trade_info["交易号"]
