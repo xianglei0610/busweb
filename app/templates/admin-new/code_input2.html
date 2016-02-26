@@ -10,6 +10,11 @@
     <script language="javascript">
         $(function (){
 			$(".single-select").uedSelect({width : 240});
+            $("#btn_submit").click(function(){
+                $(this).css("background-color", "#ccc");
+                $(this).attr("disabled", "disabled");
+                $('#pay-form').submit();
+            });
         })
     </script>
 </head>
@@ -50,7 +55,7 @@
         </div>
         <div class="fm-li">
           <span class="fm-label"><label for="txt_input6"></label></span>
-          <input onclick="javascript:$('#pay-form').submit();" name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
+          <input name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
           </div>
         </div>
         </form>
