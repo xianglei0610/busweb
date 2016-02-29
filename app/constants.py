@@ -13,6 +13,8 @@ SOURCE_JSKY = "jsky"
 SOURCE_BABA = "baba"
 SOURCE_TC = "tongcheng"
 SOURCE_FB = "fangbian"
+SOURCE_GZQCP = "gzqcp"
+
 
 SOURCE_INFO = {
     SOURCE_FB: {
@@ -200,6 +202,13 @@ SOURCE_INFO = {
         "pwd_encode": {
             "cibRpL0": "d17bc469b36817893ff0cdae06b5422f",
         }
+    },
+    SOURCE_GZQCP: {
+        "name": "贵州汽车票",
+        "website": "www.gzsqcp.com",
+        "accounts": {
+                  "13267109876": ("a123456", ""),
+                 }
     },
 }
 
