@@ -27,7 +27,7 @@
         </ul>
     </div>
 
-   <form id="search-form" class="" action="{{url_for('admin.all_order')}}" method="get" enctype='multipart/form-data'>
+   <form id="search-form" class="" action="{{url_for('admin.all_order')}}" method="post" enctype='multipart/form-data'>
    <!--查询条件-->
     <div class="formbody">
          <div class="itab">
@@ -116,18 +116,20 @@
     
     <li><label>起时日期</label>
        <div class="input-date">
-         <input type="text" datatype="/^\s*$|^\d{4}\-\d{1,2}\-\d{1,2}$/" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd'})" class="input" id="txtCreateTime" value="{{str_date }}" name="str_date">
+         <input type="text" datatype="/^\s*$|^\d{4}\-\d{1,2}\-\d{1,2}$/" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd'})" class="input" id="txtCreateTime" value="{{condition.str_date or today}}" name="str_date">
                         <i>日期</i>
         </div>
          - 
         <div class="input-date">
-          <input type="text" datatype="/^\s*$|^\d{4}\-\d{1,2}\-\d{1,2}$/" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd'})" class="input" id="txtCreateTime" value="{{end_date}}" name="end_date">
+          <input type="text" datatype="/^\s*$|^\d{4}\-\d{1,2}\-\d{1,2}$/" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd'})" class="input" id="txtCreateTime" value="{{condition.end_date or today}}" name="end_date">
                         <i>日期</i>
         </div>
     </li>
     
-    <li><label>&nbsp;</label><input id="fsb" name="" type="submit" class="b_btn" value="查询"/></li>
-    
+    <li><label>&nbsp;</label><input id="fsb" name="action" type="submit" class="b_btn" value="查询"/></li>
+    {% if current_user.is_admin %}
+    <li><input name="action" type="submit" class="y_btn" value="导出CSV"></input></li> 
+    {% endif %}
     </ul>
 
  <ul class="seachform">    

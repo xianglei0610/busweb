@@ -14,6 +14,7 @@ from app.email import send_email
 from app.constants import ADMINS
 from app import setup_app
 from app import cron_log
+from app.utils import get_redis
 
 
 app = setup_app()
@@ -24,7 +25,8 @@ def check(func):
         res = None
         try:
             t1 = time.time()
-            res = func(*args, **kwargs)
+            with app.app_context():
+                res = func(*args, **kwargs)
             cost = time.time() - t1
             cron_log.info("[succss] %s %s %s, return: %s, cost time: %s", func.__name__, args, kwargs, res, cost)
         except:
@@ -51,12 +53,11 @@ def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
 
     subject = "bus_crawl(%s, province_id=%s, crawl_kwargs=%s) " % (crawl_source, province_id, crawl_kwargs)
     html_body = subject + '</br>' + 'result:</br>%s' % "</br>".join(res_lst)
-    with app.app_context():
-        send_email(subject,
-                app.config["MAIL_USERNAME"],
-                ADMINS,
-                "",
-                html_body)
+    send_email(subject,
+            app.config["MAIL_USERNAME"],
+            ADMINS,
+            "",
+            html_body)
 
 
 @check
@@ -84,6 +85,23 @@ def clear_lines():
     return "%s line deleted" % cnt
 
 
+@check
+def clear_redis_data():
+    """
+    清理redis数据
+    """
+    r = get_redis("default")
+    now = time.time()
+    result = {}
+    for k in r.keys("line:done:*"):
+        result[k] = 0
+        for sk, v in r.hgetall(k).items():
+            if now-float(v) > 12*60*60:
+                r.hdel(k, sk)
+                result[k] += 1
+    return result
+
+
 def main():
     """ 定时任务处理 """
 
@@ -106,11 +124,13 @@ def main():
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
     sched.add_cron_job(clear_lines, hour=1, minute=0)
+    sched.add_cron_job(clear_redis_data, hour=5, minute=0)
 
     sched.start()
 
 if __name__ == '__main__':
     main()
+    #clear_redis_data()
     #bus_crawl('bus100')
     #delete_source_riders()
     #clear_lines()

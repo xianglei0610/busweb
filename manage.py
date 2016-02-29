@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 *-*
 import os
-import pymongo
 import zipfile
 
 from app import setup_app, db
@@ -80,7 +79,7 @@ def create_user(type):
     if type == "kefu":
         u.is_kefu = 1
         u.is_switch = 0
-        u.is_admin = 1
+        u.is_admin = 0
     elif type == "admin":
         u.is_kefu = 0
         u.is_switch = 0
@@ -107,22 +106,6 @@ def reset_password():
         print "重设密码成功"
     except AdminUser.DoesNotExist:
         print "不存在用户", username
-
-
-@manager.option('-s', '--site', dest='site', default='')
-@manager.option('-c', '--city', dest='city', default='')
-def migrate_from_crawl(site, city=""):
-    settings = app.config["CRAWL_MONGODB_SETTINGS"]
-    crawl_mongo = pymongo.MongoClient("mongodb://%s:%s" % (settings["host"], settings["port"]))
-    crawl_db = crawl_mongo[settings["db"]]
-
-    from sync_data import migrate_bus100
-    mappings = {
-        "bus100": migrate_bus100,
-    }
-    app.logger.info("start migrate data from crawldb to webdb:%s", site)
-    mappings[site](crawl_db, city=city)
-    app.logger.info("end migrate %s" % site)
 
 
 @manager.command
