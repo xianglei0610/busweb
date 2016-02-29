@@ -424,7 +424,7 @@ def all_order():
         action = params.get("action", "查询")
         if action == "导出CSV":
             t1 = time.time()
-            access_log.info("start export order, %s", current_user.username)
+            access_log.info("start export order, %s, condition:%s", current_user.username, request.values.to_dict())
             si = StringIO.StringIO()
             row_header =[
                 (lambda o: "%s," % o.order_no, "系统订单号"),
