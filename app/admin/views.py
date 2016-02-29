@@ -14,7 +14,6 @@ import csv
 import StringIO
 
 from datetime import datetime as dte
-from collections import OrderedDict
 from app.utils import md5, create_validate_code
 from app.constants import *
 from flask import render_template, request, redirect, url_for, jsonify, session, make_response
@@ -25,7 +24,7 @@ from app.utils import getRedisObj
 from app.models import Order, Line, AdminUser, PushUserList
 from app.flow import get_flow
 from tasks import push_kefu_order, async_lock_ticket, issued_callback
-from app import order_log, db
+from app import order_log, db, access_log
 
 
 def parse_page_data(qs):
@@ -424,6 +423,8 @@ def all_order():
     if client == 'web':
         action = params.get("action", "查询")
         if action == "导出CSV":
+            t1 = time.time()
+            access_log.info("start export order, %s", current_user.username)
             si = StringIO.StringIO()
             row_header =[
                 (lambda o: "%s," % o.order_no, "系统订单号"),
@@ -461,6 +462,7 @@ def all_order():
             output = make_response(si.getvalue())
             output.headers["Content-Disposition"] = "attachment; filename=%s_%s.csv" % (str_date, end_date)
             output.headers["Content-type"] = "text/csv"
+            access_log.info("end export order, %s, time: %s", current_user.username, time.time()-t1)
             return output
         else:
             pay_accounts = qs.distinct("pay_account")
