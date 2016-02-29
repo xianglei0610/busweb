@@ -102,6 +102,17 @@
     </select>
     </div>
     </li>
+
+   <li>
+    <div class="vocation">
+    <select class="select3" name="pay_account">
+    <option value="">支付账号</option>
+        {% for k in pay_account_list %}
+        <option value="{{k}}" {%if condition.pay_account==k%} selected {%endif%}>{{k}}</option>
+        {% endfor %}
+    </select>
+    </div>
+    </li>
     
     <li><label>起时日期</label>
        <div class="input-date">
@@ -123,11 +134,12 @@
     <li><label>搜索条件</label>    
     <div class="vocation">
     <select class="select3" name="q_key">
-                <option value="contact_phone" {%if condition.q_key=='contact_phone' %} selected {%endif%}>取票人手机号</option>
-                <option value="sys_order_no" {%if condition.q_key=='sys_order_no' %} selected {%endif%}>系统订单号</option>
-                <option value="raw_order_no" {%if condition.q_key=='raw_order_no' %} selected {%endif%}>源站订单号</option>
-                <option value="out_order_no" {%if condition.q_key=='out_order_no' %} selected {%endif%}>12308订单号</option>
-                <option value="contact_name" {%if condition.q_key=='contact_name' %} selected {%endif%}>取票人姓名</option>
+        <option value="contact_phone" {%if condition.q_key=='contact_phone' %} selected {%endif%}>取票人手机号</option>
+        <option value="sys_order_no" {%if condition.q_key=='sys_order_no' %} selected {%endif%}>系统订单号</option>
+        <option value="raw_order_no" {%if condition.q_key=='raw_order_no' %} selected {%endif%}>源站订单号</option>
+        <option value="out_order_no" {%if condition.q_key=='out_order_no' %} selected {%endif%}>12308订单号</option>
+        <option value="contact_name" {%if condition.q_key=='contact_name' %} selected {%endif%}>取票人姓名</option>
+        <option value="trade_no" {%if condition.q_key=='trade_no' %} selected {%endif%}>交易流水号</option>
     </select>
     </div>
     </li>
@@ -158,6 +170,7 @@
         <th>下单/出发时间<i class="sort"><img src="{{url_for('static', filename='admin-new/images/px.gif')}}" /></i></th>
         <th>车次号/行程</th>
         <th>源站信息</th>
+        <th>支付信息</th>
         <th>订票数</th>
         <th>订单金额（元）</th>
         <th>订单/支付状态</th>
@@ -173,6 +186,7 @@
          <td>{{d.create_date_time|format_datetime}}<br>{{d.drv_datetime|format_datetime}}</td>
          <td>{{d.bus_num}}<br>{{d.starting_name.split(';')[0]}} ({{ d.starting_name.split(';')[1]}}) - {{d.destination_name.split(';')[0] or d.destination_name.split(';')[1]}}</td>
          <td>{{source_info[d.crawl_source]["name"]}}<br>{{d.source_account}}</br>{{d.source_account_pass}}</td>
+         <td>{{d.pay_account or ""}}</br>{{d.pay_trade_no or ""}}</br>￥{{d.pay_money}}</td>
          <td>{{d.riders|count}}张</td>
          <td class="m">￥{{d.order_price}}</td>
          <td><span class="{%if d.status == 14 %} color4 {%else%} color3 {%endif%}">{{status_msg[d.status]}}</span></br><span class="color2">{{pay_status_msg[d.pay_status] or "未知"}}</span> </td>

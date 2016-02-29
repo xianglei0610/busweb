@@ -344,6 +344,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_CTRIP: "%(time)s，%(start)s--%(end)s 共%(amount)s张成功出票。取票验证码%(code)s，请在发车时间前乘车",
     SOURCE_CBD: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
     SOURCE_BABA: "购票成功,取票号:%(no)s,密码:%(code)s,取票点:%(site)s,(%(start)s-%(end)s %(time)s),请旅客尽早到车站取票.",
+    SOURCE_GZQCP: "您已购票成功！请在%(time)s前至%(site)s领取车票。本次购票取票号：%(no)s，取票密码：%(code)s。",
 }
 
 CITY_NAME_TRANS = {

@@ -136,7 +136,7 @@ class Flow(BaseFlow):
 #         rebot.login()
 #         rebot.reload()
         data = {
-            "orderId": order.lock_info['encode_orderId'],
+            "orderId": "order.lock_info['encode_orderId']",
         }
         r = requests.post(detail_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
         ret = r.json()
@@ -184,7 +184,7 @@ class Flow(BaseFlow):
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "start": order.line.s_sta_name,
+                "site": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "code": pick_code,
                 "no": pick_no,
@@ -224,7 +224,6 @@ class Flow(BaseFlow):
                 data = {}
                 cookies = json.loads(rebot.cookies)
                 r = requests.post(order_url, data=data, headers=headers, cookies=cookies)
-                print '1111111111111111',r.content
                 soup = BeautifulSoup(r.content, "lxml")
                 payCompanyType = soup.select("#order_submit_zfslx")[0].get("value")
                 cookies.update(dict(r.cookies))
@@ -234,12 +233,10 @@ class Flow(BaseFlow):
                           "payCompanyType": payCompanyType
                           }
                 r = requests.post(to_pay_url, data=data, headers=headers, cookies=cookies)
-                print '22222222222222',r.content
                 sel = etree.HTML(r.content)
                 cookies.update(dict(r.cookies))
                 title = u"支付宝支付(PC)"
                 paymentCompanyCode = sel.xpath('//td/img[@title="%s"]/@pcompany'%title)
-                print paymentCompanyCode
                 pay_url = "http://www.gzsqcp.com:80/com/yxd/pris/payment/payOnline.action"
                 params = {
                   "orderId": order.lock_info['encode_orderId'],
@@ -260,7 +257,6 @@ class Flow(BaseFlow):
             cookies.update(dict(r.cookies))
             rebot.modify(cookies=json.dumps(cookies))
         is_login = rebot.test_login_status()
-        print '444444444444444444444', is_login
 
         if is_login:
             if order.status == STATUS_LOCK_RETRY:
@@ -294,11 +290,8 @@ class Flow(BaseFlow):
 #         headers = rebot.http_header()
 #         cookies = json.loads(rebot.cookies)
 
-
-
         ua = random.choice(MOBILE_USER_AGENG)
         headers = {"User-Agent": ua}
-        
         data = {
             "startDepotCode": line.extra_info['s_code'],
             "busCompanyCode": line.extra_info['busCompanyCode'],

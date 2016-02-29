@@ -235,6 +235,8 @@ class Order(db.Document):
 
     # 支付信息
     pay_trade_no = db.StringField() # 支付交易号
+    refund_trade_no = db.StringField()  # 退款交易流水号
+    pay_order_no = db.StringField() # 源站传给支付宝的商户订单号
     pay_money = db.FloatField()     # 实际支付的金额
     pay_url = db.StringField()      # 支付链接
     pay_status = db.IntField(default=PAY_STATUS_NONE)   # 支付状态
@@ -303,7 +305,10 @@ class Order(db.Document):
             if cls.is_for_lock:
                 rebot_cls = cls
                 break
-        return rebot_cls.objects.get(telephone=self.source_account)
+        try:
+            return rebot_cls.objects.get(telephone=self.source_account)
+        except rebot_cls.DoesNotExist:
+            return None
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
@@ -480,7 +485,7 @@ class Rebot(db.Document):
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
                 continue
-            bot = cls(is_active=False,
+            bot = cls(is_active=True,
                       is_locked=False,
                       telephone=tele,
                       password=pwd,)
@@ -999,7 +1004,7 @@ class GzqcpWebRebot(Rebot):
         for tele, (pwd, _) in accounts.items():
             if tele in has_checked:
                 continue
-            bot = cls(is_active=False,
+            bot = cls(is_active=True,
                       is_locked=False,
                       telephone=tele,
                       user_agent=random.choice(BROWSER_USER_AGENT),
@@ -1033,7 +1038,7 @@ class GzqcpAppRebot(Rebot):
         start = now.strftime("%Y-%m-%d")+' 00:00:00'
         start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
         all_accounts = SOURCE_INFO[SOURCE_GZQCP]["accounts"].keys()
-        used = Order.objects.filter(crawl_source='gzqcp',
+        used = Order.objects.filter(crawl_source=SOURCE_GZQCP,
                                     status=STATUS_ISSUE_SUCC,
                                     create_date_time__gt=start) \
                             .item_frequencies("source_account")
@@ -1202,7 +1207,7 @@ class Bus100Rebot(Rebot):
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
                 continue
-            bot = cls(is_active=False,
+            bot = cls(is_active=True,
                       is_locked=False,
                       telephone=tele,
                       password=pwd,

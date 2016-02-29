@@ -114,6 +114,8 @@
      <table class="tablelist">
         <thead>
           <tr>
+            <th>支付流水号</th>
+            <th>退款流水号</th>
             <th>支付状态</th>
             <th>支付账号</th>
             <th>支付金额</th>
@@ -122,6 +124,8 @@
         </thead>
         <tbody>
           <tr class="td_c">
+            <td>{{order.pay_trade_no}}</td>
+            <td>{{order.refund_trade_no}}</td>
             <td>
                 {{pay_status_msg[order.pay_status] or "未知"}}
             </td>
