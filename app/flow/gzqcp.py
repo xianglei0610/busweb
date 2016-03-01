@@ -54,7 +54,7 @@ class Flow(BaseFlow):
                     "passengers[%s].insPrice" % i: "0",
                     "passengers[%s].idType" % i: "1101",
                 }
-            data.update(tmp)
+                data.update(tmp)
             order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
             try:
                 res = self.send_lock_request(order, rebot, data=data)
