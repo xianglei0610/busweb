@@ -319,16 +319,23 @@ class Flow(BaseFlow):
                     "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
-                url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
-                requests.post(url, headers=headers, cookies=rebot.cookies)      # 这步不能删
 
-                params = dict(
-                    userIdentifier=rebot.telephone,
-                    orderNo=order.lock_info["orderId"],
-                    couponId="",
-                    payment=5,
-                    produceType="",
-                )
+                if not order.pay_url:   # 生成支付链接
+                    url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
+                    r = requests.post(url, headers=headers, cookies=rebot.cookies)      # 这步不能删
+                    pay_info = r.json()
+                    order.modify(pay_url=pay_info.get('url', ""))
+
+                r = requests.get(order.pay_url, headers={"User-Agent": rebot.user_agent}, cookies=rebot.cookies)
+                sel = etree.HTML(r.content)
+                params = {}
+                for s in sel.xpath("//form[@id='alipayForm']//input"):
+                    k, v = s.xpath("@name"), s.xpath("@value")
+                    k, v = k[0], v[0] if v else ""
+                    if k == "payment":
+                        v = 5
+                    params[k] = v
+
                 url = "http://pay.84100.com/payment/payment/gateWayPay.do"
                 r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params))
                 sel = etree.HTML(r.content)
