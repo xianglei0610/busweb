@@ -34,8 +34,23 @@ class Flow(BaseFlow):
                 lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
                                    result_reason="账号未登陆")
-                return lock_result
-
+                data = {
+                    "loginType": 0,
+                    "backUrl": '',
+                    "mobile": rebot.telephone,
+                    "password": rebot.password,
+                    "validateCode": '1234'
+                }
+                r = requests.post("http://84100.com/doLogin/ajax", data=data)
+                if r.json().get('flag', '') == '0':
+                    ua = rebot.user_agent
+                    if not ua:
+                        ua = random.choice(BROWSER_USER_AGENT)
+                    rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now(),user_agent=ua)
+                    if not rebot.test_login_status():
+                        return lock_result
+                else:
+                    return lock_result
             try:
                 rebot.recrawl_shiftid(order.line)
             except:
@@ -56,6 +71,7 @@ class Flow(BaseFlow):
 
             ttype, ttpwd = self.request_ticket_info(order, rebot)
             lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
+            order_log.info("[lock-result]  request_create_order . order: %s,account:%s,result:%s", order.order_no,rebot.telephone,lock_info)
             lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
             if u"乘车人不能超过" in lock_msg:
                 order.line.shift_id = "0"
