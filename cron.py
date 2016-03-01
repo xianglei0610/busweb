@@ -120,6 +120,8 @@ def main():
     sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "河南"}})
     sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "广西"}})
 
+    # 贵州汽车票务网
+    sched.add_cron_job(bus_crawl, hour=6, minute=10, args=['gzqcp'])
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

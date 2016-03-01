@@ -136,7 +136,7 @@ class Flow(BaseFlow):
 #         rebot.login()
 #         rebot.reload()
         data = {
-            "orderId": "order.lock_info['encode_orderId']",
+            "orderId": order.lock_info['encode_orderId'],
         }
         r = requests.post(detail_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
         ret = r.json()
