@@ -5,7 +5,7 @@ from app import config
 
 
 def send_email(subject, sender, recipients, text_body, html_body):
-    if not config.DEBUG:
+    if not config["DEBUG"]:
         return
     msg = Message(subject, sender=sender, recipients=recipients)
     msg.body = text_body

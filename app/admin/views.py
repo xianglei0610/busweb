@@ -10,8 +10,10 @@ import cStringIO
 import flask.ext.login as flask_login
 import assign
 import traceback
+import csv
+import StringIO
 
-from datetime import datetime as dte, timedelta
+from datetime import datetime as dte
 from app.utils import md5, create_validate_code
 from app.constants import *
 from flask import render_template, request, redirect, url_for, jsonify, session, make_response
@@ -22,7 +24,7 @@ from app.utils import getRedisObj
 from app.models import Order, Line, AdminUser, PushUserList
 from app.flow import get_flow
 from tasks import push_kefu_order, async_lock_ticket, issued_callback
-from app import order_log, db
+from app import order_log, db, access_log
 
 
 def parse_page_data(qs):
@@ -355,28 +357,25 @@ def left_page():
 def all_order():
     client = request.headers.get("type", 'web')
     query = {}
-    if request.method == 'POST':
-        status = request.form.get("status", "")
-    else:
-        status = request.args.get("status", "")
+    params = request.values.to_dict()
 
-        source = request.args.get("source", "")
-        source_account = request.args.get("source_account", "")
+    source = params.get("source", "")
+    source_account = params.get("source_account", "")
+    if source:
+        query.update(crawl_source=source)
+        if source_account:
+            query.update(source_account=source_account)
 
-        if source:
-            query.update(crawl_source=source)
-            if source_account:
-                query.update(source_account=source_account)
+    status = params.get("status", "")
     if status:
         query.update(status=int(status))
-    pay_status = request.args.get("pay_status", "")
+
+    pay_status = params.get("pay_status", "")
     if pay_status:
         query.update(pay_status=int(pay_status))
+    q_key = params.get("q_key", "")
+    q_value = params.get("q_value", "").strip()
 
-    str_date = request.args.get("str_date", "")
-    end_date = request.args.get("end_date", "")
-    q_key = request.args.get("q_key", "")
-    q_value = request.args.get("q_value", "").strip()
     Q_query = None
     if q_key and q_value:
         if q_key == "contact_phone":
@@ -392,28 +391,24 @@ def all_order():
         elif q_key == "trade_no":
             Q_query = (db.Q(pay_trade_no=q_value)|db.Q(refund_trade_no=q_value))
 
-    kefu_name = request.args.get("kefu_name", "")
+    kefu_name = params.get("kefu_name", "")
     if kefu_name:
         if kefu_name == "None":
             kefu_name=None
         query.update(kefu_username=kefu_name)
 
-    if not str_date:
-        str_date = dte.now().strftime("%Y-%m-%d")
+    today = dte.now().strftime("%Y-%m-%d")
+    str_date = params.get("str_date", "") or today
+    end_date = params.get("end_date", "") or today
     query.update(create_date_time__gte=dte.strptime(str_date, "%Y-%m-%d"))
+    query.update(create_date_time__lte=dte.strptime(end_date+" 23:59", "%Y-%m-%d %H:%M"))
 
-    if not end_date:
-        end_date = dte.now().strftime("%Y-%m-%d")
-
-    pay_account = request.args.get("pay_account", "")
+    pay_account = params.get("pay_account", "")
     if pay_account:
         query.update(pay_account=pay_account)
 
-    query.update(create_date_time__lte=dte.strptime(end_date+" 23:59", "%Y-%m-%d %H:%M"))
     qs = Order.objects.filter(Q_query, **query).order_by("-create_date_time")
-
     kefu_count = {str(k): v for k,v in qs.item_frequencies('kefu_username', normalize=False).items()}
-
     status_count = {}
     for st in STATUS_MSG.keys():
         status_count[st] = qs.filter(status=st).count()
@@ -426,18 +421,61 @@ def all_order():
         "kefu_count": kefu_count,
     }
     if client == 'web':
-        pay_accounts = qs.distinct("pay_account")
-        return render_template('admin-new/allticket_order.html',
-                               page=parse_page_data(qs),
-                               status_msg=STATUS_MSG,
-                               pay_status_msg = PAY_STATUS_MSG,
-                               source_info=SOURCE_INFO,
-                               condition=request.args,
-                               stat=stat,
-                               str_date=str_date,
-                               end_date=end_date,
-                               pay_account_list=pay_accounts,
-                               )
+        action = params.get("action", "查询")
+        if action == "导出CSV":
+            t1 = time.time()
+            access_log.info("start export order, %s, condition:%s", current_user.username, request.values.to_dict())
+            si = StringIO.StringIO()
+            row_header =[
+                (lambda o: "%s," % o.order_no, "系统订单号"),
+                (lambda o: "%s," % o.out_order_no, "12308订单号"),
+                (lambda o: "%s," % o.raw_order_no, "源站订单号"),
+                (lambda o: STATUS_MSG[o.status], "订单状态"),
+                (lambda o: o.pay_trade_no, "付款流水号"),
+                (lambda o: o.refund_trade_no, "退款流水号"),
+                (lambda o: PAY_STATUS_MSG[o.pay_status], "支付状态"),
+                (lambda o: o.kefu_username, "代购人员"),
+                (lambda o: o.contact_info["name"], "姓名"),
+                (lambda o: "%s," % o.contact_info["telephone"], "手机号"),
+                (lambda o: o.create_date_time.strftime("%Y-%m-%d %H:%M:%S"), "下单时间"),
+                (lambda o: SOURCE_INFO[o.crawl_source]["name"], "源站"),
+                (lambda o: "%s," % o.source_account, "源站账号"),
+                (lambda o: o.ticket_amount, "订票数"),
+                (lambda o: o.order_price, "订单金额"),
+                (lambda o: o.pay_money, "支付金额"),
+                (lambda o: o.starting_name.split(";")[0], "出发城市"),
+                (lambda o: o.starting_name.split(";")[1], "出发站"),
+                (lambda o: o.destination_name.split(";")[1], "目的站"),
+                (lambda o: o.bus_num, "车次号"),
+                (lambda o: o.drv_datetime.strftime("%Y-%m-%d %H:%M"), "出发时间"),
+            ]
+            cw = csv.DictWriter(si, map(lambda t: t[0], row_header))
+            cw.writerow({t[0]: t[1] for t in row_header})
+            info_list = []
+            for o in qs:
+                d = {}
+                for t in row_header:
+                    func = t[0]
+                    d[func] = func(o)
+                info_list.append(d)
+            cw.writerows(info_list)
+            output = make_response(si.getvalue())
+            output.headers["Content-Disposition"] = "attachment; filename=%s_%s.csv" % (str_date, end_date)
+            output.headers["Content-type"] = "text/csv"
+            access_log.info("end export order, %s, time: %s", current_user.username, time.time()-t1)
+            return output
+        else:
+            pay_accounts = qs.distinct("pay_account")
+            return render_template('admin-new/allticket_order.html',
+                                page=parse_page_data(qs),
+                                status_msg=STATUS_MSG,
+                                pay_status_msg = PAY_STATUS_MSG,
+                                source_info=SOURCE_INFO,
+                                condition=request.values.to_dict(),
+                                stat=stat,
+                                today = today,
+                                pay_account_list=pay_accounts,
+                                )
     elif client in ['android', 'ios']:
         order_info = parse_page_data(qs)
         orders = order_info['items']
@@ -555,6 +593,13 @@ def kefu_on_off():
     is_switch = int(request.form.get('is_switch', 0))
     current_user.modify(is_switch=is_switch)
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
+
+
+@admin.route('/orders/export', methods=['POST'])
+@login_required
+def export_order():
+    qs = get_query_orders()
+    return "ok"
 
 
 @admin.route('/fangbian/callback', methods=['POST'])
