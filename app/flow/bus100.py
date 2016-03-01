@@ -34,8 +34,23 @@ class Flow(BaseFlow):
                 lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
                                    result_reason="账号未登陆")
-                return lock_result
-
+                data = {
+                    "loginType": 0,
+                    "backUrl": '',
+                    "mobile": rebot.telephone,
+                    "password": rebot.password,
+                    "validateCode": '1234'
+                }
+                r = requests.post("http://84100.com/doLogin/ajax", data=data)
+                if r.json().get('flag', '') == '0':
+                    ua = rebot.user_agent
+                    if not ua:
+                        ua = random.choice(BROWSER_USER_AGENT)
+                    rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now(),user_agent=ua)
+                    if not rebot.test_login_status():
+                        return lock_result
+                else:
+                    return lock_result
             try:
                 rebot.recrawl_shiftid(order.line)
             except:
@@ -56,6 +71,7 @@ class Flow(BaseFlow):
 
             ttype, ttpwd = self.request_ticket_info(order, rebot)
             lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
+            order_log.info("[lock-result]  request_create_order . order: %s,account:%s,result:%s", order.order_no,rebot.telephone,lock_info)
             lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
             if u"乘车人不能超过" in lock_msg:
                 order.line.shift_id = "0"
@@ -292,7 +308,7 @@ class Flow(BaseFlow):
                 full_price = float(full_price[0])
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 45, "refresh_datetime": now,'full_price':full_price})
         elif str(trainInfo['flag']) == '1':
-            line_log.info("[refresh-result]  no left_tickets line:%s %s,result:%s ", line.crawl_source, line.line_id,trainInfo)
+            line_log.info("[refresh-result]  no left_tickets line:%s,%s %s,result:%s ", line.crawl_source,line.s_city_name, line.line_id,trainInfo)
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
 
         return result_info
@@ -328,16 +344,23 @@ class Flow(BaseFlow):
                     "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
-                url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
-                requests.post(url, headers=headers, cookies=rebot.cookies)      # 这步不能删
 
-                params = dict(
-                    userIdentifier=rebot.telephone,
-                    orderNo=order.lock_info["orderId"],
-                    couponId="",
-                    payment=5,
-                    produceType="",
-                )
+                if not order.pay_url:   # 生成支付链接
+                    url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
+                    r = requests.post(url, headers=headers, cookies=rebot.cookies)      # 这步不能删
+                    pay_info = r.json()
+                    order.modify(pay_url=pay_info.get('url', ""))
+
+                r = requests.get(order.pay_url, headers={"User-Agent": rebot.user_agent}, cookies=rebot.cookies)
+                sel = etree.HTML(r.content)
+                params = {}
+                for s in sel.xpath("//form[@id='alipayForm']//input"):
+                    k, v = s.xpath("@name"), s.xpath("@value")
+                    k, v = k[0], v[0] if v else ""
+                    if k == "payment":
+                        v = 5
+                    params[k] = v
+
                 url = "http://pay.84100.com/payment/payment/gateWayPay.do"
                 r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params))
                 sel = etree.HTML(r.content)

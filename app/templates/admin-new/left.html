@@ -35,9 +35,7 @@ $(function(){
       {%if current_user.is_kefu %}
       <li class="active"><cite></cite><a href="{{url_for('admin.my_order')}}" target="rightFrame">我的订单</a><i></i></li>
       {% endif %}
-      {%if current_user.is_admin %}
       <li><cite></cite><a href="{{url_for('admin.all_order')}}" target="rightFrame">所有订单</a><i></i></li>
-      {% endif %}
      </ul>    
   </dd>
 </dl>  
