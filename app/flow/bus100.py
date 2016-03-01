@@ -260,7 +260,10 @@ class Flow(BaseFlow):
             }
             r = requests.post("http://84100.com/doLogin/ajax", data=data)
             if r.json().get('flag', '') == '0':
-                rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now())
+                ua = rebot.user_agent
+                if not ua:
+                    ua = random.choice(BROWSER_USER_AGENT)
+                rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now(),user_agent=ua)
                 if not rebot.test_login_status():
                     return result_info
             else:
@@ -272,6 +275,7 @@ class Flow(BaseFlow):
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
         rebot.recrawl_shiftid(line)
+        line.reload()
         url = "http://www.84100.com/getTrainInfo/ajax"
         payload = {
             "shiftId": line.shift_id,
