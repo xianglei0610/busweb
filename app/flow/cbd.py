@@ -15,7 +15,6 @@ from app.flow.base import Flow as BaseFlow
 from app.models import CBDRebot, Line
 from datetime import datetime as dte
 from app.utils import chinese_week_day, md5
-from app import order_log
 
 class Flow(BaseFlow):
 
@@ -275,4 +274,10 @@ class Flow(BaseFlow):
         return "logined"
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="wy" ,**kwargs):
+        for s in order.pay_url.split("?")[1].split("&"):
+            k, v = s.split("=")
+            if k == "serialId":
+                if order.pay_order_no != v:
+                    order.modify(pay_order_no=v)
+                break
         return {"flag": "url", "content": order.pay_url}
