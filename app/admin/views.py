@@ -426,6 +426,7 @@ def all_order():
             t1 = time.time()
             access_log.info("start export order, %s, condition:%s", current_user.username, request.values.to_dict())
             si = StringIO.StringIO()
+            si.write("\xEF\xBB\xBF")
             row_header =[
                 (lambda o: "%s," % o.order_no, "系统订单号"),
                 (lambda o: "%s," % o.out_order_no, "12308订单号"),
