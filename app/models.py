@@ -743,7 +743,7 @@ class JskyWebRebot(Rebot):
 
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
-        login_url = "https://www.jskylwsp.com/Account/LoginIn"
+        login_url = "http://www.jskylwsp.com/Account/LoginIn"
         data = {
             "UserName": self.telephone,
             "Password": self.password,
