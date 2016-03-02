@@ -319,6 +319,7 @@ class Order(db.Document):
                     kefu_updatetime=dte.now(),
                     kefu_username=user_obj.username)
         assign.remove_dealing(self, user_obj)
+        assign.add_dealed_but_not_issued(self, user_obj)
 
     def on_create(self, reason=""):
         if self.status != STATUS_WAITING_LOCK:
@@ -497,8 +498,14 @@ class Rebot(db.Document):
         rebot_log.info(">>>> end login %s, success %d", cls.crawl_source, valid_cnt)
 
     @classmethod
-    def get_one(cls):
-        qs = cls.objects.filter(is_active=True, is_locked=False)
+    def get_one(cls, order=None):
+        sta_bind = SOURCE_INFO[cls.crawl_source].get("station_bind", {})
+        query = {}
+        if order and sta_bind:
+            s_sta_name = order.starting_name.split(";")[1]
+            if s_sta_name in sta_bind:
+                query.update(telephone__in=sta_bind[s_sta_name])
+        qs = cls.objects.filter(is_active=True, is_locked=False, **query)
         if not qs:
             return
         size = qs.count()
@@ -511,7 +518,7 @@ class Rebot(db.Document):
         if order.source_account:
             obj = cls.objects.get(telephone=order.source_account)
         else:
-            obj = cls.get_one()
+            obj = cls.get_one(order=order)
         if obj:
             obj.add_doing_order(order)
             rebot_log.info("[get_and_lock] succ. tele: %s, order: %s", obj.telephone, order.order_no)
@@ -1039,7 +1046,7 @@ class GzqcpAppRebot(Rebot):
         }
 
     @classmethod
-    def get_one(cls):
+    def get_one(cls, order=None):
         now = dte.now()
         start = now.strftime("%Y-%m-%d")+' 00:00:00'
         start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
@@ -1117,7 +1124,7 @@ class Bus100Rebot(Rebot):
     is_for_lock = True
 
     @classmethod
-    def get_one(cls):
+    def get_one(cls, order=None):
         now = dte.now()
         start = now.strftime("%Y-%m-%d")+' 00:00:00'
         start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')

@@ -432,8 +432,8 @@ def all_order():
                 (lambda o: "%s," % o.out_order_no, "12308订单号"),
                 (lambda o: "%s," % o.raw_order_no, "源站订单号"),
                 (lambda o: STATUS_MSG[o.status], "订单状态"),
-                (lambda o: o.pay_trade_no, "付款流水号"),
-                (lambda o: o.refund_trade_no, "退款流水号"),
+                (lambda o: "%s," % o.pay_trade_no, "付款流水号"),
+                (lambda o: "%s," % o.refund_trade_no, "退款流水号"),
                 (lambda o: PAY_STATUS_MSG[o.pay_status], "支付状态"),
                 (lambda o: o.kefu_username, "代购人员"),
                 (lambda o: o.contact_info["name"], "姓名"),
@@ -554,11 +554,13 @@ def wating_deal_order():
             expire_seconds[o.order_no] = 0
             if click_time or o.status == STATUS_WAITING_LOCK:
                 expire_seconds[o.order_no] = 5
+        not_issued = assign.dealed_but_not_issued_orders(current_user)
         return render_template("admin-new/waiting_deal_order.html",
                                page=parse_page_data(qs),
                                status_msg=STATUS_MSG,
                                source_info=SOURCE_INFO,
-                               expire_seconds=expire_seconds)
+                               expire_seconds=expire_seconds,
+                               not_issued=not_issued)
     elif client in ['android', 'ios']:
         data = []
         for i in qs:
@@ -594,13 +596,6 @@ def kefu_on_off():
     is_switch = int(request.form.get('is_switch', 0))
     current_user.modify(is_switch=is_switch)
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
-
-
-@admin.route('/orders/export', methods=['POST'])
-@login_required
-def export_order():
-    qs = get_query_orders()
-    return "ok"
 
 
 @admin.route('/fangbian/callback', methods=['POST'])
