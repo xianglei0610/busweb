@@ -1309,9 +1309,11 @@ class Bus100Rebot(Rebot):
                 line_id = md5("%s-%s-%s-%s-%s" % \
                     (payload['startName'], payload['endName'], drv_datetime, str(banci), 'bus100'))
                 item['line_id'] = line_id
-
-                line_obj = Line.objects.get(line_id=line_id, crawl_source='bus100')
-                line_obj.modify(**item)
+                try:
+                    line_obj = Line.objects.get(line_id=line_id)
+                    line_obj.modify(**item)
+                except Line.DoesNotExist:
+                    continue
 
             if nextPage > pageNo:
                 url = 'http://84100.com/getBusShift/ajax'+'?pageNo=%s' % nextPage
