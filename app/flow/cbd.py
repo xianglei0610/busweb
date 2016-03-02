@@ -40,7 +40,8 @@ class Flow(BaseFlow):
                 passengersInfo=rider_info,
                 contactInfo={
                     "name": order.contact_info["name"],
-                    "mobileNo": order.contact_info["telephone"],
+                    #"mobileNo": order.contact_info["telephone"],
+                    "mobileNo": rebot.telephone,
                     "IDCard": order.contact_info["id_number"],
                     "IDType": 1,
                     "passengerType": 0

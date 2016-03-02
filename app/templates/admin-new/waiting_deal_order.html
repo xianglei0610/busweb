@@ -1,7 +1,7 @@
 <table class="tablelist">
     <thead>
     <tr>
-    <th>12308订单号</th>
+    <th>系统/12308订单号</th>
     <th>下单/出发时间<i class="sort"><img src="{{url_for('static', filename='admin-new/images/px.gif')}}" /></i></th>
     <th>车次号/行程</th>
     <th>来自源网站</th>
@@ -14,7 +14,7 @@
     <tbody>
     {% for order in page["items"] %}
     <tr>
-     <td>{{order.out_order_no}}</td>
+        <td>{{order.order_no}} </br> {{order.out_order_no}}</td>
      <td>{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}<br>{{order.drv_datetime|format_datetime('%Y-%m-%d %H:%M:%S')}}</td>
      <td>{{order.bus_num}}<br>{{order.starting_name.split(';')[0]}} -- {{order.destination_name.split(';')[1]}}</td>
      <td>{{source_info[order.crawl_source]["name"]}}<br></td>
@@ -32,6 +32,29 @@
        <p class="pt">
          <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a>
        </p>
+     </td>
+    </tr>
+    {%endfor%}
+    <tr style="height: 50px; border: 1px solid #ccc">
+        <td ></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    {% for order in not_issued %}
+    <tr>
+     <td>{{order.order_no}} </br> {{order.out_order_no}}</td>
+     <td>{{order.create_date_time|format_datetime('%Y-%m-%d %H:%M:%S')}}<br>{{order.drv_datetime|format_datetime('%Y-%m-%d %H:%M:%S')}}</td>
+     <td>{{order.bus_num}}<br>{{order.starting_name.split(';')[0]}} -- {{order.destination_name.split(';')[1]}}</td>
+     <td>{{source_info[order.crawl_source]["name"]}}<br></td>
+     <td>{{order.ticket_amount}}</td>
+     <td class="m">{{order.order_price}}</td>
+     <td class="color5">{{status_msg[order.status]}}</td>
+     <td>
      </td>
     </tr>
     {%endfor%}
