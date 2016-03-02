@@ -482,19 +482,18 @@ class Rebot(db.Document):
             if bot.login() == "OK":
                 rebot_log.info("%s 登陆成功" % bot.telephone)
                 valid_cnt += 1
-            break
 
-        #for tele, (pwd, openid) in accounts.items():
-        #    if tele in has_checked:
-        #        continue
-        #    bot = cls(is_active=True,
-        #              is_locked=False,
-        #              telephone=tele,
-        #              password=pwd,)
-        #    bot.save()
-        #    if bot.login() == "OK":
-        #        rebot_log.info("%s 登陆成功" % bot.telephone)
-        #        valid_cnt += 1
+        for tele, (pwd, openid) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,)
+            bot.save()
+            if bot.login() == "OK":
+                rebot_log.info("%s 登陆成功" % bot.telephone)
+                valid_cnt += 1
         rebot_log.info(">>>> end login %s, success %d", cls.crawl_source, valid_cnt)
 
     @classmethod
