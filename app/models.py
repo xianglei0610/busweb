@@ -1276,7 +1276,7 @@ class Bus100Rebot(Rebot):
     def recrawl_func(self, queryline_url, payload):
         res = requests.post(queryline_url, data=payload)
         trainListInfo = res.json()
-        if trainListInfo:
+        if trainListInfo and trainListInfo.get('msg', ''):
             nextPage = int(trainListInfo['nextPage'])
             pageNo = int(trainListInfo['pageNo'])
             sel = etree.HTML(trainListInfo['msg'])

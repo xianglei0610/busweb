@@ -302,7 +302,7 @@ class Flow(BaseFlow):
         ret = res.json()
         result = ret['values']['result']
         if result == '0':
-            result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="station no internet", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
         line_url = 'http://www.gzsqcp.com/com/yxd/pris/openapi/queryAllTicket.action'
@@ -313,7 +313,6 @@ class Flow(BaseFlow):
             "endName": line.d_city_name,
             "startDepotCode": line.extra_info['s_code']
         }
-        print data
         r = requests.post(line_url, data=data, headers=headers)
         res = r.json()
         now = dte.now()
