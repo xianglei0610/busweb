@@ -23,9 +23,8 @@ manager.add_command("shell", Shell(make_context=make_shell_context))
 @manager.command
 def init_account(site):
     from app.models import get_rebot_class
-    for client in ["web", "wap", "app"]:
-        for cls in get_rebot_class(site):
-            cls.login_all()
+    for cls in get_rebot_class(site):
+        cls.login_all()
 
 
 @manager.command

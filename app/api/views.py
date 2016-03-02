@@ -77,7 +77,9 @@ def query_destination():
         }
     """
     try:
+        print request.get_data(), 1111111111
         post = json.loads(request.get_data())
+        print post
         starting_name = unicode(post["starting_name"])
         assert starting_name != ""
     except Exception, e:

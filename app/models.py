@@ -12,6 +12,7 @@ from app.constants import *
 from datetime import datetime as dte
 from flask import json
 from lxml import etree
+from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj
@@ -633,17 +634,22 @@ class CBDRebot(Rebot):
     is_for_lock = True
 
     def login(self):
+        from selenium import webdriver
+        driver = webdriver.PhantomJS()
+        driver.get("http://m.chebada.com/Account/Login")
+        token = driver.find_element_by_id("TokenId").get_attribute("value")
+        driver.close()
+
         ua = random.choice(MOBILE_USER_AGENG)
+        header = {"User-Agent": ua}
         log_url = "http://m.chebada.com/Account/UserLogin"
         data = {
             "MobileNo": self.telephone,
             "Password": self.password,
-            "TokenId": "eltdiqrzcvdijpyybpxxgn42",
+            "TokenId": token,
         }
-        header = {
-            "User-Agent": ua,
-        }
-        r = requests.post(log_url, data=data, headers=header)
+        header["Content-Type"] = "application/x-www-form-urlencoded"
+        r = requests.post(log_url, data=urllib.urlencode(data), headers=header)
         ret = r.json()
         if int(ret["response"]["header"]["rspCode"]) == 0:
             self.last_login_time = dte.now()
@@ -737,7 +743,7 @@ class JskyWebRebot(Rebot):
 
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
-        login_url = "https://www.jskylwsp.com/Account/LoginIn"
+        login_url = "http://www.jskylwsp.com/Account/LoginIn"
         data = {
             "UserName": self.telephone,
             "Password": self.password,

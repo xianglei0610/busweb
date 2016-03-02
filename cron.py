@@ -6,6 +6,7 @@
 import requests
 import traceback
 import time
+import json
 
 from app.constants import *
 from apscheduler.scheduler import Scheduler
@@ -51,7 +52,7 @@ def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
         res = requests.post(url, data=data)
         res_lst.append("%s: %s" % (url, res.content))
 
-    subject = "bus_crawl(%s, province_id=%s, crawl_kwargs=%s) " % (crawl_source, province_id, crawl_kwargs)
+    subject = "bus_crawl(%s, province_id=%s, crawl_kwargs=%s) " % (crawl_source, province_id, json.dumps(crawl_kwargs, ensure_ascii=False))
     html_body = subject + '</br>' + 'result:</br>%s' % "</br>".join(res_lst)
     send_email(subject,
             app.config["MAIL_USERNAME"],
@@ -119,9 +120,19 @@ def main():
     sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "山东"}})
     sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "河南"}})
     sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "广西"}})
+    sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"city": "南京"}})
 
     # 贵州汽车票务网
     sched.add_cron_job(bus_crawl, hour=6, minute=10, args=['gzqcp'])
+
+    # 江苏客运
+    sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南京"}})
+
+    # 车巴达
+    sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['cbd'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['cbd'], kwargs={"crawl_kwargs":{"city": "南京"}})
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
@@ -133,6 +144,6 @@ def main():
 if __name__ == '__main__':
     main()
     #clear_redis_data()
-    #bus_crawl('bus100')
+    #bus_crawl('bus100', crawl_kwargs={"province": "四川"})
     #delete_source_riders()
     #clear_lines()
