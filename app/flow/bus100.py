@@ -34,8 +34,23 @@ class Flow(BaseFlow):
                 lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
                                    result_reason="账号未登陆")
-                return lock_result
-
+                data = {
+                    "loginType": 0,
+                    "backUrl": '',
+                    "mobile": rebot.telephone,
+                    "password": rebot.password,
+                    "validateCode": '1234'
+                }
+                r = requests.post("http://84100.com/doLogin/ajax", data=data)
+                if r.json().get('flag', '') == '0':
+                    ua = rebot.user_agent
+                    if not ua:
+                        ua = random.choice(BROWSER_USER_AGENT)
+                    rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now(),user_agent=ua)
+                    if not rebot.test_login_status():
+                        return lock_result
+                else:
+                    return lock_result
             try:
                 rebot.recrawl_shiftid(order.line)
             except:
@@ -56,7 +71,13 @@ class Flow(BaseFlow):
 
             ttype, ttpwd = self.request_ticket_info(order, rebot)
             lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
+            order_log.info("[lock-result]  request_create_order . order: %s,account:%s,result:%s", order.order_no,rebot.telephone,lock_info)
             lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
+            if u"乘车人不能超过" in lock_msg:
+                order.line.shift_id = "0"
+                order.save()
+                lock_result.update(result_code=0,
+                                   result_reason=lock_msg)
             if lock_flag == '0':    # 锁票成功
                 expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
                 lock_result.update({
@@ -255,18 +276,22 @@ class Flow(BaseFlow):
             }
             r = requests.post("http://84100.com/doLogin/ajax", data=data)
             if r.json().get('flag', '') == '0':
-                rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now())
+                ua = rebot.user_agent
+                if not ua:
+                    ua = random.choice(BROWSER_USER_AGENT)
+                rebot.modify(cookies=dict(r.cookies), is_active=True, last_login_time=dte.now(),user_agent=ua)
                 if not rebot.test_login_status():
                     return result_info
             else:
                 return result_info
         now = dte.now()
-        rebot.recrawl_shiftid(line)
         line = Line.objects.get(line_id=line.line_id)
         if line.shift_id == "0" or not line.extra_info.get('flag', 0):
             line_log.info("[refresh-result]  no left_tickets line:%s %s ", line.crawl_source, line.line_id)
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
+        rebot.recrawl_shiftid(line)
+        line.reload()
         url = "http://www.84100.com/getTrainInfo/ajax"
         payload = {
             "shiftId": line.shift_id,
@@ -283,7 +308,7 @@ class Flow(BaseFlow):
                 full_price = float(full_price[0])
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 45, "refresh_datetime": now,'full_price':full_price})
         elif str(trainInfo['flag']) == '1':
-            line_log.info("[refresh-result]  no left_tickets line:%s %s,result:%s ", line.crawl_source, line.line_id,trainInfo)
+            line_log.info("[refresh-result]  no left_tickets line:%s,%s %s,result:%s ", line.crawl_source,line.s_city_name, line.line_id,trainInfo)
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
 
         return result_info

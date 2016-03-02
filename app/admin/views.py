@@ -373,9 +373,9 @@ def all_order():
     pay_status = params.get("pay_status", "")
     if pay_status:
         query.update(pay_status=int(pay_status))
-
     q_key = params.get("q_key", "")
     q_value = params.get("q_value", "").strip()
+
     Q_query = None
     if q_key and q_value:
         if q_key == "contact_phone":

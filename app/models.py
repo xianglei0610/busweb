@@ -968,6 +968,142 @@ class TCWebRebot(Rebot):
         return self.check_login_by_resp(resp)
 
 
+class GzqcpWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "gzqcpweb_rebot",
+    }
+    crawl_source = SOURCE_GZQCP
+
+    def test_login_status(self):
+        try:
+            user_url = "http://www.gzsqcp.com//com/yxd/pris/grzx/grzl/detailPersonalData.action"
+            headers = {"User-Agent": self.user_agent}
+            cookies = json.loads(self.cookies)
+            data = {"memberId": "2"}
+            res = requests.post(user_url, data=data, headers=headers, cookies=cookies)
+            res = res.json()
+            if res.get('akfAjaxResult', '') == '0' and res['values']['member']:
+                return 1
+            else:
+                return 0
+        except:
+            return 0
+
+    @classmethod
+    def login_all(cls):
+        """预设账号"""
+        rebot_log.info(">>>> start to init gzqcp web:")
+        valid_cnt = 0
+        has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_GZQCP]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd = accounts[bot.telephone][0]
+            bot.modify(password=pwd)
+
+        for tele, (pwd, _) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      user_agent=random.choice(BROWSER_USER_AGENT),
+                      password=pwd,)
+            bot.save()
+            valid_cnt += 1
+        rebot_log.info(">>>> end init gzqcp web  success %d", valid_cnt)
+
+
+class GzqcpAppRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "gzqcpapp_rebot",
+    }
+    crawl_source = SOURCE_GZQCP
+    is_for_lock = True
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": ua or self.user_agent,
+        }
+
+    @classmethod
+    def get_one(cls):
+        now = dte.now()
+        start = now.strftime("%Y-%m-%d")+' 00:00:00'
+        start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
+        all_accounts = SOURCE_INFO[SOURCE_GZQCP]["accounts"].keys()
+        used = Order.objects.filter(crawl_source=SOURCE_GZQCP,
+                                    status=STATUS_ISSUE_SUCC,
+                                    create_date_time__gt=start) \
+                            .item_frequencies("source_account")
+        accounts_list = filter(lambda k: used.get(k, 0)<20, all_accounts)
+        for i in range(100):
+            choose = random.choice(accounts_list)
+            rebot = cls.objects.get(telephone=choose)
+            if rebot.is_active:
+                return rebot
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[gzqcp] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[gzqcp] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        header = {
+            "User-Agent": ua,
+        }
+        data = {
+                "username": self.telephone,
+                "password": self.password
+            }
+        log_url = "http://www.gzsqcp.com/com/yxd/pris/openapi/personLogin.action"
+        r = requests.post(log_url, data=data, headers=header)
+        ret = r.json()
+        if int(ret["akfAjaxResult"]) == 0 and int(ret["values"]['result']["code"])==1 :
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.is_active = True
+            self.save()
+            rebot_log.info("登陆成功gzqcp %s", self.telephone)
+            return "OK"
+        else:
+            rebot_log.error("登陆错误gzqcp %s, %s", self.telephone, str(ret))
+        return "fail"
+
+    def test_login_status(self):
+        try:
+            user_url = "http://www.gzsqcp.com//com/yxd/pris/openapi/detailPersonalData.action"
+            headers = {"User-Agent": self.user_agent}
+            cookies = json.loads(self.cookies)
+            data = {}
+            res = requests.post(user_url, data=data, headers=headers, cookies=cookies)
+            res = res.json()
+            if res.get('akfAjaxResult', '') == '0' and res['values']['member']:
+                return 1
+            else:
+                return 0
+        except:
+            return 0
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
@@ -1078,7 +1214,7 @@ class Bus100Rebot(Rebot):
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
                 continue
-            bot = cls(is_active=False,
+            bot = cls(is_active=True,
                       is_locked=False,
                       telephone=tele,
                       password=pwd,

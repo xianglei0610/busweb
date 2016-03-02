@@ -150,10 +150,10 @@ def sync_open_city(site, province_name):
         openObj.city_name = city_name
         city_code = "".join(map(lambda w: w[0], lazy_pinyin(city_name.decode("utf-8"))))
         openObj.city_code = city_code
-        openObj.pre_sell_days = 10
+        openObj.pre_sell_days = 5
         openObj.open_time = "23:00"
         openObj.end_time = "8:00"
-        openObj.advance_order_time = 0
+        openObj.advance_order_time = 60
         openObj.max_ticket_per_order = 5
         openObj.crawl_source = site
         openObj.is_active = True
