@@ -173,13 +173,24 @@ class Flow(BaseFlow):
                 "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.6,en;q=0.4",
             }
             data = urllib.urlencode(data)
-            r = requests.post(pay_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+            r = requests.post(pay_url,
+                              data=data,
+                              headers=headers,
+                              cookies=json.loads(rebot.cookies),
+                              allow_redirects=False)
             content = r.content.decode("gbk")
             soup = BeautifulSoup(r.content, "lxml")
             if soup.select("#mobile") and soup.select("#password"):
                 rebot.login()
             else:
-                break
+                gateway = soup.find("a").get("href")
+                for s in gateway.split("?")[1].split("&"):
+                    k, v = s.split("=")
+                    if k == "out_trade_no":
+                        if order.pay_order_no != v:
+                            order.modify(pay_order_no=v)
+                        break
+                return {"flag": "url", "content": gateway}
         return {"flag": "html", "content": content}
 
     def do_refresh_line(self, line):
