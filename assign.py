@@ -61,7 +61,7 @@ def dealing_orders(user):
 
 
 def add_dealed_but_not_issued(order, user):
-    if order.status in [STATUS_GIVE_BACK, STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL]:
+    if order.status in [STATUS_GIVE_BACK, STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL, STATUS_LOCK_FAIL]:
         return
     rds = get_redis("order")
     key = RK_DEALED_NOT_ISSUED % user.username
@@ -73,7 +73,7 @@ def dealed_but_not_issued_orders(user):
     key = RK_DEALED_NOT_ISSUED % user.username
     s_all = set(rds.smembers(key))
     qs = Order.objects.filter(order_no__in=s_all,
-                              status__nin=[STATUS_GIVE_BACK, STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL])
+                              status__nin=[STATUS_GIVE_BACK, STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL, STATUS_LOCK_FAIL])
     s_not_issued = set(qs.distinct("order_no"))
     s_issued = s_all-s_not_issued
     if s_issued:
