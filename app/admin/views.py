@@ -555,12 +555,18 @@ def wating_deal_order():
             if click_time or o.status == STATUS_WAITING_LOCK:
                 expire_seconds[o.order_no] = 5
         not_issued = assign.dealed_but_not_issued_orders(current_user)
+        today = dte.now().strftime("%Y-%m-%d")
+        dealed_count = Order.objects.filter(kefu_username=current_user.username,
+                                            create_date_time__gte=today,
+                                            status__in=[STATUS_ISSUE_ING, STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL]) \
+                            .item_frequencies("crawl_source")
         return render_template("admin-new/waiting_deal_order.html",
                                page=parse_page_data(qs),
                                status_msg=STATUS_MSG,
                                source_info=SOURCE_INFO,
                                expire_seconds=expire_seconds,
-                               not_issued=not_issued)
+                               not_issued=not_issued,
+                               dealed_count=dealed_count)
     elif client in ['android', 'ios']:
         data = []
         for i in qs:
