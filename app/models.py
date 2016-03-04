@@ -12,7 +12,6 @@ from app.constants import *
 from datetime import datetime as dte
 from flask import json
 from lxml import etree
-from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj
@@ -668,6 +667,47 @@ class CBDRebot(Rebot):
         else:
             rebot_log.error("登陆错误cbd %s, %s", self.telephone, str(ret))
         return "fail"
+
+
+class ChangtuWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "changtuweb_rebot",
+    }
+
+    crawl_source = SOURCE_CHANGTU
+    is_for_lock = True
+
+    def on_add_doing_order(self, order):
+        pass
+
+    def on_remove_doing_order(self, order):
+        pass
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active=True
+        self.cookies = "{}"
+        self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+    def test_login_status(self):
+        check_url = "http://www.changtu.com/trade/order/userInfo.htm"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = requests.get(check_url, headers=headers, cookies=cookies)
+        c = resp.content
+        c = c[c.index("(")+1: c.rindex(")")]
+        res = json.loads(c)
+        if res["loginFlag"] == "true":
+            return 1
+        return 0
 
 
 class BabaWebRebot(Rebot):
