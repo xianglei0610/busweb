@@ -19,7 +19,7 @@ class Flow(object):
             return "已经锁票成功:%s，不需要重新锁票" % order.lock_info.get('orderId', '')
         return ""
 
-    def lock_ticket(self, order):
+    def lock_ticket(self, order, **kwargs):
         """
         锁票主流程, 子类不用复写此方法
 
@@ -41,7 +41,7 @@ class Flow(object):
             order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
             return
 
-        ret = self.do_lock_ticket(order)
+        ret = self.do_lock_ticket(order, **kwargs)
         order.reload()
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 再次检查, 防止重复支付
@@ -89,7 +89,7 @@ class Flow(object):
             response = urllib2.urlopen(notify_url, json_str, timeout=20)
             order_log.info("[lock-callback-response] order:%s, %s", order.order_no, str(response))
 
-    def do_lock_ticket(self, order):
+    def do_lock_ticket(self, order, **kwargs):
         """
         实际锁票动作, 需要子类实现
         Returns:
@@ -205,13 +205,14 @@ class Flow(object):
         线路信息刷新主流程, 不用子类重写
         """
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-        #if not self.need_refresh_line(line, force=force):
-        #    line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
-        #    return
+        if not self.need_refresh_line(line, force=force):
+            line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
+            return
+        now = dte.now()
         ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
         if update:
-            line.modify(**update)
+            line.modify(refresh_datetime=now, **update)
         line_log.info("[refresh-result] line:%s %s, result: %s, update: %s",
                       line.crawl_source,
                       line.line_id,
