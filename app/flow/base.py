@@ -212,7 +212,9 @@ class Flow(object):
         ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
         if update:
-            line.modify(refresh_datetime=now, **update)
+            if "refresh_datetime" not in update:
+                update["refresh_datetime"] = now
+            line.modify(**update)
         line_log.info("[refresh-result] line:%s %s, result: %s, update: %s",
                       line.crawl_source,
                       line.line_id,
