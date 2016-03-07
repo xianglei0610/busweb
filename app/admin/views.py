@@ -165,7 +165,7 @@ def order_pay(order_no):
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
     if not ret:
-        ret= {}
+        ret = {}
     flag = ret.get("flag", "")
     if flag == "url":
         return redirect(ret["content"])
@@ -178,7 +178,7 @@ def order_pay(order_no):
             return redirect(url_for("admin.src_code_input", order_no=order_no))
     elif flag == "error":
         return ret["content"]
-    return "异常页面 %s" % str(ret)
+    return "异常页面 %s" % str(json.dumps(ret,ensure_ascii = False))
 
 
 @admin.route('/orders/<order_no>/refresh', methods=['GET'])

@@ -1110,6 +1110,80 @@ class GzqcpAppRebot(Rebot):
             return 0
 
 
+class KuaibaWapRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    user_id = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "kuaibawap_rebot",
+    }
+    crawl_source = SOURCE_KUAIBA
+    is_for_lock = True
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": ua or self.user_agent,
+        }
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[kuaiba] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[kuaiba] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        header = {
+            "User-Agent": ua,
+        }
+        pwd_info = SOURCE_INFO[SOURCE_KUAIBA]["pwd_encode"]
+        params = {
+                "account": self.telephone,
+                "password": pwd_info[self.password]
+            }
+        url = "http://m.daba.cn/gwapi/kbUser/userLogin.json?c=h5&sr=&sc=&ver=1.5.0&env=0&st="
+        login_url = "%s&%s" % (url, urllib.urlencode(params))
+        r = requests.get(login_url, headers=header)
+        ret = r.json()
+        if int(ret["code"]) == 0 and ret["msg"] == '成功' :
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.is_active = True
+            self.save()
+            rebot_log.info("登陆成功 kuaiba %s", self.telephone)
+            self.test_login_status()
+            return "OK"
+        else:
+            rebot_log.error("登陆错误 kuaiba %s, %s", self.telephone, str(ret))
+        return "fail"
+
+    def test_login_status(self):
+        try:
+            user_url = "http://m.daba.cn/gwapi/passenger/queryPassengers.json?c=h5&sr=6963&sc=729&ver=1.5.0&env=0&st=1456996592487"
+            headers = {"User-Agent": self.user_agent}
+            cookies = json.loads(self.cookies)
+            res = requests.get(user_url, headers=headers, cookies=cookies)
+            res = res.json()
+            print res
+            if res['code'] == 0:
+                if res.get('data', []) and not self.user_id:
+                    user_id = res.get('data', [])[0]['userid']
+                    self.user_id = user_id
+                    self.save()
+                return 1
+            else:
+                return 0
+        except:
+            return 0
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
@@ -1194,7 +1268,6 @@ class Bus100Rebot(Rebot):
             rebot_log.error("%s %s login failed! %s", self.telephone, self.password, ret.get("returnMsg", ""))
             self.modify(is_active=False)
             return ret.get("returnMsg", "fail")
-
         self.modify(is_active=True, last_login_time=dte.now(), user_agent=ua)
         return "OK"
 
