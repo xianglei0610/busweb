@@ -30,20 +30,27 @@ class Flow(BaseFlow):
                 rebot.reload()
             line = order.line
             riders = order.riders
+            contact_info = order.contact_info
             passengers = []
+            buyPersonCard = riders[0]['id_number']
+            buyPersonName = riders[0]['name']
+            buyPersonPhone = contact_info['telephone']
             for r in riders:
                 cyuserid = self.send_add_passenger(r["id_number"], r["name"], rebot)
                 passengers.append(cyuserid)
+                if r["id_number"] == contact_info['id_number']: #如果联系人中没有乘车人就取第一个乘车人作为取票人
+                    buyPersonName = contact_info['name']
+                    buyPersonCard = contact_info['id_number']
             data = {
                 "userId": rebot.user_id,
-                "buyPersonName": riders[0]['name'],
+                "buyPersonName": buyPersonName,
                 "insuCode": "",
-                "buyPersonCard": riders[0]['id_number'],
+                "buyPersonCard": buyPersonCard,
                 "insuType": '',
-                "buyPersonPhone": order.contact_info['telephone'],
-                "couponId": '', 
+                "buyPersonPhone": buyPersonPhone,
+                "couponId": '',
                 "insuPrice": '0',
-                'token':'',
+                'token': '',
                 "lineBcId": order.line.bus_num,
                 "passengers": ','.join(passengers),
                 }
@@ -57,7 +64,6 @@ class Flow(BaseFlow):
                 rebot.reload()
                 res = self.send_lock_request(order, rebot, data=data)
             order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
-            print '3333333333333333',res
             lock_result = {
                 "lock_info": res,
                 "source_account": rebot.telephone,
@@ -102,7 +108,6 @@ class Flow(BaseFlow):
         add_url = "%s&%s" % (url, urllib.urlencode(params))
         r = requests.get(add_url, headers=headers, cookies=json.loads(rebot.cookies))
         ret = r.json()
-        print 'ret----------',ret
         if ret['code'] == 0:
             cyuserid = ret['data']['cyuserid']
             if not rebot.user_id:
@@ -140,14 +145,11 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
 #         rebot.login()
 #         rebot.reload()
-
         r = requests.get(detail_url, headers=headers, cookies=json.loads(rebot.cookies))
         ret = r.json()
         return {
             "state": ret['data']['status'],
             "order_no": ret['data']['orderid']
-#             "pick_no": ret['values']['result']['order']['takeTicketNo'],
-#             "pick_code": ret['values']['result']['order']['takfPw'],
         }
 
     def do_refresh_issue(self, order):
@@ -293,7 +295,6 @@ class Flow(BaseFlow):
         r = requests.get(line_url, headers=headers)
         res = r.json()
         now = dte.now()
-        print '1111111111111111',res
         if res["code"] != 0:
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
@@ -302,7 +303,6 @@ class Flow(BaseFlow):
         if not cityOpenSale or len(busTripInfoSet) == 0:
             result_info.update(result_msg=" not open sale or not line list", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
-        print '2222222222222',res
         update_attrs = {}
         for d in busTripInfoSet:
             drv_datetime = dte.strptime("%s %s" % (line.drv_date, d["time"][0:-3]), "%Y-%m-%d %H:%M")
