@@ -154,7 +154,7 @@ def sync_open_city(site, province_name):
         openObj.open_time = "23:00"
         openObj.end_time = "8:00"
         openObj.advance_order_time = 60
-        openObj.max_ticket_per_order = 5
+        openObj.max_ticket_per_order = 3
         openObj.crawl_source = site
         openObj.is_active = True
         try:
