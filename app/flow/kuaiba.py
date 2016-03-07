@@ -224,7 +224,9 @@ class Flow(BaseFlow):
             if order.status == STATUS_WAITING_ISSUE:
                 headers = rebot.http_header()
                 callback_url = "http://m.daba.cn/jsp/order/orderdetail.jsp?c=h5&sr=7327&sc=483&ver=1.5.0&env=0&st=1456912139874&orderid=%s"%order.raw_order_no
-                print '11111111111111', callback_url
+        #         rebot.login()
+        #         rebot.reload()
+#                 r = requests.get(callback_url, headers=headers, cookies=json.loads(rebot.cookies))
                 pay_url = "http://m.daba.cn/gwapi/newOrder/pay.json?c=h5&sr=6636&sc=161&ver=1.5.0&env=0&st=1457076498612env=0&c=h5&ver=1.5.0"
                 params = {
                         "orderId": order.raw_order_no,
@@ -239,7 +241,7 @@ class Flow(BaseFlow):
                 r = requests.get(pay_url, headers=headers, cookies=cookies)
                 cookies.update(dict(r.cookies))
                 res = r.json()
-                if res['flag'] == False and res['desc'] == "订单已经支付成功，请不要重复支付":
+                if res['flag'] == False:
                     return res
                 data = r.json()['data']
                 sel = etree.HTML(data)
