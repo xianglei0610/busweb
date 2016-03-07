@@ -111,7 +111,7 @@ def main():
     # 巴士壹佰
     sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['bus100', "450000"]) #广西
     sched.add_cron_job(bus_crawl, hour=18, minute=20, args=['bus100', "370000"]) #山东
-    sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['bus100', "410000"]) #河南
+    sched.add_cron_job(bus_crawl, hour=19, minute=40, args=['bus100', "410000"]) #河南
 
     # 巴巴快巴
     sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['baba'])
@@ -126,6 +126,7 @@ def main():
     # 贵州汽车票务网
     sched.add_cron_job(bus_crawl, hour=6, minute=10, args=['gzqcp'])
 
+    
     # 江苏客运
     sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州"}})
     sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南京"}})
@@ -133,6 +134,10 @@ def main():
     # 车巴达
     sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['cbd'], kwargs={"crawl_kwargs":{"city": "苏州"}})
     sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['cbd'], kwargs={"crawl_kwargs":{"city": "南京"}})
+
+
+    # 快巴
+    sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['kuaiba'], kwargs={"crawl_kwargs":{"province": "北京"}})
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
