@@ -1132,7 +1132,7 @@ class GzqcpAppRebot(Rebot):
             return "OK"
         else:
             rebot_log.error("登陆错误gzqcp %s, %s", self.telephone, str(ret))
-        return "fail"
+            return "fail"
 
     def test_login_status(self):
         try:
@@ -1202,7 +1202,7 @@ class KuaibaWapRebot(Rebot):
             return "OK"
         else:
             rebot_log.error("登陆错误 kuaiba %s, %s", self.telephone, str(ret))
-        return "fail"
+            return "fail"
 
     def test_login_status(self):
         try:
