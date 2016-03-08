@@ -12,6 +12,7 @@ import assign
 import traceback
 import csv
 import StringIO
+import re
 
 from datetime import datetime as dte
 from app.utils import md5, create_validate_code
@@ -656,9 +657,28 @@ def qupiao_duanxin():
         "message": "ok":
     }
     """
+    regex_mapping = {
+    }
     data = request.get_data()
     access_log.info("[qupiao_duanxin] %s", data)
     post = json.loads(data)
+    r_phone = post["recevie_phone"]
+    s_phone = post["send_phone"]
+    content = post["content"].encode("utf-8")
+    md5_str = md5(content)
+    if content.startswith("【同程旅游】"):
+        regex = r"【同程旅游】您购买了：(\S{4}-\S{2}-\S{2}\s\S{2}:\S{2})，(\S+) - (\S+)车次为(\S+)的汽车票，取票号：(\d+)，取票密码：(\d+)，座位号：(\d+)"
+        try:
+            sdate, start, dest, bus, pick_no, pick_code, seat = re.findall(regex, content)[0]
+            drv_datetime = dte.strptime("%Y-%m-%d %H:%M", sdate)
+        except:
+            access_log.info("[qupiao_duanxin] ignore!")
+    elif content.startswith(""):
+        regex = r"【畅途网】您预订的(\S{4}-\S{2}-\S{2}\s\S{2}:\S{2})(\S+) (\S+) 到(\S+)，汽车票(\d+)张，订单总金额：(\S+)元。取票时间：(\S+)。凭取票号(\d+)和密码(\d+)取票，取票地点:(\S+)。请预留取票时间"
+        try:
+            sdate, start_city, start_sta, dest, amount, money, pick_time, pick_no, pick_code, pick_site = re.findall(regex, content)[0]
+        except:
+            access_log.info("[qupiao_duanxin] ignore!")
     return jsonify({"code": 1,
                     "message": "OK",
                     "data": ""})
