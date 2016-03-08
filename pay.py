@@ -13,6 +13,7 @@ COMPANY_TO_SOURCE = {
     "车巴达(苏州)网络科技有限公司": SOURCE_CBD,
     "北京巴士壹佰网络科技有限公司": SOURCE_BUS100,
     "上海华程西南国际旅行社有限公司": SOURCE_CTRIP,
+    "北京二两科技有限公司": SOURCE_KUAIBA,
 }
 
 def parse_alipay_record(f):

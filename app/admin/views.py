@@ -640,5 +640,28 @@ def fangbian_callback():
     return "success"
 
 
+@admin.route('/api/qpdx', methods=['POST'])
+def qupiao_duanxin():
+    """
+    Request:
+    {
+        "recevie_phone": "150xxxxxxx",          # 接收短信的手机号码
+        "send_phone"; "10086",                  # 发送短信的号码
+        "content": "xxxx",                      # 短信内容
+    }
+
+    Response:
+    {
+        "code": 1                           # 1 成功  0 失败或异常
+        "message": "ok":
+    }
+    """
+    data = request.get_data()
+    access_log.info("[qupiao_duanxin] %s", data)
+    post = json.loads(data)
+    return jsonify({"code": 1,
+                    "message": "OK",
+                    "data": ""})
+
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
 admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
