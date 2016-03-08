@@ -21,7 +21,7 @@ class Config:
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
     CELERY_IMPORTS=("tasks")
 
-    PERMANENT_SESSION_LIFETIME = 24*60*60   # session有效期
+    PERMANENT_SESSION_LIFETIME = 24 * 60 * 60   # session有效期
 
     # 方便网接口地址
     FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"
@@ -63,12 +63,6 @@ class Config:
         'port': 27017,
     }
 
-    CRAWL_MONGODB_SETTINGS = {
-        'db': 'crawl12308',
-        'host': 'localhost',
-        'port': 27017,
-    }
-
     @staticmethod
     def init_app(app):
         pass
@@ -89,12 +83,6 @@ class ApiDevConfig(Config):
 
     MONGODB_SETTINGS = {
         'db': 'web12308',
-        'host': '192.168.1.202',
-        'port': 27017,
-    }
-
-    CRAWL_MONGODB_SETTINGS = {
-        'db': 'crawl12308',
         'host': '192.168.1.202',
         'port': 27017,
     }
@@ -137,12 +125,6 @@ class ApiProdConfig(Config):
     }
 
     MONGODB_SETTINGS = {
-        'db': 'web12308',
-        'host': '10.51.9.34',
-        'port': 27017,
-    }
-
-    CRAWL_MONGODB_SETTINGS = {
         'db': 'web12308',
         'host': '10.51.9.34',
         'port': 27017,
