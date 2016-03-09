@@ -950,6 +950,52 @@ class CTripRebot(Rebot):
         return ret
 
 
+class CqkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "cqkyweb_rebot",
+    }
+    crawl_source = SOURCE_CQKY
+    is_for_lock = True
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active=True
+        self.cookies = "{}"
+        self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+    def test_login_status(self):
+        login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
+        headers = {
+            "User-Agent": self.user_agent,
+            "Referer": "http://www.96096kp.com/TicketMain.aspx",
+            "Origin": "http://www.96096kp.com",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        }
+        cookies = json.loads(self.cookies)
+        today = dte.now().strftime("%Y-%m-%d")
+        params = {
+            "beginDate": today,
+            "endDate": today,
+            "isCheck": "false",
+            "Code": "",
+            "cmd": "GetMobileList",
+        }
+        r = requests.post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        lst = re.findall(r'success:"(\w+)"', r.content)
+        succ = lst and lst[0] or ""
+        if succ == "true":
+            return 1
+        return 0
+
+
 class TCWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
@@ -1211,7 +1257,6 @@ class KuaibaWapRebot(Rebot):
             cookies = json.loads(self.cookies)
             res = requests.get(user_url, headers=headers, cookies=cookies)
             res = res.json()
-            print res
             if res['code'] == 0:
                 if res.get('data', []) and not self.user_id:
                     user_id = res.get('data', [])[0]['userid']

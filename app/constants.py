@@ -16,6 +16,7 @@ SOURCE_FB = "fangbian"
 SOURCE_GZQCP = "gzqcp"
 SOURCE_KUAIBA = "kuaiba"
 SOURCE_CHANGTU = "changtu"
+SOURCE_CQKY = "cqky"
 
 
 SOURCE_INFO = {
@@ -221,6 +222,13 @@ SOURCE_INFO = {
         "pwd_encode": {
             "cibRpL0": "d17bc469b36817893ff0cdae06b5422f",
         }
+    },
+    SOURCE_CQKY: {
+        "name": "重庆客运",
+        "website": "http://http://www.96096kp.com/",
+        "accounts": {
+            "15575101324": ("123456", ''),
+        },
     },
     SOURCE_GZQCP: {
         "name": "贵州汽车票",
