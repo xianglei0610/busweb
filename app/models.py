@@ -1224,6 +1224,75 @@ class KuaibaWapRebot(Rebot):
             return 0
 
 
+class BjkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "bjkyweb_rebot",
+    }
+    crawl_source = SOURCE_BJKY
+    is_for_lock = True
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": ua or self.user_agent,
+        }
+
+    @classmethod
+    def login_all(cls):
+        """登陆所有预设账号"""
+        rebot_log.info(">>>> start to init bjky:")
+        valid_cnt = 0
+        has_checked = {}
+        ua = random.choice(BROWSER_USER_AGENT)
+        accounts = SOURCE_INFO[SOURCE_BJKY]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd, _ = accounts[bot.telephone]
+            bot.modify(password=pwd)
+
+#             if bot.login() == "OK":
+#                 rebot_log.info("%s 登陆成功" % bot.telephone)
+#                 valid_cnt += 1
+        for tele, (pwd, _) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,
+                      user_agent=ua
+                      )
+            bot.save()
+#             if bot.login() == "OK":
+#                 rebot_log.info("%s 登陆成功" % bot.telephone)
+            valid_cnt += 1
+        rebot_log.info(">>>> end init bjky success %d", valid_cnt)
+
+    def test_login_status(self):
+        url = "http://www.e2go.com.cn/TicketOrder/SearchSchedule"
+#         cookie ="Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06=1456970104,1457072900,1457316719,1457403102; ASP.NET_SessionId=uuppwd3q4j3qo5vwcka2v04y; Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06=1457415243"
+#         headers={"cookie":cookie} 
+#         cookies = {"Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06": "1456970104,1457072900,1457316719,1457403102",
+#                                        "ASP.NET_SessionId": "uuppwd3q4j3qo5vwcka2v04y",
+#                                        "Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06": "1457415243"}
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        res = requests.get(url, headers=headers, cookies=cookies)
+        result = urlparse.urlparse(res.url)
+        if result.path == '/Home/Login':
+            return 0
+        else:
+            return 1
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()

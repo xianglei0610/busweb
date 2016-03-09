@@ -16,6 +16,7 @@ SOURCE_FB = "fangbian"
 SOURCE_GZQCP = "gzqcp"
 SOURCE_KUAIBA = "kuaiba"
 SOURCE_CHANGTU = "changtu"
+SOURCE_BJKY = "bjky"
 
 
 SOURCE_INFO = {
@@ -333,6 +334,13 @@ SOURCE_INFO = {
         "pwd_encode": {
             "123456": "e10adc3949ba59abbe56e057f20f883e",
         }
+    },
+    SOURCE_BJKY: {
+        "name": "北京客运",
+        "website": "http://www.e2go.com.cn",
+        "accounts": {
+            "13267109876": ("a123456", ''),
+        },
     },
 }
 
