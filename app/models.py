@@ -1284,7 +1284,7 @@ class BjkyWebRebot(Rebot):
 #                                        "ASP.NET_SessionId": "uuppwd3q4j3qo5vwcka2v04y",
 #                                        "Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06": "1457415243"}
         headers = {"User-Agent": self.user_agent}
-        cookies = json.loads(self.cookies)
+        cookies = json.loads(self.cookies or '{}')
         res = requests.get(url, headers=headers, cookies=cookies)
         result = urlparse.urlparse(res.url)
         if result.path == '/Home/Login':
