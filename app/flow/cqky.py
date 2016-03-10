@@ -323,8 +323,7 @@ class Flow(BaseFlow):
             }
             r = requests.post(base_url,
                               data=urllib.urlencode(params),
-                              headers=headers,
-                              proxies={"http": "http://192.168.1.99:8888"})
+                              headers=headers)
             return {"flag": "html", "content": r.content}
 
         if order.status == STATUS_LOCK_RETRY:
