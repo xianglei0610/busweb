@@ -33,15 +33,15 @@ class Flow(BaseFlow):
         with CqkyWebRebot.get_and_lock(order) as rebot:
             line = order.line
 
-            is_login = rebot.test_login_status()
-            # 未登录
-            if not is_login:
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": u"账号未登录",
-                })
-                return lock_result
+            # is_login = rebot.test_login_status()
+            # # 未登录
+            # if not is_login:
+            #     lock_result.update({
+            #         "result_code": 2,
+            #         "source_account": rebot.telephone,
+            #         "result_reason": u"账号未登录",
+            #     })
+            #     return lock_result
 
             res = self.request_station_status(line, rebot)
             if res["success"]:
@@ -61,6 +61,12 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                     "pay_money": res["pay_money"]
                 })
+            elif "您未登录或登录已过期" in res["msg"]:
+                lock_result.update({
+                     "result_code": 2,
+                     "source_account": rebot.telephone,
+                     "result_reason": u"账号未登录",
+                 })
             else:
                 lock_result.update({
                     "result_code": 0,
@@ -177,7 +183,9 @@ class Flow(BaseFlow):
                           data=urllib.urlencode(params),
                           headers=headers,
                           cookies=cookies,)
-        return json.loads(trans_js_str(r.content))
+        res = json.loads(trans_js_str(r.content))
+        order_log.info("[locking] order: %s add shopcart, %s", order.order_no, res.get("msg", ""))
+        return res
 
     def request_station_status(self, line, rebot):
         """
@@ -263,69 +271,70 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
-        if valid_code:
-            login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
-            info = json.loads(session["pay_login_info"])
-            headers = info["headers"]
-            cookies = info["cookies"]
-            headers = {
-                "User-Agent": headers.get("User-Agent", "") or rebot.user_agent,
-                "Referer": "http://www.96096kp.com/CusLogin.aspx",
-                "Origin": "http://www.96096kp.com",
-                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            }
-            params = {
-                "loginID": rebot.telephone,
-                "loginPwd": rebot.password,
-                "getInfo": 1,
-                "loginValid": valid_code,
-                "cmd": "Login",
-            }
-            r = requests.post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
-            cookies.update(dict(r.cookies))
-            rebot.modify(cookies=json.dumps(cookies))
-
-        is_login = rebot.test_login_status()
-        if is_login:
-            if order.status == STATUS_LOCK_RETRY:
-                self.lock_ticket(order)
-            if order.status == STATUS_WAITING_ISSUE:
-                base_url = "http://www.96096kp.com/GoodsDetail.aspx"
+        if order.status == STATUS_LOCK_RETRY:
+            if valid_code:
+                login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
+                info = json.loads(session["pay_login_info"])
+                headers = info["headers"]
+                cookies = info["cookies"]
                 headers = {
-                    "User-Agent": rebot.user_agent,
-                    "Referer": "http://www.96096kp.com/TicketMain.aspx",
+                    "User-Agent": headers.get("User-Agent", "") or rebot.user_agent,
+                    "Referer": "http://www.96096kp.com/CusLogin.aspx",
                     "Origin": "http://www.96096kp.com",
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                 }
-                r = requests.get(base_url, headers=headers)
-                soup = BeautifulSoup(r.content, "lxml")
-                headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
-                cookies = json.loads(rebot.cookies)
-                params ={
-                    "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
-                    "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
-                    "ctl00$FartherMain$IDTypeCode": 1,
-                    "ctl00$FartherMain$IDTypeNo":  order.contact_info["id_number"],
-                    "ctl00$FartherMain$hiAgainPayOrderNo": order.raw_order_no,
-                    "txtBDate": "",
-                    "txtEDate": "",
-                    "ctl00$FartherMain$Hidden1": "",
-                    "txtCusName": "",
-                    "txtCusPhone": "",
-                    "ctl00$FartherMain$Hidden2": "",
-                    "pageNum": ""
+                params = {
+                    "loginID": rebot.telephone,
+                    "loginPwd": rebot.password,
+                    "getInfo": 1,
+                    "loginValid": valid_code,
+                    "cmd": "Login",
                 }
-                r = requests.post(base_url,
-                                data=urllib.urlencode(params),
-                                headers=headers,
-                                cookies=cookies,)
-                return {"flag": "html", "content": r.content}
-        else:
+                r = requests.post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+                cookies.update(dict(r.cookies))
+                rebot.modify(cookies=json.dumps(cookies))
+            self.lock_ticket(order)
+
+        if order.status == STATUS_WAITING_ISSUE:
+            base_url = "http://www.96096kp.com/GoodsDetail.aspx"
+            headers = {
+                "User-Agent": rebot.user_agent,
+                "Referer": "http://www.96096kp.com/TicketMain.aspx",
+                "Origin": "http://www.96096kp.com",
+            }
+            r = requests.get(base_url, headers=headers)
+            soup = BeautifulSoup(r.content, "lxml")
+            headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+            headers.update({"Referer": "http://www.96096kp.com/GoodsDetail.aspx"})
+            params ={
+                "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
+                "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
+                "ctl00$FartherMain$IDTypeCode": 1,
+                "ctl00$FartherMain$IDTypeNo":  order.contact_info["id_number"],
+                "ctl00$FartherMain$hiAgainPayOrderNo": order.raw_order_no,
+                "txtBDate": "2016-02-10",
+                "txtEDate": "2016-03-10",
+                "ctl00$FartherMain$Hidden1": "",
+                "txtCusName": "",
+                "txtCusPhone": "",
+                "ctl00$FartherMain$Hidden2": "",
+                "pageNum": ""
+            }
+            r = requests.post(base_url,
+                              data=urllib.urlencode(params),
+                              headers=headers,
+                              proxies={"http": "http://192.168.1.99:8888"})
+            return {"flag": "html", "content": r.content}
+
+        if order.status == STATUS_LOCK_RETRY:
+            cookies = json.loads(rebot.cookies)
             login_form = "http://www.96096kp.com/CusLogin.aspx"
             valid_url = "http://www.96096kp.com/ValidateCode.aspx"
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-            r = requests.get(login_form, headers=headers)
+            r = requests.get(login_form, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
             data = {
-                "cookies": dict(r.cookies),
+                "cookies": cookies,
                 "headers": headers,
                 "valid_url": valid_url,
             }
