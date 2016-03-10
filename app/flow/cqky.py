@@ -13,6 +13,7 @@ from app.models import Line, CqkyWebRebot
 from datetime import datetime as dte
 from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
+from app import order_log
 
 
 class Flow(BaseFlow):
