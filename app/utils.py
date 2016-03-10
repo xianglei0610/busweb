@@ -3,6 +3,7 @@ import os
 import hashlib
 import redis
 import random
+import re
 
 try:
     import Image
@@ -20,6 +21,16 @@ from flask import current_app
 
 
 _redis_pool_list = {}
+
+
+def trans_js_str(s):
+    """
+    {aa:'bb'} ==> {"aa":"bb"}
+    """
+    for k in set(re.findall("([A-Za-z]+):", s)):
+        s= re.sub(r"\b%s\b" % k, '"%s"' % k, s)
+    s = s.replace("'", '"')
+    return s
 
 
 def get_redis(name):

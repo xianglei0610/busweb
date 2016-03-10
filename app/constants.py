@@ -16,6 +16,7 @@ SOURCE_FB = "fangbian"
 SOURCE_GZQCP = "gzqcp"
 SOURCE_KUAIBA = "kuaiba"
 SOURCE_CHANGTU = "changtu"
+SOURCE_CQKY = "cqky"
 
 
 SOURCE_INFO = {
@@ -221,6 +222,23 @@ SOURCE_INFO = {
         "pwd_encode": {
             "cibRpL0": "d17bc469b36817893ff0cdae06b5422f",
         }
+    },
+    SOURCE_CQKY: {
+        "name": "重庆客运",
+        "website": "http://http://www.96096kp.com/",
+        "accounts": {
+            "15575101324": ("123456", ''),
+            "17095467589": ("123456", ''),
+            "17071529203": ("123456", ''),
+            "17051255375": ("123456", ''),
+            "17095045507": ("123456", ''),
+            "17051194559": ("123456", ''),
+            "17051253969": ("123456", ''),
+            "17095049278": ("123456", ''),
+            "17051192807": ("123456", ''),
+            "17051192869": ("123456", ''),
+            "17051194878": ("123456", ''),
+        },
     },
     SOURCE_GZQCP: {
         "name": "贵州汽车票",
@@ -470,7 +488,8 @@ DUAN_XIN_TEMPL = {
     SOURCE_CBD: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
     SOURCE_BABA: "购票成功,取票号:%(no)s,密码:%(code)s,取票点:%(site)s,(%(start)s-%(end)s %(time)s),请旅客尽早到车站取票.",
     SOURCE_GZQCP: "您已购票成功！请在%(time)s前至%(site)s领取车票。本次购票取票号：%(no)s，取票密码：%(code)s。",
-    SOURCE_KUAIBA: "您已成功购买%(time)s%(start)s-%(end)s的车票,请到出发车站自助取票机或服务台凭身份证取票。"
+    SOURCE_KUAIBA: "您已成功购买%(time)s%(start)s-%(end)s的车票,请到出发车站自助取票机或服务台凭身份证取票。",
+    SOURCE_CQKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
 }
 
 CITY_NAME_TRANS = {
