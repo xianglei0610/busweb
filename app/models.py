@@ -961,6 +961,14 @@ class CqkyWebRebot(Rebot):
     crawl_source = SOURCE_CQKY
     is_for_lock = True
 
+    def on_add_doing_order(self, order):
+        rebot_log.info("[cqky] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[cqky] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
         self.last_login_time = dte.now()
