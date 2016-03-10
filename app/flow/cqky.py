@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
+import re
 import random
 import requests
 import json
@@ -9,11 +9,10 @@ import datetime
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import Line, CqkyWebRebot, Order
+from app.models import Line, CqkyWebRebot
 from datetime import datetime as dte
 from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
-from app import order_log
 
 
 class Flow(BaseFlow):
@@ -24,8 +23,8 @@ class Flow(BaseFlow):
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
-            "result_code": 0,
-            "result_reason": "",
+            "result_code": -1,
+            "result_reason": "blank",
             "pay_url": "",
             "raw_order_no": "",
             "expire_datetime": "",
@@ -46,46 +45,80 @@ class Flow(BaseFlow):
 
             res = self.request_station_status(line, rebot)
             if res["success"]:
-                pass
+                mode = 2
             else:
-                res = self.request_add_shopcart(order, rebot)
-                if res["success"]:
-                    print self.request_lock(order, rebot)
-                else:
-                    lock_result.update({
-                        "result_code": 0,
-                        "result_reason": "add_shopcat error. %s" % res["msg"],
-                        "source_account": rebot.telephone,
-                    })
+                mode = 1
+            res = self.request_add_shopcart(order, rebot, sta_mode=mode)
+            if res["success"]:
+                res = self.request_lock(order, rebot, sta_mode=mode)
+                expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+                lock_result.update({
+                    "result_code": 1,
+                    "result_reason": "",
+                    "pay_url": "",
+                    "raw_order_no": res["raw_order_no"],
+                    "expire_datetime": expire_time,
+                    "source_account": rebot.telephone,
+                    "pay_money": res["pay_money"]
+                })
+            else:
+                lock_result.update({
+                    "result_code": 0,
+                    "result_reason": "add_shopcart fail, %s" % res["msg"],
+                    "source_account": rebot.telephone,
+                })
             return lock_result
 
-    def request_lock(self, order, rebot):
-        base_url = "http://www.96096kp.com/CommitGoods.aspx"
+    def request_lock(self, order, rebot, sta_mode=1):
         headers = {
             "User-Agent": rebot.user_agent,
             "Referer": "http://www.96096kp.com/TicketMain.aspx",
             "Origin": "http://www.96096kp.com",
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
-        params ={
-            "ctl00$FartherMain$NavigationControl1$CustRBList": """{"Moblie":"15575101324","ID":"552bcc59-e1ea-11e5-960a-78e3b50bbe0f","Email":"","Name":"罗军平","CerType":"1","CerNo":"431021199004165616","Addr":"","Notes":"默认"}""",
-            "ctl00$FartherMain$NavigationControl1$o_CustomerName": order.contact_info["name"],
-            "ctl00$FartherMain$NavigationControl1$o_Mobele": rebot.telephone,
-            "ctl00$FartherMain$NavigationControl1$o_IdType": 1,
-            "ctl00$FartherMain$NavigationControl1$o_IdCard": order.contact_info["id_number"],
-            "ctl00$FartherMain$NavigationControl1$o_IdCardConfirm": order.contact_info["id_number"],
-            "ctl00$FartherMain$NavigationControl1$radioListPayType": "OnlineAliPay,支付宝在线支付",
-            "ctl00$FartherMain$NavigationControl1$o_Email": "",
-            "ctl00$FartherMain$NavigationControl1$ContactAddress": "",
-            "ctl00$FartherMain$NavigationControl1$o_Memo": "",
-            "ctl00$FartherMain$NavigationControl1$hideIsSubmit": "true",
-        }
+        if sta_mode == 1:
+            base_url = "http://www.96096kp.com/CommitGoods.aspx"
+            r = requests.get(base_url, headers=headers)
+            soup = BeautifulSoup(r.content, "lxml")
+            headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+            params ={
+                "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
+                "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
+                "ctl00$FartherMain$NavigationControl1$CustRBList": "",
+                "ctl00$FartherMain$NavigationControl1$o_CustomerName": order.contact_info["name"],
+                "ctl00$FartherMain$NavigationControl1$o_Mobele": rebot.telephone,
+                "ctl00$FartherMain$NavigationControl1$o_IdType": 1,
+                "ctl00$FartherMain$NavigationControl1$o_IdCard": order.contact_info["id_number"],
+                "ctl00$FartherMain$NavigationControl1$o_IdCardConfirm": order.contact_info["id_number"],
+                "ctl00$FartherMain$NavigationControl1$radioListPayType": "OnlineAliPay,支付宝在线支付",
+                "ctl00$FartherMain$NavigationControl1$o_Email": "",
+                "ctl00$FartherMain$NavigationControl1$ContactAddress": "",
+                "ctl00$FartherMain$NavigationControl1$o_Memo": "",
+                "ctl00$FartherMain$NavigationControl1$hideIsSubmit": "true",
+            }
+        else:
+            base_url = "http://www.96096kp.com/OrderConfirm.aspx"
+            r = requests.get(base_url, headers=headers)
+            soup = BeautifulSoup(r.content, "lxml")
+            headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+            params ={
+                "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
+                "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
+                "ctl00$FartherMain$radioListPayType": "OnlineAliPay,支付宝在线支付",
+                "ctl00$FartherMain$hideIsSubmit": "true",
+            }
         r = requests.post(base_url,
                           data=urllib.urlencode(params),
                           headers=headers,
-                          cookies=cookies)
-        return r.content
+                          cookies=cookies,)
+        soup = BeautifulSoup(r.content, "lxml")
+        order_no = soup.find("input", attrs={"name": "out_trade_no"}).get("value")
+        pay_money = float(soup.find("input", attrs={"name": "total_fee"}).get("value"))
+        return {
+            "raw_order_no": order_no,
+            "pay_order_no": order_no,
+            "pay_money": pay_money,
+        }
 
     def request_get_shoptcart(self, rebot):
         """
@@ -109,7 +142,7 @@ class Flow(BaseFlow):
         return r.json()
 
 
-    def request_add_shopcart(self, order, rebot):
+    def request_add_shopcart(self, order, rebot, sta_mode=1):
         """
         加入购物车
         """
@@ -123,7 +156,7 @@ class Flow(BaseFlow):
         }
         cookies = json.loads(rebot.cookies)
         params = {
-            "classInfo": line.extra_info["raw_info"],
+            "classInfo": json.dumps(line.extra_info["raw_info"], ensure_ascii=False),
             "drBusStationCode": line.s_sta_id,
             "drBusStationName": line.s_sta_name,
             "ticketHalfCount": 0,
@@ -131,10 +164,19 @@ class Flow(BaseFlow):
             "ticketChildCount": 0,
             "cmd": "buyTicket",
         }
+        if sta_mode == 2:
+            lst = []
+            for r in order.riders:
+                lst.append("1~%s~1~%s~%s~0~false" % (r["name"], r["id_number"], rebot.telephone))
+            params.update({
+                "passengerMsg": "|".join(lst),
+                "contactMsg": "%s~%s~" % (order.contact_info["name"], rebot.telephone),
+                "isIns": "false",
+            })
         r = requests.post(base_url,
                           data=urllib.urlencode(params),
                           headers=headers,
-                          cookies=cookies)
+                          cookies=cookies,)
         return json.loads(trans_js_str(r.content))
 
     def request_station_status(self, line, rebot):
@@ -167,17 +209,57 @@ class Flow(BaseFlow):
         if not self.need_refresh_issue(order):
             result_info.update(result_msg="状态未变化")
             return result_info
-        rebot = TCWebRebot.objects.get(telephone=order.source_account)
-        ret = self.send_order_request(rebot, order=order)
-        state = ret["state"]
-        if state == "出票中":
+        rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
+        ret = self.send_order_request(rebot, order)
+        state = ret.get("OrderStatus", "")
+        if state == "已支付":
+            msg_list = []
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CQKY]
+            dx_info = {
+                "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                "start": order.line.s_sta_name,
+                "end": order.line.d_sta_name,
+                "raw_order": order.raw_order_no,
+            }
+            msg_list.append(dx_tmpl % dx_info)
             result_info.update({
-                "result_code": 4,
+                "result_code": 1,
                 "result_msg": state,
+                "pick_code_list": [""],
+                "pick_msg_list": msg_list,
             })
-        elif state=="出票成功":
-            pass
+        elif not ret:
+            result_info.update({
+                "result_code": 2,
+                "result_msg": "在源站没找到订单信息",
+            })
         return result_info
+
+    def send_order_request(self, rebot, order):
+        base_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
+        params = {
+            "isCheck": "false",
+            "ValidateCode": "",
+            "IDTypeCode": 1,
+            "IDTypeNo": order.contact_info["id_number"],
+            "start": 0,
+            "limit": 10,
+            "Status":  -1,
+            "cmd": "OnlineOrderGetList"
+        }
+        headers = {
+            "User-Agent": rebot.user_agent,
+            "Referer": "http://www.96096kp.com/TicketMain.aspx",
+            "Origin": "http://www.96096kp.com",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        }
+        cookies = json.loads(rebot.cookies)
+        r = requests.post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        res = json.loads(trans_js_str(r.content))
+        for d in res["data"]:
+            if d["OrderNo"] == order.raw_order_no:
+                return d
+        return {}
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
@@ -208,7 +290,35 @@ class Flow(BaseFlow):
             if order.status == STATUS_LOCK_RETRY:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
-                return {"flag": "url", "content": order.pay_url}
+                base_url = "http://www.96096kp.com/GoodsDetail.aspx"
+                headers = {
+                    "User-Agent": rebot.user_agent,
+                    "Referer": "http://www.96096kp.com/TicketMain.aspx",
+                    "Origin": "http://www.96096kp.com",
+                }
+                r = requests.get(base_url, headers=headers)
+                soup = BeautifulSoup(r.content, "lxml")
+                headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+                cookies = json.loads(rebot.cookies)
+                params ={
+                    "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
+                    "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
+                    "ctl00$FartherMain$IDTypeCode": 1,
+                    "ctl00$FartherMain$IDTypeNo":  order.contact_info["id_number"],
+                    "ctl00$FartherMain$hiAgainPayOrderNo": order.raw_order_no,
+                    "txtBDate": "",
+                    "txtEDate": "",
+                    "ctl00$FartherMain$Hidden1": "",
+                    "txtCusName": "",
+                    "txtCusPhone": "",
+                    "ctl00$FartherMain$Hidden2": "",
+                    "pageNum": ""
+                }
+                r = requests.post(base_url,
+                                data=urllib.urlencode(params),
+                                headers=headers,
+                                cookies=cookies,)
+                return {"flag": "html", "content": r.content}
         else:
             login_form = "http://www.96096kp.com/CusLogin.aspx"
             valid_url = "http://www.96096kp.com/ValidateCode.aspx"
@@ -227,40 +337,47 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        line_url = "http://m.ly.com/bus/BusJson/BusSchedule"
-        params = dict(
-            Departure=line.s_city_name,
-            Destination=line.d_city_name,
-            DepartureDate=line.drv_date,
-            DepartureStation="",
-            DptTimeSpan=0,
-            HasCategory="true",
-            Category="0",
-            SubCategory="",
-            ExParms="",
-            Page="1",
-            PageSize="1025",
-            BookingType="0"
-        )
+        line_url = "http://www.96096kp.com/UserData/MQCenterSale.aspx"
+        params = {
+            "StartStation": line.s_city_name,
+            "WaitStationCode": "",
+            "OpStation": -1,
+            "OpAddress": -1,
+            "SchDate": line.drv_date,
+            "DstNode": line.d_city_name,
+            "SeatType": "",
+            "SchTime": "",
+            "OperMode": "",
+            "SchCode": "",
+            "txtImgCode": "",
+            "cmd": "MQCenterGetClass",
+            "isCheck": "false",
+        }
         headers = {
             "User-Agent": random.choice(BROWSER_USER_AGENT),
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Referer": "http://www.96096kp.com",
+            "Origin": "http://www.96096kp.com",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
-        r = requests.post(line_url, data=urllib.urlencode(params), headers=headers)
-        res = r.json()
-        res = res["response"]
+        r = requests.post(line_url,
+                          data=urllib.urlencode(params),
+                          headers=headers)
+        content = r.content
+        for k in set(re.findall("([A-Za-z]+):", content)):
+            content = re.sub(r"\b%s\b" % k, '"%s"' % k, content)
+        res = json.loads(content)
         now = dte.now()
-        if res["rspCode"] != "0000":
+        if res["success"] != "true":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
         update_attrs = {}
-        for d in res["body"]["schedule"]:
-            drv_datetime = dte.strptime("%s %s" % (d["dptDate"], d["dptTime"]), "%Y-%m-%d %H:%M")
+        for d in res["data"]:
+            drv_datetime = dte.strptime("%s %s" % (d["SchDate"], d["SchTime"]), "%Y-%m-%d %H:%M")
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
-                "bus_num": d["coachNo"],
+                "bus_num": d["SchLocalCode"],
                 "crawl_source": line.crawl_source,
                 "drv_datetime": drv_datetime,
             }
@@ -270,11 +387,11 @@ class Flow(BaseFlow):
             except Line.DoesNotExist:
                 continue
             info = {
-                "full_price": float(d["ticketPrice"]),
+                "full_price": float(d["SchPrice"]),
                 "fee": 0,
-                "left_tickets": int(d["ticketLeft"]),
+                "left_tickets": int(d["SchTicketCount"]),
                 "refresh_datetime": now,
-                "extra_info": {},
+                "extra_info": {"raw_info": d},
             }
             if line_id == line.line_id:
                 update_attrs = info
