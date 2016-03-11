@@ -55,7 +55,7 @@ class Flow(BaseFlow):
             r = requests.post(select_url, data=data, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             ret = r.content
-            add_schedule_url = 'http://www.e2go.com.cn/TicketOrder/AddScheduleTicket'
+            add_shopcart_url = 'http://www.e2go.com.cn/TicketOrder/AddScheduleTicket'
             for i in riders:
                 data = {
                     "AddToTicketOwnerList": "false",
@@ -67,7 +67,7 @@ class Flow(BaseFlow):
                     "SellInsurance": "false",
                     "WithChild": "false",
                 }
-                r = requests.post(add_schedule_url, data=data, headers=headers, cookies=cookies)
+                r = requests.post(add_shopcart_url, data=data, headers=headers, cookies=cookies)
                 ret = r.content
                 if isinstance(ret, unicode):
                     pass
@@ -147,8 +147,15 @@ class Flow(BaseFlow):
             content = content.decode('utf-8')
         sel = etree.HTML(content)
         status = sel.xpath('//*[@id="orderItemsContainer"]/table/tbody/tr/td[12]/text()')[0]
+        raw_order_list = []
+        for i in range(1, order.ticket_amount+1):
+            raw_order = sel.xpath('//*[@id="orderItemsContainer"]/table/tbody/tr[%s]/td[1]/text()'%i)[0]
+            name = sel.xpath('//*[@id="orderItemsContainer"]/table/tbody/tr[%s]/td[6]/text()'%i)[0]
+            info = name+':'+raw_order
+            raw_order_list.append(info)
         return {
             "state": status,
+            'raw_order_list': raw_order_list
         }
 
     def do_refresh_issue(self, order):
@@ -167,11 +174,11 @@ class Flow(BaseFlow):
         order_log.info("[refresh_issue_end] order: %s,account:%s orderDetail request result : %s", order.order_no, rebot.telephone,ret)
         state = ret["state"]
         order_status_mapping = {
-                u"已成功": "出票成功",
+                u"购票成功": "出票成功",
                 u"已取消": "出票失败",
                 u"已释放": "出票失败",
                 }
-        if state in(u"已成功"): #"出票成功":
+        if state in(u"购票成功"): #"出票成功":
             code_list = []
             msg_list = []
             dx_templ = DUAN_XIN_TEMPL[SOURCE_BJKY]
@@ -179,6 +186,7 @@ class Flow(BaseFlow):
                 "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                "raw_order": ','.join(ret['raw_order_list']),
             }
             code_list.append('无需取票密码')
             msg_list.append(dx_templ % dx_info)
@@ -320,34 +328,33 @@ class Flow(BaseFlow):
             "update_attrs": {},
         }
         now = dte.now()
-#         rebot = KuaibaWapRebot.get_one()
-#         if not rebot.test_login_status():
-#             rebot.login()
-#             rebot.reload()
-#         headers = rebot.http_header()
-#         cookies = json.loads(rebot.cookies)
-
         ua = random.choice(MOBILE_USER_AGENG)
         headers = {"User-Agent": ua}
         url = "http://m.daba.cn/jsp/line/newlines.jsp"
         res = requests.get(url, headers=headers)
         base_url = 'http://m.daba.cn'
         line_url = base_url + re.findall(r'query_station : (.*),', res.content)[0][1:-1]
+        s_sta_name = line.s_sta_name
+        d_city_name = line.d_city_name
+        if line.s_sta_name == u'首都机场站':
+            s_sta_name = line.s_sta_name.strip().rstrip("站")
+        try:
+            kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=line.s_sta_name, d_sta_name=line.d_sta_name, drv_time=line.drv_time )    
+            d_city_name = kuaiba_line.d_city_name
+        except:
+            pass
         params = {
               "endTime": '',
               "startCity": line.s_city_name,
-              "startStation": line.s_sta_name,
-              "arriveCity": line.d_city_name,
+              "startStation": s_sta_name,
+              "arriveCity": d_city_name,
               "arriveStation": line.d_sta_name,
               "startDate": line.drv_date,
               "startTime": '',
               }
-
         line_url = "%s&%s" % (line_url, urllib.urlencode(params))
-
         r = requests.get(line_url, headers=headers)
         res = r.json()
-        now = dte.now()
         if res["code"] != 0:
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
@@ -357,7 +364,6 @@ class Flow(BaseFlow):
             result_info.update(result_msg=" not open sale or not line list", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
         update_attrs = {}
-        print busTripInfoSet
         for d in busTripInfoSet:
             if line.drv_time == d["time"][0:-3]:
                 tickets = d['tickets']
