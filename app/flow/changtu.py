@@ -145,21 +145,9 @@ class Flow(BaseFlow):
         soup = BeautifulSoup(r.content, "lxml")
         order_no = soup.select(".orderTime .font_arial")[0].get_text().strip()
         state = soup.select(".orderTime .right")[0].get_text().strip()
-        #no, code ,site = "", "", ""
-        #for tag in soup.select(".details_taketicket .details_passenger_num"):
-        #    s = tag.get_text().strip()
-        #    if s.startswith("取票号:"):
-        #        no = s.lstrip("取票号:")
-        #    elif s.startswith("取票密码:"):
-        #        code = s.lstrip("取票密码:")
-        #    elif s.startswith("取票地点:"):
-        #        site = s.lstrip("取票地点:")
         return {
             "order_no": order_no,
             "state": state,
-            "pick_no": no,
-            #"pick_code": code,
-            #"pick_site": site,
         }
 
     def do_refresh_issue(self, order):
@@ -178,12 +166,7 @@ class Flow(BaseFlow):
         if raw_order and raw_order != order.raw_order_no:
             order.modify(raw_order_no=raw_order)
         state = ret["state"]
-        if state == "支付超时作废":
-            result_info.update({
-                "result_code": 5,
-                "result_msg": state,
-            })
-        elif state == "订单关闭":
+        if state == "订单关闭":
             result_info.update({
                 "result_code": 2,
                 "result_msg": state,
@@ -193,30 +176,12 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif state=="出票异常":
-            self.close_line(order.line, "出票异常")
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
         elif state=="购票成功":
-            no, code, site = ret["pick_no"], ret["pick_code"], ret["pick_site"]
-            dx_info = {
-                "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "start": order.line.s_sta_name,
-                "end": order.line.d_sta_name,
-                "code": code,
-                "no": no,
-                "site": site,
-            }
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CHANTU]
-            code_list = ["%s|%s" % (no, code)]
-            msg_list = [dx_tmpl % dx_info]
             result_info.update({
                 "result_code": 1,
                 "result_msg": state,
-                "pick_code_list": code_list,
-                "pick_msg_list": msg_list,
+                "pick_code_list": [],
+                "pick_msg_list": [],
             })
         return result_info
 
