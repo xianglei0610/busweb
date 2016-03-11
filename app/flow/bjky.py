@@ -9,16 +9,11 @@ import re
 import datetime
 import random
 from lxml import etree
-from bs4 import BeautifulSoup
-import pytesseract
-import cStringIO
-from PIL import Image
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import BjkyWebRebot, Line
 from datetime import datetime as dte
-from app.utils import md5
 from app import order_log, line_log
 
 
@@ -94,8 +89,7 @@ class Flow(BaseFlow):
             res = {}
             if order_no:
                 res['order_no'] = order_no[0]
-                res['pay_url'] = pay_url[0]
-                res['order_id'] = res['pay_url'].split('/')[-1]
+                res['order_id'] = pay_url.split('/')[-1]
             lock_result = {
                 "lock_info": res,
                 "source_account": rebot.telephone,
@@ -107,7 +101,7 @@ class Flow(BaseFlow):
                 lock_result.update({
                     "result_code": 1,
                     "result_reason": "",
-                    "pay_url": res['pay_url'],
+                    "pay_url": '',
                     "raw_order_no": order_no,
                     "expire_datetime": expire_time,
                     "lock_info": res
@@ -121,18 +115,6 @@ class Flow(BaseFlow):
                     "expire_datetime": None,
                 })
             return lock_result
-
-
-#     def send_lock_request(self, order, rebot, data):
-#         """
-#         单纯向源站发请求
-#         """
-#         order_url = "http://www.e2go.com.cn/TicketOrder/SelectSchedule"
-#         headers = rebot.http_header()
-#         r = requests.post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
-#         ret = r.content
-#         print '444444444444444444444',ret
-#         return ret
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
         order_detail_url = "http://www.e2go.com.cn/TicketOrder/OrderDetail/%s?seed=0.3821293651129908"%order.lock_info['order_id']
@@ -177,6 +159,7 @@ class Flow(BaseFlow):
                 u"购票成功": "出票成功",
                 u"已取消": "出票失败",
                 u"已释放": "出票失败",
+                u"出票中": "正在出票",
                 }
         if state in(u"购票成功"): #"出票成功":
             code_list = []
@@ -196,7 +179,7 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
-        elif state in("3", "6", "7", "8", "9"): #"出票中":
+        elif state in("出票中"): #"出票中":
             result_info.update({
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
@@ -222,11 +205,9 @@ class Flow(BaseFlow):
             if order.status == STATUS_WAITING_ISSUE:
                 cookies = json.loads(rebot.cookies)
                 pay_url = "http://www.e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
-                print pay_url
                 headers = rebot.http_header()
                 r = requests.get(pay_url, headers=headers, cookies=cookies)
                 content = r.content
-                print content
                 if isinstance(content, unicode):
                     pass
                 else:
@@ -264,12 +245,11 @@ class Flow(BaseFlow):
                         merReserved=sel.xpath("//input[@name='merReserved']/@value")[0],
                         signMethod=sel.xpath("//input[@name='signMethod']/@value")[0],
                     )
-                print data
                 url = 'https://unionpaysecure.com/api/Pay.action'
                 r = requests.post(url, data=data, headers=headers, cookies=cookies)
                 return {"flag": "html", "content": r.content}
 
-        if valid_code:      #  登陆
+        if valid_code:#  登陆
             data = json.loads(session["pay_login_info"])
             code_url = data["valid_url"]
             headers = data["headers"]
@@ -294,7 +274,6 @@ class Flow(BaseFlow):
                 if order.status == STATUS_WAITING_ISSUE:
                     pay_url = "http://www.e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                     r = requests.get(pay_url, headers={"User-Agent": rebot.user_agent}, cookies=cookies)
-                    print r.content
                     return {"flag": "html", "content": r.content}
                 else:
                     return {"flag": "false", "content": order.lock_info.get('result_reason','')}

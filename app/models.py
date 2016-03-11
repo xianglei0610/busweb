@@ -950,6 +950,60 @@ class CTripRebot(Rebot):
         return ret
 
 
+class CqkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "cqkyweb_rebot",
+    }
+    crawl_source = SOURCE_CQKY
+    is_for_lock = True
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[cqky] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[cqky] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active=True
+        self.cookies = "{}"
+        self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+    def test_login_status(self):
+        login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
+        headers = {
+            "User-Agent": self.user_agent,
+            "Referer": "http://www.96096kp.com/TicketMain.aspx",
+            "Origin": "http://www.96096kp.com",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        }
+        cookies = json.loads(self.cookies)
+        today = dte.now().strftime("%Y-%m-%d")
+        params = {
+            "beginDate": today,
+            "endDate": today,
+            "isCheck": "false",
+            "Code": "",
+            "cmd": "GetMobileList",
+        }
+        r = requests.post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        lst = re.findall(r'success:"(\w+)"', r.content)
+        succ = lst and lst[0] or ""
+        if succ == "true":
+            return 1
+        return 0
+
+
 class TCWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
@@ -1211,7 +1265,6 @@ class KuaibaWapRebot(Rebot):
             cookies = json.loads(self.cookies)
             res = requests.get(user_url, headers=headers, cookies=cookies)
             res = res.json()
-            print res
             if res['code'] == 0:
                 if res.get('data', []) and not self.user_id:
                     user_id = res.get('data', [])[0]['userid']
@@ -1241,6 +1294,28 @@ class BjkyWebRebot(Rebot):
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             "User-Agent": ua or self.user_agent,
         }
+
+    @classmethod
+    def get_one(cls, order=None):
+        now = dte.now()
+        start = now.strftime("%Y-%m-%d")+' 00:00:00'
+        start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
+        all_accounts = SOURCE_INFO[SOURCE_BJKY]["accounts"].keys()
+        used = Order.objects.filter(crawl_source=SOURCE_BJKY,
+                                    status=STATUS_ISSUE_SUCC,
+                                    create_date_time__gt=start) \
+                            .item_frequencies("source_account")
+        accounts_list = filter(lambda k: used.get(k, 0) < 3, all_accounts)
+        rebot = None
+        source_account = ''
+        for account in accounts_list:
+            count = Order.objects.filter(create_date_time__gt=start, status=STATUS_ISSUE_SUCC,source_account = account).sum('ticket_amount')
+            if count + int(order.ticket_amount) <= 3:
+                source_account = account
+                break
+        if source_account:
+            rebot = cls.objects.get(telephone=source_account, is_active=True)
+        return rebot
 
     @classmethod
     def login_all(cls):

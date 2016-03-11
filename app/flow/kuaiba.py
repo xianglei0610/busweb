@@ -38,7 +38,7 @@ class Flow(BaseFlow):
             for r in riders:
                 cyuserid = self.send_add_passenger(r["id_number"], r["name"], rebot)
                 passengers.append(cyuserid)
-                if r["id_number"] == contact_info['id_number']: #如果联系人中没有乘车人就取第一个乘车人作为取票人
+                if r["id_number"] == contact_info['id_number'] and r["name"] == contact_info['name']: #如果联系人中没有乘车人就取第一个乘车人作为取票人
                     buyPersonName = contact_info['name']
                     buyPersonCard = contact_info['id_number']
             data = {
@@ -51,7 +51,7 @@ class Flow(BaseFlow):
                 "couponId": '',
                 "insuPrice": '0',
                 'token': '',
-                "lineBcId": order.line.bus_num,
+                "lineBcId": order.line.shift_id,
                 "passengers": ','.join(passengers),
                 }
 

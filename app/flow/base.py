@@ -194,7 +194,7 @@ class Flow(object):
             return True
         now = dte.now()
         last_refresh = (now-line.refresh_datetime).total_seconds()
-        if last_refresh < 15:    # 15s之前刷新过了，不刷新
+        if last_refresh < 60:    # 60s之前刷新过了，不刷新
             return False
         elif last_refresh < 2*60*60 and line.left_tickets<=0:    # 2小时之内刷新过，但上次刷新已经没票了。此次不刷新
             return False
@@ -205,9 +205,11 @@ class Flow(object):
         线路信息刷新主流程, 不用子类重写
         """
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-#         if not self.need_refresh_line(line, force=force):
-#             line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
-#             return
+        if line.crawl_source == 'bus100':
+            force = True
+        if not self.need_refresh_line(line, force=force):
+            line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
+            return
         now = dte.now()
         ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
