@@ -51,7 +51,7 @@ class Flow(BaseFlow):
                 "couponId": '',
                 "insuPrice": '0',
                 'token': '',
-                "lineBcId": order.line.bus_name,
+                "lineBcId": order.line.bus_num,
                 "passengers": ','.join(passengers),
                 }
 

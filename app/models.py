@@ -185,7 +185,7 @@ class Line(db.Document):
             "starting_station": self.s_sta_name,
             "destination_city": self.d_city_name,
             "destination_station": self.d_sta_name,
-            "bus_num": self.bus_num,
+            "bus_num": self.bus_num if self.crawl_source != 'kuaiba' else '',
             "drv_date": self.drv_date,
             "drv_time": self.drv_time,
             "vehicle_type": self.vehicle_type,
