@@ -17,7 +17,7 @@ def get_flow(site):
                     continue
                 if f in ["base.py", "__init__.py"]:
                     continue
-                mod=importlib.import_module("app.flow.%s" % f[:-3])
+                mod = importlib.import_module("app.flow.%s" % f[:-3])
                 cls = mod.Flow
                 if cls.name == site:
                     flow_list[cls.name] = cls()

@@ -160,7 +160,7 @@ class Line(db.Document):
         city = self.s_city_name
         if city in CITY_NAME_TRANS:
             city = CITY_NAME_TRANS[city]
-        elif len(city)>2 and (city.endswith("市") or city.endswith("县")):
+        elif len(city) > 2 and (city.endswith("市") or city.endswith("县")):
             city = city[:-1]
         try:
             open_city = OpenCity.objects.get(city_name=city)
