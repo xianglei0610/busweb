@@ -192,11 +192,11 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-
         if order.source_account:
             rebot = BjkyWebRebot.objects.get(telephone=order.source_account)
         else:
             rebot = BjkyWebRebot.get_one()
+            
         is_login = rebot.test_login_status()
         if is_login:
             if order.status == STATUS_LOCK_RETRY:
@@ -285,6 +285,8 @@ class Flow(BaseFlow):
                 }
                 session["pay_login_info"] = json.dumps(data)
                 return {"flag": "input_code", "content": ""}
+            else:
+                return {"flag": "false", "content": r}
         else:
             login_form_url = "http://www.e2go.com.cn/Home/Login?returnUrl=/TicketOrder/Notic"
             headers = {"User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT)}

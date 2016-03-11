@@ -294,7 +294,6 @@ class Flow(BaseFlow):
 
         r = requests.get(line_url, headers=headers)
         res = r.json()
-        print '333333333333333333333333333',res
         now = dte.now()
         if res["code"] != 0:
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})

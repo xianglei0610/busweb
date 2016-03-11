@@ -1396,7 +1396,7 @@ class Bus100Rebot(Rebot):
             choose = random.choice(accounts_list)
             rebot = cls.objects.get(telephone=choose)
             if rebot.is_active:
-                return  rebot
+                return rebot
 
     def test_login_status(self):
         url = "http://www.84100.com/user.shtml"
