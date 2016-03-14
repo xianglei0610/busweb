@@ -52,13 +52,13 @@ def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
         res = requests.post(url, data=data)
         res_lst.append("%s: %s" % (url, res.content))
 
-    subject = "bus_crawl(%s, province_id=%s, crawl_kwargs=%s) " % (crawl_source, province_id, json.dumps(crawl_kwargs, ensure_ascii=False))
-    html_body = subject + '</br>' + 'result:</br>%s' % "</br>".join(res_lst)
-    send_email(subject,
-            app.config["MAIL_USERNAME"],
-            ADMINS,
-            "",
-            html_body)
+    # subject = "bus_crawl(%s, province_id=%s, crawl_kwargs=%s) " % (crawl_source, province_id, json.dumps(crawl_kwargs, ensure_ascii=False))
+    # html_body = subject + '</br>' + 'result:</br>%s' % "</br>".join(res_lst)
+    # send_email(subject,
+    #         app.config["MAIL_USERNAME"],
+    #         ADMINS,
+    #         "",
+    #         html_body)
 
 
 @check

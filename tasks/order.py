@@ -9,7 +9,7 @@ from app import celery
 from app.utils import getRedisObj
 from app.email import send_email
 from app.flow import get_flow
-from app.models import Order, AdminUser
+from app.models import Order
 from app import order_log
 from flask import current_app
 
