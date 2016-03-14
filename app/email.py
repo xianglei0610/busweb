@@ -2,6 +2,7 @@
 from flask.ext.mail import Message
 from app import mail
 from app import config
+from app.constants import *
 
 
 def send_email(subject, sender, recipients, text_body, html_body):

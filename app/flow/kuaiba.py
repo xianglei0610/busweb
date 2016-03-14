@@ -51,7 +51,7 @@ class Flow(BaseFlow):
                 "couponId": '',
                 "insuPrice": '0',
                 'token': '',
-                "lineBcId": order.line.shift_id,
+                "lineBcId": order.line.bus_num,
                 "passengers": ','.join(passengers),
                 }
 
@@ -309,7 +309,7 @@ class Flow(BaseFlow):
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
-                "bus_num": '',
+                "bus_num": d['id'],
                 "crawl_source": line.crawl_source,
                 "drv_datetime": drv_datetime,
             }

@@ -176,7 +176,7 @@ class Line(db.Document):
         city = self.s_city_name
         if city in CITY_NAME_TRANS:
             city = CITY_NAME_TRANS[city]
-        elif len(city)>2 and (city.endswith("市") or city.endswith("县")):
+        elif len(city) > 2 and (city.endswith("市") or city.endswith("县")):
             city = city[:-1]
         try:
             open_city = OpenCity.objects.get(city_name=city)
@@ -201,7 +201,7 @@ class Line(db.Document):
             "starting_station": self.s_sta_name,
             "destination_city": self.d_city_name,
             "destination_station": self.d_sta_name,
-            "bus_num": self.bus_num,
+            "bus_num": self.bus_num if self.crawl_source != 'kuaiba' else '',
             "drv_date": self.drv_date,
             "drv_time": self.drv_time,
             "vehicle_type": self.vehicle_type,
@@ -1293,6 +1293,97 @@ class KuaibaWapRebot(Rebot):
             return 0
 
 
+class BjkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "bjkyweb_rebot",
+    }
+    crawl_source = SOURCE_BJKY
+    is_for_lock = True
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": ua or self.user_agent,
+        }
+
+    @classmethod
+    def get_one(cls, order=None):
+        now = dte.now()
+        start = now.strftime("%Y-%m-%d")+' 00:00:00'
+        start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
+        all_accounts = SOURCE_INFO[SOURCE_BJKY]["accounts"].keys()
+        used = Order.objects.filter(crawl_source=SOURCE_BJKY,
+                                    status=STATUS_ISSUE_SUCC,
+                                    create_date_time__gt=start) \
+                            .item_frequencies("source_account")
+        accounts_list = filter(lambda k: used.get(k, 0) < 3, all_accounts)
+        rebot = None
+        source_account = ''
+        for account in accounts_list:
+            count = Order.objects.filter(create_date_time__gt=start, status=STATUS_ISSUE_SUCC,source_account = account).sum('ticket_amount')
+            if count + int(order.ticket_amount) <= 3:
+                source_account = account
+                break
+        if source_account:
+            rebot = cls.objects.get(telephone=source_account, is_active=True)
+        return rebot
+
+    @classmethod
+    def login_all(cls):
+        """登陆所有预设账号"""
+        rebot_log.info(">>>> start to init bjky:")
+        valid_cnt = 0
+        has_checked = {}
+        ua = random.choice(BROWSER_USER_AGENT)
+        accounts = SOURCE_INFO[SOURCE_BJKY]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd, _ = accounts[bot.telephone]
+            bot.modify(password=pwd)
+
+#             if bot.login() == "OK":
+#                 rebot_log.info("%s 登陆成功" % bot.telephone)
+#                 valid_cnt += 1
+        for tele, (pwd, _) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,
+                      user_agent=ua
+                      )
+            bot.save()
+#             if bot.login() == "OK":
+#                 rebot_log.info("%s 登陆成功" % bot.telephone)
+            valid_cnt += 1
+        rebot_log.info(">>>> end init bjky success %d", valid_cnt)
+
+    def test_login_status(self):
+        url = "http://www.e2go.com.cn/TicketOrder/SearchSchedule"
+#         cookie ="Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06=1456970104,1457072900,1457316719,1457403102; ASP.NET_SessionId=uuppwd3q4j3qo5vwcka2v04y; Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06=1457415243"
+#         headers={"cookie":cookie} 
+#         cookies = {"Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06": "1456970104,1457072900,1457316719,1457403102",
+#                                        "ASP.NET_SessionId": "uuppwd3q4j3qo5vwcka2v04y",
+#                                        "Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06": "1457415243"}
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies or '{}')
+        res = requests.get(url, headers=headers, cookies=cookies)
+        result = urlparse.urlparse(res.url)
+        if result.path == '/Home/Login':
+            return 0
+        else:
+            return 1
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
@@ -1321,7 +1412,7 @@ class Bus100Rebot(Rebot):
             choose = random.choice(accounts_list)
             rebot = cls.objects.get(telephone=choose)
             if rebot.is_active:
-                return  rebot
+                return rebot
 
     def test_login_status(self):
         url = "http://www.84100.com/user.shtml"

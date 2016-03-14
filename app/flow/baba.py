@@ -13,6 +13,7 @@ from app.models import Line, BabaWebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
+from tasks import async_send_email
 
 
 class Flow(BaseFlow):
@@ -134,6 +135,9 @@ class Flow(BaseFlow):
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break
+                if u"服务器与客运站网络中断" in errmsg:
+                    body = "源站: 巴巴快巴, <br/> 城市: %s, <br/> 车站: %s" % (line.s_city_name, line.s_sta_name)
+                    async_send_email.delay("客运站联网中断", body)
                 lock_result.update({
                     "result_code": 0,
                     "result_reason": "%s %s" % (ret["msgType"], errmsg),
