@@ -116,8 +116,9 @@ def crawl_proxy():
     data = {}
     cnt = proxy_producer.crawl_from_haodaili()
     data["haodaili"] = cnt
+    cnt = proxy_producer.crawl_from_samair()
+    data["samair"] = cnt
     return data
-
 
 
 @check(run_in_local=True)

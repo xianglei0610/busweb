@@ -32,7 +32,7 @@ class ProxyProducer(object):
 
     def crawl_from_haodaili(self):
         add_cnt = 0
-        for i in range(1, 6):
+        for i in range(1, 10):
             url = "http://www.haodailiip.com/guonei/%s" % i
             try:
                 r = requests.get(url, timeout=10)
@@ -43,6 +43,21 @@ class ProxyProducer(object):
                 td_lst = s.findAll("td")
                 ip, port = td_lst[0].text.strip(), td_lst[1].text.strip()
                 ipstr = "%s:%s" % (ip, port)
+                if self.valid_proxy(ipstr):
+                    self.add_proxy(ipstr)
+                    add_cnt += 1
+        return add_cnt
+
+    def crawl_from_samair(self):
+        add_cnt = 0
+        for i in range(1, 10):
+            url = "http://www.samair.ru/proxy-by-country/China-%02d.htm" % i
+            try:
+                r = requests.get(url, timeout=10)
+            except Exception:
+                continue
+            lst = re.findall(r"(\d+.\d+.\d+.\d+:\d+)", r.content)
+            for ipstr in lst:
                 if self.valid_proxy(ipstr):
                     self.add_proxy(ipstr)
                     add_cnt += 1
@@ -169,7 +184,7 @@ class CqkyProxyConsumer(ProxyConsumer):
             r = requests.post(line_url,
                               data=urllib.urlencode(params),
                               headers=headers,
-                              timeout=5,
+                              timeout=4,
                               proxies={"http": "http://%s" % ipstr})
             content = r.content
             for k in set(re.findall("([A-Za-z]+):", content)):
