@@ -86,6 +86,7 @@ class OpenCity(db.Document):
     is_active = db.BooleanField(default=True)
     source_weight = db.DictField()          # 源站分配权重
     source_order_limit = db.DictField()     # 源站分配单数限制
+    dest_list = db.ListField()              # 目的地列表  ["成都|cd", "重庆|cq"]
 
     meta = {
         "indexes": [
@@ -95,6 +96,21 @@ class OpenCity(db.Document):
             "is_active",
         ],
     }
+
+    def check_new_dest(self):
+        qs = Line.objects.filter(crawl_source=self.crawl_source,
+                                 s_city_name__startswith=starting_name) \
+                         .aggregate({
+                             "$group": {
+                                 "_id": {
+                                     "city_name": "$d_city_name",
+                                     "city_code": "$d_city_code"
+                                 }
+                             }
+                         })
+        old = set(self.dest_list)
+        new= set(map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
+        self.update(dest_list=old.union(new))
 
 
 class Line(db.Document):
@@ -1354,7 +1370,7 @@ class BjkyWebRebot(Rebot):
     def test_login_status(self):
         url = "http://www.e2go.com.cn/TicketOrder/SearchSchedule"
 #         cookie ="Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06=1456970104,1457072900,1457316719,1457403102; ASP.NET_SessionId=uuppwd3q4j3qo5vwcka2v04y; Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06=1457415243"
-#         headers={"cookie":cookie} 
+#         headers={"cookie":cookie}
 #         cookies = {"Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06": "1456970104,1457072900,1457316719,1457403102",
 #                                        "ASP.NET_SessionId": "uuppwd3q4j3qo5vwcka2v04y",
 #                                        "Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06": "1457415243"}

@@ -103,7 +103,7 @@ def match_alipay_order(trade_info):
 def import_alipay_record(filename):
     account, trade_list = parse_alipay_record(filename)
 
-    print "支付宝账号:", account
+    kefu_log.info("支付宝账号:%s", account)
     cnt = 0
     for trade_info in trade_list:
         order = match_alipay_order(trade_info)

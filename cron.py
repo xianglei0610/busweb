@@ -6,13 +6,12 @@
 import requests
 import traceback
 import time
-import json
 
 from app.constants import *
 from apscheduler.scheduler import Scheduler
 from datetime import datetime as dte
-from app.email import send_email
-from app.constants import ADMINS
+# from app.email import send_email
+# from app.constants import ADMINS
 from app import setup_app
 from app import cron_log
 from app.utils import get_redis
@@ -21,22 +20,30 @@ from app.utils import get_redis
 app = setup_app()
 
 
-def check(func):
-    def temp(*args, **kwargs):
-        res = None
-        try:
-            t1 = time.time()
-            with app.app_context():
-                res = func(*args, **kwargs)
-            cost = time.time() - t1
-            cron_log.info("[succss] %s %s %s, return: %s, cost time: %s", func.__name__, args, kwargs, res, cost)
-        except:
-            cron_log.error("%s,%s,%s", traceback.format_exc(), args, kwargs)
-        return res
-    return temp
+def check(run_in_local=False):
+    """
+    run_in_local 是否允许在local环境运行
+    """
+    def wrap(func):
+        def sub_wrap(*args, **kwargs):
+            res = None
+            try:
+                if not run_in_local:
+                    cron_log.info("[ignore] forbid run at debug mode")
+                    return None
+                t1 = time.time()
+                with app.app_context():
+                    res = func(*args, **kwargs)
+                cost = time.time() - t1
+                cron_log.info("[succss] %s %s %s, return: %s, cost time: %s", func.__name__, args, kwargs, res, cost)
+            except:
+                cron_log.error("%s,%s,%s", traceback.format_exc(), args, kwargs)
+            return res
+        return sub_wrap
+    return wrap
 
 
-@check
+@check()
 def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
     url_list = app.config["SCRAPYD_URLS"]
     data = {
@@ -61,7 +68,7 @@ def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
     #         html_body)
 
 
-@check
+@check()
 def delete_source_riders():
     """
     删除源站乘客信息
@@ -75,7 +82,7 @@ def delete_source_riders():
                 rebot.clear_riders()
 
 
-@check
+@check(run_in_local=True)
 def clear_lines():
     """
     清理过期线路数据
@@ -86,7 +93,7 @@ def clear_lines():
     return "%s line deleted" % cnt
 
 
-@check
+@check(run_in_local=True)
 def clear_redis_data():
     """
     清理redis数据
@@ -103,9 +110,33 @@ def clear_redis_data():
     return result
 
 
-def main():
-    """ 定时任务处理 """
+@check(run_in_local=True)
+def crawl_proxy():
+    from app.proxy import proxy_producer
+    data = {}
+    cnt = proxy_producer.crawl_from_haodaili()
+    data["haodaili"] = cnt
+    return data
 
+
+
+@check(run_in_local=True)
+def check_proxy():
+    from app.proxy import proxy_producer
+    for ipstr in proxy_producer.all_proxy():
+        if not proxy_producer.valid_proxy(ipstr):
+            proxy_producer.remove_proxy(ipstr)
+
+    data = {}
+    for con in proxy_producer.consumer_list:
+        for ipstr in con.all_proxy():
+            if not con.valid_proxy(ipstr):
+                con.remove_proxy(ipstr)
+        data[con.__class__.__name__] = con.proxy_size()
+    return data
+
+
+def main():
     sched = Scheduler(daemonic=False)
 
     # 巴士壹佰
@@ -142,6 +173,10 @@ def main():
     # 快巴
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['kuaiba'], kwargs={"crawl_kwargs":{"province": "北京"}})
 
+    # 代理ip相关
+    sched.add_interval_job(crawl_proxy, minutes=3)
+    sched.add_interval_job(check_proxy, minutes=1)
+
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
     sched.add_cron_job(clear_lines, hour=1, minute=0)
@@ -151,7 +186,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    #clear_redis_data()
-    #bus_crawl('bus100', crawl_kwargs={"province": "四川"})
-    #delete_source_riders()
-    #clear_lines()
