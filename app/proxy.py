@@ -50,7 +50,7 @@ class ProxyProducer(object):
 
     def crawl_from_samair(self):
         add_cnt = 0
-        for i in range(7, 10):
+        for i in range(1, 10):
             url = "http://www.samair.ru/proxy-by-country/China-%02d.htm" % i
             try:
                 r = requests.get(url, timeout=10)
