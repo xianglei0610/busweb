@@ -533,7 +533,9 @@ RK_WATING_LOCK_ORDERS = "wating_lock_orders"       # 等待下单的订单
 RK_DEALING_ORDERS = "dealing_orders:%s"            # 客服正在处理的订单
 RK_DEALED_NOT_ISSUED = "dealed_not_issued:%s"      # 客服处理了,但没获取到出票状态的订单
 
-RK_ALL_PROXY_IP = "all_proxy_ip"
+RK_PROXY_IP_ALL = "proxy:all"
+RK_PROXY_IP_CQKY = "proxy:cqky"
+RK_PROXY_CUR_CQKY = "proxy:cqky:current"        # 当前使用的
 
 # 短信模版
 

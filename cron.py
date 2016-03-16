@@ -12,7 +12,7 @@ from apscheduler.scheduler import Scheduler
 from datetime import datetime as dte
 # from app.email import send_email
 # from app.constants import ADMINS
-from app import setup_app, proxy
+from app import setup_app
 from app import cron_log
 from app.utils import get_redis
 
@@ -112,13 +112,28 @@ def clear_redis_data():
 
 @check(run_in_local=True)
 def crawl_proxy():
-    proxy.crawl_ip_from_haodaili()
+    from app.proxy import proxy_producer
+    data = {}
+    cnt = proxy_producer.crawl_from_haodaili()
+    data["haodaili"] = cnt
+    return data
+
 
 
 @check(run_in_local=True)
 def check_proxy():
-    res = proxy.check_all_proxy_ip()
-    return res
+    from app.proxy import proxy_producer
+    for ipstr in proxy_producer.all_proxy():
+        if not proxy_producer.valid_proxy(ipstr):
+            proxy_producer.remove_proxy(ipstr)
+
+    data = {}
+    for con in proxy_producer.consumer_list:
+        for ipstr in con.all_proxy():
+            if not con.valid_proxy(ipstr):
+                con.remove_proxy(ipstr)
+        data[con.__class__.__name__] = con.proxy_size()
+    return data
 
 
 def main():
