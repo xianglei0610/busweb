@@ -171,12 +171,12 @@ class CqkyProxyConsumer(ProxyConsumer):
                               headers=headers,
                               timeout=5,
                               proxies={"http": "http://%s" % ipstr})
+            content = r.content
+            for k in set(re.findall("([A-Za-z]+):", content)):
+                content = re.sub(r"\b%s\b" % k, '"%s"' % k, content)
+            res = json.loads(content)
         except:
             return False
-        content = r.content
-        for k in set(re.findall("([A-Za-z]+):", content)):
-            content = re.sub(r"\b%s\b" % k, '"%s"' % k, content)
-        res = json.loads(content)
         if res["success"] != "true" or not res["data"]:
             return False
         return True
