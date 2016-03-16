@@ -349,39 +349,39 @@ class Flow(BaseFlow):
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
 
-#                 if not order.pay_url:   # 生成支付链接
-#                     url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
-#                     r = requests.post(url, headers=headers, cookies=rebot.cookies)      # 这步不能删
-#                     pay_info = r.json()
-#                     order.modify(pay_url=pay_info.get('url', ""))
-# 
-#                 r = requests.get(order.pay_url, headers={"User-Agent": rebot.user_agent}, cookies=rebot.cookies)
-#                 sel = etree.HTML(r.content)
-#                 params = {}
-#                 for s in sel.xpath("//form[@id='alipayForm']//input"):
-#                     k, v = s.xpath("@name"), s.xpath("@value")
-#                     k, v = k[0], v[0] if v else ""
-#                     if k == "payment":
-#                         v = 5
-#                     params[k] = v
-# 
-#                 url = "http://pay.84100.com/payment/payment/gateWayPay.do"
-#                 r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params))
-#                 sel = etree.HTML(r.content)
-#                 pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
-#                 if order.pay_order_no != pay_order_no:
-#                     order.update(pay_order_no=pay_order_no)
-#                 return {"flag": "html", "content": r.content}
-
-                if not order.pay_url:
+                if not order.pay_url:   # 生成支付链接
                     url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
-                    headers = {"User-Agent": rebot.user_agent}
-                    r = requests.post(url, headers=headers, cookies=rebot.cookies)
+                    r = requests.post(url, headers=headers, cookies=rebot.cookies)      # 这步不能删
                     pay_info = r.json()
                     order.modify(pay_url=pay_info.get('url', ""))
-                if not order.pay_url:
-                    return {"flag": "error", "content": "没有获取到支付连接,请重试!"}
-                return {"flag": "url", "content": order.pay_url}
+ 
+                r = requests.get(order.pay_url, headers={"User-Agent": rebot.user_agent}, cookies=rebot.cookies)
+                sel = etree.HTML(r.content)
+                params = {}
+                for s in sel.xpath("//form[@id='alipayForm']//input"):
+                    k, v = s.xpath("@name"), s.xpath("@value")
+                    k, v = k[0], v[0] if v else ""
+                    if k == "payment":
+                        v = 5
+                    params[k] = v
+ 
+                url = "http://pay.84100.com/payment/payment/gateWayPay.do"
+                r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params))
+                sel = etree.HTML(r.content)
+                pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
+                if order.pay_order_no != pay_order_no:
+                    order.update(pay_order_no=pay_order_no)
+                return {"flag": "html", "content": r.content}
+
+#                 if not order.pay_url:
+#                     url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
+#                     headers = {"User-Agent": rebot.user_agent}
+#                     r = requests.post(url, headers=headers, cookies=rebot.cookies)
+#                     pay_info = r.json()
+#                     order.modify(pay_url=pay_info.get('url', ""))
+#                 if not order.pay_url:
+#                     return {"flag": "error", "content": "没有获取到支付连接,请重试!"}
+#                 return {"flag": "url", "content": order.pay_url}
         else:
             login_form_url = "http://84100.com/login.shtml"
             ua = random.choice(BROWSER_USER_AGENT)
