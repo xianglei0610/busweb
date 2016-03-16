@@ -123,7 +123,11 @@ def src_code_img(order_no):
         code_url = data.get("valid_url")
         headers = data.get("headers")
         cookies = data.get("cookies")
-        r = requests.get(code_url, headers=headers, cookies=cookies)
+        if order.crawl_source == "cqky":
+            flow = get_flow("cqky")
+            r = flow.get(code_url, headers=headers, cookies=cookies)
+        else:
+            r = requests.get(code_url, headers=headers, cookies=cookies)
         cookies.update(dict(r.cookies))
         data["cookies"] = cookies
         session["pay_login_info"] = json.dumps(data)
