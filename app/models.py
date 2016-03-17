@@ -1384,6 +1384,70 @@ class BjkyWebRebot(Rebot):
             return 1
 
 
+class LnkyWapRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "lnkywap_rebot",
+    }
+    crawl_source = SOURCE_LNKY
+    is_for_lock = True
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": self.user_agent or ua,
+        }
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[lnky] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[lnky] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        headers = self.http_header(ua)
+        pwd_info = SOURCE_INFO[SOURCE_LNKY]["pwd_encode"]
+        data = {
+                "userInfo.account": self.telephone,
+                "userInfo.password": pwd_info[self.password]
+            }
+        login_url = "http://www.jt306.cn/wap/login/ajaxLogin.do"
+        r = requests.post(login_url, data=data, headers=headers)
+        ret = r.json()
+        if ret["returnCode"] == '0000':
+            self.last_login_time = dte.now()
+            self.user_agent = self.user_agent or ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.is_active = True
+            self.save()
+            rebot_log.info("登陆成功 lnky %s", self.telephone)
+            return "OK"
+        else:
+            rebot_log.error("登陆错误 lnky %s, %s", self.telephone, str(ret))
+            return "fail"
+
+    def test_login_status(self):
+        try:
+            user_url = "http://www.jt306.cn/wap/userCenter/personalInformation.do"
+            headers = self.http_header()
+            cookies = json.loads(self.cookies)
+            res = requests.get(user_url, headers=headers, cookies=cookies)
+            result = urlparse.urlparse(res.url)
+            if 'login/loginPage.do' in result.path:
+                return 0
+            else:
+                return 1
+        except:
+            return 0
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
