@@ -28,7 +28,7 @@ def check(run_in_local=False):
         def sub_wrap(*args, **kwargs):
             res = None
             try:
-                if not run_in_local:
+                if not run_in_local and app.config["DEBUG"]:
                     cron_log.info("[ignore] forbid run at debug mode")
                     return None
                 t1 = time.time()
