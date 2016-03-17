@@ -64,16 +64,30 @@ class Flow(BaseFlow):
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
             if res["success"]:
                 res = self.request_lock(order, rebot, sta_mode=mode)
-                expire_time = dte.now()+datetime.timedelta(seconds=15*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": "",
-                    "raw_order_no": res["raw_order_no"],
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                    "pay_money": res["pay_money"]
-                })
+                if res["success"]:
+                    expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+                    lock_result.update({
+                        "result_code": 1,
+                        "result_reason": "",
+                        "pay_url": "",
+                        "raw_order_no": res["raw_order_no"],
+                        "expire_datetime": expire_time,
+                        "source_account": rebot.telephone,
+                        "pay_money": res["pay_money"]
+                    })
+                elif u"同一IP一天最多可订、购20张" in res["msg"]:
+                    cqky_proxy.clear_current_proxy()
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
+                else:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
             elif "您未登录或登录已过期" in res["msg"]:
                 lock_result.update({
                      "result_code": 2,
@@ -127,13 +141,25 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$hideIsSubmit": "true",
             }
         r = self.post(base_url,
-                          data=urllib.urlencode(params),
-                          headers=headers,
-                          cookies=cookies,)
+                      data=urllib.urlencode(params),
+                      headers=headers,
+                      cookies=cookies,)
         soup = BeautifulSoup(r.content, "lxml")
-        order_no = soup.find("input", attrs={"name": "out_trade_no"}).get("value")
-        pay_money = float(soup.find("input", attrs={"name": "total_fee"}).get("value"))
+        msg_lst = re.findall(r'<script>alert\("(.+)"\);</script>', r.content)
+        msg = ""
+        if msg_lst:
+            msg = msg_lst[0]
+        try:
+            order_no = soup.find("input", attrs={"name": "out_trade_no"}).get("value")
+            pay_money = float(soup.find("input", attrs={"name": "total_fee"}).get("value"))
+            flag = True
+        except:
+            order_no = ""
+            pay_money = ""
+            flag = False
         return {
+            "success": flag,
+            "msg": msg,
             "raw_order_no": order_no,
             "pay_order_no": order_no,
             "pay_money": pay_money,

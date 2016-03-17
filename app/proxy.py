@@ -156,6 +156,10 @@ class CqkyProxyConsumer(ProxyConsumer):
         rds.set(RK_PROXY_CUR_CQKY, ipstr)
         return ipstr
 
+    def clear_current_proxy(self):
+        rds = get_redis("default")
+        return rds.set(RK_PROXY_CUR_CQKY, "")
+
     def valid_proxy(self, ipstr):
         line_url = "http://www.96096kp.com/UserData/MQCenterSale.aspx"
         tomorrow = dte.now() + timedelta(days=1)
