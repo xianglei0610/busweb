@@ -102,6 +102,7 @@ class Flow(BaseFlow):
             elif "您未登录或登录已过期" in res["msg"]:
                 # 换个ip 和 账号重试
                 rebot.remove_doing_order(order)
+                order.modify(source_account="")
                 with CqkyWebRebot.get_and_lock(order) as newrebot:
                     account = newrebot.telephone
                 lock_result.update({
