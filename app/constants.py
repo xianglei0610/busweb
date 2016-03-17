@@ -18,6 +18,7 @@ SOURCE_KUAIBA = "kuaiba"
 SOURCE_CHANGTU = "changtu"
 SOURCE_BJKY = "bjky"
 SOURCE_CQKY = "cqky"
+SOURCE_LNKY = "lnky"
 
 
 SOURCE_INFO = {
@@ -422,6 +423,17 @@ SOURCE_INFO = {
 
         },
     },
+    SOURCE_LNKY: {
+        "name": "辽宁客运",
+        "website": "http://www.jt306.cn/index.jsp",
+        "accounts": {
+            # telephone: {password, auth)
+            "13267109876": ("123456", ""),
+        },
+        "pwd_encode": {
+            "123456": "e10adc3949ba59abbe56e057f20f883e",
+        }
+    },
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
@@ -565,6 +577,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_KUAIBA: "您已成功购买%(time)s%(start)s-%(end)s的车票,请到出发车站自助取票机或服务台凭身份证取票。",
     SOURCE_BJKY: "您已成功购买发车时间：%(time)s,%(start)s-%(end)s,对应网站取票单号：%(raw_order)s,取票时请出示您购票时登记的有效证件和网站取票单号。",
     SOURCE_CQKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
+    SOURCE_LNKY: "您%(time)s去往%(end)s的订单%(order_no)s共出票%(ticket_amount)s张，请发车前2小时内取票乘车。",
 }
 
 CITY_NAME_TRANS = {
