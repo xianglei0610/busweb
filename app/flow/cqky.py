@@ -82,7 +82,7 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
-                elif u"锁位失败" in res["msg"]:
+                elif u"拒绝售票" in res["msg"]:
                     lock_result.update({
                         "result_code": 0,
                         "source_account": rebot.telephone,
@@ -343,10 +343,29 @@ class Flow(BaseFlow):
         for d in res["data"]:
             if d["OrderNo"] == order.raw_order_no:
                 return d
+        params = {
+            "isCheck": "false",
+            "ValidateCode": "",
+            "IDTypeCode": 1,
+            "IDTypeNo": order.riders[0]["id_number"],
+            "start": 0,
+            "limit": 10,
+            "Status":  -1,
+            "cmd": "OnlineOrderGetList"
+        }
+        r = self.post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        res = json.loads(trans_js_str(r.content))
+        for d in res["data"]:
+            if d["OrderNo"] == order.raw_order_no:
+                return d
         return {}
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
+        try:
+            rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
+        except:
+            with CqkyWebRebot.get_and_lock(order) as new:
+                rebot = new
         if order.status == STATUS_LOCK_RETRY:
             if valid_code:
                 login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
