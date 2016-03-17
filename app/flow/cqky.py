@@ -89,9 +89,14 @@ class Flow(BaseFlow):
                         "result_reason": res["msg"],
                     })
                 else:
+                    # 换个ip 和 账号重试
+                    cqky_proxy.clear_current_proxy()
+                    rebot.remove_doing_order(order)
+                    with CqkyWebRebot.get_and_lock(order) as newrebot:
+                        account = newrebot.telephone
                     lock_result.update({
                         "result_code": 2,
-                        "source_account": rebot.telephone,
+                        "source_account": account,
                         "result_reason": res["msg"],
                     })
             elif "您未登录或登录已过期" in res["msg"]:

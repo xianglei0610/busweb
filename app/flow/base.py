@@ -2,6 +2,7 @@
 import urllib2
 import json
 import traceback
+import os
 
 from app.constants import *
 from app import order_log, line_log
@@ -35,7 +36,7 @@ class Flow(object):
             "raw_order_no": order.raw_order_no,
         }
         call_from = traceback.format_stack()[-2]
-        order_log.info("[lock-start] order: %s call from: %s", order.order_no, call_from)
+        order_log.info("[lock-start] order: %s call from: %s", order.order_no, call_from.replace(os.linesep, " "))
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 防止重复下单
             order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
