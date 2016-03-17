@@ -127,7 +127,7 @@ class Flow(BaseFlow):
         cookies = json.loads(rebot.cookies)
         if sta_mode == 1:
             base_url = "http://www.96096kp.com/CommitGoods.aspx"
-            r = self.get(base_url, headers=headers)
+            r = rebot.http_get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             params ={
@@ -147,7 +147,7 @@ class Flow(BaseFlow):
             }
         else:
             base_url = "http://www.96096kp.com/OrderConfirm.aspx"
-            r = self.get(base_url, headers=headers)
+            r = rebot.http_get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             params ={
@@ -156,7 +156,7 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$radioListPayType": "OnlineAliPay,支付宝在线支付",
                 "ctl00$FartherMain$hideIsSubmit": "true",
             }
-        r = self.post(base_url,
+        r = rebot.http_post(base_url,
                       data=urllib.urlencode(params),
                       headers=headers,
                       cookies=cookies,)
@@ -196,7 +196,7 @@ class Flow(BaseFlow):
         params = {
             "cmd": "getCartItemList",
         }
-        r = self.post(base_url,
+        r = rebot.http_post(base_url,
                       data=urllib.urlencode(params),
                       headers=headers,
                       cookies=cookies)
@@ -218,7 +218,7 @@ class Flow(BaseFlow):
             "cmd": "delCartItem",
             "id": sid,
         }
-        r = self.post(base_url,
+        r = rebot.http_post(base_url,
                       data=urllib.urlencode(params),
                       headers=headers,
                       cookies=cookies)
@@ -255,7 +255,7 @@ class Flow(BaseFlow):
                 "contactMsg": "%s~%s~" % (order.contact_info["name"], rebot.telephone),
                 "isIns": "false",
             })
-        r = self.post(base_url,
+        r = rebot.http_post(base_url,
                           data=urllib.urlencode(params),
                           headers=headers,
                           cookies=cookies,)
@@ -280,7 +280,7 @@ class Flow(BaseFlow):
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
-        r = self.post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
         return json.loads(trans_js_str(r.content))
 
     def do_refresh_issue(self, order):
@@ -338,7 +338,7 @@ class Flow(BaseFlow):
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
-        r = self.post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
         res = json.loads(trans_js_str(r.content))
         for d in res["data"]:
             if d["OrderNo"] == order.raw_order_no:
@@ -353,7 +353,7 @@ class Flow(BaseFlow):
             "Status":  -1,
             "cmd": "OnlineOrderGetList"
         }
-        r = self.post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
         res = json.loads(trans_js_str(r.content))
         for d in res["data"]:
             if d["OrderNo"] == order.raw_order_no:
@@ -385,7 +385,7 @@ class Flow(BaseFlow):
                     "loginValid": valid_code,
                     "cmd": "Login",
                 }
-                r = self.post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+                r = rebot.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
                 cookies.update(dict(r.cookies))
                 rebot.modify(cookies=json.dumps(cookies))
             self.lock_ticket(order)
@@ -425,7 +425,7 @@ class Flow(BaseFlow):
             login_form = "http://www.96096kp.com/CusLogin.aspx"
             valid_url = "http://www.96096kp.com/ValidateCode.aspx"
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-            r = self.get(login_form, headers=headers, cookies=cookies)
+            r = rebot.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             data = {
                 "cookies": cookies,

@@ -14,7 +14,7 @@ from flask import json
 from lxml import etree
 from contextlib import contextmanager
 from app import db
-from app.utils import md5, getRedisObj
+from app.utils import md5, getRedisObj, get_redis
 from app import rebot_log, order_status_log, line_log
 
 
@@ -480,6 +480,9 @@ class Rebot(db.Document):
 
     crawl_source = ""
     is_for_lock = False         # 是否为用于发起锁票的账号
+
+    def __str__(self):
+        return self.telephone
 
     @classmethod
     def login_all(cls):
@@ -969,13 +972,59 @@ class CTripRebot(Rebot):
 class CqkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
 
     meta = {
-        "indexes": ["telephone", "is_active", "is_locked"],
+        "indexes": ["telephone", "is_active", "is_locked", "ip"],
         "collection": "cqkyweb_rebot",
     }
     crawl_source = SOURCE_CQKY
     is_for_lock = True
+
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_CQKY, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_CQKY)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def http_get(self, url, **kwargs):
+        r = requests.get(url,
+                         proxies={"http": "http://%s" % self.proxy_ip},
+                         timeout=10,
+                         **kwargs)
+        return r
+
+    def http_post(self, url, **kwargs):
+        r = requests.post(url,
+                          proxies={"http": "http://%s" % self.proxy_ip},
+                          timeout=10,
+                          **kwargs)
+        return r
+
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source='cqky',
+                                      create_date_time__gte=today) \
+                              .aggregate({
+                                  "$group":{
+                                      "_id": {"phone": "$source_account"},
+                                      "count": {"$sum": "$ticket_amount"}}
+                              }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt >= 10:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts-droped))
+        return cls.objects.get(telephone=tele)
 
     def on_add_doing_order(self, order):
         rebot_log.info("[cqky] %s locked", self.telephone)
