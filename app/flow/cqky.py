@@ -82,6 +82,12 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
+                elif u"锁位失败" in res["msg"]:
+                    lock_result.update({
+                        "result_code": 0,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
                 else:
                     lock_result.update({
                         "result_code": 2,
@@ -119,7 +125,7 @@ class Flow(BaseFlow):
                 "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
                 "ctl00$FartherMain$NavigationControl1$CustRBList": "",
                 "ctl00$FartherMain$NavigationControl1$o_CustomerName": order.contact_info["name"],
-                "ctl00$FartherMain$NavigationControl1$o_Mobele": rebot.telephone,
+                "ctl00$FartherMain$NavigationControl1$o_Mobele": order.contact_info["telephone"],
                 "ctl00$FartherMain$NavigationControl1$o_IdType": 1,
                 "ctl00$FartherMain$NavigationControl1$o_IdCard": order.contact_info["id_number"],
                 "ctl00$FartherMain$NavigationControl1$o_IdCardConfirm": order.contact_info["id_number"],
@@ -296,11 +302,11 @@ class Flow(BaseFlow):
                 "pick_code_list": [""],
                 "pick_msg_list": msg_list,
             })
-        elif not ret:
-            result_info.update({
-                "result_code": 2,
-                "result_msg": "在源站没找到订单信息",
-            })
+        # elif not ret:
+        #     result_info.update({
+        #         "result_code": 2,
+        #         "result_msg": "在源站没找到订单信息",
+        #     })
         return result_info
 
     def send_order_request(self, rebot, order):
