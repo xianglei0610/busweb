@@ -119,7 +119,10 @@ def src_code_img(order_no):
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
     else:
-        data = json.loads(session["pay_login_info"])
+        if order.crawl_source == "cqky":
+            data = json.loads(session["pay_login_info_%s" % order.order_no])
+        else:
+            data = json.loads(session["pay_login_info"])
         code_url = data.get("valid_url")
         headers = data.get("headers")
         cookies = data.get("cookies")

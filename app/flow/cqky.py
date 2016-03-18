@@ -82,7 +82,7 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
-                elif u"拒绝售票" in res["msg"]:
+                elif u"拒绝售票" in res["msg"] or "提前时间不足" in res["msg"]:
                     lock_result.update({
                         "result_code": 0,
                         "source_account": rebot.telephone,
@@ -367,7 +367,7 @@ class Flow(BaseFlow):
         if order.status == STATUS_LOCK_RETRY:
             if valid_code:
                 login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
-                info = json.loads(session["pay_login_info"])
+                info = json.loads(session["pay_login_info_%s" % order.order_no])
                 headers = info["headers"]
                 cookies = info["cookies"]
                 headers = {
@@ -399,8 +399,8 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            cookies = json.loads(rebot.cookies)
-            r = rebot.http_get(base_url, headers=headers, cookies=cookies)
+            #cookies = json.loads(rebot.cookies)
+            r = requests.get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             headers.update({"Referer": "http://www.96096kp.com/GoodsDetail.aspx"})
@@ -418,14 +418,9 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$Hidden2": "",
                 "pageNum": ""
             }
-            try:
-                r = rebot.http_post(base_url,
-                                data=urllib.urlencode(params),
-                                headers=headers,
-                                cookies=cookies)
-            except Exception, e:
-                rebot.modify(ip="")
-                raise e
+            r = requests.post(base_url,
+                            data=urllib.urlencode(params),
+                            headers=headers,)
             return {"flag": "html", "content": r.content}
 
         if order.status == STATUS_LOCK_RETRY:
@@ -440,7 +435,7 @@ class Flow(BaseFlow):
                 "headers": headers,
                 "valid_url": valid_url,
             }
-            session["pay_login_info"] = json.dumps(data)
+            session["pay_login_info_%s" % order.order_no] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
