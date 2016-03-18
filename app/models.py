@@ -1000,10 +1000,14 @@ class CqkyWebRebot(Rebot):
         return r
 
     def http_post(self, url, **kwargs):
-        r = requests.post(url,
-                          proxies={"http": "http://%s" % self.proxy_ip},
-                          timeout=10,
-                          **kwargs)
+        try:
+            r = requests.post(url,
+                            proxies={"http": "http://%s" % self.proxy_ip},
+                            timeout=10,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
         return r
 
     @classmethod

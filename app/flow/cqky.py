@@ -90,24 +90,26 @@ class Flow(BaseFlow):
                     })
                 else:
                     # 换个ip 和 账号重试
-                    cqky_proxy.clear_current_proxy()
-                    rebot.remove_doing_order(order)
-                    with CqkyWebRebot.get_and_lock(order) as newrebot:
-                        account = newrebot.telephone
+                    # cqky_proxy.clear_current_proxy()
+                    # rebot.remove_doing_order(order)
+                    # with CqkyWebRebot.get_and_lock(order) as newrebot:
+                    #     account = newrebot.telephone
+                    rebot.modify(ip="")
                     lock_result.update({
                         "result_code": 2,
-                        "source_account": account,
+                        "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
             elif "您未登录或登录已过期" in res["msg"]:
                 # 换个ip 和 账号重试
-                rebot.remove_doing_order(order)
-                order.modify(source_account="")
-                with CqkyWebRebot.get_and_lock(order) as newrebot:
-                    account = newrebot.telephone
+                #rebot.remove_doing_order(order)
+                #order.modify(source_account="")
+                #with CqkyWebRebot.get_and_lock(order) as newrebot:
+                #    account = newrebot.telephone
+                rebot.modify(ip="")
                 lock_result.update({
                      "result_code": 2,
-                     "source_account": account,
+                     "source_account": rebot.telephone,
                      "result_reason": u"账号未登录",
                  })
             else:
@@ -127,7 +129,7 @@ class Flow(BaseFlow):
         cookies = json.loads(rebot.cookies)
         if sta_mode == 1:
             base_url = "http://www.96096kp.com/CommitGoods.aspx"
-            r = rebot.http_get(base_url, headers=headers)
+            r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             params ={
@@ -147,7 +149,7 @@ class Flow(BaseFlow):
             }
         else:
             base_url = "http://www.96096kp.com/OrderConfirm.aspx"
-            r = rebot.http_get(base_url, headers=headers)
+            r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             params ={
@@ -361,11 +363,7 @@ class Flow(BaseFlow):
         return {}
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        try:
-            rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
-        except:
-            with CqkyWebRebot.get_and_lock(order) as new:
-                rebot = new
+        rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
         if order.status == STATUS_LOCK_RETRY:
             if valid_code:
                 login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
@@ -385,7 +383,11 @@ class Flow(BaseFlow):
                     "loginValid": valid_code,
                     "cmd": "Login",
                 }
-                r = rebot.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+                try:
+                    r = rebot.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+                except Exception,e:
+                    rebot.modify(ip="")
+                    raise e
                 cookies.update(dict(r.cookies))
                 rebot.modify(cookies=json.dumps(cookies))
             self.lock_ticket(order)
@@ -397,7 +399,8 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            r = requests.get(base_url, headers=headers)
+            cookies = json.loads(rebot.cookies)
+            r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             headers.update({"Referer": "http://www.96096kp.com/GoodsDetail.aspx"})
@@ -407,17 +410,22 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$IDTypeCode": 1,
                 "ctl00$FartherMain$IDTypeNo":  order.contact_info["id_number"],
                 "ctl00$FartherMain$hiAgainPayOrderNo": order.raw_order_no,
-                "txtBDate": "2016-02-10",
-                "txtEDate": "2016-03-10",
+                "txtBDate": "",
+                "txtEDate": "",
                 "ctl00$FartherMain$Hidden1": "",
                 "txtCusName": "",
                 "txtCusPhone": "",
                 "ctl00$FartherMain$Hidden2": "",
                 "pageNum": ""
             }
-            r = requests.post(base_url,
-                              data=urllib.urlencode(params),
-                              headers=headers)
+            try:
+                r = rebot.http_post(base_url,
+                                data=urllib.urlencode(params),
+                                headers=headers,
+                                cookies=cookies)
+            except Exception, e:
+                rebot.modify(ip="")
+                raise e
             return {"flag": "html", "content": r.content}
 
         if order.status == STATUS_LOCK_RETRY:
