@@ -105,7 +105,10 @@ def async_lock_ticket(self, order_no, retry_seq=1):
     if order.status != STATUS_WAITING_LOCK:
         return
     flow = get_flow(order.crawl_source)
-    flow.lock_ticket(order)
+    try:
+        flow.lock_ticket(order)
+    finally:
+        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=20, max_retries=10)
 
 
 @celery.task(ignore_result=True)

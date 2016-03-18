@@ -82,7 +82,23 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
+                elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"]:
+                    rebot.remove_doing_order(order)
+                    order.modify(source_account="")
+                    with CqkyWebRebot.get_and_lock(order) as newrebot:
+                        account = newrebot.telephone
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": account,
+                        "result_reason": res["msg"],
+                    })
                 elif u"拒绝售票" in res["msg"] or "提前时间不足" in res["msg"]:
+                    lock_result.update({
+                        "result_code": 0,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
+                elif u"可售票数量不足" in res["msg"]:
                     lock_result.update({
                         "result_code": 0,
                         "source_account": rebot.telephone,
@@ -102,14 +118,14 @@ class Flow(BaseFlow):
                     })
             elif "您未登录或登录已过期" in res["msg"]:
                 # 换个ip 和 账号重试
-                #rebot.remove_doing_order(order)
-                #order.modify(source_account="")
-                #with CqkyWebRebot.get_and_lock(order) as newrebot:
-                #    account = newrebot.telephone
+                rebot.remove_doing_order(order)
+                order.modify(source_account="")
+                with CqkyWebRebot.get_and_lock(order) as newrebot:
+                    account = newrebot.telephone
                 rebot.modify(ip="")
                 lock_result.update({
                      "result_code": 2,
-                     "source_account": rebot.telephone,
+                     "source_account": account,
                      "result_reason": u"账号未登录",
                  })
             else:

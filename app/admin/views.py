@@ -133,7 +133,7 @@ def src_code_img(order_no):
             r = requests.get(code_url, headers=headers, cookies=cookies)
         cookies.update(dict(r.cookies))
         data["cookies"] = cookies
-        session["pay_login_info"] = json.dumps(data)
+        session["pay_login_info_%s" % order.order_no] = json.dumps(data)
         return r.content
 
 
