@@ -163,8 +163,8 @@ def main():
     sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['cqky'])
 
     # 江苏客运
-    sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州"}})
-    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南京"}})
+    sched.add_cron_job(bus_crawl, hour=12, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南京"}})
 
     # 车巴达
     sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['cbd'], kwargs={"crawl_kwargs":{"city": "苏州"}})
