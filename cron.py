@@ -174,6 +174,12 @@ def main():
     # 快巴
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['kuaiba'], kwargs={"crawl_kwargs":{"province": "北京"}})
 
+    # 辽宁省网
+    sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['lnky'], kwargs={"crawl_kwargs":{"city": "沈阳市"}})
+    sched.add_cron_job(bus_crawl, hour=16, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "大连市"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['lnky'], kwargs={"crawl_kwargs":{"city": "锦州市"}})
+
+    
     # 代理ip相关
     sched.add_interval_job(crawl_proxy, minutes=3)
     sched.add_interval_job(check_proxy, minutes=1)
