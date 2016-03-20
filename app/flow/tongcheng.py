@@ -186,8 +186,6 @@ class Flow(BaseFlow):
             "drv_datetime": drv_datetime,
             "contact_name": contact_name,
             "contact_phone": contact_phone,
-            "pick_no": "",
-            "pick_code": "",
         }
 
     def do_refresh_issue(self, order):
