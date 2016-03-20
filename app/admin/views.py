@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 import time
+import random
 import math
 import copy
 import urllib2
@@ -119,19 +120,24 @@ def src_code_img(order_no):
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
+    elif order.crawl_source == "cqky":
+        rebot = order.get_lock_rebot()
+        key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+        data = json.loads(session[key])
+        code_url = "%s?%s" % (data.get("valid_url"), random.randint(0, 1000))
+        headers = data.get("headers")
+        cookies = data.get("cookies")
+        r = rebot.http_get(code_url, headers=headers, cookies=cookies)
+        cookies.update(dict(r.cookies))
+        data["cookies"] = cookies
+        session[key] = json.dumps(data)
+        return r.content
     else:
-        if order.crawl_source == "cqky":
-            data = json.loads(session["pay_login_info_%s" % order.order_no])
-        else:
-            data = json.loads(session["pay_login_info"])
+        data = json.loads(session["pay_login_info"])
         code_url = data.get("valid_url")
         headers = data.get("headers")
         cookies = data.get("cookies")
-        if order.crawl_source == "cqky":
-            flow = get_flow("cqky")
-            r = flow.get(code_url, headers=headers, cookies=cookies)
-        else:
-            r = requests.get(code_url, headers=headers, cookies=cookies)
+        r = requests.get(code_url, headers=headers, cookies=cookies)
         cookies.update(dict(r.cookies))
         data["cookies"] = cookies
         session["pay_login_info"] = json.dumps(data)

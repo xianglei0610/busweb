@@ -15,6 +15,7 @@ from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
 from app import order_log
 from app.proxy import cqky_proxy
+from app.models import Order
 
 
 class Flow(BaseFlow):
@@ -75,37 +76,44 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "pay_money": res["pay_money"]
                     })
-                elif u"同一IP一天最多可订、购20张" in res["msg"]:
-                    cqky_proxy.clear_current_proxy()
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
-                    })
-                elif u"拒绝售票" in res["msg"] or "提前时间不足" in res["msg"]:
-                    lock_result.update({
-                        "result_code": 0,
-                        "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
-                    })
-                else:
-                    # 换个ip 和 账号重试
-                    # cqky_proxy.clear_current_proxy()
-                    # rebot.remove_doing_order(order)
-                    # with CqkyWebRebot.get_and_lock(order) as newrebot:
-                    #     account = newrebot.telephone
+                elif u"同一IP一天最多可订、购20张" in res["msg"] or u"当前系统维护中" in res["msg"]:
                     rebot.modify(ip="")
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
+                elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"]:
+                    rebot.remove_doing_order(order)
+                    order.modify(source_account="")
+                    with CqkyWebRebot.get_and_lock(order) as newrebot:
+                        account = newrebot.telephone
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": account,
+                        "result_reason": res["msg"],
+                    })
+                elif u"拒绝售票" in res["msg"] or "提前时间不足" in res["msg"] or u"班次席位可售数不足" in res["msg"]:
+                    self.close_line(line, reason=res["msg"])
+                    lock_result.update({
+                        "result_code": 0,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
+                elif u"可售票数量不足" in res["msg"]:
+                    self.close_line(line, reason=res["msg"])
+                    lock_result.update({
+                        "result_code": 0,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
+                else:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
             elif "您未登录或登录已过期" in res["msg"]:
-                # 换个ip 和 账号重试
-                #rebot.remove_doing_order(order)
-                #order.modify(source_account="")
-                #with CqkyWebRebot.get_and_lock(order) as newrebot:
-                #    account = newrebot.telephone
                 rebot.modify(ip="")
                 lock_result.update({
                      "result_code": 2,
@@ -314,11 +322,6 @@ class Flow(BaseFlow):
                 "pick_code_list": [""],
                 "pick_msg_list": msg_list,
             })
-        # elif not ret:
-        #     result_info.update({
-        #         "result_code": 2,
-        #         "result_msg": "在源站没找到订单信息",
-        #     })
         return result_info
 
     def send_order_request(self, rebot, order):
@@ -367,7 +370,8 @@ class Flow(BaseFlow):
         if order.status == STATUS_LOCK_RETRY:
             if valid_code:
                 login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
-                info = json.loads(session["pay_login_info_%s" % order.order_no])
+                key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+                info = json.loads(session[key])
                 headers = info["headers"]
                 cookies = info["cookies"]
                 headers = {
@@ -385,6 +389,13 @@ class Flow(BaseFlow):
                 }
                 try:
                     r = rebot.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+                    order_log.info("[cqky login] order:%s rebot:%s %s ip:%s", order.order_no, rebot.telephone, r.content, rebot.proxy_ip)
+                    if u"用户名或密码错误" in r.content:
+                        rebot.remove_doing_order(order)
+                        order.modify(source_account="")
+                        with CqkyWebRebot.get_and_lock(order) as newrebot:
+                            order.update(source_account=newrebot.telephone)
+                            rebot = newrebot
                 except Exception,e:
                     rebot.modify(ip="")
                     raise e
@@ -393,13 +404,14 @@ class Flow(BaseFlow):
             self.lock_ticket(order)
 
         if order.status == STATUS_WAITING_ISSUE:
+            self.check_raw_order_no(order)
+            order.reload()
             base_url = "http://www.96096kp.com/GoodsDetail.aspx"
             headers = {
                 "User-Agent": rebot.user_agent,
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            #cookies = json.loads(rebot.cookies)
             r = requests.get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
@@ -435,7 +447,8 @@ class Flow(BaseFlow):
                 "headers": headers,
                 "valid_url": valid_url,
             }
-            session["pay_login_info_%s" % order.order_no] = json.dumps(data)
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
@@ -508,3 +521,66 @@ class Flow(BaseFlow):
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
+
+    def check_raw_order_no(self, order):
+        """
+        有时候源站返回的订单号是错的，这时需要从源站搜出来
+        """
+        if order.status != STATUS_WAITING_ISSUE:
+            return
+        try:
+            other = Order.objects.get(raw_order_no=order.raw_order_no, status__in=[STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL])
+        except Order.DoesNotExist:
+            return
+        if other.order_no == order.order_no:
+            return
+        rebot = order.get_lock_rebot()
+        base_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
+        params = {
+            "isCheck": "false",
+            "ValidateCode": "",
+            "IDTypeCode": 1,
+            "IDTypeNo": order.contact_info["id_number"],
+            "start": 0,
+            "limit": 10,
+            "Status":  -1,
+            "cmd": "OnlineOrderGetList"
+        }
+        headers = {
+            "User-Agent": rebot.user_agent,
+            "Referer": "http://www.96096kp.com/TicketMain.aspx",
+            "Origin": "http://www.96096kp.com",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        }
+        cookies = json.loads(rebot.cookies)
+        r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        res = json.loads(trans_js_str(r.content))
+        order_list = res["data"]
+
+        if order.contact_info["id_number"] != order.riders[0]["id_number"]:
+            params = {
+                "isCheck": "false",
+                "ValidateCode": "",
+                "IDTypeCode": 1,
+                "IDTypeNo": order.riders[0]["id_number"],
+                "start": 0,
+                "limit": 10,
+                "Status":  -1,
+                "cmd": "OnlineOrderGetList"
+            }
+            r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            res = json.loads(trans_js_str(r.content))
+            order_list.extends(res["data"])
+
+        for d in order_list:
+            if d["OrderStatus"] == "未支付" and float(d["OrderMoney"]) == order.order_price and int(d["TicketCount"]) == order.ticket_amount:
+                raw_order = d["OrderNo"]
+                try:
+                    obj = Order.objects.get(raw_order_no=raw_order, status=STATUS_ISSUE_SUCC)
+                    if obj.order_no == order.order_no:
+                        return
+                except Order.DoesNotExist:
+                    old = order.raw_order_no
+                    order.modify(raw_order_no=raw_order, pay_money=float(d["Price"]))
+                    order_log.info("order:%s change raw_order_no %s to %s", order.order_no, old, order.raw_order_no)
+                    return

@@ -41,7 +41,7 @@ def parse_alipay_record(f):
             d[my_decode(k).strip()]=my_decode(v).strip()
         if not d:
             continue
-        trade_list.append(d)
+        trade_list.insert(0, d)
     return account, trade_list
 
 
@@ -123,6 +123,10 @@ def import_alipay_record(filename):
             if order.refund_trade_no and order.refund_trade_no != trade_no:
                 kefu_log.error("the order has matched other pay record %s", json.dumps(trade_info, ensure_ascii=False))
                 continue
+            refund_trade_no = trade_no
+            status = PAY_STATUS_REFUND
+            give_back = pay_money
+            pay_money = order.pay_money
         else:
             if order.pay_trade_no and order.pay_trade_no != trade_no:
                 kefu_log.error("the order has matched other pay record %s", json.dumps(trade_info, ensure_ascii=False))
@@ -135,10 +139,10 @@ def import_alipay_record(filename):
         elif trade_status == "交易成功":
             status = PAY_STATUS_PAID
             pay_trade_no = trade_no
-        elif trade_status == "退款成功":
-            status = PAY_STATUS_REFUND
-            give_back = pay_money
-            pay_money = order.pay_money
+        # elif trade_status == "退款成功":
+        #     status = PAY_STATUS_REFUND
+        #     give_back = pay_money
+        #     pay_money = order.pay_money
         cnt += 1
         order.modify(pay_trade_no=pay_trade_no,
                      refund_trade_no=refund_trade_no,
