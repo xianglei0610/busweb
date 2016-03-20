@@ -107,7 +107,7 @@ def async_lock_ticket(self, order_no, retry_seq=1):
     flow = get_flow(order.crawl_source)
     try:
         flow.lock_ticket(order)
-    finally:
+    except:
         self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=20, max_retries=10)
 
 

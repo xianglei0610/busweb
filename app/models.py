@@ -993,10 +993,14 @@ class CqkyWebRebot(Rebot):
         return ipstr
 
     def http_get(self, url, **kwargs):
-        r = requests.get(url,
-                         proxies={"http": "http://%s" % self.proxy_ip},
-                         timeout=10,
-                         **kwargs)
+        try:
+            r = requests.get(url,
+                            proxies={"http": "http://%s" % self.proxy_ip},
+                            timeout=10,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
         return r
 
     def http_post(self, url, **kwargs):
@@ -1025,7 +1029,7 @@ class CqkyWebRebot(Rebot):
                               }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt >= 10:
+            if cnt >= 4:
                 droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)
