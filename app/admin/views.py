@@ -664,23 +664,61 @@ def qupiao_duanxin():
         "message": "ok":
     }
     """
-    regex_mapping = {
-    }
     data = request.get_data()
-    access_log.info("[qupiao_duanxin] %s", data)
+    access_log.info("[qupiao_duanxin-1] %s", data)
     post = json.loads(data)
     r_phone = post["recevie_phone"]
-    s_phone = post["send_phone"]
+    # s_phone = post["send_phone"]
     content = post["content"].encode("utf-8")
-    md5_str = md5(content)
-    if content.startswith("【同程旅游】"):
+    today = dte.now().strftime("%Y-%m-%d")
+    if content.startswith(u"【同程旅游】"):
         regex = r"【同程旅游】您购买了：(\S{4}-\S{2}-\S{2}\s\S{2}:\S{2})，(\S+) - (\S+)车次为(\S+)的汽车票，取票号：(\d+)，取票密码：(\d+)，座位号：(\d+)"
         try:
             sdate, start, dest, bus, pick_no, pick_code, seat = re.findall(regex, content)[0]
-            drv_datetime = dte.strptime("%Y-%m-%d %H:%M", sdate)
-        except:
-            access_log.info("[qupiao_duanxin] ignore!")
-    elif content.startswith(""):
+            drv_datetime = dte.strptime(sdate, "%Y-%m-%d %H:%M")
+        except Exception, e:
+            access_log.info("[qupiao_duanxin-2] ignore, incorrect format, %s", e)
+            return jsonify({"code": 0, "message": "incorrect conent format", "data": ""})
+        orders = Order.objects.filter(create_date_time__gt=today,
+                                      crawl_source=SOURCE_TC,
+                                      source_account=r_phone,
+                                      pick_code_list__contains="%s|%s" % (pick_no, pick_code))
+        if orders:
+            access_log.info("[qupiao_duanxin-3] ignore, has matched before")
+            return jsonify({"code": 0, "message": "has mached before", "data": ""})
+        orders = Order.objects.filter(create_date_time__gt=today,
+                                      crawl_source=SOURCE_TC,
+                                      status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING],
+                                      drv_datetime=drv_datetime,
+                                      bus_num=bus.strip(),
+                                      source_account=r_phone,
+                                      starting_name=start.strip().replace("/", ";"),
+                                      )
+        orders = filter(lambda o: not o.pick_code_list, orders)
+        if not orders:
+            access_log.error("[qupiao_duanxin-4] not found order!")
+            return jsonify({"code": 0, "message": "not found order", "data": ""})
+        access_log.info("[qupiao_duanxin-5] mached %s order" % len(orders))
+        order = orders[0]
+
+        msg_list = []
+        dx_tmpl = DUAN_XIN_TEMPL["江苏"]
+        code_list = ["%s|%s" % (pick_no, pick_code)]
+        dx_info = {
+            "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+            "start": order.line.s_sta_name,
+            "end": order.line.d_sta_name,
+            #"amount": order.ticket_amount,
+            "code": pick_code,
+            "no": pick_no,
+            "raw_order": order.raw_order_no,
+        }
+        msg_list = [dx_tmpl % dx_info]
+        order.modify(pick_code_list=code_list, pick_msg_list=msg_list)
+        issued_callback(order.order_no)
+        order_log.info("order:%s set pick msg %s", order.order_no, msg_list[0])
+
+    elif content.startswith(u"【畅途网】"):
         regex = r"【畅途网】您预订的(\S{4}-\S{2}-\S{2}\s\S{2}:\S{2})(\S+) (\S+) 到(\S+)，汽车票(\d+)张，订单总金额：(\S+)元。取票时间：(\S+)。凭取票号(\d+)和密码(\d+)取票，取票地点:(\S+)。请预留取票时间"
         try:
             sdate, start_city, start_sta, dest, amount, money, pick_time, pick_no, pick_code, pick_site = re.findall(regex, content)[0]

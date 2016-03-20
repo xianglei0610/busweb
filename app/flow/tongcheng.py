@@ -128,7 +128,6 @@ class Flow(BaseFlow):
                              data=json.dumps(data),
                              headers=headers,
                              cookies=cookies,
-                             proxies={"http": "http://192.168.1.99:8888"},
                              )
         ret = resp.json()
         return ret
@@ -199,7 +198,7 @@ class Flow(BaseFlow):
             result_info.update(result_msg="状态未变化")
             return result_info
         rebot = TCWebRebot.objects.get(telephone=order.source_account)
-        ret = self.send_order_request(rebot, order=order)
+        ret = self.send_order_request(rebot, order.raw_order_no)
         state = ret["state"]
         if state == "出票中":
             result_info.update({
@@ -207,7 +206,12 @@ class Flow(BaseFlow):
                 "result_msg": state,
             })
         elif state=="出票成功":
-            pass
+            result_info.update({
+                "result_code": 1,
+                "result_msg": state,
+                "pick_code_list": [],
+                "pick_msg_list": [],
+            })
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
@@ -265,7 +269,7 @@ class Flow(BaseFlow):
         res = r.json()
         res = res["response"]
         now = dte.now()
-        if res["rspCode"] != "0000":
+        if res["header"]["rspCode"] != "0000":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
