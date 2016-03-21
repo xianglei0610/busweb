@@ -2,10 +2,10 @@
 # encoding: utf-8
 
 import random
-import requests
 import json
 import urllib
 import datetime
+import requests
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -13,7 +13,6 @@ from app.models import Line, TCWebRebot, Order
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
-from app import order_log
 
 
 class Flow(BaseFlow):
@@ -124,7 +123,7 @@ class Flow(BaseFlow):
             "Content-Type": "application/json",
         }
         cookies = json.loads(rebot.cookies)
-        resp = requests.post(submit_url,
+        resp = rebot.proxy_post(submit_url,
                              data=json.dumps(data),
                              headers=headers,
                              cookies=cookies,
@@ -139,8 +138,7 @@ class Flow(BaseFlow):
         url = "http://member.ly.com/ajaxhandler/OrderListHandler.ashx?OrderFilter=1&ProjectTag=0&DateType=2&PageIndex=1"
         headers = {"User-Agent": rebot.user_agent}
         cookies = json.loads(rebot.cookies)
-        r = requests.get(url, headers=headers, cookies=cookies)
-        order_log.debug("[query_order_no] order:%s %s", order.order_no, r.content)
+        r = rebot.proxy_get(url, headers=headers, cookies=cookies)
         res = r.json()
         line = order.line
         for info in res["ReturnValue"]["OrderDetailList"]:
@@ -170,9 +168,8 @@ class Flow(BaseFlow):
             "User-Agent": rebot.user_agent,
         }
         cookies = json.loads(rebot.cookies)
-        r = requests.get(detail_url, headers=headers, cookies=cookies)
+        r = rebot.proxy_get(detail_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
-        order_log.debug("[send_order_request] raw_order:%s %s", raw_order_no, r.content)
         state = soup.select(".paystate")[0].get_text().strip()
         sdate = soup.select(".list01_info table")[0].findAll("tr")[2].get_text().strip()
         drv_datetime = dte.strptime(sdate, "%Y-%m-%d %H:%M:%S")
@@ -205,6 +202,11 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
+        elif state == "已取消":
+            result_info.update({
+                "result_code": 2,
+                "result_msg": state,
+            })
         elif state=="出票成功":
             result_info.update({
                 "result_code": 1,
@@ -232,7 +234,7 @@ class Flow(BaseFlow):
             login_form = "https://passport.ly.com"
             valid_url = "https://passport.ly.com/AjaxHandler/ValidCode.ashx?action=getcheckcode&name=%s" % rebot.telephone
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-            r = requests.get(login_form, headers=headers)
+            r = rebot.proxy_get(login_form, headers=headers)
             data = {
                 "cookies": dict(r.cookies),
                 "headers": headers,

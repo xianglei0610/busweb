@@ -994,6 +994,8 @@ RK_DEALED_NOT_ISSUED = "dealed_not_issued:%s"      # 客服处理了,但没获�
 
 RK_PROXY_IP_ALL = "proxy:all"
 RK_PROXY_IP_CQKY = "proxy:cqky"
+RK_PROXY_IP_TC = "proxy:tongcheng"
+RK_PROXY_IP_CBD = "proxy:cbd"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"        # 当前使用的
 
 # 短信模版
