@@ -164,6 +164,7 @@ def order_pay(order_no):
     token = request.args.get("token", "")
     username = request.args.get("username",'')
     code = request.args.get("valid_code", "")
+    force = int(request.args.get("force", "0"))
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY]:
         return redirect(url_for("admin.wating_deal_order"))
     r = getRedisObj()
@@ -182,8 +183,12 @@ def order_pay(order_no):
         ret = {}
     flag = ret.get("flag", "")
     if flag == "url":
+        if order.pay_money != order.order_price and not force:
+            return "订单金额不等于支付金额, 禁止支付"
         return redirect(ret["content"])
     elif flag == "html":
+        if order.pay_money != order.order_price and not force:
+            return "订单金额不等于支付金额, 禁止支付"
         return ret["content"]
     elif flag == "input_code":
         if token and token == TOKEN:
