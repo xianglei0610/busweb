@@ -63,6 +63,22 @@ class Flow(BaseFlow):
                 self.request_del_shoptcart(rebot, ids)
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
+            ilst = re.findall(r"(\d) 张车票", res.get("msg", ""))
+            if ilst:
+                amount = int(ilst[0])
+                if amount != order.ticket_amount:
+                    order_log.info("[locking] order: %s, 锁票数量不对 %s,%s" % (order.ticket_amount, amount))
+                    # 查看购物车列表
+                    res = self.request_get_shoptcart(rebot)
+                    # 清空购物车列表
+                    for ids in res["data"][u"ShopTable"].keys():
+                        self.request_del_shoptcart(rebot, ids)
+                    lock_result.update({
+                        "result_code": 2,
+                        "result_reason": u"锁票数量不对",
+                    })
+                    return lock_result
+
             if res["success"]:
                 res = self.request_lock(order, rebot, sta_mode=mode)
                 if res["success"]:
