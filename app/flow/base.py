@@ -8,6 +8,7 @@ from app.constants import *
 from app import order_log, line_log
 from datetime import datetime as dte
 from tasks import issued_callback
+from bs4 import BeautifulSoup
 
 
 class Flow(object):
@@ -254,3 +255,50 @@ class Flow(object):
     def lock_ticket_retry(self, order):
         order.modify(status=STATUS_LOCK_RETRY)
         order.on_lock_retry()
+
+    def extract_alipay(self, content):
+        """
+        Input:
+        <form name="alipaysubmit" method="post" action="https://mapi.alipay.com/gateway.do?_input_charset=utf-8">
+            <input type=hidden name="body" value="&#23458;&#36816;&#27773;&#36710;&#31080;&#65288;&#35746;&#21333;&#32534;&#21495;&#65306;1600281634&#65289;">
+            <input type=hidden name="notify_url" value="http://www.bababus.com/bankresults/payresultalin.htm">
+            <input type=hidden name="out_trade_no" value="1600281634">
+            <input type=hidden name="partner" value="2088121049160648">
+            <input type=hidden name="payment_type" value="1">
+            <input type=hidden name="seller_email" value="bababus@bababus.com">
+            <input type=hidden name="service" value="create_direct_pay_by_user">
+            <input type=hidden name="sign" value="211d37eb1941429942ecee90bfcb789e">
+            <input type=hidden name="sign_type" value="MD5">
+            <input type=hidden name="subject" value="&#23458;&#36816;&#27773;&#36710;&#31080;">
+            <input type=hidden name="total_fee" value="11">
+            <input type=hidden name="show_url" value="http://keyun.96520.com.cn/">
+            <input type=hidden name="return_url" value="http://www.bababus.com/bankresults/payresultali.htm">
+            <input type=hidden name="it_b_pay" value="20m">
+            </form>
+        <script language="JavaScript">
+            document.alipaysubmit.submit();
+        </script>
+
+        Output:
+        {
+            "body": "客运汽车票（订单编号：1600281634）",
+            "seller_email": "bababus@bababus.com",
+            "total_fee": "11",
+            "service": "create_direct_pay_by_user",
+            "show_url": "http://keyun.96520.com.cn/",
+            "sign": "211d37eb1941429942ecee90bfcb789e",
+            "out_trade_no": "1600281634",
+            "payment_type": "1",
+            "notify_url": "http://www.bababus.com/bankresults/payresultalin.htm",
+            "sign_type": "MD5",
+            "partner": "2088121049160648",
+            "it_b_pay": "20m",
+            "return_url": "http://www.bababus.com/bankresults/payresultali.htm",
+            "subject": "客运汽车票"
+        }
+        """
+        soup = BeautifulSoup(content, "lxml")
+        data = {}
+        for e in soup.findAll("input"):
+            data[e.get("name")] = e.get("value")
+        return data
