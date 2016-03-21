@@ -258,6 +258,11 @@ class Flow(BaseFlow):
                 }
                 cookies = json.loads(rebot.cookies)
                 r = requests.post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+                data = self.extract_alipay(r.content)
+                pay_money = float(data["total_fee"])
+                trade_no = data["out_trade_no"]
+                if order.pay_money != pay_money or order.pay_order_no != trade_no:
+                    order.modify(pay_money=pay_money, pay_order_no=trade_no)
                 return {"flag": "html", "content": r.content}
 
         if valid_code:
