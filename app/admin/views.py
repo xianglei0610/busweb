@@ -182,12 +182,12 @@ def order_pay(order_no):
         ret = {}
     flag = ret.get("flag", "")
     if flag == "url":
-        if order.pay_money > order.order_price and not force:
-            return "订单金额小于支付金额, 禁止支付"
+        if order.pay_money != order.order_price and not force:
+            return "订单金额不等于支付金额, 禁止支付"
         return redirect(ret["content"])
     elif flag == "html":
-        if order.pay_money > order.order_price and not force:
-            return "订单金额小于支付金额, 禁止支付"
+        if order.pay_money != order.order_price and not force:
+            return "订单金额不等于支付金额, 禁止支付"
         return ret["content"]
     elif flag == "input_code":
         if token and token == TOKEN:

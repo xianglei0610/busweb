@@ -285,7 +285,11 @@ class Flow(BaseFlow):
                           data=urllib.urlencode(params),
                           headers=headers,
                           cookies=cookies,)
-        res = json.loads(trans_js_str(r.content))
+        try:
+            res = json.loads(trans_js_str(r.content))
+        except Exception, e:
+            rebot.modify(ip="")
+            raise e
         order_log.info("[locking] order: %s add shopcart, %s", order.order_no, res.get("msg", ""))
         return res
 

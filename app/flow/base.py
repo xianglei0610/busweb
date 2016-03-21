@@ -8,6 +8,7 @@ from app.constants import *
 from app import order_log, line_log
 from datetime import datetime as dte
 from tasks import issued_callback
+from bs4 import BeautifulSoup
 
 
 class Flow(object):
@@ -296,7 +297,7 @@ class Flow(object):
             "subject": "客运汽车票"
         }
         """
-        soup = BeautifulSoup(r.content, "lxml")
+        soup = BeautifulSoup(content, "lxml")
         data = {}
         for e in soup.findAll("input"):
             data[e.get("name")] = e.get("value")
