@@ -680,7 +680,7 @@ def qupiao_duanxin():
     data = request.get_data()
     access_log.info("[qupiao_duanxin-1] %s", data)
     post = json.loads(data)
-    r_phone = post["recevie_phone"].lstrip("+86")
+    r_phone = post["receive_phone"].lstrip("+86")
     s_phone = post["send_phone"].lstrip("+86")
     content = post["content"].encode("utf-8")
     today = dte.now().strftime("%Y-%m-%d")
@@ -694,7 +694,7 @@ def qupiao_duanxin():
             return jsonify({"code": 0, "message": "incorrect conent format", "data": ""})
         orders = Order.objects.filter(create_date_time__gt=today,
                                       crawl_source=SOURCE_TC,
-                                      source_account__in=[r_phone, s_phone],
+                                      #source_account__in=[r_phone, s_phone],
                                       pick_code_list__contains="%s|%s" % (pick_no, pick_code))
         if orders:
             access_log.info("[qupiao_duanxin-3] ignore, has matched before")
@@ -704,7 +704,7 @@ def qupiao_duanxin():
                                       status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING],
                                       drv_datetime=drv_datetime,
                                       bus_num=bus.strip(),
-                                      source_account__in=[r_phone, s_phone],
+                                      #source_account__in=[r_phone, s_phone],
                                       starting_name=start.strip().replace("/", ";"),
                                       )
         orders = filter(lambda o: not o.pick_code_list, orders)
