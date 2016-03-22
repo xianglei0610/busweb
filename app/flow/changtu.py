@@ -347,11 +347,10 @@ class Flow(BaseFlow):
                 if valid_code:
                     self.lock_ticket(order, valid_code=valid_code)
                 elif fail_code == "13":
-                    "http://www.changtu.com/dverifyCode/order?t=%s" % time.time()
                     data = {
-                        "cookies": {},
+                        "cookies": json.loads(rebot.cookies),
                         "headers": {"User-Agent": random.choice(BROWSER_USER_AGENT)},
-                        "valid_url": "https://passport.changtu.com/dverifyCode/login?ts=%s" % time.time()
+                        "valid_url": "http://www.changtu.com/dverifyCode/order?t=%s" % time.time(),
                     }
                     session["pay_login_info"] = json.dumps(data)
                     return {"flag": "input_code", "content": ""}
