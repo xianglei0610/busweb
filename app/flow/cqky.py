@@ -63,6 +63,22 @@ class Flow(BaseFlow):
                 self.request_del_shoptcart(rebot, ids)
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
+            ilst = re.findall(r"(\d) 张车票", res.get("msg", ""))
+            if ilst:
+                amount = int(ilst[0])
+                if amount != order.ticket_amount:
+                    order_log.info("[locking] order: %s, 锁票数量不对 %s,%s" % (order.ticket_amount, amount))
+                    # 查看购物车列表
+                    res = self.request_get_shoptcart(rebot)
+                    # 清空购物车列表
+                    for ids in res["data"][u"ShopTable"].keys():
+                        self.request_del_shoptcart(rebot, ids)
+                    lock_result.update({
+                        "result_code": 2,
+                        "result_reason": u"锁票数量不对",
+                    })
+                    return lock_result
+
             if res["success"]:
                 res = self.request_lock(order, rebot, sta_mode=mode)
                 if res["success"]:
@@ -269,7 +285,11 @@ class Flow(BaseFlow):
                           data=urllib.urlencode(params),
                           headers=headers,
                           cookies=cookies,)
-        res = json.loads(trans_js_str(r.content))
+        try:
+            res = json.loads(trans_js_str(r.content))
+        except Exception, e:
+            rebot.modify(ip="")
+            raise e
         order_log.info("[locking] order: %s add shopcart, %s", order.order_no, res.get("msg", ""))
         return res
 
@@ -496,11 +516,12 @@ class Flow(BaseFlow):
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
-                "bus_num": d["SchLocalCode"],
+                "s_sta_name": d["SchStationName"],
+                "d_sta_name": d["SchDstNodeName"],
                 "crawl_source": line.crawl_source,
                 "drv_datetime": drv_datetime,
             }
-            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
             try:
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:

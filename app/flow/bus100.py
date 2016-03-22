@@ -366,7 +366,7 @@ class Flow(BaseFlow):
                     r = requests.post(url, headers=headers, cookies=rebot.cookies)      # 这步不能删
                     pay_info = r.json()
                     order.modify(pay_url=pay_info.get('url', ""))
- 
+
                 r = requests.get(order.pay_url, headers={"User-Agent": rebot.user_agent}, cookies=rebot.cookies)
                 sel = etree.HTML(r.content)
                 params = {}
@@ -376,7 +376,7 @@ class Flow(BaseFlow):
                     if k == "payment":
                         v = 5
                     params[k] = v
- 
+
                 url = "http://pay.84100.com/payment/payment/gateWayPay.do"
                 r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params))
                 sel = etree.HTML(r.content)
