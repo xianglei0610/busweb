@@ -79,7 +79,7 @@ class Flow(BaseFlow):
                 ],
                 "ContactInfo": {
                     "Name": order.contact_info["name"],
-                    "MobileNo": order.contact_info["telephone"],
+                    "MobileNo": rebot.telephone,
                     "IDType": 1,
                     "IDCard": order.contact_info["id_number"],
                 },

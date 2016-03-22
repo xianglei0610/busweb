@@ -168,6 +168,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"city": "无锡"}})
     sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"city": "常州"}})
     sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"city": "重庆"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "四川"}})
 
     # 贵州汽车票务网
     sched.add_cron_job(bus_crawl, hour=6, minute=10, args=['gzqcp'])
