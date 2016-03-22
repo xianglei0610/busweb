@@ -261,7 +261,6 @@ class Flow(BaseFlow):
         }
         rebot = None
         for i in Bus100Rebot.objects.filter(is_active=True).order_by('-last_login_time')[0:5]:
-            print '1111111111', i.telephone, i.last_login_time
             if i.test_login_status():
                 rebot = i
                 break
@@ -301,7 +300,7 @@ class Flow(BaseFlow):
         }
         trainInfo = requests.post(url, data=payload, cookies=rebot.cookies)
         if trainInfo.status_code == 404:
-            line_log.info("[refresh-result] request 404   line:%s,%s %s ", line.crawl_source,line.s_city_name, line.line_id)
+            line_log.info("[refresh-result] request 404 line:%s,%s %s ", line.crawl_source,line.s_city_name, line.line_id)
             result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
             trainInfo = trainInfo.json()
@@ -310,7 +309,20 @@ class Flow(BaseFlow):
                 full_price = sel.xpath('//div[@class="order_detail"]/div[@class="left"]/p[@class="price"]/em/text()')
                 if full_price:
                     full_price = float(full_price[0])
-                result_info.update(result_msg="ok", update_attrs={"left_tickets": 45, "refresh_datetime": now,'full_price':full_price})
+                try:
+                    ticket_info = sel.xpath('//div[@class="order_detail"]/div[@class="right"]/p[3]/a/text()')[0]
+                    p = re.compile(r'\d+')
+                    left_ticketObj = p.findall(ticket_info)
+                    left_tickets = 0
+                    if left_ticketObj:
+                        left_tickets = int(left_ticketObj[0])
+                    if int(trainInfo['maxSellNum']) < 3:
+                        left_tickets = 0
+                except Exception, e:
+                    line_log.info("[refresh-result] request error line:%s,%s %s,%s ", line.crawl_source,line.s_city_name, line.line_id,e)
+                    left_tickets = 0
+
+                result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now,'full_price':full_price})
             elif str(trainInfo['flag']) == '1':
                 line_log.info("[refresh-result]  no left_tickets line:%s,%s %s,result:%s ", line.crawl_source,line.s_city_name, line.line_id,trainInfo)
                 result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
