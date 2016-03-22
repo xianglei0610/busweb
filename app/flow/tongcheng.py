@@ -195,6 +195,11 @@ class Flow(BaseFlow):
             result_info.update(result_msg="状态未变化")
             return result_info
         rebot = TCWebRebot.objects.get(telephone=order.source_account)
+        if not order.raw_order_no:
+            order.modify(raw_order_no=self.query_order_no(order, rebot))
+        if not order.raw_order_no:
+            result_info.update(result_msg="状态未变化, 没拿到源站订单号")
+            return result_info
         ret = self.send_order_request(rebot, order.raw_order_no)
         state = ret["state"]
         if state == "出票中":

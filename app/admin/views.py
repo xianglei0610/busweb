@@ -721,10 +721,9 @@ def qupiao_duanxin():
             "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
             "start": order.line.s_sta_name,
             "end": order.line.d_sta_name,
-            #"amount": order.ticket_amount,
             "code": pick_code,
             "no": pick_no,
-            "raw_order": order.raw_order_no,
+            "bus": order.line.bus_num,
         }
         msg_list = [dx_tmpl % dx_info]
         order.modify(pick_code_list=code_list, pick_msg_list=msg_list)
@@ -740,6 +739,42 @@ def qupiao_duanxin():
     return jsonify({"code": 1,
                     "message": "OK",
                     "data": ""})
+
+
+@admin.route('/orders/<order_no>/pickinfo', methods=['POST'])
+@login_required
+def order_pick_info(order_no):
+    """
+    提交取票信息
+    """
+    order = Order.objects.get(order_no=order_no)
+    if order.crawl_source == SOURCE_TC:
+        if order.status not in [STATUS_WAITING_ISSUE, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING]:
+            return u"订单状态不正确"
+        pick_pass = request.args.get("pick_pass")
+        pick_num = request.args.get("pick_num")
+        raw_order = request.args.get("raw_order_no")
+        msg_list = []
+        dx_tmpl = DUAN_XIN_TEMPL["江苏"]
+        code_list = ["%s|%s" % (pick_num, pick_pass)]
+        if order.pick_code_list and order.pick_code_list != code_list:
+            return "之前已经设置过不同的取票短信"
+        if raw_order and order.raw_order_no and raw_order != order.raw_order_no:
+            return "源站订单号对应不上"
+        dx_info = {
+            "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+            "start": order.line.s_sta_name,
+            "end": order.line.d_sta_name,
+            "code": pick_code,
+            "no": pick_no,
+            "bus": order.line.bus_num,
+        }
+        msg_list = [dx_tmpl % dx_info]
+        order.modify(pick_code_list=code_list, pick_msg_list=msg_list)
+        issued_callback(order.order_no)
+        return msg_list[0]
+    return "type error"
+
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
 admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))

@@ -1054,7 +1054,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_LNKY: "您%(time)s去往%(end)s的订单%(order_no)s共出票%(ticket_amount)s张，请发车前2小时内取票乘车。",
 
     # 按省来分
-    "江苏": "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
+    "江苏": "您购买了：%(time)s，%(start)s-%(end)s车次为%(bus)s的汽车票，取票号：%(no)s，取票密码：%(code)s"
 }
 
 CITY_NAME_TRANS = {
