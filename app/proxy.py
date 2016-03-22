@@ -200,7 +200,48 @@ class CqkyProxyConsumer(ProxyConsumer):
             return False
         return True
 
+
+class TongChengProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_TC
+
+    def valid_proxy(self, ipstr):
+        url = "https://passport.ly.com"
+        try:
+            r = requests.get(url,
+                             headers=headers,
+                             proxies={"https": "https://%s" % ipstr})
+        except:
+            return False
+        if r.status_code != 200:
+            return False
+
+        return True
+
+
+class CBDProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_CBD
+
+    def valid_proxy(self, ipstr):
+        url = "http://m.chebada.com/"
+        headers = {
+            "User-Agent": random.choice(MOBILE_USER_AGENG),
+        }
+        try:
+            r = requests.get(url,
+                             headers=headers,
+                             proxies={"http": "http://%s" % ipstr})
+        except:
+            return False
+        if r.status_code != 200 or "巴士管家" not in r.content:
+            return False
+        return True
+
 proxy_producer = ProxyProducer()
 
 cqky_proxy = CqkyProxyConsumer()
+tc_proxy = TongChengProxyConsumer()
+cbd_proxy = CBDProxyConsumer()
+
 proxy_producer.registe_consumer(cqky_proxy)
+proxy_producer.registe_consumer(tc_proxy)
+proxy_producer.registe_consumer(cbd_proxy)

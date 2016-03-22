@@ -107,7 +107,8 @@ def async_lock_ticket(self, order_no, retry_seq=1):
     flow = get_flow(order.crawl_source)
     try:
         flow.lock_ticket(order)
-    except:
+    except Exception, e:
+        order_log.exception("async_lock_ticket")
         self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=20, max_retries=10)
 
 
@@ -138,6 +139,9 @@ def issued_callback(order_no):
     if not cb_url:
         return
     if order.status == STATUS_ISSUE_SUCC:
+        if not order.pick_code_list:    # 没取票信息不回调
+            order_log.info("[issue-callback-ignore] no pick info")
+            return
         pick_info = []
         for i, code in enumerate(order.pick_code_list):
             pick_info.append({
@@ -154,7 +158,7 @@ def issued_callback(order_no):
                 "pick_info": pick_info,
             }
         }
-    else:
+    elif order.status in [STATUS_GIVE_BACK, STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL]:
         ret = {
             "code": RET_ISSUED_FAIL,
             "message": "fail",
@@ -164,6 +168,9 @@ def issued_callback(order_no):
                 "raw_order_no": order.raw_order_no,
             }
         }
+    else:
+        order_log.info("[issue-callback-ignore] status incorrect")
+        return
     order_log.info("[issue-callback] %s %s", order_no, str(ret))
     response = urllib2.urlopen(cb_url, json.dumps(ret), timeout=10)
     order_log.info("[issue-callback-response]%s %s", order_no, str(response))

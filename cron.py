@@ -127,14 +127,25 @@ def check_proxy():
     for ipstr in proxy_producer.all_proxy():
         if not proxy_producer.valid_proxy(ipstr):
             proxy_producer.remove_proxy(ipstr)
+    return proxy_producer.proxy_size()
 
-    data = {}
-    for con in proxy_producer.consumer_list:
-        for ipstr in con.all_proxy():
-            if not con.valid_proxy(ipstr):
-                con.remove_proxy(ipstr)
-        data[con.__class__.__name__] = con.proxy_size()
-    return data
+
+@check(run_in_local=True)
+def check_proxy_cqky():
+    from app.proxy import cqky_proxy
+    for ipstr in cqky_proxy.all_proxy():
+        if not cqky_proxy.valid_proxy(ipstr):
+            cqky_proxy.remove_proxy(ipstr)
+    return cqky_proxy.proxy_size()
+
+
+@check(run_in_local=True)
+def check_proxy_tc():
+    from app.proxy import tc_proxy as con
+    for ipstr in con.all_proxy():
+        if not con.valid_proxy(ipstr):
+            con.remove_proxy(ipstr)
+    return con.proxy_size()
 
 
 def main():
@@ -165,8 +176,8 @@ def main():
     sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['cqky'])
 
     # 江苏客运
-    sched.add_cron_job(bus_crawl, hour=18, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州"}})
-    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南京"}})
+    sched.add_cron_job(bus_crawl, hour=12, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南京"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "无锡"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "常州"}})
 
@@ -194,6 +205,8 @@ def main():
     # 代理ip相关
     sched.add_interval_job(crawl_proxy, minutes=3)
     sched.add_interval_job(check_proxy, minutes=1)
+    sched.add_interval_job(check_proxy_cqky, minutes=1)
+    sched.add_interval_job(check_proxy_tc, minutes=1)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

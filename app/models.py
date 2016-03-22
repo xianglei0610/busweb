@@ -1081,6 +1081,7 @@ class TCWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
     user_id = db.StringField()
+    ip = db.StringField(default="")
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -1104,10 +1105,10 @@ class TCWebRebot(Rebot):
                 "User-Agent": random.choice(BROWSER_USER_AGENT),
             }
         headers.update({"Content-Type": "application/x-www-form-urlencoded"})
-        r = requests.post(login_url,
-                          data=urllib.urlencode(data),
-                          headers=headers,
-                          cookies=cookies)
+        r = self.proxy_post(login_url,
+                            data=urllib.urlencode(data),
+                            headers=headers,
+                            cookies=cookies)
         cookies.update(dict(r.cookies))
         ret = r.json()
         if int(ret["state"]) == 100:    # 登录成功
@@ -1137,8 +1138,44 @@ class TCWebRebot(Rebot):
         user_url = "http://member.ly.com/Member/MemberInfomation.aspx"
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
-        resp = requests.get(user_url, headers=headers, cookies=cookies)
+        resp = self.proxy_get(user_url, headers=headers, cookies=cookies)
         return self.check_login_by_resp(resp)
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_TC, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_TC)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def proxy_get(self, url, **kwargs):
+        return requests.get(url, **kwargs)
+        # scheme = urllib2.urlparse.urlparse(url).scheme
+        # try:
+        #     r = requests.get(url,
+        #                     proxies={scheme: "%s://%s" % (scheme, self.proxy_ip)},
+        #                     timeout=10,
+        #                     **kwargs)
+        # except Exception, e:
+        #     self.modify(ip="")
+        #     raise e
+        # return r
+
+    def proxy_post(self, url, **kwargs):
+        return requests.post(url, **kwargs)
+        # scheme = urllib2.urlparse.urlparse(url).scheme
+        # try:
+        #     r = requests.post(url,
+        #                     proxies={scheme: "%s://%s" % (scheme, self.proxy_ip)},
+        #                     timeout=10,
+        #                     **kwargs)
+        # except Exception, e:
+        #     self.modify(ip="")
+        #     raise e
+        # return r
 
 
 class GzqcpWebRebot(Rebot):
