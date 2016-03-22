@@ -462,7 +462,9 @@ def all_order():
                 (lambda o: "%s," % o.source_account, "源站账号"),
                 (lambda o: o.ticket_amount, "订票数"),
                 (lambda o: o.order_price, "订单金额"),
+                (lambda o: o.pay_account, "支付账号"),
                 (lambda o: o.pay_money, "支付金额"),
+                (lambda o: o.refund_money, "退款金额"),
                 (lambda o: o.starting_name.split(";")[0], "出发城市"),
                 (lambda o: o.starting_name.split(";")[1], "出发站"),
                 (lambda o: o.destination_name.split(";")[1], "目的站"),
@@ -678,7 +680,7 @@ def qupiao_duanxin():
     data = request.get_data()
     access_log.info("[qupiao_duanxin-1] %s", data)
     post = json.loads(data)
-    r_phone = post["recevie_phone"].lstrip("+86")
+    r_phone = post["receive_phone"].lstrip("+86")
     s_phone = post["send_phone"].lstrip("+86")
     content = post["content"].encode("utf-8")
     today = dte.now().strftime("%Y-%m-%d")
@@ -692,7 +694,7 @@ def qupiao_duanxin():
             return jsonify({"code": 0, "message": "incorrect conent format", "data": ""})
         orders = Order.objects.filter(create_date_time__gt=today,
                                       crawl_source=SOURCE_TC,
-                                      source_account__in=[r_phone, s_phone],
+                                      #source_account__in=[r_phone, s_phone],
                                       pick_code_list__contains="%s|%s" % (pick_no, pick_code))
         if orders:
             access_log.info("[qupiao_duanxin-3] ignore, has matched before")
@@ -702,7 +704,7 @@ def qupiao_duanxin():
                                       status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING],
                                       drv_datetime=drv_datetime,
                                       bus_num=bus.strip(),
-                                      source_account__in=[r_phone, s_phone],
+                                      #source_account__in=[r_phone, s_phone],
                                       starting_name=start.strip().replace("/", ";"),
                                       )
         orders = filter(lambda o: not o.pick_code_list, orders)
@@ -719,10 +721,9 @@ def qupiao_duanxin():
             "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
             "start": order.line.s_sta_name,
             "end": order.line.d_sta_name,
-            #"amount": order.ticket_amount,
             "code": pick_code,
             "no": pick_no,
-            "raw_order": order.raw_order_no,
+            "bus": order.line.bus_num,
         }
         msg_list = [dx_tmpl % dx_info]
         order.modify(pick_code_list=code_list, pick_msg_list=msg_list)
@@ -738,6 +739,42 @@ def qupiao_duanxin():
     return jsonify({"code": 1,
                     "message": "OK",
                     "data": ""})
+
+
+@admin.route('/orders/<order_no>/pickinfo', methods=['POST'])
+@login_required
+def order_pick_info(order_no):
+    """
+    提交取票信息
+    """
+    order = Order.objects.get(order_no=order_no)
+    if order.crawl_source == SOURCE_TC:
+        if order.status not in [STATUS_WAITING_ISSUE, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING]:
+            return u"订单状态不正确"
+        pick_pass = request.args.get("pick_pass")
+        pick_num = request.args.get("pick_num")
+        raw_order = request.args.get("raw_order_no")
+        msg_list = []
+        dx_tmpl = DUAN_XIN_TEMPL["江苏"]
+        code_list = ["%s|%s" % (pick_num, pick_pass)]
+        if order.pick_code_list and order.pick_code_list != code_list:
+            return "之前已经设置过不同的取票短信"
+        if raw_order and order.raw_order_no and raw_order != order.raw_order_no:
+            return "源站订单号对应不上"
+        dx_info = {
+            "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+            "start": order.line.s_sta_name,
+            "end": order.line.d_sta_name,
+            "code": pick_code,
+            "no": pick_no,
+            "bus": order.line.bus_num,
+        }
+        msg_list = [dx_tmpl % dx_info]
+        order.modify(pick_code_list=code_list, pick_msg_list=msg_list)
+        issued_callback(order.order_no)
+        return msg_list[0]
+    return "type error"
+
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
 admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))

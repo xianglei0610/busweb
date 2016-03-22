@@ -195,6 +195,10 @@ class Line(db.Document):
         """
         传给客户端的格式和数据，不能轻易修改！
         """
+        delta = self.drv_datetime-dte.now()
+        left_tickets = self.left_tickets
+        if delta.total_seconds < 40*60:
+            left_tickets = 0
         return {
             "line_id": self.line_id,
             "starting_city": self.s_city_name,
@@ -207,7 +211,7 @@ class Line(db.Document):
             "vehicle_type": self.vehicle_type,
             "full_price": self.full_price,
             "half_price": self.half_price,
-            "left_tickets": self.left_tickets,
+            "left_tickets": left_tickets,
             "fee": self.fee,
             "distance": self.distance,
         }
