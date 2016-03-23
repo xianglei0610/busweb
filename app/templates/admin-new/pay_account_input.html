@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>请选择支付账号</title>
+    <link href="{{url_for('static', filename='admin-new/css/style.css')}}" rel="stylesheet" type="text/css" />
+    <link href="{{url_for('static', filename='admin-new/css/select.css')}}" rel="stylesheet" type="text/css" />
+    <script language="JavaScript" src="{{url_for('static', filename='admin-new/js/jquery.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='admin-new/js/select-ui.min.js')}}"></script>
+    <script language="javascript">
+        $(function (){
+			$(".single-select").uedSelect({width : 240});
+           
+        })
+        
+        function select_account(order_no,pay_account){
+		    var data = {
+		        order_no : order_no,
+		        pay_account :pay_account
+		    };
+		    $.ajax({
+		        url: "/orders/set_pay_account/",
+		        type : "post",
+		        data : data ,
+		        success: function(data){
+		            if(data.status==0){
+		               if (data.areadyOrderCt >= data.limit_payct){
+	                       var r=confirm('支付账号今天'+data.crawl_source_name+'已经超过'+data.limit_payct+'单，是否切换支付账号?')
+			               if (r==false){
+			               		window.location.href = '{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay';
+			               }
+			           }else{
+			                window.location.href = '{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay';
+			           }
+		            }
+		        }
+		    });
+		}
+    </script>
+</head>
+<body>
+
+   
+   <div id="btsizebox" style=" display:">
+   
+   <div class="regbox_bd">
+     <div class="signup_hd"></div>
+     <div class="signup_box">
+		<div class="pub-form reg-form">
+		        {%if token %}
+		         <input value="{{token}}" name="token" hidden="hidden" type="text">
+		         <input value="{{username}}" name="username" hidden="hidden" type="text">
+		        {%endif%}
+		        <div class="fm-li pbot-5" >
+		          
+		          <span class="fm-label"><label for="txt_userName">请选择支付账号：</label></span>
+				    <select name="pay_account"   id="pay_account" datatype="*" sucmsg=" " class="single-select" onchange="select_account({{order.order_no}},this.options[this.options.selectedIndex].value)">
+					    <option value="">请先选择支付账号</option> 
+					    {% for u in pay_accounts %}
+					    	<option value="{{u}}" {%if order.pay_account==u %} selected {%endif%}>{{u}}</option>
+					    {% endfor %}
+				    </select>
+		        </div>
+	        </div>
+        </div>
+  </div>
+   </div>
+</body>
+</html>
