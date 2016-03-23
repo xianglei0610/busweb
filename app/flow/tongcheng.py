@@ -322,7 +322,7 @@ class Flow(BaseFlow):
         if ret["header"]["rspCode"] != "0000":
             result_info.update(result_msg=desc)
             return result_info
-        state = ret["orderStateName"]
+        state = ret["body"]["orderStateName"]
         if state == "出票中":
             result_info.update({
                 "result_code": 4,

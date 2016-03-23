@@ -1143,6 +1143,9 @@ class TCAppRebot(Rebot):
         return r
 
     def login(self):
+        if self.test_login_status():
+            rebot_log.info("已登陆 tcapp %s", self.telephone)
+            return "OK"
         log_url = "http://tcmobileapi.17usoft.com/member/MembershipHandler.ashx"
         data = OrderedDict({
             "isUserLogin": "1",
@@ -1163,7 +1166,8 @@ class TCAppRebot(Rebot):
             rebot_log.info("登陆成功 tcapp %s", self.telephone)
             return "OK"
         else:
-            rebot_log.error("登陆错误 tcapp %s, %s", self.telephone, str(res))
+            self.update(is_active=False)
+            rebot_log.info("登陆错误 tcapp %s, %s", self.telephone, str(res))
         return "fail"
 
     def test_login_status(self):
