@@ -166,7 +166,7 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$NavigationControl1$o_IdCard": order.contact_info["id_number"],
                 "ctl00$FartherMain$NavigationControl1$o_IdCardConfirm": order.contact_info["id_number"],
                 "ctl00$FartherMain$NavigationControl1$radioListPayType": "OnlineAliPay,支付宝在线支付",
-                "ctl00$FartherMain$NavigationControl1$o_Email": "",
+                "ctl00$FartherMain$NavigationControl1$o_Email": "kuo86106@qq.com",
                 "ctl00$FartherMain$NavigationControl1$ContactAddress": "",
                 "ctl00$FartherMain$NavigationControl1$o_Memo": "",
                 "ctl00$FartherMain$NavigationControl1$hideIsSubmit": "true",

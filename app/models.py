@@ -528,9 +528,12 @@ class Rebot(db.Document):
             s_sta_name = order.starting_name.split(";")[1]
             if s_sta_name in sta_bind:
                 query.update(telephone__in=sta_bind[s_sta_name])
-        qs = cls.objects.filter(is_active=True, is_locked=False, **query)
+        qs = cls.objects.filter(is_active=True, is_locked=False)
         if not qs:
             return
+        sub_qs = qs.filter(**query)
+        if sub_qs:
+            qs = sub_qs
         size = qs.count()
         rd = random.randint(0, size-1)
         return qs[rd]
@@ -1084,7 +1087,7 @@ class CqkyWebRebot(Rebot):
         try:
             r = requests.post(url,
                             proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
+                            timeout=30,
                             **kwargs)
         except Exception, e:
             self.modify(ip="")

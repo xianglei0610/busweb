@@ -7,7 +7,7 @@ from flask import request, jsonify
 from assign import enqueue_wating_lock
 from app.api import api
 from app.models import Line, Order, OpenCity
-from app.flow import get_compatible_flow
+from app.flow import get_compatible_flow, get_flow
 from app import order_log
 from tasks import async_lock_ticket
 
@@ -241,7 +241,11 @@ def submit_order():
     except Line.DoesNotExist:
         order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
-    flow, line = get_compatible_flow(line)
+
+    if line.crawl_source == "cqky":
+        flow = get_flow(line.crawl_source)
+    else:
+        flow, line = get_compatible_flow(line)
 
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
