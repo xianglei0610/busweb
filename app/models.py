@@ -686,9 +686,9 @@ class ScqcpRebot(Rebot):
             "password": self.password,
             "is_encrypt": is_encrypt,
         }
-        ret = self.http_post(uri, data)
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         headers.update({"Authorization": self.token})
-        r = self.proxy_post(url, data=urllib.urlencode(data), headers=headers)
+        r = self.http_post(url, data=urllib.urlencode(data), headers=headers)
         ret = r.json()
 
         if "open_id" not in ret:
