@@ -148,6 +148,15 @@ def check_proxy_tc():
     return con.proxy_size()
 
 
+@check(run_in_local=True)
+def check_proxy_scqcp():
+    from app.proxy import scqcp_proxy as con
+    for ipstr in con.all_proxy():
+        if not con.valid_proxy(ipstr):
+            con.remove_proxy(ipstr)
+    return con.proxy_size()
+
+
 def main():
     sched = Scheduler(daemonic=False)
 
@@ -208,6 +217,7 @@ def main():
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_proxy_cqky, minutes=1)
     sched.add_interval_job(check_proxy_tc, minutes=1)
+    sched.add_interval_job(check_proxy_scqcp, minutes=1)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

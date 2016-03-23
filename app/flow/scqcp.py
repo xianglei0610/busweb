@@ -71,13 +71,14 @@ class Flow(BaseFlow):
         单纯向源站发锁票请求
         """
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, "/api/v1/telecom/lock")
-        request = urllib2.Request(url)
-        request.add_header('User-Agent', rebot.user_agent)
-        request.add_header('Authorization', rebot.token)
-        request.add_header('Content-type', "application/json; charset=UTF-8")
-        qstr = urllib.urlencode(data)
-        response = urllib2.urlopen(request, qstr, timeout=20)
-        return json.loads(response.read())
+        headers = {
+            "User-Agent": rebot.user_agent,
+            "Authorization": rebot.token,
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
+        ret = r.json()
+        return ret
 
     def do_refresh_issue(self, order):
         result_info = {
@@ -135,13 +136,13 @@ class Flow(BaseFlow):
         data = {"open_id": rebot.open_id}
         uri = "/api/v1/ticket_lines/query_order"
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
-        request = urllib2.Request(url)
-        request.add_header('User-Agent', rebot.user_agent)
-        request.add_header('Authorization', rebot.token)
-        request.add_header('Content-type', "application/json; charset=UTF-8")
-        qstr = urllib.urlencode(data)
-        response = urllib2.urlopen(request, qstr, timeout=20)
-        ret = json.loads(response.read())
+        headers = {
+            "User-Agent": rebot.user_agent,
+            "Authorization": rebot.token,
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        r = self.post(url, data=urllib.urlencode(data), headers=headers)
+        ret = r.json()
 
         ticket_ids = order.lock_info["ticket_ids"]
         amount = len(ticket_ids)
@@ -172,15 +173,24 @@ class Flow(BaseFlow):
             drv_date="%s %s" % (line.drv_date, line.drv_time),
             sign_id=line.extra_info["sign_id"],
         )
-        ua = random.choice(MOBILE_USER_AGENG)
-        ret = ScqcpRebot.get_one().http_post("/scqcp/api/v2/ticket/query_plan_info", params, user_agent=ua)
+        rebot = ScqcpRebot.get_one()
+        uri = "/scqcp/api/v2/ticket/query_plan_info"
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        headers = {
+            "User-Agent": rebot.user_agent,
+            "Authorization": rebot.token,
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        r = self.post(url, data=urllib.urlencode(params), headers=headers)
+        ret = r.json()
+
         now = dte.now()
         if ret["status"] == 1:
             if ret["plan_info"]:
                 raw = ret["plan_info"][0]
                 info = {
                     "full_price": raw["full_price"],
-                    "fee": raw["server_price"],
+                    "fee": raw["service_price"],
                     "left_tickets": raw["amount"],
                     "refresh_datetime": now,
                 }
@@ -197,6 +207,11 @@ class Flow(BaseFlow):
         }
         pay_url = order.pay_url
         code = valid_code
+        try:
+            rebot = ScqcpRebot.objects.get(telephone=order.source_account)
+        except:
+            with ScqcpRebot.get_and_lock(order) as new:
+                rebot = new
         # 验证码处理
         if code:
             data = json.loads(session["pay_login_info"])
@@ -217,11 +232,9 @@ class Flow(BaseFlow):
             im = Image.open(tmpIm)
             code = pytesseract.image_to_string(im)
 
-        accounts = SOURCE_INFO[SOURCE_SCQCP]["accounts"]
-        passwd, _ = accounts[order.source_account]
         data = {
-            "uname": order.source_account,
-            "passwd": passwd,
+            "uname": rebot.telephone,
+            "passwd": rebot.password,
             "code": code,
             "token": token,
         }
@@ -250,6 +263,14 @@ class Flow(BaseFlow):
 
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             r = requests.post(info_url, data=data, headers=headers, cookies=cookies)
+            sel = etree.HTML(r.content)
+            try:
+                pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
+                if order.pay_order_no != pay_order_no:
+                    order.update(pay_order_no=pay_order_no)
+            except:
+                pass
+
             return {"flag": "html", "content": r.content}
         elif ret["msg"] == "验证码不正确":
             data = {

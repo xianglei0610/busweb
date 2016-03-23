@@ -593,6 +593,7 @@ class ScqcpRebot(Rebot):
     user_agent = db.StringField()
     token = db.StringField()
     open_id = db.StringField()
+    ip = db.StringField(default="")
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -607,25 +608,89 @@ class ScqcpRebot(Rebot):
     def on_remove_doing_order(self, order):
         self.modify(is_locked=False)
 
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def http_get(self, url, **kwargs):
+        try:
+            r = requests.get(url,
+                            proxies={"http": "http://%s" % self.proxy_ip},
+                            timeout=10,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
+        return r
+
+    def http_post(self, url, **kwargs):
+        try:
+            r = requests.post(url,
+                            proxies={"http": "http://%s" % self.proxy_ip},
+                            timeout=10,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
+        return r
+
+    @classmethod
+    def get_one(cls, order=None):
+        city_bind = SOURCE_INFO[cls.crawl_source].get("city_bind", {})
+        query = {}
+        if order and city_bind:
+            s_city_name = order.starting_name.split(";")[0]
+            if s_city_name in city_bind:
+                query.update(telephone__in=city_bind[s_city_name])
+            else:
+                init_tel = []
+                for _, tel in city_bind.items():
+                    init_tel.extend(tel)
+                query.update(telephone__nin=init_tel)
+        qs = cls.objects.filter(is_active=True, is_locked=False, **query)
+        if not qs:
+            return
+        size = qs.count()
+        rd = random.randint(0, size-1)
+        return qs[rd]
+
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
         device = "android" if "android" in ua else "ios"
 
         # 获取token
         uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
-        ret = self.http_post(uri, "")
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        headers = {
+            "User-Agent": ua,
+            "Authorization": self.token,
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        r = self.http_get(url, headers=headers)
+        ret = r.json()
         token = ret["token"]
         self.user_agent = ua
         self.token = token
 
+        is_encrypt = self.is_encrypt or 1
         # 登陆
         uri = "/api/v1/user/login_phone"
         data = {
             "username": self.telephone,
             "password": self.password,
-            "is_encrypt": self.is_encrypt,
+            "is_encrypt": is_encrypt,
         }
         ret = self.http_post(uri, data)
+        headers.update({"Authorization": self.token})
+        r = self.proxy_post(url, data=urllib.urlencode(data), headers=headers)
+        ret = r.json()
+
         if "open_id" not in ret:
             # 登陆失败
             self.is_active = False
@@ -637,19 +702,26 @@ class ScqcpRebot(Rebot):
             self.is_active = True
             self.last_login_time = dte.now()
             self.open_id = ret["open_id"]
+            self.is_encrypt = is_encrypt
             self.save()
             return "OK"
 
-    def http_post(self, uri, data, user_agent="", token=""):
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
-        request = urllib2.Request(url)
-        request.add_header('User-Agent', user_agent or self.user_agent)
-        request.add_header('Authorization', token or self.token)
-        request.add_header('Content-type', "application/json; charset=UTF-8")
-        qstr = urllib.urlencode(data)
-        response = urllib2.urlopen(request, qstr, timeout=30)
-        ret = json.loads(response.read())
-        return ret
+    def test_login_status(self):
+        uri = "/scqcp/api/v2/ticket/query_rider"
+        check_url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        headers = {
+            "User-Agent": self.user_agent,
+            "Authorization": self.token,
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        data = {
+            "open_id": self.open_id,
+        }
+        res = self.proxy_post(check_url, data=urllib.urlencode(data), headers=headers)
+        ret = res.json()
+        if ret['status'] == 1:
+            return 1
+        return 0
 
 
 class CBDRebot(Rebot):

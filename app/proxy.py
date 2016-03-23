@@ -12,6 +12,7 @@ import requests
 import json
 import random
 import urllib
+import urllib2
 import re
 
 from app.constants import *
@@ -205,6 +206,47 @@ class CqkyProxyConsumer(ProxyConsumer):
         return True
 
 
+
+class ScqcpProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_SCQCP
+
+    @property
+    def current_proxy(self):
+        rds = get_redis("default")
+        ipstr = rds.get(RK_PROXY_CUR_SCQCP)
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        rds.set(RK_PROXY_CUR_SCQCP, ipstr)
+        return ipstr
+
+    def clear_current_proxy(self):
+        rds = get_redis("default")
+        return rds.set(RK_PROXY_CUR_SCQCP, "")
+
+    def valid_proxy(self, ipstr):
+        ua = random.choice(MOBILE_USER_AGENG)
+        device = "android" if "android" in ua else "ios"
+
+        # 获取token
+        uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        headers = {
+            "User-Agent": ua,
+            "Authorization": '',
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        try:
+            r = requests.get(url, headers=headers, timeout=4, proxies={"http": "http://%s" % ipstr})
+            ret = r.json()
+            print '33333333333333333',ret
+            if ret["token"]:
+                return True
+        except:
+            return False
+        return True
+
+
 class TongChengProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_TC
 
@@ -245,7 +287,9 @@ proxy_producer = ProxyProducer()
 cqky_proxy = CqkyProxyConsumer()
 tc_proxy = TongChengProxyConsumer()
 cbd_proxy = CBDProxyConsumer()
+scqcp_proxy = ScqcpProxyConsumer()
 
 proxy_producer.registe_consumer(cqky_proxy)
 proxy_producer.registe_consumer(tc_proxy)
 proxy_producer.registe_consumer(cbd_proxy)
+proxy_producer.registe_consumer(scqcp_proxy)
