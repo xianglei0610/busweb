@@ -20,8 +20,8 @@ def dequeue_wating_lock():
     if not no:
         return None
     orderObj = Order.objects.get(order_no=no)
-    if orderObj.crawl_source in (SOURCE_SCQCP,):
-        orderct = Order.objects.filter(kefu_order_status__ne=1, status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]).count()
+    if orderObj.crawl_source == SOURCE_SCQCP:
+        orderct = Order.objects.filter(kefu_order_status__ne=1, crawl_source=SOURCE_SCQCP, status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]).count()
         if orderct > 0:
             rds.lpush(RK_WATING_LOCK_ORDERS, orderObj.order_no)
             return None

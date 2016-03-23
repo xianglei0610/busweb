@@ -717,7 +717,7 @@ class ScqcpRebot(Rebot):
         data = {
             "open_id": self.open_id,
         }
-        res = self.proxy_post(check_url, data=urllib.urlencode(data), headers=headers)
+        res = self.http_post(check_url, data=urllib.urlencode(data), headers=headers)
         ret = res.json()
         if ret['status'] == 1:
             return 1
