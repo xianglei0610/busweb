@@ -141,7 +141,7 @@ class Flow(BaseFlow):
             "Authorization": rebot.token,
             "Content-Type": "application/json; charset=UTF-8",
         }
-        r = self.post(url, data=urllib.urlencode(data), headers=headers)
+        r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
         ret = r.json()
 
         ticket_ids = order.lock_info["ticket_ids"]
@@ -181,7 +181,7 @@ class Flow(BaseFlow):
             "Authorization": rebot.token,
             "Content-Type": "application/json; charset=UTF-8",
         }
-        r = self.post(url, data=urllib.urlencode(params), headers=headers)
+        r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers)
         ret = r.json()
 
         now = dte.now()
