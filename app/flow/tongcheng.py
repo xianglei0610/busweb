@@ -9,7 +9,7 @@ import requests
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import Line, TCWebRebot, Order
+from app.models import Line, TCWebRebot, Order, TCAppRebot
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
@@ -19,7 +19,121 @@ class Flow(BaseFlow):
 
     name = "tongcheng"
 
+    def do_lock_ticket_by_app(self, order):
+        lock_result = {
+            "lock_info": {},
+            "source_account": order.source_account,
+            "result_code": 0,
+            "result_reason": "",
+            "pay_url": "",
+            "raw_order_no": "",
+            "expire_datetime": "",
+            "pay_money": 0,
+        }
+        with TCAppRebot.get_and_lock(order) as rebot:
+            line = order.line
+
+            is_login = rebot.test_login_status()
+            if not is_login:
+                if rebot.login() == "OK":
+                    is_login = 1
+            # 未登录
+            if not is_login:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": u"账号未登录",
+                })
+                return lock_result
+
+            # 构造表单参数
+            riders = []
+            for r in order.riders:
+                riders.append({
+                    "name": unicode(r["name"]),
+                    "IDType": "1",
+                    "IDCard": r["id_number"],
+                    "passengersType": "0",
+                })
+            data = {
+                "memberId": rebot.user_id,
+                "ticketsInfo": [{
+                    "coachType": line.vehicle_type,
+                    "coachNo": line.bus_num,
+                    "departure": line.s_city_name,
+                    "destination": line.d_city_name,
+                    "dptStation": line.s_sta_name,
+                    "arrStation": line.d_sta_name,
+                    "dptDateTime": "%sT%s:00" % (line.drv_date, line.drv_time),
+                    "dptDate": line.drv_date,
+                    "dptTime": line.drv_time,
+                    "ticketPrice": line.full_price,
+                    "ticketFee": 0,
+                    "ticketLeft": "0",
+                    "canBooking": "true",
+                    "bookingType": 1,
+                    "timePeriodType": 0,
+                    "dptStationCode": line.s_sta_id,
+                    "exData1": "",
+                    "exData2": "",
+                    "runTime": "",
+                    "distance": "",
+                    "runThrough": "",
+                    "AgentType": 1,
+                    "ExtraReturnFlag": "N",
+                    "ExtraSchFlag": 0,
+                    "$$hashKey": "017",
+                    "optionType": 1
+                }],
+                "contactInfo": {
+                    "name": order.contact_info["name"],
+                    "IDCard": order.contact_info["id_number"],
+                    "IDType": 1,
+                    "mobileNo": rebot.telephone
+                },
+                "passengersInfo": riders,
+                "totalAmount": order.order_price,
+                "stationCode": line.s_sta_id,
+                "AlternativeFlag": 0,
+                "isSubscribe": "false",
+                "count": order.ticket_amount,
+                "coachType": line.vehicle_type,
+                "activityId": 0,
+                "reductAmount": 0,
+                "reduceType": 0,
+                "activityType": 0,
+                "couponCode": "",
+                "couponAmount": 0,
+                "insuranceId": 0,
+                "insuranceAmount": 0,
+                "sessionId": "1663255238"
+            }
+            url = "http://tcmobileapi.17usoft.com/bus/OrderHandler.ashx"
+            r = rebot.http_post(url, "createbusorder", data)
+            ret = r.json()["response"]
+            desc = ret["header"]["rspDesc"]
+            if ret["header"]["rspCode"] == "0002":
+                expire_time = dte.now()+datetime.timedelta(seconds=20*60)
+                lock_result.update({
+                    "result_code": 1,
+                    "result_reason": desc,
+                    "pay_url": "",
+                    "raw_order_no":  ret["body"]["orderSerialId"],
+                    "expire_datetime": expire_time,
+                    "source_account": rebot.telephone,
+                    "pay_money": float(ret["body"]["payAmount"]),
+                    "lock_info": ret["body"],
+                })
+            else:
+                lock_result.update({
+                    "result_code": 0,
+                    "result_reason": desc,
+                    "source_account": rebot.telephone,
+                })
+            return lock_result
+
     def do_lock_ticket(self, order):
+        return self.do_lock_ticket_by_app(order)
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
@@ -45,7 +159,6 @@ class Flow(BaseFlow):
                     "result_reason": "账号未登录",
                 })
                 return lock_result
-
 
             # 构造表单参数
             riders = []
@@ -184,7 +297,54 @@ class Flow(BaseFlow):
             "contact_phone": contact_phone,
         }
 
+    def send_order_request_by_app(self, order):
+        rebot = TCAppRebot.objects.get(telephone=order.source_account)
+        data = {
+            "memberid": rebot.user_id,
+            "orderId": order.lock_info["orderId"],
+        }
+        url = "http://tcmobileapi.17usoft.com/bus/OrderHandler.ashx"
+        r = rebot.http_post(url, "getbusorderdetail", data)
+        return r.json()["response"]
+
+    def do_refresh_issue_by_app(self, order):
+        result_info = {
+            "result_code": 0,
+            "result_msg": "",
+            "pick_code_list": [],
+            "pick_msg_list": [],
+        }
+        if not self.need_refresh_issue(order):
+            result_info.update(result_msg="状态未变化")
+            return result_info
+        ret = self.send_order_request_by_app(order)
+        desc = ret["header"]["rspDesc"]
+        if ret["header"]["rspCode"] != "0000":
+            result_info.update(result_msg=desc)
+            return result_info
+        state = ret["orderStateName"]
+        if state == "出票中":
+            result_info.update({
+                "result_code": 4,
+                "result_msg": state,
+            })
+        elif state == "已取消":
+            result_info.update({
+                "result_code": 2,
+                "result_msg": state,
+            })
+        elif state=="出票成功":
+            body = ret["body"]
+            result_info.update({
+                "result_code": 1,
+                "result_msg": state,
+                "pick_code_list": ["%s|%s" % (body["getTicketNo"], body["getTicketPassWord"])],
+                "pick_msg_list": [body["getTicketInfo"]],
+            })
+        return result_info
+
     def do_refresh_issue(self, order):
+        return self.do_refresh_issue_by_app(order)
         result_info = {
             "result_code": 0,
             "result_msg": "",
@@ -234,7 +394,16 @@ class Flow(BaseFlow):
             if order.status == STATUS_LOCK_RETRY:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
-                return {"flag": "url", "content": order.pay_url}
+                headers = {
+                    "User-Agent": rebot.user_agent,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                }
+                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.order_price)
+                r = rebot.proxy_post("http://member.ly.com/bus/Pay/MobileGateway", data=form_str, headers=headers, cookies=json.loads(rebot.cookies))
+                res = r.json()["response"]
+                if res["header"]["rspCode"] == "0000":
+                    return {"flag": "url", "content": res["body"]["PayUrl"]}
+                return {"flag": "html", "content": r.content}
         else:
             login_form = "https://passport.ly.com"
             valid_url = "https://passport.ly.com/AjaxHandler/ValidCode.ashx?action=getcheckcode&name=%s" % rebot.telephone
