@@ -8,6 +8,7 @@ import urlparse
 import assign
 import re
 
+from collections import OrderedDict
 from app.constants import *
 from datetime import datetime as dte
 from flask import json
@@ -1081,6 +1082,103 @@ class CqkyWebRebot(Rebot):
         return 0
 
 
+class TCAppRebot(Rebot):
+    member_id = db.StringField()
+    user_id = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "tcapp_rebot",
+    }
+    crawl_source = SOURCE_TC
+    is_for_lock = True
+
+    def http_post(self, url, service_name, data):
+        stime = str(int(time.time()*1000))
+        account_id = "c26b007f-c89e-431a-b8cc-493becbdd8a2"
+        version = "20111128102912"
+        s="AccountID=%s&ReqTime=%s&ServiceName=%s&Version=%s" % (account_id, stime, service_name, version)
+        digital_sign = md5(s+"8874d8a8b8b391fbbd1a25bda6ecda11")
+        params = OrderedDict()
+        params["request"] = OrderedDict()
+        s="""{"request":{"body":{"clientInfo":{"clientIp":"192.168.111.104","deviceId":"898fd52b362f6a9c","extend":"4^4.4.4,5^MI 4W,6^-1","mac":"14:f6:5a:b9:d1:4a","manufacturer":"Xiaomi","networkType":"wifi","pushInfo":"d//igwEhgBGCI2TG6lWqlK1bASX03rDfA3JbL/g8WWZAjh0HL+Xl4O6Gnz/Md0IMtK5xaQLx2gx0lrKjigw0va5kMl4fwRtaflQwB/JWvEE=","refId":"16359978","tag":"|^^0^1^91^0^|","versionNumber":"8.0.5","versionType":"android"},"isUserLogin":"1","password":"X8OreO1LsvFYfESF/pau4chTlTsG2LB9bSaTxbq2GYcesBmrBKgsb7bFy9F/K5AC","loginName":"17051322878"},"header":{"accountID":"c26b007f-c89e-431a-b8cc-493becbdd8a2","digitalSign":"d9f62ee2d12b65eca96e5f14f13ff733","reqTime":"1458673470243","serviceName":"Loginv2","version":"20111128102912"}}}"""
+        params = {
+            "request": {
+                "body": {
+                    "clientInfo": {
+                        "clientIp": "192.168.111.104",
+                        "deviceId": "898fd52b362f6a9c",
+                        "extend": "4^4.4.4,5^MI 4W,6^-1",
+                        "mac": "14:f6:5a:b9:d1:4a",
+                        "manufacturer": "Xiaomi",
+                        "networkType": "wifi",
+                        "pushInfo": "d//igwEhgBGCI2TG6lWqlK1bASX03rDfA3JbL/g8WWZAjh0HL+Xl4O6Gnz/Md0IMtK5xaQLx2gx0lrKjigw0va5kMl4fwRtaflQwB/JWvEE=",
+                        "refId": "16359978",
+                        "tag": "|^^0^1^91^0^|",
+                        "versionNumber": "8.0.5",
+                        "versionType": "android",
+                    },
+                },
+                "header": {
+                    "accountID": account_id,
+                    "digitalSign": digital_sign,
+                    "reqTime": stime,
+                    "serviceName": service_name,
+                    "version": version,
+                }
+            }
+        }
+        params["request"]["body"].update(data)
+        body = json.dumps(params)
+        req_data = md5(body+"4957CA66-37C3-46CB-B26D-E3D9DCB51535")
+        headers = {
+            "secver": 5,
+            "reqdata": req_data,
+            "alisign": "ab88e5c9-0266-4526-872c-7a9e15ce78fd",
+            "sxx": "f28c70d32017edb57cfe4d6fc1a9d5b2",
+            "Content-Type": "application/json",
+            "User-Agent": "okhttp/2.5.0",
+        }
+        r = requests.post(url, data=body, headers=headers)
+        return r
+
+    def login(self):
+        log_url = "http://tcmobileapi.17usoft.com/member/MembershipHandler.ashx"
+        data = OrderedDict({
+            "isUserLogin": "1",
+            "password": SOURCE_INFO[SOURCE_TC]["pwd_encode_app"][self.password],
+            "loginName": self.telephone
+        })
+        data["isUserLogin"] = "1"
+        data["password"] = SOURCE_INFO[SOURCE_TC]["pwd_encode_app"][self.password]
+        data["loginName"] = self.telephone
+        r = self.http_post(log_url, "Loginv2", data)
+        res = r.json()["response"]
+        if res["header"]["rspCode"] == "0000":
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.member_id = res["body"]["memberId"]
+            self.user_id = res["body"]["externalMemberId"]
+            self.save()
+            rebot_log.info("登陆成功 tcapp %s", self.telephone)
+            return "OK"
+        else:
+            rebot_log.error("登陆错误 tcapp %s, %s", self.telephone, str(res))
+        return "fail"
+
+    def test_login_status(self):
+        user_url = "http://tcmobileapi.17usoft.com/member/membershiphandler.ashx"
+        data={
+            "memberId": self.member_id,
+            "loginName": self.telephone,
+        }
+        r = self.http_post(user_url, "QueryMemberInfo", data)
+        res = r.json()["response"]
+        if res["header"]["rspCode"] == "0000":
+            return 1
+        return 0
+
+
 class TCWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
@@ -1092,7 +1190,7 @@ class TCWebRebot(Rebot):
         "collection": "tc_rebot",
     }
     crawl_source = SOURCE_TC
-    is_for_lock = True
+    is_for_lock = False
 
     def login(self, headers=None, cookies={}, valid_code=""):
         login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
