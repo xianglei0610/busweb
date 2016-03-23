@@ -196,7 +196,11 @@ class CqkyProxyConsumer(ProxyConsumer):
             res = json.loads(content)
         except:
             return False
-        if res["success"] != "true" or not res["data"]:
+        try:
+            if res["success"] != "true" or not res["data"]:
+                return False
+        except:
+            print res
             return False
         return True
 

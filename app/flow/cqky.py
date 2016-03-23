@@ -591,7 +591,7 @@ class Flow(BaseFlow):
             }
             r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
             res = json.loads(trans_js_str(r.content))
-            order_list.extends(res["data"])
+            order_list.extend(res["data"])
 
         for d in order_list:
             if d["OrderStatus"] == "未支付" and float(d["OrderMoney"]) == order.order_price and int(d["TicketCount"]) == order.ticket_amount:
@@ -602,6 +602,6 @@ class Flow(BaseFlow):
                         return
                 except Order.DoesNotExist:
                     old = order.raw_order_no
-                    order.modify(raw_order_no=raw_order, pay_money=float(d["Price"]))
+                    order.modify(raw_order_no=raw_order, pay_money=float(d["OrderMoney"]))
                     order_log.info("order:%s change raw_order_no %s to %s", order.order_no, old, order.raw_order_no)
                     return
