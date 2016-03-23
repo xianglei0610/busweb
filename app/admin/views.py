@@ -157,6 +157,20 @@ def src_code_input(order_no):
                            )
 
 
+@admin.route('/orders/<order_no>/pay_account_input', methods=['GET'])
+@login_required
+def pay_account_input(order_no):
+    order = Order.objects.get(order_no=order_no)
+    token = request.args.get("token", "")
+    username = request.args.get("username", '')
+    return render_template('admin-new/pay_account_input.html',
+                           order=order,
+                           token=token,
+                           username=username,
+                           pay_accounts=PAY_ACCOUNTS
+                           )
+
+
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 @login_required
 def order_pay(order_no):
@@ -167,6 +181,12 @@ def order_pay(order_no):
     force = int(request.args.get("force", "0"))
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY]:
         return redirect(url_for("admin.wating_deal_order"))
+    if not order.pay_account:
+        if token and token == TOKEN:
+            return redirect(url_for("admin.pay_account_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
+        else:
+            return redirect(url_for("admin.pay_account_input", order_no=order_no))
+
     r = getRedisObj()
     limit_key = LAST_PAY_CLICK_TIME % order_no
     click_time = r.get(limit_key)
@@ -623,6 +643,24 @@ def kefu_on_off():
     is_switch = int(request.form.get('is_switch', 0))
     current_user.modify(is_switch=is_switch)
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
+
+
+@admin.route('/orders/set_pay_account/', methods=['POST'])
+@login_required
+def set_pay_account():
+    today = dte.now().strftime("%Y-%m-%d")
+    order_no = request.form.get("order_no", '')
+    pay_account = request.form.get("pay_account", '')
+    if not (order_no and pay_account):
+        return jsonify({"status": -1, "msg": "参数错误"})
+    orderObj = Order.objects.get(order_no=order_no)
+    orderObj.modify(pay_account=pay_account)
+    areadyOrderCt = Order.objects.filter(status=14, pay_account=pay_account,\
+                                         crawl_source=orderObj.crawl_source, create_date_time__gte=today).count()
+    limit_payct = SOURCE_INFO.get(orderObj.crawl_source).get('limit_payct', DEFALUT_LIMIT_PAYCT)
+    crawl_source_name = SOURCE_INFO.get(orderObj.crawl_source).get('name', '')
+    return jsonify({"status": 0, 'areadyOrderCt': areadyOrderCt, "limit_payct":limit_payct,
+                    'crawl_source_name': crawl_source_name})
 
 
 @admin.route('/fangbian/callback', methods=['POST'])

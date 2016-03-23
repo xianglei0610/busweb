@@ -19,7 +19,13 @@ def dequeue_wating_lock():
     no = rds.rpop(RK_WATING_LOCK_ORDERS)
     if not no:
         return None
-    return Order.objects.get(order_no=no)
+    orderObj = Order.objects.get(order_no=no)
+    if orderObj.crawl_source in (SOURCE_SCQCP,):
+        orderct = Order.objects.filter(kefu_order_status__ne=1, status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]).count()
+        if orderct > 0:
+            rds.lpush(RK_WATING_LOCK_ORDERS, orderObj.order_no)
+            return None
+    return orderObj
 
 
 def wating_lock_size():
