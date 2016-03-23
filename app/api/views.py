@@ -241,11 +241,7 @@ def submit_order():
     except Line.DoesNotExist:
         order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
-
-    if line.crawl_source == "cqky":
-        flow = get_flow(line.crawl_source)
-    else:
-        flow, line = get_compatible_flow(line)
+    flow, line = get_compatible_flow(line)
 
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
