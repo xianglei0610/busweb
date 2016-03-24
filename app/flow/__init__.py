@@ -3,6 +3,7 @@ import os
 import importlib
 
 from app.utils import weight_choice
+from datetime import datetime as dte
 from app.constants import *
 
 flow_list = {}
@@ -35,8 +36,13 @@ def get_compatible_flow(line):
         for src, w in weight_config.items():
             if src in weights:
                 weights[src] = w
+    # 江苏省网不卖当天的票
+    if line.s_province == "江苏" and line.drv_date == dte.now().strftime("%Y-%m-%d"):
+        weights.update(jsky=0)
 
     choose = weight_choice(weights)
     from app.models import Line
+    if not choose:
+        return None, None
     new_line = Line.objects.get(line_id=line.compatible_lines[choose])
     return get_flow(choose), new_line
