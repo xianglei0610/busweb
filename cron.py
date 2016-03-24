@@ -213,9 +213,18 @@ def main():
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['kuaiba'], kwargs={"crawl_kwargs":{"province": "北京"}})
 
     # 辽宁省网
-    sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['lnky'], kwargs={"crawl_kwargs":{"city": "沈阳市"}})
-    sched.add_cron_job(bus_crawl, hour=16, minute=50, args=['lnky'], kwargs={"crawl_kwargs":{"city": "大连市"}})
-    sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['lnky'], kwargs={"crawl_kwargs":{"city": "锦州市"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "沈阳市"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=20, args=['lnky'], kwargs={"crawl_kwargs":{"city": "大连市"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['lnky'], kwargs={"crawl_kwargs":{"city": "锦州市"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "辽阳市"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "营口市"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "铁岭市"}})
+    sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "鞍山市"}})
+    sched.add_cron_job(bus_crawl, hour=20, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "抚顺市"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "本溪市"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "丹东市"}})
+    sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "阜新市"}})
+    sched.add_cron_job(bus_crawl, hour=22, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "葫芦岛市"}})
 
 
     # 代理ip相关
