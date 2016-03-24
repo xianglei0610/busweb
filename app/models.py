@@ -251,6 +251,19 @@ class Line(db.Document):
             d_line.update({self.crawl_source: self.line_id})
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
+        elif self.s_province == "四川":
+            # 四川汽车票务网, 方便网
+            # 方便网和四川目的地城市差别太多，所以不匹配目的地城市
+            s_city = self.s_city_name.rstrip("市")
+            qs = Line.objects.filter(s_sta_name=self.s_sta_name,
+                                     s_city_name__startswith=unicode(s_city),
+                                     d_sta_name=self.d_sta_name,
+                                     bus_num =self.bus_num,
+                                     drv_datetime=self.drv_datetime)
+            d_line = {obj.crawl_source: obj.line_id for obj in qs}
+            d_line.update({self.crawl_source: self.line_id})
+            self.modify(compatible_lines=d_line)
+            return self.compatible_lines
         else:
             s_city = CITY_NAME_TRANS.get(self.s_city_name, self.s_city_name)
             d_city = CITY_NAME_TRANS.get(self.d_city_name, self.d_city_name)
