@@ -173,4 +173,4 @@ def issued_callback(order_no):
         return
     order_log.info("[issue-callback] %s %s", order_no, str(ret))
     response = urllib2.urlopen(cb_url, json.dumps(ret), timeout=10)
-    order_log.info("[issue-callback-response]%s %s", order_no, str(response))
+    order_log.info("[issue-callback-response]%s %s", order_no, response.read())

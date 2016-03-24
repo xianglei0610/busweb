@@ -4,6 +4,7 @@
 import random
 import json
 import urllib
+import urllib2
 import datetime
 import requests
 
@@ -399,16 +400,38 @@ class Flow(BaseFlow):
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
                 form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.order_price)
-                r = rebot.proxy_post("http://member.ly.com/bus/Pay/MobileGateway", data=form_str, headers=headers, cookies=json.loads(rebot.cookies))
+                r = rebot.proxy_post("http://member.ly.com/bus/Pay/MobileGateway",
+                                     data=form_str,
+                                     headers=headers,
+                                     cookies=json.loads(rebot.cookies))
                 res = r.json()["response"]
                 if res["header"]["rspCode"] == "0000":
-                    return {"flag": "url", "content": res["body"]["PayUrl"]}
+                    pay_url = res["body"]["PayUrl"]
+                    r = rebot.proxy_get(pay_url, headers=headers)
+                    soup = BeautifulSoup(r.content, "lxml")
+                    sign = soup.select("#aliPay").get("data-sign")
+                    partner = soup.find("input", name="partner")
+                    serial = soup.find("input", name="serial")
+                    pay_type = soup.select("#aliPay").get("data-value")
+                    params = {
+                        "sign": sign,
+                        "partner": partner,
+                        "serial": serial,
+                        "pay_data": pay_type,
+                    }
+                    alipay_url = "https://pay.ly.com/pc/payment/GatewayPay"
+                    form_str = urllib.urlencode(params)
+                    r = rebot.proxy_post(alipay_url, headers=headers, data=form_str, verify=False)
+                    data = self.extract_alipay(r.content)
+                    if order.pay_money != pay_money or order.pay_order_no != trade_no:
+                        order.modify(pay_money=pay_money, pay_order_no=trade_no)
+                    return {"flag": "html", "content": r.content}
                 return {"flag": "html", "content": r.content}
         else:
             login_form = "https://passport.ly.com"
             valid_url = "https://passport.ly.com/AjaxHandler/ValidCode.ashx?action=getcheckcode&name=%s" % rebot.telephone
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-            r = rebot.proxy_get(login_form, headers=headers)
+            r = rebot.proxy_get(login_form, headers=headers, verify=False)
             data = {
                 "cookies": dict(r.cookies),
                 "headers": headers,

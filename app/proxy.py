@@ -201,7 +201,6 @@ class CqkyProxyConsumer(ProxyConsumer):
             if res["success"] != "true" or not res["data"]:
                 return False
         except:
-            print res
             return False
         return True
 
@@ -250,16 +249,17 @@ class TongChengProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_TC
 
     def valid_proxy(self, ipstr):
-        url = "https://passport.ly.com"
+        url = "http://www.ly.com/"
         try:
+            ua = random.choice(BROWSER_USER_AGENT)
             r = requests.get(url,
-                             headers=headers,
-                             proxies={"https": "https://%s" % ipstr})
+                             headers={"User-Agent": ua},
+                             timeout=3,
+                             proxies={"http": "http://%s" % ipstr})
         except:
             return False
-        if r.status_code != 200:
+        if r.status_code != 200 or "同程旅游" not in r.content:
             return False
-
         return True
 
 
