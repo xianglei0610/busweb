@@ -355,6 +355,7 @@ SOURCE_INFO = {
     },
     SOURCE_BABA: {
         "name": "巴巴",
+        "limit_payct": 100,
         "website": "http://www.bababus.com/",
         "accounts": {
             #"15575101324": ("cibRpL", ''),
@@ -384,6 +385,7 @@ SOURCE_INFO = {
     },
     SOURCE_TC: {
         "name": "同程",
+        "limit_payct": 50,
         "website": "http://www.ly.com/",
         "accounts": {
             #"15575101324": ("cibRpL0", ''),
@@ -486,6 +488,7 @@ SOURCE_INFO = {
     },
     SOURCE_CQKY: {
         "name": "重庆客运",
+        "limit_payct": 100,
         "website": "http://http://www.96096kp.com/",
         "accounts": {
             "13288814480":("123456", ""),
