@@ -18,8 +18,12 @@
 		        order_no : order_no,
 		        pay_account :pay_account
 		    };
+		    var url = '/orders/set_pay_account'
+		    {%if token %}
+		    	var url = '/orders/set_pay_account'+'?token={{token}}&username={{username}}';
+		    {%endif%}
 		    $.ajax({
-		        url: "/orders/set_pay_account/",
+		        url: url,
 		        type : "post",
 		        data : data ,
 		        success: function(data){
@@ -27,10 +31,18 @@
 		               if (data.areadyOrderCt >= data.limit_payct){
 	                       var r=confirm('支付账号今天'+data.crawl_source_name+'已经超过'+data.limit_payct+'单，是否切换支付账号?')
 			               if (r==false){
-			               		window.location.href = '{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay';
+                           	{%if token %}
+			             		window.location.href = '{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay&&token={{token}}&username={{username}}';
+			             	{%else%}
+			             		window.location.href = '{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay';
+			            	{%endif%}
 			               }
 			           }else{
-			                window.location.href = '{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay';
+                           	{%if token %}
+			             		window.location.href = '{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay&&token={{token}}&username={{username}}';
+			             	{%else%}
+			             		window.location.href = '{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay';
+			            	{%endif%}
 			           }
 		            }
 		        }
