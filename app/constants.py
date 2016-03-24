@@ -30,7 +30,7 @@ SOURCE_INFO = {
     SOURCE_SCQCP: {
         "name": "四川汽车票务网",
         "website": "www.scqcp.com",
-        "limit_payct": 10,
+        "limit_payct": 20,
         "accounts": {
             # telephone: {password, is_encrypt)
                 "17088172543": ("123456", 0),
@@ -59,6 +59,7 @@ SOURCE_INFO = {
     },
     SOURCE_BUS100: {
         "name": "巴士壹佰",
+        "limit_payct": 50,
         "website": "www.84100.com",
         "accounts": {
             # telephone: {password, opendid)
@@ -797,6 +798,7 @@ SOURCE_INFO = {
     },
     SOURCE_KUAIBA: {
         "name": "快巴",
+        "limit_payct": 50,
         "website": "http://m.daba.cn/",
         "accounts": {
             "13267109876": ("123456", ''),
@@ -904,6 +906,7 @@ SOURCE_INFO = {
     },
     SOURCE_LNKY: {
         "name": "辽宁客运",
+        "limit_payct": 50,
         "website": "http://www.jt306.cn/index.jsp",
         "accounts": {
             # telephone: {password, auth)
