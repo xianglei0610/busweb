@@ -845,8 +845,6 @@ class CBDRebot(Rebot):
             raise e
         return r
 
-
-
 class ChangtuWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
