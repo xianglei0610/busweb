@@ -178,6 +178,10 @@ def query_line_detail():
     except Line.DoesNotExist:
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
     flow, new_line = get_compatible_flow(line)
+    if not flow:
+        data = line.get_json()
+        data["left_tickets"] = 0
+        return jsonify({"code": RET_OK, "message": "OK", "data": data})
     flow.refresh_line(new_line)
     return jsonify({"code": RET_OK, "message": "OK", "data": new_line.get_json()})
 
@@ -241,11 +245,9 @@ def submit_order():
     except Line.DoesNotExist:
         order_log.info("[submit-fail] line not exist")
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
-
-    if line.crawl_source == "cqky":
-        flow = get_flow(line.crawl_source)
-    else:
-        flow, line = get_compatible_flow(line)
+    flow, line = get_compatible_flow(line)
+    if not flow:
+        return jsonify({"code": RET_LINE_404, "message": "未找到合适路线", "data": ""})
 
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
