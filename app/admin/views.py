@@ -429,6 +429,8 @@ def all_order():
             query.update(raw_order_no=q_value)
         elif q_key == "trade_no":
             Q_query = (db.Q(pay_trade_no=q_value)|db.Q(refund_trade_no=q_value))
+        elif q_key == "pay_order_no":
+            query.update(pay_order_no=q_value)
 
     kefu_name = params.get("kefu_name", "")
     if kefu_name:
@@ -645,7 +647,7 @@ def kefu_on_off():
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
 
 
-@admin.route('/orders/set_pay_account/', methods=['POST'])
+@admin.route('/orders/set_pay_account', methods=['POST'])
 @login_required
 def set_pay_account():
     today = dte.now().strftime("%Y-%m-%d")
