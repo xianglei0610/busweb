@@ -1087,7 +1087,7 @@ class CqkyWebRebot(Rebot):
         try:
             r = requests.post(url,
                             proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=30,
+                            timeout=90,
                             **kwargs)
         except Exception, e:
             self.modify(ip="")

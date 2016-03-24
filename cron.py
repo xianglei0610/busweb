@@ -32,6 +32,7 @@ def check(run_in_local=False):
                     cron_log.info("[ignore] forbid run at debug mode")
                     return None
                 t1 = time.time()
+                cron_log.info("[start] %s %s %s", func.__name__, args, kwargs)
                 with app.app_context():
                     res = func(*args, **kwargs)
                 cost = time.time() - t1
@@ -111,15 +112,20 @@ def clear_redis_data():
 
 
 @check(run_in_local=True)
-def crawl_proxy():
+def crawl_proxy_haodaili():
     from app.proxy import proxy_producer
     data = {}
     cnt = proxy_producer.crawl_from_haodaili()
     data["haodaili"] = cnt
+    return data
+
+@check(run_in_local=True)
+def crawl_proxy_samair():
+    from app.proxy import proxy_producer
+    data = {}
     cnt = proxy_producer.crawl_from_samair()
     data["samair"] = cnt
     return data
-
 
 @check(run_in_local=True)
 def check_proxy():
@@ -213,7 +219,8 @@ def main():
 
 
     # 代理ip相关
-    sched.add_interval_job(crawl_proxy, minutes=3)
+    sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
+    sched.add_interval_job(crawl_proxy_samair, minutes=6)
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_proxy_cqky, minutes=1)
     sched.add_interval_job(check_proxy_tc, minutes=1)

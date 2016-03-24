@@ -189,7 +189,7 @@ class CqkyProxyConsumer(ProxyConsumer):
             r = requests.post(line_url,
                               data=urllib.urlencode(params),
                               headers=headers,
-                              timeout=4,
+                              timeout=3,
                               proxies={"http": "http://%s" % ipstr})
             content = r.content
             for k in set(re.findall("([A-Za-z]+):", content)):
@@ -237,9 +237,8 @@ class ScqcpProxyConsumer(ProxyConsumer):
             "Content-Type": "application/json; charset=UTF-8",
         }
         try:
-            r = requests.get(url, headers=headers, timeout=4, proxies={"http": "http://%s" % ipstr})
+            r = requests.get(url, headers=headers, timeout=3, proxies={"http": "http://%s" % ipstr})
             ret = r.json()
-            print '33333333333333333',ret
             if ret["token"]:
                 return True
         except:

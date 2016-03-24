@@ -123,6 +123,11 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
+                elif u"锁位失败" in res["msg"]:
+                    lock_result.update({
+                        "result_code": 0,
+                        "result_reason": res["msg"],
+                    })
                 else:
                     lock_result.update({
                         "result_code": 2,
