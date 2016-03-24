@@ -775,6 +775,7 @@ class ScqcpRebot(Rebot):
 class CBDRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    ip = db.StringField(default="")
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -811,6 +812,39 @@ class CBDRebot(Rebot):
         else:
             rebot_log.error("登陆错误cbd %s, %s", self.telephone, str(ret))
         return "fail"
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_CBD, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_CBD)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def http_get(self, url, **kwargs):
+        try:
+            r = requests.get(url,
+                            proxies={"http": "http://%s" % self.proxy_ip},
+                            timeout=10,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
+        return r
+
+    def http_post(self, url, **kwargs):
+        try:
+            r = requests.post(url,
+                            proxies={"http": "http://%s" % self.proxy_ip},
+                            timeout=90,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
+        return r
+
 
 
 class ChangtuWebRebot(Rebot):

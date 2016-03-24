@@ -38,7 +38,7 @@ SOURCE_INFO = {
                 "17088174869": ("123456", 0),
                 "17088173420": ("123456", 0),
                 "17088175416": ("123456", 0),
-                
+
             # "15575101324": ("cibRpL", 0),
 #             "15626025673": ("lxy12308", 0),
 #             "13719074050": ("lxy12308", 0),
@@ -1086,14 +1086,14 @@ CITY_NAME_TRANS = {
 }
 
 PAY_ACCOUNTS = [
-               "441744343@qq.com",
-               "125083788@qq.com",
-               "lipigpig@foxmail.com",
-               "abc87765928@163.com",
-               "weishenm66@foxmail.com",
-               "teq021ula@foxmail.com",
-               "372048470@qq.com",
-               "onmyfish@126.com",
-               "6217007200039300143",
-               "6217582000021706858",
-               ]
+    "441744343@qq.com",
+    "125083788@qq.com",
+    "lipigpig@foxmail.com",
+    "abc87765928@163.com",
+    "weishenm66@foxmail.com",
+    "teq021ula@foxmail.com",
+    "372048470@qq.com",
+    "onmyfish@126.com",
+    "6217007200039300143",
+    "6217582000021706858",
+]
