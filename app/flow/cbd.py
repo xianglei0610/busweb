@@ -64,6 +64,7 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
                 "pay_money": 0,
             }
+            msg = res["header"]["rspDesc"]
             if int(res["header"]["rspCode"]) == 0:
                 pay_url = res["body"]["PayUrl"]
                 pay_ret = self.send_pay_request(pay_url, rebot)
@@ -76,6 +77,16 @@ class Flow(BaseFlow):
                     "pay_money": pay_ret["total_price"],
                 })
                 lock_result["lock_info"].update(order_detail_url=pay_ret["detail_url"])
+            elif u"您的账户近期购票数量存在异常" in msg:
+                rebot.remove_doing_order(order)
+                order.modify(source_account="")
+                with CBDRebot.get_and_lock(order) as newrebot:
+                    account = newrebot.telephone
+                lock_result.update({
+                    "result_code": 2,
+                    "result_reason": msg,
+                    "source_account": account,
+                })
             else:
                 lock_result.update({
                     "result_code": 0,
@@ -96,7 +107,10 @@ class Flow(BaseFlow):
             "Content-Type": "application/json",
         }
         for i in range(2):
-            r = requests.post(order_url, data=json.dumps(data), headers=headers, cookies=json.loads(rebot.cookies))
+            r = rebot.http_post(order_url,
+                              data=json.dumps(data),
+                              headers=headers,
+                              cookies=json.loads(rebot.cookies))
             ret = r.json()
             if self.check_login_by_resp(rebot, r) != "relogined":
                 break
@@ -107,7 +121,7 @@ class Flow(BaseFlow):
             headers = {
                 "User-Agent": rebot.user_agent,
             }
-            r = requests.get(pay_url, headers=headers, cookies=json.loads(rebot.cookies))
+            r = rebot.http_get(pay_url, headers=headers, cookies=json.loads(rebot.cookies))
             if self.check_login_by_resp(rebot, r) != "relogined":
                 break
         sel = etree.HTML(r.content)
@@ -124,7 +138,7 @@ class Flow(BaseFlow):
         detail_url = order.lock_info["order_detail_url"]
         for i in range(2):
             headers = {"User-Agent": rebot.user_agent}
-            r = requests.get(detail_url, headers=headers, cookies=json.loads(rebot.cookies))
+            r = rebot.http_get(detail_url, headers=headers, cookies=json.loads(rebot.cookies))
             if self.check_login_by_resp(rebot, r) != "relogined":
                 break
         soup = BeautifulSoup(r.content, "lxml")
@@ -208,7 +222,7 @@ class Flow(BaseFlow):
         line_url = "http://m.chebada.com/Schedule/GetBusSchedules"
         params = dict(
             departure=line.s_city_name,
-            destination=line.destination.city_name,
+            destination=line.d_city_name,
             departureDate=line.drv_date,
             page="1",
             pageSize="1025",
