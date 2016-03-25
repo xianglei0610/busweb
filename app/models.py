@@ -635,6 +635,80 @@ class Rebot(db.Document):
         """
         raise Exception("Not Implemented")
 
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def http_get(self, url, **kwargs):
+        if self.proxy_ip:
+            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+        try:
+            r = requests.get(url,
+                            timeout=30,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
+        return r
+
+    def http_post(self, url, **kwargs):
+        if self.proxy_ip:
+            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+        try:
+            r = requests.post(url,
+                            timeout=30,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
+        return r
+
+
+class ZjgsmWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "zjgsmweb_rebot",
+    }
+    crawl_source = SOURCE_ZJGSM
+    is_for_lock = True
+
+    def login(self):
+        login_url = "http://www.zjgsmwy.com/portal/user/service/User.checkUserState.json"
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active=True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_ZJGSM, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_ZJGSM)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def test_login_status(self):
+        check_url = "http://www.zjgsmwy.com/busticket/busticket/service/Busticket.checkLogin.json"
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        }
+        cookies = json.loads(self.cookies)
+        r = self.http_post(check_url, headers=headers, cookies=cookies)
+        res = r.json()
+        if res["rtnCode"] == "000000":
+            return 1
+        return 0
+
 
 class ScqcpRebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
@@ -1148,28 +1222,6 @@ class CqkyWebRebot(Rebot):
         ipstr = rds.srandmember(RK_PROXY_IP_CQKY)
         self.modify(ip=ipstr)
         return ipstr
-
-    def http_get(self, url, **kwargs):
-        try:
-            r = requests.get(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
-
-    def http_post(self, url, **kwargs):
-        try:
-            r = requests.post(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=90,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
 
     @classmethod
     def get_one(cls, order=None):

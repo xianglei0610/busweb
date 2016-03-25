@@ -19,9 +19,16 @@ SOURCE_CHANGTU = "changtu"
 SOURCE_BJKY = "bjky"
 SOURCE_CQKY = "cqky"
 SOURCE_LNKY = "lnky"
-
+SOURCE_ZJGSM = "zjgsm"
 
 SOURCE_INFO = {
+    SOURCE_ZJGSM: {
+        "name": "张家港市民网页",
+        "website": "www.zjgsmwy.com",
+        "accounts": {
+            "15575101324": "123456",
+        },
+    },
     SOURCE_FB: {
         "name": "方便网",
         "website": "www.fangbian.com",
@@ -1053,6 +1060,7 @@ RK_PROXY_IP_ALL = "proxy:all"
 RK_PROXY_IP_CQKY = "proxy:cqky"
 RK_PROXY_IP_TC = "proxy:tongcheng"
 RK_PROXY_IP_CBD = "proxy:cbd"
+RK_PROXY_IP_ZJGSM = "proxy:zjgsm"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"        # 当前使用的
 
 RK_PROXY_IP_SCQCP = "proxy:scqcp"
