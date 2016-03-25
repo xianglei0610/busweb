@@ -264,6 +264,16 @@ class Line(db.Document):
             d_line.update({self.crawl_source: self.line_id})
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
+        elif self.s_province == "北京":
+            qs = Line.objects.filter(s_sta_name=self.s_sta_name,
+                                     s_city_name=self.s_city_name,
+                                     d_sta_name=self.d_sta_name,
+                                     d_city_name=self.d_city_name,
+                                     drv_datetime=self.drv_datetime)
+            d_line = {obj.crawl_source: obj.line_id for obj in qs}
+            d_line.update({self.crawl_source: self.line_id})
+            self.modify(compatible_lines=d_line)
+            return self.compatible_lines
         else:
             qs = Line.objects.filter(s_sta_name=self.s_sta_name,
                                      s_city_name=self.s_city_name,

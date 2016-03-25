@@ -89,7 +89,7 @@ class Flow(BaseFlow):
             res = {}
             if order_no:
                 res['order_no'] = order_no[0]
-                res['order_id'] = pay_url.split('/')[-1]
+                res['order_id'] = pay_url[0].split('/')[-1]
             lock_result = {
                 "lock_info": res,
                 "source_account": rebot.telephone,
@@ -320,7 +320,7 @@ class Flow(BaseFlow):
         if line.s_sta_name == u'首都机场站':
             s_sta_name = line.s_sta_name.strip().rstrip("站")
         try:
-            kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=line.s_sta_name, d_sta_name=line.d_sta_name, drv_time=line.drv_time )    
+            kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=s_sta_name, d_sta_name=line.d_sta_name, drv_time=line.drv_time )    
             d_city_name = kuaiba_line.d_city_name
         except:
             pass
@@ -350,6 +350,7 @@ class Flow(BaseFlow):
                 tickets = d['tickets']
                 info = {
                     "left_tickets": tickets,
+                    "full_price": float(d["price"]),
                     "refresh_datetime": now,
                 }
                 update_attrs = info
