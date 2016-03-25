@@ -407,12 +407,14 @@ class Flow(BaseFlow):
                 res = r.json()["response"]
                 if res["header"]["rspCode"] == "0000":
                     pay_url = res["body"]["PayUrl"]
-                    r = rebot.proxy_get(pay_url, headers=headers)
+                    # return {"flag": "url", "content": pay_url}
+
+                    r = rebot.proxy_get(pay_url, headers=headers, verify=False)
                     soup = BeautifulSoup(r.content, "lxml")
-                    sign = soup.select("#aliPay").get("data-sign")
-                    partner = soup.find("input", name="partner")
-                    serial = soup.find("input", name="serial")
-                    pay_type = soup.select("#aliPay").get("data-value")
+                    sign = soup.select("#aliPay")[0].get("data-sign")
+                    partner = soup.find("input", attrs={"name": "partner"}).get("value")
+                    serial = soup.find("input", attrs={"name": "serial"}).get("value")
+                    pay_type = soup.select("#aliPay")[0].get("data-value")
                     params = {
                         "sign": sign,
                         "partner": partner,
@@ -422,10 +424,19 @@ class Flow(BaseFlow):
                     alipay_url = "https://pay.ly.com/pc/payment/GatewayPay"
                     form_str = urllib.urlencode(params)
                     r = rebot.proxy_post(alipay_url, headers=headers, data=form_str, verify=False)
-                    data = self.extract_alipay(r.content)
+                    res = r.json()
+
+                    web_url = res["web_url"]
+                    parser = urllib2.urlparse.urlparse(web_url)
+                    data = {}
+                    for s in parser.query.split("&"):
+                        n, v = s.split("=")
+                        data[n] = v
+                    pay_money = float(data["total_fee"])
+                    trade_no = data["out_trade_no"]
                     if order.pay_money != pay_money or order.pay_order_no != trade_no:
                         order.modify(pay_money=pay_money, pay_order_no=trade_no)
-                    return {"flag": "html", "content": r.content}
+                    return {"flag": "url", "content": web_url}
                 return {"flag": "html", "content": r.content}
         else:
             login_form = "https://passport.ly.com"
