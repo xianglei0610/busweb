@@ -15,7 +15,16 @@ manager = Manager(app)
 def make_shell_context():
     import app.models as m
     import app.flow as f
-    return dict(app=app, db=db, m=m, f=f)
+    get_order = lambda o: m.Order.objects.get(order_no=o)
+    get_line = lambda o: m.Order.objects.get(order_no=o)
+    def make_fail(o):
+        order = get_order(o)
+        if order.status not in [7, 3]:
+            return
+        order.update(status=5)
+        from tasks import issued_callback
+        issued_callback(o)
+    return dict(app=app, db=db, m=m, f=f, get_order=get_order, get_line=get_line, make_fail=make_fail)
 
 manager.add_command("shell", Shell(make_context=make_shell_context))
 
