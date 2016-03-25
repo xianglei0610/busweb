@@ -78,13 +78,14 @@ class Flow(BaseFlow):
                 })
                 lock_result["lock_info"].update(order_detail_url=pay_ret["detail_url"])
             elif u"您的账户近期购票数量存在异常" in msg:
+                rebot.modify(is_active=False)
                 rebot.remove_doing_order(order)
                 order.modify(source_account="")
                 with CBDRebot.get_and_lock(order) as newrebot:
                     account = newrebot.telephone
                 lock_result.update({
                     "result_code": 2,
-                    "result_reason": msg,
+                    "result_reason": "%s-%s" % (rebot.telephone, msg),
                     "source_account": account,
                 })
             else:
@@ -289,10 +290,15 @@ class Flow(BaseFlow):
         return "logined"
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="wy" ,**kwargs):
-        for s in order.pay_url.split("?")[1].split("&"):
-            k, v = s.split("=")
-            if k == "serialId":
-                if order.pay_order_no != v:
-                    order.modify(pay_order_no=v)
-                break
-        return {"flag": "url", "content": order.pay_url}
+        if order.status == STATUS_LOCK_RETRY:
+            self.lock_ticket(order)
+
+        if order.status == STATUS_WAITING_ISSUE:
+            for s in order.pay_url.split("?")[1].split("&"):
+                k, v = s.split("=")
+                if k == "serialId":
+                    if order.pay_order_no != v:
+                        order.modify(pay_order_no=v)
+                    break
+            return {"flag": "url", "content": order.pay_url}
+        return {"flag": "error", "content": "请重试"}
