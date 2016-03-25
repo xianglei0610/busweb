@@ -163,21 +163,29 @@ def check_proxy_scqcp():
     return con.proxy_size()
 
 
+@check(run_in_local=True)
+def check_proxy_cbd():
+    from app.proxy import cbd_proxy as con
+    for ipstr in con.all_proxy():
+        if not con.valid_proxy(ipstr):
+            con.remove_proxy(ipstr)
+    return con.proxy_size()
+
 def main():
     sched = Scheduler(daemonic=False)
 
     # 巴士壹佰
-    sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['bus100', "450000"]) #广西
+    #sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['bus100', "450000"]) #广西
     sched.add_cron_job(bus_crawl, hour=18, minute=20, args=['bus100', "370000"]) #山东
-    sched.add_cron_job(bus_crawl, hour=19, minute=40, args=['bus100', "410000"]) #河南
+    #sched.add_cron_job(bus_crawl, hour=19, minute=40, args=['bus100', "410000"]) #河南
 
     # 巴巴快巴
     sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['baba'])
 
     # 方便网
     sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "山东"}})
-    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "河南"}})
-    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "广西"}})
+    #sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "河南"}})
+    #sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "广西"}})
     sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"city": "苏州"}})
     sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"city": "南京"}})
     sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"city": "无锡"}})
@@ -233,6 +241,7 @@ def main():
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_proxy_cqky, minutes=1)
     sched.add_interval_job(check_proxy_tc, minutes=1)
+    sched.add_interval_job(check_proxy_cbd, minutes=1)
     sched.add_interval_job(check_proxy_scqcp, minutes=1)
 
     # 其他

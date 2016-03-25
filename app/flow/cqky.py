@@ -116,7 +116,7 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
-                elif u"可售票数量不足" in res["msg"]:
+                elif u"可售票数量不足" in res["msg"] or "锁票超时超过10次" in res["msg"]:
                     self.close_line(line, reason=res["msg"])
                     lock_result.update({
                         "result_code": 0,
@@ -140,6 +140,11 @@ class Flow(BaseFlow):
                      "result_code": 2,
                      "source_account": rebot.telephone,
                      "result_reason": u"账号未登录",
+                 })
+            elif u"单笔订单一次只允许购买3张车票" in res["msg"]:
+                lock_result.update({
+                     "result_code": 2,
+                     "result_reason": res["msg"],
                  })
             else:
                 lock_result.update({
@@ -187,10 +192,23 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$radioListPayType": "OnlineAliPay,支付宝在线支付",
                 "ctl00$FartherMain$hideIsSubmit": "true",
             }
-        r = rebot.http_post(base_url,
-                      data=urllib.urlencode(params),
-                      headers=headers,
-                      cookies=cookies,)
+        try:
+            r = rebot.http_post(base_url,
+                        data=urllib.urlencode(params),
+                        headers=headers,
+                        cookies=cookies,)
+        except requests.exceptions.Timeout, e:
+            rebot.modify(ip="")
+            lock_info = order.lock_info
+            if "lock_timeout_cnt" not in lock_info:
+                lock_info["lock_timeout_cnt"] = 0
+            lock_info["lock_timeout_cnt"] += 1
+            order.modify(lock_info=lock_info)
+            if order.lock_info["lock_timeout_cnt"] > 10:
+                return {
+                    "success": False,
+                    "msg": u"锁票超时超过10次",
+                }
         soup = BeautifulSoup(r.content, "lxml")
         msg_lst = re.findall(r'<script>alert\("(.+)"\);</script>', r.content)
         msg = ""

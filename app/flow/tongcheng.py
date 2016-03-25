@@ -342,6 +342,11 @@ class Flow(BaseFlow):
                 "pick_code_list": ["%s|%s" % (body["getTicketNo"], body["getTicketPassWord"])],
                 "pick_msg_list": [body["getTicketInfo"]],
             })
+        elif state == "已退款":
+            result_info.update({
+                "result_code": 3,
+                "result_msg": state,
+            })
         return result_info
 
     def do_refresh_issue(self, order):
@@ -404,15 +409,20 @@ class Flow(BaseFlow):
                                      data=form_str,
                                      headers=headers,
                                      cookies=json.loads(rebot.cookies))
-                res = r.json()["response"]
+                try:
+                    res = r.json()["response"]
+                except Exception, e:
+                    rebot.modify(ip="")
+                    raise e
                 if res["header"]["rspCode"] == "0000":
                     pay_url = res["body"]["PayUrl"]
+                    return {"flag": "url", "content": pay_url}
                     r = rebot.proxy_get(pay_url, headers=headers)
                     soup = BeautifulSoup(r.content, "lxml")
-                    sign = soup.select("#aliPay").get("data-sign")
-                    partner = soup.find("input", name="partner")
-                    serial = soup.find("input", name="serial")
-                    pay_type = soup.select("#aliPay").get("data-value")
+                    sign = soup.select("#aliPay")[0].get("data-sign")
+                    partner = soup.find("input", attrs={"name": "partner"}).get("value")
+                    serial = soup.find("input", attrs={"name": "serial"}).get("value")
+                    pay_type = soup.select("#aliPay")[0].get("data-value")
                     params = {
                         "sign": sign,
                         "partner": partner,
@@ -422,7 +432,10 @@ class Flow(BaseFlow):
                     alipay_url = "https://pay.ly.com/pc/payment/GatewayPay"
                     form_str = urllib.urlencode(params)
                     r = rebot.proxy_post(alipay_url, headers=headers, data=form_str, verify=False)
+                    return {"flag": "html", "content": r.content}
                     data = self.extract_alipay(r.content)
+                    pay_money = float(data["total_fee"])
+                    trade_no = data["out_trade_no"]
                     if order.pay_money != pay_money or order.pay_order_no != trade_no:
                         order.modify(pay_money=pay_money, pay_order_no=trade_no)
                     return {"flag": "html", "content": r.content}
