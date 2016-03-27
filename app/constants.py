@@ -26,8 +26,11 @@ SOURCE_INFO = {
         "name": "张家港市民网页",
         "website": "www.zjgsmwy.com",
         "accounts": {
-            "15575101324": "123456",
+            "15575101324": ("123456", ""),
         },
+        "pwd_encode": {
+            "123456": "895b317c76b8e504c2fb32dbb4420178f60ce321",
+        }
     },
     SOURCE_FB: {
         "name": "方便网",

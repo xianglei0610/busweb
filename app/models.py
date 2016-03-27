@@ -666,7 +666,7 @@ class Rebot(db.Document):
 
 class ZjgsmWebRebot(Rebot):
     user_agent = db.StringField()
-    cookies = db.StringField()
+    cookies = db.StringField(default="{}")
     ip = db.StringField(default="")
 
     meta = {
@@ -675,16 +675,6 @@ class ZjgsmWebRebot(Rebot):
     }
     crawl_source = SOURCE_ZJGSM
     is_for_lock = True
-
-    def login(self):
-        login_url = "http://www.zjgsmwy.com/portal/user/service/User.checkUserState.json"
-        ua = random.choice(BROWSER_USER_AGENT)
-        self.last_login_time = dte.now()
-        self.user_agent = ua
-        self.is_active=True
-        self.cookies = "{}"
-        self.save()
-        return "OK"
 
     @property
     def proxy_ip(self):
@@ -697,17 +687,29 @@ class ZjgsmWebRebot(Rebot):
         return ipstr
 
     def test_login_status(self):
-        check_url = "http://www.zjgsmwy.com/busticket/busticket/service/Busticket.checkLogin.json"
         headers = {
             "User-Agent": self.user_agent,
             "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
         }
         cookies = json.loads(self.cookies)
+        check_url = "http://www.zjgsmwy.com/busticket/busticket/service/Busticket.checkLogin.json"
         r = self.http_post(check_url, headers=headers, cookies=cookies)
-        res = r.json()
-        if res["rtnCode"] == "000000":
+        try:
+            res = r.json()
+        except:
+            return 0
+        if res["responseData"].get("flag", False):
             return 1
         return 0
+
+    def login(self):
+        self.last_login_time = dte.now()
+        self.user_agent = headers["User-Agent"]
+        self.is_active=True
+        self.cookies = json.dumps(cookies)
+        self.save()
+        self.test_login_status()
+        return "OK"
 
 
 class ScqcpRebot(Rebot):
@@ -734,9 +736,9 @@ class ScqcpRebot(Rebot):
     def proxy_ip(self):
         rds = get_redis("default")
         ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+        if ipstr and rds.sismember(RK_PROXY_IP_ZJGSM, ipstr):
             return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        ipstr = rds.srandmember(RK_PROXY_IP_ZJGSM)
         self.modify(ip=ipstr)
         return ipstr
 
