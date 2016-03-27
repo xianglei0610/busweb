@@ -914,7 +914,7 @@ class CBDRebot(Rebot):
         try:
             r = requests.post(url,
                             proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=90,
+                            timeout=30,
                             **kwargs)
         except Exception, e:
             self.modify(ip="")

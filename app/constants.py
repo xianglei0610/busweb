@@ -40,7 +40,7 @@ SOURCE_INFO = {
     SOURCE_SCQCP: {
         "name": "四川汽车票务网",
         "website": "www.scqcp.com",
-        "limit_payct": 10,
+        "limit_payct": 20,
         "accounts": {
             # telephone: {password, is_encrypt)
                 "17088172543": ("123456", 0),
@@ -69,6 +69,7 @@ SOURCE_INFO = {
     },
     SOURCE_BUS100: {
         "name": "巴士壹佰",
+        "limit_payct": 50,
         "website": "www.84100.com",
         "accounts": {
             # telephone: {password, opendid)
@@ -364,6 +365,7 @@ SOURCE_INFO = {
     },
     SOURCE_BABA: {
         "name": "巴巴",
+        "limit_payct": 100,
         "website": "http://www.bababus.com/",
         "accounts": {
             #"15575101324": ("cibRpL", ''),
@@ -393,6 +395,7 @@ SOURCE_INFO = {
     },
     SOURCE_TC: {
         "name": "同程",
+        "limit_payct": 50,
         "website": "http://www.ly.com/",
         "accounts": {
             # "15575101324": ("123456", ''),
@@ -495,6 +498,7 @@ SOURCE_INFO = {
     },
     SOURCE_CQKY: {
         "name": "重庆客运",
+        "limit_payct": 100,
         "website": "http://http://www.96096kp.com/",
         "accounts": {
             "13288814480":("123456", ""),
@@ -807,6 +811,7 @@ SOURCE_INFO = {
     },
     SOURCE_KUAIBA: {
         "name": "快巴",
+        "limit_payct": 50,
         "website": "http://m.daba.cn/",
         "accounts": {
             "13267109876": ("123456", ''),
@@ -914,6 +919,7 @@ SOURCE_INFO = {
     },
     SOURCE_LNKY: {
         "name": "辽宁客运",
+        "limit_payct": 50,
         "website": "http://www.jt306.cn/index.jsp",
         "accounts": {
             # telephone: {password, auth)
@@ -1043,7 +1049,7 @@ RET_BUY_TIME_ERROR = 202    # 线路不在预售期
 RET_CITY_NOT_OPEN = 203     # 该城市未开放
 
 # 立即支付按钮变灰持续时间
-PAY_CLICK_EXPIR = 10
+PAY_CLICK_EXPIR = 20
 
 ISSUE_FAIL_WARNING = 3
 ISSUEING_WARNING = 3
