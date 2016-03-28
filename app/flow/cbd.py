@@ -21,7 +21,25 @@ class Flow(BaseFlow):
     name = "cbd"
 
     def do_lock_ticket(self, order):
+        lock_result = {
+            "lock_info": {},
+            "source_account": order.source_account,
+            "result_code": 0,
+            "result_reason": "",
+            "pay_url": "",
+            "raw_order_no": "",
+            "expire_datetime": "",
+            "pay_money": 0,
+        }
         with CBDRebot.get_and_lock(order) as rebot:
+            # 未登录
+            if not rebot.test_login_status():
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": "账号未登录",
+                })
+                return lock_result
             line = order.line
             ticket_info = line.extra_info["raw_info"]
             ticket_info.update(week=chinese_week_day(line.drv_datetime), optionType=1)
@@ -59,11 +77,11 @@ class Flow(BaseFlow):
 
             ret = self.send_lock_request(order, rebot, data=data)
             res = ret["response"]
-            lock_result = {
+            lock_result.update({
                 "lock_info": {"raw_return": ret},
                 "source_account": rebot.telephone,
                 "pay_money": 0,
-            }
+            })
             msg = res["header"]["rspDesc"]
             if int(res["header"]["rspCode"]) == 0:
                 pay_url = res["body"]["PayUrl"]
@@ -290,6 +308,9 @@ class Flow(BaseFlow):
         return "logined"
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="wy" ,**kwargs):
+       # rebot = order.get_lock_rebot()
+       # if not rebot.test_login_status():
+       #     rebot.login()
         if order.status == STATUS_LOCK_RETRY:
             self.lock_ticket(order)
 

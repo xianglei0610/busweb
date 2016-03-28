@@ -267,7 +267,8 @@ class Line(db.Document):
         elif self.s_province == "北京":
             qs = Line.objects.filter(s_sta_name=self.s_sta_name,
                                      s_city_name=self.s_city_name,
-                                     d_sta_name=self.d_sta_name,
+                                     #d_sta_name=self.d_sta_name,
+                                     full_price=self.full_price,
                                      d_city_name=self.d_city_name,
                                      drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
@@ -794,7 +795,21 @@ class CBDRebot(Rebot):
     crawl_source = SOURCE_CBD
     is_for_lock = True
 
+    def test_login_status(self):
+        url = "http://m.chebada.com/Order/OrderList"
+        headers = {"User-Agent": self.user_agent}
+        if not self.cookies:
+            return 0
+        cookies = json.loads(self.cookies)
+        r = requests.get(url, headers=headers, cookies=cookies)
+        if u"Account/Login" in r.url:
+            return 0
+        return 1
+
     def login(self):
+        if self.test_login_status():
+            rebot_log.info("已登录cbd %s", self.telephone)
+            return "OK"
         from selenium import webdriver
         driver = webdriver.PhantomJS()
         driver.get("http://m.chebada.com/Account/Login")
@@ -820,6 +835,7 @@ class CBDRebot(Rebot):
             rebot_log.info("登陆成功cbd %s", self.telephone)
             return "OK"
         else:
+            self.modify(is_active=False)
             rebot_log.error("登陆错误cbd %s, %s", self.telephone, str(ret))
         return "fail"
 

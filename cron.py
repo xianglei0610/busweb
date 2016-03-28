@@ -197,7 +197,10 @@ def main():
     sched.add_cron_job(bus_crawl, hour=6, minute=10, args=['gzqcp'])
 
     # 重庆客运
-    sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['cqky'])
+    sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['cqky'])
+
+    # 四川
+    sched.add_cron_job(bus_crawl, hour=22, minute=30, args=['scqcp'], kwargs={"crawl_kwargs":{"city": "成都市"}})
 
     # 江苏客运
     sched.add_cron_job(bus_crawl, hour=12, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州"}})
@@ -212,10 +215,10 @@ def main():
     sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['cbd'], kwargs={"crawl_kwargs":{"city": "常州"}})
 
     # 同程旅行
-    sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "南京"}})
-    sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "苏州"}})
-    sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "无锡"}})
-    sched.add_cron_job(bus_crawl, hour=0, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "常州"}})
+    sched.add_cron_job(bus_crawl, hour=23, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "南京"}})
+    sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "无锡"}})
+    sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "常州"}})
 
     # 快巴
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['kuaiba'], kwargs={"crawl_kwargs":{"province": "北京"}})
@@ -236,8 +239,8 @@ def main():
 
 
     # 代理ip相关
-    sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
-    sched.add_interval_job(crawl_proxy_samair, minutes=6)
+    sched.add_interval_job(crawl_proxy_haodaili, minutes=10)
+    sched.add_interval_job(crawl_proxy_samair, minutes=15)
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_proxy_cqky, minutes=1)
     sched.add_interval_job(check_proxy_tc, minutes=1)

@@ -347,6 +347,12 @@ class Flow(BaseFlow):
                 "result_code": 3,
                 "result_msg": state,
             })
+        elif state=="出票失败":
+            self.close_line(order.line, "出票失败")
+            result_info.update({
+                "result_code": 2,
+                "result_msg": state,
+            })
         return result_info
 
     def do_refresh_issue(self, order):
@@ -374,6 +380,12 @@ class Flow(BaseFlow):
                 "result_msg": state,
             })
         elif state == "已取消":
+            result_info.update({
+                "result_code": 2,
+                "result_msg": state,
+            })
+        elif state=="出票失败":
+            self.close_line(order.line, "出票失败")
             result_info.update({
                 "result_code": 2,
                 "result_msg": state,

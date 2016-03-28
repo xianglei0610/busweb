@@ -577,7 +577,7 @@ def wating_deal_order():
         if current_user.is_switch:
             order_ct = assign.dealing_size(current_user)
             for i in range(max(0, KF_ORDER_CT-order_ct)):
-                order = assign.dequeue_wating_lock()
+                order = assign.dequeue_wating_lock(username=current_user.username)
                 if not order:
                     continue
                 if order.kefu_username:
