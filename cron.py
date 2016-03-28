@@ -175,7 +175,7 @@ def main():
     sched = Scheduler(daemonic=False)
 
     # 巴士壹佰
-    #sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['bus100', "450000"]) #广西
+    sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['bus100', "450000"]) #广西
     sched.add_cron_job(bus_crawl, hour=18, minute=20, args=['bus100', "370000"]) #山东
     #sched.add_cron_job(bus_crawl, hour=19, minute=40, args=['bus100', "410000"]) #河南
 
