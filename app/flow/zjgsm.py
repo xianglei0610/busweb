@@ -286,7 +286,7 @@ class Flow(BaseFlow):
         params = {
             "AREACODE": line.s_city_id,
             "ONSTAION": line.s_sta_name,
-            "OFFSTATION": line.d_sta_name,
+            "OFFSTATION": line.d_city_name,
             "STARTDATE": line.drv_date,
         }
         headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
@@ -306,11 +306,12 @@ class Flow(BaseFlow):
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
-                "bus_num": d["shift"],
+                "s_sta_name": d["onstation"],
+                "d_sta_name": d["offstation"],
                 "crawl_source": line.crawl_source,
                 "drv_datetime": drv_datetime,
             }
-            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
             try:
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:
@@ -318,7 +319,7 @@ class Flow(BaseFlow):
             info = {
                 "full_price": float(d["price"]),
                 "fee": 0,
-                "left_tickets": int(d["halfprice"]),
+                "left_tickets": int(d["availablenum"]),
                 "refresh_datetime": now,
                 "extra_info": {"startstation": d["startstation"], "terminalstation": d["terminalstation"]},
             }
