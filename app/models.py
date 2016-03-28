@@ -1844,6 +1844,23 @@ class KuaibaWapRebot(Rebot):
         except:
             return 0
 
+    def clear_riders(self):
+        try:
+            query_url = "http://m.daba.cn/gwapi/passenger/queryPassengers.json?c=h5&sr=2985&sc=162&ver=1.5.0&env=0&st=1456998910554"
+            if not self.test_login_status():
+                self.login()
+                self.reload()
+            headers = self.http_header()
+            r = requests.get(query_url, headers=headers, cookies=json.loads(self.cookies))
+            ret = r.json()
+            if ret['code'] == 0:
+                for i in ret['data']:
+                    cyuserid = i['cyuserid']
+                    del_url = "http://m.daba.cn/gwapi/passenger/deletePassenger.json?c=h5&sr=5975&sc=111&ver=1.5.0&env=0&st=1458898047519&passengerId=%s"%cyuserid
+                    r = requests.get(del_url, headers=headers, cookies=json.loads(self.cookies))
+        except:
+            pass
+
 
 class BjkyWebRebot(Rebot):
     user_agent = db.StringField()
