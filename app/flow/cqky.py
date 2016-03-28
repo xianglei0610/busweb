@@ -116,7 +116,7 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
-                elif u"可售票数量不足" in res["msg"] or "锁票超时超过10次" in res["msg"]:
+                elif u"可售票数量不足" in res["msg"] or "锁票超时超过10次" in res["msg"] or "当前班次座位资源紧张" in res["msg"]:
                     self.close_line(line, reason=res["msg"])
                     lock_result.update({
                         "result_code": 0,

@@ -181,11 +181,11 @@ def order_pay(order_no):
     force = int(request.args.get("force", "0"))
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY]:
         return redirect(url_for("admin.wating_deal_order"))
-    if not order.pay_account:
-        if token and token == TOKEN:
-            return redirect(url_for("admin.pay_account_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
-        else:
-            return redirect(url_for("admin.pay_account_input", order_no=order_no))
+#     if not order.pay_account:
+#         if token and token == TOKEN:
+#             return redirect(url_for("admin.pay_account_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
+#         else:
+#             return redirect(url_for("admin.pay_account_input", order_no=order_no))
 
     r = getRedisObj()
     limit_key = LAST_PAY_CLICK_TIME % order_no
@@ -577,7 +577,7 @@ def wating_deal_order():
         if current_user.is_switch:
             order_ct = assign.dealing_size(current_user)
             for i in range(max(0, KF_ORDER_CT-order_ct)):
-                order = assign.dequeue_wating_lock()
+                order = assign.dequeue_wating_lock(username=current_user.username)
                 if not order:
                     continue
                 if order.kefu_username:

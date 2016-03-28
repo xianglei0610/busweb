@@ -16,12 +16,17 @@ def make_shell_context():
     import app.models as m
     import app.flow as f
     get_order = lambda o: m.Order.objects.get(order_no=o)
-    get_line = lambda o: m.Order.objects.get(order_no=o)
-    def make_fail(o):
+    get_line = lambda o: m.Line.objects.get(line_id=o)
+    def make_fail(o, type):
         order = get_order(o)
-        if order.status not in [7, 3]:
+        if order.status not in [7, 3, 12]:
             return
-        order.update(status=5)
+        if type == "lock":
+            order.update(status=5)
+        elif type == "issue":
+            order.update(status=13)
+        else:
+            return
         from tasks import issued_callback
         issued_callback(o)
     return dict(app=app, db=db, m=m, f=f, get_order=get_order, get_line=get_line, make_fail=make_fail)

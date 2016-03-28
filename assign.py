@@ -4,6 +4,7 @@
 from app.constants import *
 from app.utils import get_redis
 from app.models import Order
+from datetime import datetime as dte
 
 
 def enqueue_wating_lock(order):
@@ -14,18 +15,22 @@ def enqueue_wating_lock(order):
     rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
 
 
-def dequeue_wating_lock():
+def dequeue_wating_lock(username=""):
     rds = get_redis("order")
     no = rds.rpop(RK_WATING_LOCK_ORDERS)
     if not no:
         return None
-    orderObj = Order.objects.get(order_no=no)
-    if orderObj.crawl_source == SOURCE_SCQCP:
-        orderct = Order.objects.filter(kefu_order_status__ne=1, crawl_source=SOURCE_SCQCP, status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]).count()
+    order = Order.objects.get(order_no=no)
+    if order.crawl_source in [SOURCE_SCQCP, SOURCE_CBD]:
+        today = dte.now().strftime("%Y-%m-%d")
+        orderct = Order.objects.filter(crawl_source=order.crawl_source,
+                                       create_date_time__gt=today,
+                                       kefu_username=username,
+                                       status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]).count()
         if orderct > 0:
-            rds.lpush(RK_WATING_LOCK_ORDERS, orderObj.order_no)
+            rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
             return None
-    return orderObj
+    return order
 
 
 def wating_lock_size():
