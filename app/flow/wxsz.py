@@ -206,13 +206,16 @@ class Flow(BaseFlow):
             "update_attrs": {},
         }
         line_url = "http://coach.wisesz.mobi/coach_v38/main/get_tickets"
+        name_trans = {
+            u"苏州北广场站": u"北广场站",
+            u"苏州吴中站": u"吴中站",
+        }
         params = {
             "departdate": line.drv_datetime.strftime("%Y%m%d"),
             "destination": line.d_city_name,
             "fromcode": line.s_sta_id,
-            "from": line.s_sta_name,
+            "from": name_trans.get(line.s_sta_name, line.s_sta_name),
         }
-        print json.dumps(params, ensure_ascii=False)
         headers={
             "User-Agent": "Apache-HttpClient/UNAVAILABLE (java 1.4)",
             "Content-Type": "application/json;charset=UTF-8"
@@ -220,7 +223,6 @@ class Flow(BaseFlow):
         line_url = "%s?%s" % (line_url, urllib.urlencode(params))
         r = requests.post(line_url, headers=headers)
         res = r.json()
-        print res
         now = dte.now()
         if res["errorCode"] != 0:
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})

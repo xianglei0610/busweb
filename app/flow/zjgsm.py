@@ -289,7 +289,10 @@ class Flow(BaseFlow):
             "OFFSTATION": line.d_city_name,
             "STARTDATE": line.drv_date,
         }
-        headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        headers = {
+            "User-Agent": random.choice(BROWSER_USER_AGENT),
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        }
         r = requests.post(line_url,
                           data=urllib.urlencode(params),
                           headers=headers)
