@@ -646,6 +646,205 @@ class Rebot(db.Document):
         """
         raise Exception("Not Implemented")
 
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def http_get(self, url, **kwargs):
+        if self.proxy_ip:
+            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+        try:
+            r = requests.get(url,
+                            timeout=30,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
+        return r
+
+    def http_post(self, url, **kwargs):
+        if self.proxy_ip:
+            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+        try:
+            r = requests.post(url,
+                            timeout=30,
+                            **kwargs)
+        except Exception, e:
+            self.modify(ip="")
+            raise e
+        return r
+
+
+class WxszRebot(Rebot):
+    user_agent = db.StringField(default="Apache-HttpClient/UNAVAILABLE (java 1.4)")
+    uid = db.StringField()
+    sign = db.StringField()
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "wxsz_rebot",
+    }
+    crawl_source = SOURCE_WXSZ
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        key = RK_PROXY_IP_WXSZ
+        if ipstr and rds.sismember(key, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(key)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def login(self):
+        url = "http://content.2500city.com/ucenter/user/login"
+        params = dict(
+            account=self.telephone,
+            platform="2",
+            password=SOURCE_INFO[SOURCE_WXSZ]["pwd_encode"][self.password],
+            appVersion="3.9.1",
+            deviceId="",
+            version="3.9.1",
+        )
+        url = "%s?%s" % (url, urllib.urlencode(params))
+        r = self.http_get(url, headers={"User-Agent": self.user_agent})
+        res = r.json()
+        if res["errorCode"] == 0:
+            _, sign = SOURCE_INFO[SOURCE_WXSZ]["accounts"][self.telephone]
+            self.modify(uid=res["data"]["uid"], sign=sign)
+            return "OK"
+        return "fail"
+
+    def test_login_status(self):
+        user_url = "http://content.2500city.com/ucenter/user/getuserinfo"
+        params = {
+            "sign": self.sign,
+            "uid": self.uid,
+        }
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/json;charset=UTF-8",
+        }
+        r = self.http_post(user_url, headers=headers, data=json.dumps(params))
+        res = r.json()
+        if res["errorCode"] != 0:
+            return 0
+        if res["data"]["mobile"] != self.telephone:
+            return 0
+        return 1
+
+    def clear_riders(self):
+        is_login = self.test_login_status()
+        if not is_login:
+            return
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        query_url = "http://coach.wisesz.mobi/coach_v38/contacts/index"
+        params = {"sign": self.sign, "uid": self.uid}
+        r = self.http_post(query_url, headers=headers, data=urllib.urlencode(params))
+        res = r.json()
+
+        del_url = "http://coach.wisesz.mobi/coach_v38/contacts/ondel"
+        for d in res["data"]["dataList"]:
+            params = { "sign": self.sign, "id": d["id"], "uid": self.uid}
+            self.http_post(del_url, headers=headers, data=urllib.urlencode(params))
+
+    def get_riders(self):
+        if not self.test_login_status():
+            raise Exception("%s账号未登录" % self.telephone)
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        query_url = "http://coach.wisesz.mobi/coach_v38/contacts/index"
+        params = {"sign": self.sign, "uid": self.uid}
+        r = self.http_post(query_url, headers=headers, data=urllib.urlencode(params))
+        res = r.json()
+        card_to_id = {}
+        for d in res["data"]["dataList"]:
+            card_to_id[d["idcard"]] = d["id"]
+        return card_to_id
+
+    def add_riders(self, order):
+        add_url = "http://coach.wisesz.mobi/coach_v38/contacts/onadd"
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        id_lst = []
+        exists_lst = {}
+        for c in order.riders:
+            params = {
+                "sign": self.sign,
+                "uid": self.uid,
+                "idcard" : c["id_number"],
+                "uname": c["name"],
+                "tel": c["telephone"],
+            }
+            r = self.http_post(add_url, headers=headers, data=urllib.urlencode(params))
+            res = r.json()
+            if "该身份证号已存在" in res["errorMsg"]:
+                if not exists_lst:
+                    exists_lst = self.get_riders()
+                id_lst.append(exists_lst[c["id_number"]])
+            else:
+                id_lst.append(res["data"]["id"])
+        return id_lst
+
+
+
+class ZjgsmWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "zjgsmweb_rebot",
+    }
+    crawl_source = SOURCE_ZJGSM
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_ZJGSM, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_ZJGSM)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def test_login_status(self):
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        }
+        cookies = json.loads(self.cookies)
+        check_url = "http://www.zjgsmwy.com/busticket/busticket/service/Busticket.checkLogin.json"
+        r = self.http_post(check_url, headers=headers, cookies=cookies)
+        try:
+            res = r.json()
+        except:
+            return 0
+        if res["responseData"].get("flag", False):
+            return 1
+        return 0
+
+    def login(self):
+        self.last_login_time = dte.now()
+        self.user_agent = headers["User-Agent"]
+        self.is_active=True
+        self.cookies = json.dumps(cookies)
+        self.save()
+        self.test_login_status()
+        return "OK"
+
 
 class ScqcpRebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
@@ -671,9 +870,9 @@ class ScqcpRebot(Rebot):
     def proxy_ip(self):
         rds = get_redis("default")
         ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+        if ipstr and rds.sismember(RK_PROXY_IP_ZJGSM, ipstr):
             return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        ipstr = rds.srandmember(RK_PROXY_IP_ZJGSM)
         self.modify(ip=ipstr)
         return ipstr
 
@@ -1174,28 +1373,6 @@ class CqkyWebRebot(Rebot):
         ipstr = rds.srandmember(RK_PROXY_IP_CQKY)
         self.modify(ip=ipstr)
         return ipstr
-
-    def http_get(self, url, **kwargs):
-        try:
-            r = requests.get(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
-
-    def http_post(self, url, **kwargs):
-        try:
-            r = requests.post(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=90,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
 
     @classmethod
     def get_one(cls, order=None):

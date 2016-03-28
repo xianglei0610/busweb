@@ -82,6 +82,9 @@ class Flow(object):
             order.on_lock_fail()
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["result_reason"], "data": data})
             order_log.info("[lock-result] fail. order: %s, reason: %s", order.order_no, ret["result_reason"])
+        elif ret["result_code"] == 3:   # 锁票输验证码
+            order_log.info("[lock-result] order:%s need valid code", order.order_no)
+            return
         else:
             order_log.info("[lock-result] unrecognize. order: %s, reason: %s code:%s", order.order_no, ret["result_reason"], ret["result_code"])
             return
