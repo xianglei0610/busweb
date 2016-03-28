@@ -208,46 +208,46 @@ class Flow(BaseFlow):
                 pay_url = "http://www.e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                 headers = rebot.http_header()
                 r = requests.get(pay_url, headers=headers, cookies=cookies)
-                content = r.content
-                if isinstance(content, unicode):
-                    pass
-                else:
-                    content = content.decode('utf-8')
-                sel = etree.HTML(r.content)
-                form = sel.xpath('//form[@id="pay_form"]')
-                for sel in form:
-                    data = dict(
-                        version=sel.xpath("//input[@name='version']/@value")[0],
-                        charset=sel.xpath("//input[@name='charset']/@value")[0],
-                        merId=sel.xpath("//input[@name='merId']/@value")[0],
-                        acqCode=sel.xpath("//input[@name='acqCode']/@value")[0],
-                        merCode=sel.xpath("//input[@name='merCode']/@value")[0],
-                        merAbbr=sel.xpath("//input[@name='merAbbr']/@value")[0],
-                        transType=sel.xpath("//input[@name='transType']/@value")[0],
-                        commodityUrl=sel.xpath("//input[@name='commodityUrl']/@value")[0],
-                        commodityName=sel.xpath("//input[@name='commodityName']/@value")[0],
-                        commodityUnitPrice=sel.xpath("//input[@name='commodityUnitPrice']/@value")[0],
-                        commodityQuantity=sel.xpath("//input[@name='commodityQuantity']/@value")[0],
-                        orderNumber=sel.xpath("//input[@name='orderNumber']/@value")[0],
-                        orderAmount=sel.xpath("//input[@name='orderAmount']/@value")[0],
-                        orderCurrency=sel.xpath("//input[@name='orderCurrency']/@value")[0],
-                        orderTime=sel.xpath("//input[@name='orderTime']/@value")[0],
-                        customerIp=sel.xpath("//input[@name='customerIp']/@value")[0],
-                        frontEndUrl=sel.xpath("//input[@name='frontEndUrl']/@value")[0],
-                        backEndUrl=sel.xpath("//input[@name='backEndUrl']/@value")[0],
-                        signature=sel.xpath("//input[@name='signature']/@value")[0],
-                        origQid=sel.xpath("//input[@name='origQid']/@value")[0],
-                        commodityDiscount=sel.xpath("//input[@name='commodityDiscount']/@value")[0],
-                        transferFee=sel.xpath("//input[@name='transferFee']/@value")[0],
-                        customerName=sel.xpath("//input[@name='customerName']/@value")[0],
-                        defaultPayType=sel.xpath("//input[@name='defaultPayType']/@value")[0],
-                        defaultBankNumber=sel.xpath("//input[@name='defaultBankNumber']/@value")[0],
-                        transTimeout=sel.xpath("//input[@name='transTimeout']/@value")[0],
-                        merReserved=sel.xpath("//input[@name='merReserved']/@value")[0],
-                        signMethod=sel.xpath("//input[@name='signMethod']/@value")[0],
-                    )
-                url = 'https://unionpaysecure.com/api/Pay.action'
-                r = requests.post(url, data=data, headers=headers, cookies=cookies)
+#                 content = r.content
+#                 if isinstance(content, unicode):
+#                     pass
+#                 else:
+#                     content = content.decode('utf-8')
+#                 sel = etree.HTML(r.content)
+#                 form = sel.xpath('//form[@id="pay_form"]')
+#                 for sel in form:
+#                     data = dict(
+#                         version=sel.xpath("//input[@name='version']/@value")[0],
+#                         charset=sel.xpath("//input[@name='charset']/@value")[0],
+#                         merId=sel.xpath("//input[@name='merId']/@value")[0],
+#                         acqCode=sel.xpath("//input[@name='acqCode']/@value")[0],
+#                         merCode=sel.xpath("//input[@name='merCode']/@value")[0],
+#                         merAbbr=sel.xpath("//input[@name='merAbbr']/@value")[0],
+#                         transType=sel.xpath("//input[@name='transType']/@value")[0],
+#                         commodityUrl=sel.xpath("//input[@name='commodityUrl']/@value")[0],
+#                         commodityName=sel.xpath("//input[@name='commodityName']/@value")[0],
+#                         commodityUnitPrice=sel.xpath("//input[@name='commodityUnitPrice']/@value")[0],
+#                         commodityQuantity=sel.xpath("//input[@name='commodityQuantity']/@value")[0],
+#                         orderNumber=sel.xpath("//input[@name='orderNumber']/@value")[0],
+#                         orderAmount=sel.xpath("//input[@name='orderAmount']/@value")[0],
+#                         orderCurrency=sel.xpath("//input[@name='orderCurrency']/@value")[0],
+#                         orderTime=sel.xpath("//input[@name='orderTime']/@value")[0],
+#                         customerIp=sel.xpath("//input[@name='customerIp']/@value")[0],
+#                         frontEndUrl=sel.xpath("//input[@name='frontEndUrl']/@value")[0],
+#                         backEndUrl=sel.xpath("//input[@name='backEndUrl']/@value")[0],
+#                         signature=sel.xpath("//input[@name='signature']/@value")[0],
+#                         origQid=sel.xpath("//input[@name='origQid']/@value")[0],
+#                         commodityDiscount=sel.xpath("//input[@name='commodityDiscount']/@value")[0],
+#                         transferFee=sel.xpath("//input[@name='transferFee']/@value")[0],
+#                         customerName=sel.xpath("//input[@name='customerName']/@value")[0],
+#                         defaultPayType=sel.xpath("//input[@name='defaultPayType']/@value")[0],
+#                         defaultBankNumber=sel.xpath("//input[@name='defaultBankNumber']/@value")[0],
+#                         transTimeout=sel.xpath("//input[@name='transTimeout']/@value")[0],
+#                         merReserved=sel.xpath("//input[@name='merReserved']/@value")[0],
+#                         signMethod=sel.xpath("//input[@name='signMethod']/@value")[0],
+#                     )
+#                 url = 'https://unionpaysecure.com/api/Pay.action'
+#                 r = requests.post(url, data=data, headers=headers, cookies=cookies)
                 return {"flag": "html", "content": r.content}
 
         if valid_code:#  登陆
