@@ -55,7 +55,7 @@ def init_celery(app):
 def init_logging(app, server_type):
     fmt = Formatter('[%(asctime)s] %(levelname)s: %(message)s')
     stdout_fhd = StreamHandler()
-    stdout_fhd.setLevel(logging.DEBUG)
+    stdout_fhd.setLevel(logging.INFO)
     stdout_fhd.setFormatter(fmt)
     for k, v in globals().items():
         if not k.endswith("_log"):

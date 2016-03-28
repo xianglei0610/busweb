@@ -19,9 +19,30 @@ SOURCE_CHANGTU = "changtu"
 SOURCE_BJKY = "bjky"
 SOURCE_CQKY = "cqky"
 SOURCE_LNKY = "lnky"
-
+SOURCE_ZJGSM = "zjgsm"
+SOURCE_WXSZ = "wxsz"
 
 SOURCE_INFO = {
+    SOURCE_ZJGSM: {
+        "name": "张家港市民网页",
+        "website": "www.zjgsmwy.com",
+        "accounts": {
+            "15575101324": ("123456", ""),
+        },
+        "pwd_encode": {
+            "123456": "895b317c76b8e504c2fb32dbb4420178f60ce321",
+        }
+    },
+    SOURCE_WXSZ: {
+        "name": "无线苏州",
+        "website": "www.wisesz.com",
+        "accounts": {
+            "15575101324": ("a123456", "e19c700b5008dee2568213bec639aea2"),
+        },
+        "pwd_encode": {
+            "a123456": "dc483e80a7a0bd9ef71d8cf973673924",
+        }
+    },
     SOURCE_FB: {
         "name": "方便网",
         "website": "www.fangbian.com",
@@ -1068,6 +1089,8 @@ RK_PROXY_IP_ALL = "proxy:all"
 RK_PROXY_IP_CQKY = "proxy:cqky"
 RK_PROXY_IP_TC = "proxy:tongcheng"
 RK_PROXY_IP_CBD = "proxy:cbd"
+RK_PROXY_IP_ZJGSM = "proxy:zjgsm"
+RK_PROXY_IP_WXSZ = "proxy:wxsz"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"        # 当前使用的
 
 RK_PROXY_IP_SCQCP = "proxy:scqcp"
@@ -1087,6 +1110,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_BJKY: "您已成功购买发车时间：%(time)s,%(start)s-%(end)s,对应网站取票单号：%(raw_order)s,取票时请出示您购票时登记的有效证件和网站取票单号。",
     SOURCE_CQKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_LNKY: "您%(time)s去往%(end)s的订单%(order_no)s共出票%(ticket_amount)s张，请发车前2小时内取票乘车。",
+    SOURCE_WXSZ: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
 
     # 按省来分
     "江苏": "您购买了：%(time)s，%(start)s-%(end)s车次为%(bus)s的汽车票，取票号：%(no)s，取票密码：%(code)s"
