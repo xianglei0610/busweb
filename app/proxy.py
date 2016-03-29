@@ -300,14 +300,37 @@ class CBDProxyConsumer(ProxyConsumer):
             return False
         return True
 
+
+class BjkyProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_BJKY
+
+    def valid_proxy(self, ipstr):
+        url = "http://e2go.com.cn"
+        headers = {
+            "User-Agent": random.choice(MOBILE_USER_AGENG),
+        }
+        try:
+            r = requests.get(url,
+                             headers=headers,
+                             timeout=10,
+                             proxies={"http": "http://%s" % ipstr})
+        except:
+            return False
+        if r.status_code != 200 or "欢迎访问北京客运信息网" not in r.content:
+            return False
+        return True
+
+
 proxy_producer = ProxyProducer()
 
 cqky_proxy = CqkyProxyConsumer()
 tc_proxy = TongChengProxyConsumer()
 cbd_proxy = CBDProxyConsumer()
 scqcp_proxy = ScqcpProxyConsumer()
+bjky_proxy = BjkyProxyConsumer()
 
 proxy_producer.registe_consumer(cqky_proxy)
 proxy_producer.registe_consumer(tc_proxy)
 proxy_producer.registe_consumer(cbd_proxy)
 proxy_producer.registe_consumer(scqcp_proxy)
+proxy_producer.registe_consumer(bjky_proxy)
