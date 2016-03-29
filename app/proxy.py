@@ -64,6 +64,24 @@ class ProxyProducer(object):
                     add_cnt += 1
         return add_cnt
 
+    def crawl_from_66ip(self):
+        proxy_lst = set()
+        for i in [2,3,4]:
+            url = "http://www.66ip.cn/nmtq.php?getnum=150&isp=0&anonymoustype=%s&start=&ports=&export=&ipaddress=&area=0&proxytype=2&api=66ip" % i
+            try:
+                r = requests.get(url, timeout=6)
+            except Exception:
+                continue
+            proxy_lst=proxy_lst.union(set(re.findall(r"(\d+.\d+.\d+.\d+:\d+)", r.content)))
+        add_cnt = 0
+        for ipstr in proxy_lst:
+            if self.valid_proxy(ipstr):
+                self.add_proxy(ipstr)
+                add_cnt += 1
+        return add_cnt
+
+
+
     def add_proxy(self, ipstr):
         """
         Args:
@@ -189,7 +207,7 @@ class CqkyProxyConsumer(ProxyConsumer):
             r = requests.post(line_url,
                               data=urllib.urlencode(params),
                               headers=headers,
-                              timeout=3,
+                              timeout=2,
                               proxies={"http": "http://%s" % ipstr})
             content = r.content
             for k in set(re.findall("([A-Za-z]+):", content)):
@@ -236,7 +254,7 @@ class ScqcpProxyConsumer(ProxyConsumer):
             "Content-Type": "application/json; charset=UTF-8",
         }
         try:
-            r = requests.get(url, headers=headers, timeout=3, proxies={"http": "http://%s" % ipstr})
+            r = requests.get(url, headers=headers, timeout=2, proxies={"http": "http://%s" % ipstr})
             ret = r.json()
             if ret["token"]:
                 return True
@@ -254,7 +272,7 @@ class TongChengProxyConsumer(ProxyConsumer):
             ua = random.choice(BROWSER_USER_AGENT)
             r = requests.get(url,
                              headers={"User-Agent": ua},
-                             timeout=3,
+                             timeout=2,
                              proxies={"http": "http://%s" % ipstr})
         except:
             return False
@@ -274,6 +292,7 @@ class CBDProxyConsumer(ProxyConsumer):
         try:
             r = requests.get(url,
                              headers=headers,
+                             timeout=2,
                              proxies={"http": "http://%s" % ipstr})
         except:
             return False
