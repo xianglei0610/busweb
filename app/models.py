@@ -1869,6 +1869,7 @@ class KuaibaWapRebot(Rebot):
 class BjkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -1884,6 +1885,17 @@ class BjkyWebRebot(Rebot):
             "User-Agent": ua or self.user_agent,
         }
 
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        key = RK_PROXY_IP_BJKY
+        if ipstr and rds.sismember(key, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(key)
+        self.modify(ip=ipstr)
+        return ipstr
+
     @classmethod
     def get_one(cls, order=None):
         now = dte.now()
@@ -1895,6 +1907,7 @@ class BjkyWebRebot(Rebot):
                                     create_date_time__gt=start) \
                             .item_frequencies("source_account")
         accounts_list = filter(lambda k: used.get(k, 0) < 3, all_accounts)
+        random.shuffle(accounts_list)
         rebot = None
         source_account = ''
         for account in accounts_list:
@@ -1949,7 +1962,7 @@ class BjkyWebRebot(Rebot):
 #                                        "Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06": "1457415243"}
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies or '{}')
-        res = requests.get(url, headers=headers, cookies=cookies)
+        res = self.http_get(url, headers=headers, cookies=cookies)
         result = urlparse.urlparse(res.url)
         if result.path == '/Home/Login':
             return 0
