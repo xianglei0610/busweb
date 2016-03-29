@@ -48,7 +48,7 @@ class Flow(BaseFlow):
                     "StopString": line.extra_info['ArrivingStopJson']
                     }
             select_url = "http://www.e2go.com.cn/TicketOrder/SelectSchedule"
-            r = requests.post(select_url, data=data, headers=headers, cookies=cookies)
+            r = rebot.http_post(select_url, data=data, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             ret = r.content
             add_shopcart_url = 'http://www.e2go.com.cn/TicketOrder/AddScheduleTicket'
@@ -63,7 +63,7 @@ class Flow(BaseFlow):
                     "SellInsurance": "false",
                     "WithChild": "false",
                 }
-                r = requests.post(add_shopcart_url, data=data, headers=headers, cookies=cookies)
+                r = rebot.http_post(add_shopcart_url, data=data, headers=headers, cookies=cookies)
                 ret = r.content
                 if isinstance(ret, unicode):
                     pass
@@ -78,7 +78,7 @@ class Flow(BaseFlow):
                                        lock_info={'result_reason':errmsg[0]})
                     return lock_result
             order_url = 'http://www.e2go.com.cn/TicketOrder/Order'
-            r = requests.post(order_url, headers=headers, cookies=cookies)
+            r = rebot.http_post(order_url, headers=headers, cookies=cookies)
             content = r.content
             if isinstance(content, unicode):
                 pass
@@ -122,7 +122,7 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
 #         rebot.login()
 #         rebot.reload()
-        r = requests.get(order_detail_url, headers=headers, cookies=json.loads(rebot.cookies))
+        r = rebot.http_get(order_detail_url, headers=headers, cookies=json.loads(rebot.cookies))
         content = r.content
         if isinstance(content, unicode):
             pass
@@ -207,7 +207,7 @@ class Flow(BaseFlow):
                 cookies = json.loads(rebot.cookies)
                 pay_url = "http://www.e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                 headers = rebot.http_header()
-                r = requests.get(pay_url, headers=headers, cookies=cookies)
+                r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
 #                 content = r.content
 #                 if isinstance(content, unicode):
 #                     pass
@@ -263,7 +263,7 @@ class Flow(BaseFlow):
                 "CheckCode": valid_code
             }
             url = "http://www.e2go.com.cn/Home/Login"
-            r = requests.post(url, data=data, headers=headers, cookies=cookies)
+            r = rebot.http_post(url, data=data, headers=headers, cookies=cookies)
             new_cookies = r.cookies
             r = r.json()
             if r['ErrorCode'] == 0:
@@ -274,7 +274,7 @@ class Flow(BaseFlow):
 
                 if order.status == STATUS_WAITING_ISSUE:
                     pay_url = "http://www.e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
-                    r = requests.get(pay_url, headers={"User-Agent": rebot.user_agent}, cookies=cookies)
+                    r = rebot.http_get(pay_url, headers={"User-Agent": rebot.user_agent}, cookies=cookies)
                     return {"flag": "html", "content": r.content}
                 else:
                     return {"flag": "false", "content": order.lock_info.get('result_reason','')}
@@ -291,10 +291,10 @@ class Flow(BaseFlow):
         else:
             login_form_url = "http://www.e2go.com.cn/Home/Login?returnUrl=/TicketOrder/Notic"
             headers = {"User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT)}
-            r = requests.get(login_form_url, headers=headers)
+            r = rebot.http_get(login_form_url, headers=headers)
             cookies = dict(r.cookies)
             code_url = 'http://www.e2go.com.cn/Home/LoginCheckCode/0.2769864823920234'
-            r = requests.get(code_url, headers=headers, cookies=cookies)
+            r = rebot.http_get(code_url, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             data = {
                 "cookies": cookies,
@@ -327,7 +327,7 @@ class Flow(BaseFlow):
                 "RideStation": line.s_sta_name,
                 "RideStationId": line.s_sta_id
             }
-            r = requests.post(queryline_url, data=data, headers=rebot.http_header(), cookies=json.loads(rebot.cookies))
+            r = self.http_post(queryline_url, data=data, headers=rebot.http_header(), cookies=json.loads(rebot.cookies))
             content = r.content
             if isinstance(content, unicode):
                 pass
