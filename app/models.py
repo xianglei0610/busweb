@@ -874,9 +874,9 @@ class ScqcpRebot(Rebot):
     def proxy_ip(self):
         rds = get_redis("default")
         ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_ZJGSM, ipstr):
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
             return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_ZJGSM)
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
         self.modify(ip=ipstr)
         return ipstr
 
