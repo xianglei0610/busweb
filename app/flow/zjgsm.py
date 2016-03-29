@@ -49,7 +49,7 @@ class Flow(BaseFlow):
             r = rebot.http_get(verify_url, headers=headers, cookies=cookies)
             res = json.loads(r.content[r.content.index("(")+1: r.content.rindex(")")])
             if res["rtn_code"] != "000000":
-                lock_result.update(result_code=3)
+                lock_result.update(result_code=2, result_reason="需要锁票验证码")
                 return lock_result
             rtn_key = res["rtn_key"]
 
