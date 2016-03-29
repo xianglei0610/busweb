@@ -150,6 +150,7 @@ class Flow(BaseFlow):
         state_names = {
             "02": "出票成功",
             "06": "已过期",
+            "04": "出票中",
         }
         state = state_names.get(detail_info["state"], "")
         if state == "出票成功":
@@ -171,6 +172,11 @@ class Flow(BaseFlow):
                 "result_msg": state,
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
+            })
+        elif state == "出票中":
+            result_info.update({
+                "result_code": 4,
+                "result_msg": state,
             })
         elif state == "已过期":
             result_info.update({
