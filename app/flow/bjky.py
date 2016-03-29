@@ -65,24 +65,20 @@ class Flow(BaseFlow):
                 }
                 r = rebot.http_post(add_shopcart_url, data=data, headers=headers, cookies=cookies)
                 ret = r.content
-                if isinstance(ret, unicode):
-                    pass
-                else:
+                if not isinstance(ret, unicode):
                     ret = ret.decode('utf-8')
                 sel = etree.HTML(ret)
                 errmsg = sel.xpath('//*[@id="addOneTicket"]/ul/li[2]/div[3]/span/text()')
                 if errmsg:
                     lock_result.update(result_code=0,
                                        source_account=rebot.telephone,
-                                       result_reason=errmsg[0],
+                                       result_reason='add_shopcart'+errmsg[0],
                                        lock_info={'result_reason':errmsg[0]})
                     return lock_result
             order_url = 'http://www.e2go.com.cn/TicketOrder/Order'
             r = rebot.http_post(order_url, headers=headers, cookies=cookies)
             content = r.content
-            if isinstance(content, unicode):
-                pass
-            else:
+            if not isinstance(content, unicode):
                 content = content.decode('utf-8')
             sel = etree.HTML(content)
             order_no = sel.xpath('//div[@class="orderContainer"]/div[@class="importantBox orderTip"]/strong/text()')

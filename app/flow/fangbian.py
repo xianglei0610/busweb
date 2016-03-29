@@ -73,7 +73,7 @@ class Flow(BaseFlow):
                     "arrStation": line.d_sta_name,
                     "dptDate": line.drv_date,
                     "dptTime": line.drv_time,
-                    "ticketPrice": line.full_price,
+                    "ticketPrice": line.full_price+line.fee,
                     "optionType": 1
                 },
             ],
