@@ -255,6 +255,21 @@ def main():
     sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "阜新市"}})
     sched.add_cron_job(bus_crawl, hour=22, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "葫芦岛市"}})
 
+    #张家港市民网页 & 无线苏州
+    sched.add_cron_job(bus_crawl, hour=23, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "张家港"}})
+    sched.add_cron_job(bus_crawl, hour=0, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "常熟"}})
+    sched.add_cron_job(bus_crawl, hour=2, minute=0, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "太仓"}})
+    sched.add_cron_job(bus_crawl, hour=2, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "吴江"}})
+    sched.add_cron_job(bus_crawl, hour=3, minute=0, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "昆山"}})
+
+    sched.add_cron_job(bus_crawl, hour=23, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "张家港"}})
+    sched.add_cron_job(bus_crawl, hour=0, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "常熟"}})
+    sched.add_cron_job(bus_crawl, hour=2, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "太仓"}})
+    sched.add_cron_job(bus_crawl, hour=2, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "吴江"}})
+    sched.add_cron_job(bus_crawl, hour=3, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "昆山"}})
+
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=10)
