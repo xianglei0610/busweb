@@ -815,6 +815,26 @@ class ZjgsmWebRebot(Rebot):
     crawl_source = SOURCE_ZJGSM
     is_for_lock = True
 
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source='zjgsm',
+                                      create_date_time__gte=today) \
+                              .aggregate({
+                                  "$group":{
+                                      "_id": {"phone": "$source_account"},
+                                      "count": {"$sum": "$ticket_amount"}}
+                              }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt >= 4:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts-droped))
+        return cls.objects.get(telephone=tele)
+
     @property
     def proxy_ip(self):
         rds = get_redis("default")
