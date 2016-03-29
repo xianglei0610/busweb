@@ -327,7 +327,7 @@ class Flow(BaseFlow):
                 "RideStation": line.s_sta_name,
                 "RideStationId": line.s_sta_id
             }
-            r = self.http_post(queryline_url, data=data, headers=rebot.http_header(), cookies=json.loads(rebot.cookies))
+            r = rebot.http_post(queryline_url, data=data, headers=rebot.http_header(), cookies=json.loads(rebot.cookies))
             content = r.content
             if isinstance(content, unicode):
                 pass

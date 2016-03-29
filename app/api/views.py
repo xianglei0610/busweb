@@ -8,7 +8,7 @@ from assign import enqueue_wating_lock
 from app.api import api
 from app.models import Line, Order, OpenCity
 from app.flow import get_compatible_flow, get_flow
-from app import order_log
+from app import order_log, access_log
 from tasks import async_lock_ticket
 
 
@@ -130,6 +130,7 @@ def query_line():
     """
     now = dte.now()
     try:
+        access_log.info("[query_line] %s", request.get_data())
         post = json.loads(request.get_data())
         starting_name = post.get("starting_name")
         dest_name = post.get("destination_name")
