@@ -221,28 +221,27 @@ class Flow(BaseFlow):
             token = data["token"]
         else:
             login_form_url = "http://scqcp.com/login/index.html"
-            r = requests.get(login_form_url, headers=headers)
+            r = rebot.http_get(login_form_url, headers=headers)
             sel = etree.HTML(r.content)
             cookies = dict(r.cookies)
             code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
             token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
-            r = requests.get(code_url, headers=headers, cookies=cookies)
+            r = rebot.http_get(code_url, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             tmpIm = cStringIO.StringIO(r.content)
             im = Image.open(tmpIm)
             code = pytesseract.image_to_string(im)
-
         data = {
             "uname": rebot.telephone,
             "passwd": rebot.password,
             "code": code,
             "token": token,
         }
-        r = requests.post("http://scqcp.com/login/check.json", data=data, headers=headers, cookies=cookies)
+        r = rebot.http_post("http://scqcp.com/login/check.json", data=data, headers=headers, cookies=cookies)
         cookies.update(dict(r.cookies))
         ret = r.json()
         if ret["success"]:
-            r = requests.get(pay_url, headers=headers, cookies=cookies)
+            r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
                 order.modify(status=STATUS_ISSUE_FAIL)
@@ -262,7 +261,7 @@ class Flow(BaseFlow):
             )
 
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
-            r = requests.post(info_url, data=data, headers=headers, cookies=cookies)
+            r = rebot.http_post(info_url, data=data, headers=headers, cookies=cookies)
             sel = etree.HTML(r.content)
             try:
                 pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
