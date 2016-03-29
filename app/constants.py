@@ -1091,6 +1091,7 @@ RK_PROXY_IP_TC = "proxy:tongcheng"
 RK_PROXY_IP_CBD = "proxy:cbd"
 RK_PROXY_IP_ZJGSM = "proxy:zjgsm"
 RK_PROXY_IP_WXSZ = "proxy:wxsz"
+RK_PROXY_IP_BJKY = "proxy:cbd"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"        # 当前使用的
 
 RK_PROXY_IP_SCQCP = "proxy:scqcp"
