@@ -84,6 +84,8 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                 })
             else:
+                if u"所购车次已无余票" in msg:
+                    self.close_line(line, reason=msg)
                 lock_result.update({
                     "result_code": 0,
                     "result_reason": msg,

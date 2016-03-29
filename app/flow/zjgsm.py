@@ -40,6 +40,7 @@ class Flow(BaseFlow):
                     "result_reason": u"账号未登录",
                 })
                 return lock_result
+            lock_result.update(source_account=rebot.telephone)
 
             # 检验验证码
             headers = {"User-Agent": rebot.user_agent}
@@ -89,6 +90,16 @@ class Flow(BaseFlow):
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": msg,
+                })
+            elif "您当日购票数量(含本次购买票数)已超过5张" in msg:
+                rebot.remove_doing_order(order)
+                order.modify(source_account="")
+                with ZjgsmWebRebot.get_and_lock(order) as newrebot:
+                    account = newrebot.telephone
+                lock_result.update({
+                    "result_code": 2,
+                    "result_reason": msg,
+                    "source_account": account,
                 })
             else:
                 lock_result.update({
