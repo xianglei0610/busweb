@@ -700,6 +700,9 @@ class WxszRebot(Rebot):
         return ipstr
 
     def login(self):
+        if self.test_login_status():
+            rebot_log.info("已经登陆wxsz %s" % self.telephone)
+            return "OK"
         url = "http://content.2500city.com/ucenter/user/login"
         params = dict(
             account=self.telephone,
@@ -712,10 +715,12 @@ class WxszRebot(Rebot):
         url = "%s?%s" % (url, urllib.urlencode(params))
         r = self.http_get(url, headers={"User-Agent": self.user_agent})
         res = r.json()
-        if res["errorCode"] == 0:
+        error = res["errorMsg"]
+        if not error:
             _, sign = SOURCE_INFO[SOURCE_WXSZ]["accounts"][self.telephone]
             self.modify(uid=res["data"]["uid"], sign=sign)
             return "OK"
+        rebot_log.info("登陆失败wxsz %s %s", self.telephone, error)
         return "fail"
 
     def test_login_status(self):
@@ -838,11 +843,10 @@ class ZjgsmWebRebot(Rebot):
 
     def login(self):
         self.last_login_time = dte.now()
-        self.user_agent = headers["User-Agent"]
+        self.user_agent = random.choice(BROWSER_USER_AGENT)
         self.is_active=True
-        self.cookies = json.dumps(cookies)
+        self.cookies = "{}"
         self.save()
-        self.test_login_status()
         return "OK"
 
 
