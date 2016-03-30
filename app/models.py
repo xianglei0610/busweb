@@ -1113,6 +1113,60 @@ class ChangtuWebRebot(Rebot):
             return 1
         return 0
 
+class JsdlkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "jsdlkyweb_rebot",
+    }
+    crawl_source = SOURCE_JSDLKY
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        index_url = "http://www.jslw.gov.cn/"
+        headers = {"User-Agent": ua}
+        r = self.http_get(index_url, headers=headers)
+        cookies = dict(r.cookies)
+        add_secret = lambda s: "".join(map(lambda b: str(hex(ord(b))).lstrip("0x"), s))
+
+        params = {
+            "returnurl":  "",
+            "event": "login",
+            "password1":  add_secret(self.password),
+            "user_code1": add_secret(self.telephone),
+            "user_code": self.telephone,
+            "password": self.password,
+            "rememberMe": "yes",
+        }
+
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active=True
+        self.cookies = "{}"
+        self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+    def check_login_by_resp(self, resp):
+        result = urlparse.urlparse(resp.url)
+        if "login" in result.path:
+            return 0
+        return 1
+
+    def test_login_status(self):
+        undone_order_url = "http://www.bababus.com/baba/order/list.htm?billStatus=0&currentLeft=11"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = requests.get(undone_order_url, headers=headers, cookies=cookies)
+        return self.check_login_by_resp(resp)
+
 
 class BabaWebRebot(Rebot):
     user_agent = db.StringField()

@@ -21,8 +21,18 @@ SOURCE_CQKY = "cqky"
 SOURCE_LNKY = "lnky"
 SOURCE_ZJGSM = "zjgsm"
 SOURCE_WXSZ = "wxsz"
+SOURCE_JSDLKY = "jsdlky"
 
 SOURCE_INFO = {
+    SOURCE_JSDLKY: {
+        "name": "江苏道路客运",
+        "website": "www.jslw.gov.cn",
+        "accounts": {
+            "15575101324": ("123456", ""),
+        },
+        "pwd_encode": {
+        }
+    },
     SOURCE_ZJGSM: {
         "name": "张家港市民网页",
         "website": "www.zjgsmwy.com",
