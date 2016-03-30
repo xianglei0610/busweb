@@ -9,7 +9,7 @@ import datetime
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import Line, BabaWebRebot
+from app.models import Line, JsdlkyWebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
@@ -18,7 +18,7 @@ from tasks import async_send_email
 
 class Flow(BaseFlow):
 
-    name = "baba"
+    name = "jsdlky"
 
     def do_lock_ticket(self, order):
         lock_result = {
@@ -31,54 +31,60 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with BabaWebRebot.get_and_lock(order) as rebot:
+        with JsdlkyWebRebot.get_and_lock(order) as rebot:
             line = order.line
-            form_url = "http://www.bababus.com/baba/order/writeorder.htm"
-            params = {
-                "sbId": line.extra_info["sbId"],
-                "stId": line.extra_info["stId"],
-                "depotId": line.extra_info["depotId"],
-                "busId": line.bus_num,
-                "leaveDate": line.drv_date,
-                "beginStationId": line.s_sta_id,
-                "endStationId": line.d_sta_id,
-                "endStationName": line.d_sta_name,
-            }
-            cookies = json.loads(rebot.cookies)
-            r = requests.get("%s?%s" %(form_url,urllib.urlencode(params)),
-                             headers={"User-Agent": rebot.user_agent},
-                             cookies=cookies)
-
             # 未登录
-            if not rebot.check_login_by_resp(r):
+            if not rebot.test_login_status():
                 lock_result.update({
                     "result_code": 2,
                     "source_account": rebot.telephone,
-                    "result_reason": "账号未登录",
+                    "result_reason": u"账号未登录",
                 })
                 return lock_result
+
+            form_url = "http://www.jslw.gov.cn/busOrder.do"
+            params = {
+                "event": "init_query",
+                "max_date": "2016-04-01",
+                "drive_date1": line.drv_date,
+                "bus_code": line.bus_num,
+                "sstcode": line.extra_info["startstationcode"],
+                "rstcode": line.s_sta_id,
+                "dstcode": line.d_sta_id,
+                "rst_name1": line.s_sta_name,
+                "dst_name1": line.d_sta_name,
+                "rst_name": line.s_sta_name,
+                "dst_name": line.d_sta_name,
+                "drive_date": line.drv_date,
+                "checkcode": "",
+            }
+            cookies = json.loads(rebot.cookies)
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": rebot.user_agent,
+            }
+            r = rebot.http_post(form_url,
+                                data=urllib.urlencode(params),
+                                headers=headers,
+                                cookies=cookies)
 
             soup = BeautifulSoup(r.content, "lxml")
-            wrong_info = soup.select(".wrong_body .wrong_inf")
-            # 订单填写页获取错误
-            if wrong_info:
-                inf = wrong_info[0].get_text()
-                tip = soup.select(".wrong_body .wrong_tip")[1].get_text()
-                lock_result.update({
-                    "result_code": 0,
-                    "source_account": rebot.telephone,
-                    "result_reason": "%s %s" % (inf, tip),
-                })
-                return lock_result
-
             # 构造表单参数
             raw_form = {}
             for obj in soup.find_all("input"):
                 name, val = obj.get("name"), obj.get("value")
                 if name in ["None", "none", '']:
                     continue
+                print name, val
                 raw_form[name] = val
-
+            return
+            # psgName 罗军平
+            # psgIdType   01
+            # psgIdCode   431021199004165616
+            # psgTel  15575101324
+            # psgEmail    luo86106@qq.com
+            # psgTicketType   0
+            # psgBabyFlg  0
             submit_data = {
                 "p": raw_form.get("p", ""),
                 "sbId": raw_form["sbId"],
@@ -247,9 +253,19 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = BabaWebRebot.objects.get(telephone=order.source_account)
+        rebot = JsdlkyWebRebot.objects.get(telephone=order.source_account)
+        is_login = rebot.test_login_status()
+        if not is_login and valid_code:
+            info = json.loads(session["pay_login_info"])
+            headers = info["headers"]
+            cookies = info["cookies"]
+            flag = rebot.login(headers=headers, cookies=cookies, valid_code=valid_code)
+            if flag == "OK":
+                is_login = 1
 
-        def _get_page(rebot):
+        if is_login:
+            if order.status == STATUS_LOCK_RETRY:
+                self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
                 pay_url = "http://www.bababus.com/baba/order/bankpay.htm"
                 headers = {
@@ -269,45 +285,14 @@ class Flow(BaseFlow):
                 if order.pay_money != pay_money or order.pay_order_no != trade_no:
                     order.modify(pay_money=pay_money, pay_order_no=trade_no)
                 return {"flag": "html", "content": r.content}
-
-        if valid_code:
-            info = json.loads(session["pay_login_info"])
-            headers = info["headers"]
-            cookies = info["cookies"]
-            params = {
-                "returnurl": "",
-                "userCode": rebot.telephone,
-                "password": rebot.password,
-                "checkCode": valid_code,
-                "rememberMe": "yes",
-            }
-            custom_headers = {}
-            custom_headers.update(headers)
-            custom_headers.update({"Content-Type": "application/x-www-form-urlencoded"})
-            r = requests.post("http://www.bababus.com/baba/login.htm",
-                              data=urllib.urlencode(params),
-                              headers=custom_headers,
-                              allow_redirects=False,
-                              cookies=cookies)
-            cookies.update(dict(r.cookies))
-            rebot.modify(cookies=json.dumps(cookies))
-        is_login = rebot.test_login_status()
-
-        if is_login:
-            if order.status == STATUS_LOCK_RETRY:
-                self.lock_ticket(order)
-            return _get_page(rebot)
         else:
-            login_form = "http://www.bababus.com/baba/login.htm"
-            ua = random.choice(BROWSER_USER_AGENT)
-            headers = {"User-Agent": ua}
+            login_form = "http://www.jslw.gov.cn/login.do"
+            headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
             r = requests.get(login_form, headers=headers)
-            soup = BeautifulSoup(r.content, "lxml")
-            valid_url = soup.select("#cc")[0].get("src")
             data = {
                 "cookies": dict(r.cookies),
                 "headers": headers,
-                "valid_url": valid_url,
+                "valid_url": "http://www.jslw.gov.cn/verifyCode",
             }
             session["pay_login_info"] = json.dumps(data)
             return {"flag": "input_code", "content": ""}

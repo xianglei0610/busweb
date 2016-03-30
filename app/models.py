@@ -548,8 +548,6 @@ class Rebot(db.Document):
     @classmethod
     def login_all(cls):
         # 登陆所有预设账号
-        rebot_log.info("== start to login %s", cls.crawl_source)
-        valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
         for bot in cls.objects:
@@ -560,8 +558,9 @@ class Rebot(db.Document):
             pwd, _ = accounts[bot.telephone]
             bot.modify(password=pwd)
             if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
+                rebot_log.info("%s %s 登陆成功", cls.crawl_source, bot.telephone)
+            else:
+                rebot_log.info("%s %s 登陆失败", cls.crawl_source, bot.telephone)
 
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
@@ -572,9 +571,9 @@ class Rebot(db.Document):
                       password=pwd,)
             bot.save()
             if bot.login() == "OK":
-                rebot_log.info("%s 登陆成功" % bot.telephone)
-                valid_cnt += 1
-        rebot_log.info(">>>> end login %s, success %d", cls.crawl_source, valid_cnt)
+                rebot_log.info("%s %s 登陆成功", cls.crawl_source, bot.telephone)
+            else:
+                rebot_log.info("%s %s 登陆失败", cls.crawl_source, bot.telephone)
 
     @classmethod
     def get_one(cls, order=None):
@@ -1128,14 +1127,16 @@ class JsdlkyWebRebot(Rebot):
     def proxy_ip(self):
         return ""
 
-    def login(self):
-        ua = random.choice(BROWSER_USER_AGENT)
+    def login(self, headers=None, cookies={}, valid_code=""):
         index_url = "http://www.jslw.gov.cn/"
-        headers = {"User-Agent": ua}
-        r = self.http_get(index_url, headers=headers)
-        cookies = dict(r.cookies)
-        add_secret = lambda s: "".join(map(lambda b: str(hex(ord(b))).lstrip("0x"), s))
+        if not headers:
+            ua = random.choice(BROWSER_USER_AGENT)
+            headers = {"User-Agent": ua}
+        if not cookies:
+            r = self.http_get(index_url, headers=headers)
+            cookies = dict(r.cookies)
 
+        add_secret = lambda s: "".join(map(lambda b: str(hex(ord(b))).lstrip("0x"), s))
         params = {
             "returnurl":  "",
             "event": "login",
@@ -1145,27 +1146,39 @@ class JsdlkyWebRebot(Rebot):
             "password": self.password,
             "rememberMe": "yes",
         }
+        if valid_code:
+            params.update(checkcode=valid_code)
 
-        self.last_login_time = dte.now()
-        self.user_agent = ua
-        self.is_active=True
-        self.cookies = "{}"
-        self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
-        return "OK"
-
-    def check_login_by_resp(self, resp):
-        result = urlparse.urlparse(resp.url)
-        if "login" in result.path:
-            return 0
-        return 1
+        login_url = "http://www.jslw.gov.cn/login.do"
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        r = self.http_post(login_url,
+                           data=urllib.urlencode(params),
+                           allow_redirects=False,
+                           headers=headers, cookies=cookies)
+        r_cookies = dict(r.cookies)
+        cookies.update(r_cookies)
+        if r.headers.get("location", "") and r_cookies["userId"]:
+            self.last_login_time = dte.now()
+            self.user_agent = headers["User-Agent"]
+            self.is_active=True
+            self.cookies = json.dumps(cookies)
+            self.save()
+            return "OK"
+        else:
+            return "fail"
 
     def test_login_status(self):
-        undone_order_url = "http://www.bababus.com/baba/order/list.htm?billStatus=0&currentLeft=11"
+        user_url = "http://www.jslw.gov.cn/registerUser.do"
         headers = {"User-Agent": self.user_agent}
-        cookies = json.loads(self.cookies)
-        resp = requests.get(undone_order_url, headers=headers, cookies=cookies)
-        return self.check_login_by_resp(resp)
+        r= self.http_get(user_url, headers=headers, cookies=json.loads(self.cookies))
+        sel = etree.HTML(r.content)
+        try:
+            username = sel.xpath("//li[@class='user']/text()")[0]
+            assert username == self.telephone
+            return 1
+        except:
+            self.modify(cookies="{}")
+            return 0
 
 
 class BabaWebRebot(Rebot):
