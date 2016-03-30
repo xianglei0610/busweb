@@ -40,7 +40,7 @@ class Flow(BaseFlow):
 
             if len(set([d["id_number"] for d in order.riders])) != len(order.riders):
                 lock_result.update({
-                    "result_code": 2,
+                    "result_code": 0,
                     "source_account": rebot.telephone,
                     "result_reason": u"乘客身份证号重复",
                 })
