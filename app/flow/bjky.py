@@ -114,7 +114,7 @@ class Flow(BaseFlow):
             return lock_result
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
-        order_detail_url = "http://www.e2go.com.cn/TicketOrder/OrderDetail/%s?seed=0.3821293651129908"%order.lock_info['order_id']
+        order_detail_url = "http://e2go.com.cn/TicketOrder/OrderDetail/%s?seed=0.3821293651129908"%order.lock_info['order_id']
         headers = rebot.http_header()
 #         rebot.login()
 #         rebot.reload()
@@ -193,7 +193,7 @@ class Flow(BaseFlow):
             rebot = BjkyWebRebot.objects.get(telephone=order.source_account)
         else:
             rebot = BjkyWebRebot.get_one()
-            
+
         is_login = rebot.test_login_status()
         if is_login:
             if order.status == STATUS_LOCK_RETRY:
@@ -375,7 +375,7 @@ class Flow(BaseFlow):
             if line.s_sta_name == u'首都机场站':
                 s_sta_name = line.s_sta_name.strip().rstrip("站")
             try:
-                kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=s_sta_name, d_city_name=d_city_name,d_sta_name=line.d_sta_name, drv_time=line.drv_time )    
+                kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=s_sta_name, d_city_name=d_city_name,d_sta_name=line.d_sta_name, drv_time=line.drv_time )
                 d_city_name = kuaiba_line.d_city_name
             except:
                 pass

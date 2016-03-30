@@ -13,6 +13,11 @@ class Config:
     MAIL_USE_TLS = True
     MAIL_USERNAME = 'dg@12308.com'
     MAIL_PASSWORD = 'PY12dg'
+    #MAIL_SERVER = 'smtp.qq.com'
+    #MAIL_PORT = 25
+    #MAIL_USE_TLS = True
+    #MAIL_USERNAME = '1913839418@qq.com'
+    #MAIL_PASSWORD = '12308_com'
 
     # celery config
     CELERY_BROKER_URL = 'redis://localhost:6379/10'
@@ -70,11 +75,11 @@ class Config:
 
 class ApiDevConfig(Config):
 
-    MAIL_SERVER = 'smtp.exmail.qq.com'
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    #MAIL_SERVER = 'smtp.exmail.qq.com'
+    #MAIL_PORT = 587
+    #MAIL_USE_TLS = True
+    #MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    #MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 
     # scrapyd 地址
     SCRAPYD_URLS = [
