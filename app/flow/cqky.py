@@ -385,16 +385,16 @@ class Flow(BaseFlow):
             "Origin": "http://www.96096kp.com",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
-        #def my_trans_js_str(s):
-        #    """
-        #    {aa:'bb'} ==> {"aa":"bb"}
-        #    """
-        #    for k in set(re.findall("([A-Za-z]+):", s)):
-        #        s= re.sub(r"\b%s\b" % k, '"%s"' % k, s)
-        #    return s
+        def my_trans_js_str(s):
+            for k in set(re.findall("([A-Za-z]+):", s)):
+                s= re.sub(r"\b%s\b" % k, '"%s"' % k, s)
+            return s
         cookies = json.loads(rebot.cookies)
         r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
-        res = json.loads(trans_js_str(r.content))
+        try:
+            res = json.loads(trans_js_str(r.content))
+        except:
+            res = json.loads(my_trans_js_str(r.content))
         for d in res["data"]:
             if d["OrderNo"] == order.raw_order_no:
                 return d

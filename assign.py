@@ -30,7 +30,7 @@ def dequeue_wating_lock(username=""):
         if orderct > 0:
             rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
             return None
-    if order.crawl_source == SOURCE_CBD and username not in ["luocky"]:
+    if order.crawl_source == SOURCE_CBD and username not in ["luocky", "liuquan"]:
         rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
         return None
     return order

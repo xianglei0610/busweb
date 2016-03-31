@@ -1392,7 +1392,7 @@ class CqkyWebRebot(Rebot):
                               }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt >= 6:
+            if cnt >= 3:
                 droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)
