@@ -136,14 +136,9 @@ class Flow(BaseFlow):
                     })
             elif "您未登录或登录已过期" in res["msg"]:
                 rebot.modify(ip="")
-                rebot.remove_doing_order(order)
-                order.modify(source_account="")
-                with CqkyWebRebot.get_and_lock(order) as newrebot:
-                    account = newrebot.telephone
                 lock_result.update({
                      "result_code": 2,
-                     #"source_account": rebot.telephone,
-                     "source_account": account,
+                     "source_account": rebot.telephone,
                      "result_reason": u"账号未登录",
                  })
             elif u"单笔订单一次只允许购买3张车票" in res["msg"]:
@@ -171,6 +166,10 @@ class Flow(BaseFlow):
             r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+            if "@" in rebot.telephone:
+                mail = rebot.telephone
+            else:
+                mail = "%s@qq.com" % rebot.telephone
             params ={
                 "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
                 "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
@@ -181,7 +180,7 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$NavigationControl1$o_IdCard": order.contact_info["id_number"],
                 "ctl00$FartherMain$NavigationControl1$o_IdCardConfirm": order.contact_info["id_number"],
                 "ctl00$FartherMain$NavigationControl1$radioListPayType": "OnlineAliPay,支付宝在线支付",
-                "ctl00$FartherMain$NavigationControl1$o_Email": "kuo86106@qq.com",
+                "ctl00$FartherMain$NavigationControl1$o_Email": mail,
                 "ctl00$FartherMain$NavigationControl1$ContactAddress": "",
                 "ctl00$FartherMain$NavigationControl1$o_Memo": "",
                 "ctl00$FartherMain$NavigationControl1$hideIsSubmit": "true",
@@ -421,13 +420,7 @@ class Flow(BaseFlow):
         return {}
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        try:
-            rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
-        except:
-            with CqkyWebRebot.get_and_lock(order) as newrebot:
-                account = newrebot.telephone
-                order.modify(source_account=account)
-                rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
+        rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
         if order.status == STATUS_LOCK_RETRY:
             if valid_code:
                 login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
