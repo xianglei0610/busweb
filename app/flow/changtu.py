@@ -19,7 +19,7 @@ class Flow(BaseFlow):
 
     name = "changtu"
 
-    def do_lock_ticket_web(self, order, valid_code=""):
+    def do_lock_ticket_web(self, order, valid_code="", login_checked=False):
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
@@ -32,9 +32,8 @@ class Flow(BaseFlow):
         }
         with ChangtuWebRebot.get_and_lock(order) as rebot:
             line = order.line
-            is_login = rebot.test_login_status()
             # 未登录
-            if not is_login:
+            if not login_checked and not rebot.test_login_status():
                 lock_result.update({ "result_code": 2,
                     "source_account": rebot.telephone,
                     "result_reason": u"账号未登录",
@@ -66,18 +65,17 @@ class Flow(BaseFlow):
                 passenger_info.update({
                     "ticketInfo_%s" % i: "1♂%s♂%s♂0♂♂N" % (r["name"], r["id_number"])
                 })
+            s = '{"ticketInfo_0":"1♂孟斌强♂330621199001255913♂0♂♂N","ticketInfo_1":"1♂罗军♂431021199004165616♂0♂♂N"}'
 
-            params = {
+            ticket_info = {
                 "refUrl": "http://www.changtu.com/",
                 "stationMapId": line.extra_info["stationMapId"],
                 "planId": line.extra_info["id"],
                 "planDate": line.drv_date,
-                "receUserName": order.contact_info["name"],
-                "receUserCardCode": order.contact_info["id_number"],
-                "receUserContact": rebot.telephone,
-                "orderCount": 1,        # 这个???
+                "orderCount": order.ticket_amount,
                 "arMoney": order.order_price,
-                "passengerStr": json.dumps(passenger_info),
+                #"passengerStr": passenger_info,
+                "passengerStr": s,
                 "yhqMoney": 0,
                 "yhqId": "",
                 "tickType": ticket_type,
@@ -94,9 +92,20 @@ class Flow(BaseFlow):
                 "reserveNearbyFlag": "N",
                 "stationId": line.s_sta_id,
                 "actionFlag": 2,
+            }
+
+            submit_data = {
+                "saveReceUserFlag": "N",
+                "receUserName": order.contact_info["name"],
+                "receUserCardCode": order.contact_info["id_number"],
+                "receUserContact": order.contact_info["telephone"],
                 "t": token,
                 "fraud": json.dumps({"verifyCode": valid_code}),
+                "ordersJson": [json.dumps(ticket_info, ensure_ascii=False)],
+                "orderType": -1,
+                "reserveNearbyFlag": "N",
             }
+
             ret = self.send_lock_request_web(order, rebot, submit_data)
             flag = int(ret["flag"])
             if flag == 1:
@@ -131,7 +140,8 @@ class Flow(BaseFlow):
                     })
             return lock_result
 
-    def do_lock_ticket(self, order):
+    def do_lock_ticket(self, order, **kwargs):
+        return self.do_lock_ticket_web(order, **kwargs)
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
@@ -251,16 +261,18 @@ class Flow(BaseFlow):
         """
         单纯向源站发请求
         """
-        submit_url = "http://m.changtu.com/order/submitOrder.htm"
+        submit_url = "http://www.changtu.com/trade/order/submitOrders.htm"
         headers = {
             "User-Agent": rebot.user_agent,
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
         resp = requests.post(submit_url,
                              data=urllib.urlencode(data),
                              headers=headers,
-                             cookies=cookies,)
+                             cookies=cookies,
+                             proxies={"http": "http://localhost:8888"})
+        print resp.content, 1111111111111
         ret = resp.json()
         return ret
 
@@ -338,18 +350,16 @@ class Flow(BaseFlow):
                               cookies=cookies)
             cookies.update(dict(r.cookies))
             rebot.modify(cookies=json.dumps(cookies))
-        if not is_login:
-            is_login = rebot.test_login_status()
 
+        is_login = is_login or rebot.test_login_status()
         if is_login:
             if order.status == STATUS_LOCK_RETRY:
                 fail_code = order.lock_info.get("failReason", "")
-                if valid_code:
-                    self.lock_ticket(order, valid_code=valid_code)
-                elif fail_code == "13":
+                self.lock_ticket(order, valid_code=valid_code, login_checked=True)
+                if fail_code == "13":
                     data = {
                         "cookies": json.loads(rebot.cookies),
-                        "headers": {"User-Agent": random.choice(BROWSER_USER_AGENT)},
+                        "headers": {"User-Agent": rebot.user_agent},
                         "valid_url": "http://www.changtu.com/dverifyCode/order?t=%s" % time.time(),
                     }
                     session["pay_login_info"] = json.dumps(data)
