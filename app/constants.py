@@ -570,6 +570,16 @@ SOURCE_INFO = {
         "limit_payct": 100,
         "website": "http://http://www.96096kp.com/",
         "accounts": {
+            "370119907@qq.com":  ("123456", ""),
+            "18575593355": ("123456", ""),
+            "15574335669": ("123456", ""),
+            "372048470@qq.com": ("123456", ""),
+            "18588468517": ("123456", ""),
+            "efrfdaf@qq.com": ("123456", ""),
+            "efrfdaf@foxmail.com": ("123456", ""),
+            "joshualq@vip.qq.com": ("123456", ""),
+            "6063983@qq.com": ("123456", ""),
+
             "927330592@qq.com": ("123456", ""),
             "729263464@qq.com": ("123456", ""),
             "812193944@qq.com": ("123456", ""),
@@ -1216,7 +1226,7 @@ RET_BUY_TIME_ERROR = 202    # 线路不在预售期
 RET_CITY_NOT_OPEN = 203     # 该城市未开放
 
 # 立即支付按钮变灰持续时间
-PAY_CLICK_EXPIR = 20
+PAY_CLICK_EXPIR = 5
 
 ISSUE_FAIL_WARNING = 3
 ISSUEING_WARNING = 3

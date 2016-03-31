@@ -136,9 +136,14 @@ class Flow(BaseFlow):
                     })
             elif "您未登录或登录已过期" in res["msg"]:
                 rebot.modify(ip="")
+                rebot.remove_doing_order(order)
+                order.modify(source_account="")
+                with CqkyWebRebot.get_and_lock(order) as newrebot:
+                    account = newrebot.telephone
                 lock_result.update({
                      "result_code": 2,
-                     "source_account": rebot.telephone,
+                     #"source_account": rebot.telephone,
+                     "source_account": account,
                      "result_reason": u"账号未登录",
                  })
             elif u"单笔订单一次只允许购买3张车票" in res["msg"]:
@@ -416,7 +421,13 @@ class Flow(BaseFlow):
         return {}
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
+        try:
+            rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
+        except:
+            with CqkyWebRebot.get_and_lock(order) as newrebot:
+                account = newrebot.telephone
+                order.modify(source_account=account)
+                rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
         if order.status == STATUS_LOCK_RETRY:
             if valid_code:
                 login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
