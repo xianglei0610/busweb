@@ -303,7 +303,8 @@ class Flow(BaseFlow):
                 return {"flag": "html", "content": r.content}
 
         if valid_code:#  登陆
-            data = json.loads(session["pay_login_info"])
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            data = json.loads(session[key])
             code_url = data["valid_url"]
             headers = data["headers"]
             cookies = data["cookies"]
@@ -336,7 +337,8 @@ class Flow(BaseFlow):
                     "headers": headers,
                     "valid_url": code_url,
                 }
-                session["pay_login_info"] = json.dumps(data)
+                key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+                session[key] = json.dumps(data)
                 return {"flag": "input_code", "content": ""}
             else:
                 return {"flag": "false", "content": r}
@@ -353,7 +355,8 @@ class Flow(BaseFlow):
                 "headers": headers,
                 "valid_url": code_url,
             }
-            session["pay_login_info"] = json.dumps(data)
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
@@ -381,9 +384,7 @@ class Flow(BaseFlow):
             }
             r = rebot.http_post(queryline_url, data=data, headers=rebot.http_header(), cookies=json.loads(rebot.cookies))
             content = r.content
-            if isinstance(content, unicode):
-                pass
-            else:
+            if not isinstance(content, unicode):
                 content = content.decode('utf-8')
             sel = etree.HTML(content)
             scheduleList = sel.xpath('//div[@id="scheduleList"]/table/tbody/tr')
