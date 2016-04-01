@@ -265,6 +265,7 @@ class Flow(BaseFlow):
                     "fee": 0,
                     "left_tickets": int(d['seatLast']),
                     "refresh_datetime": now,
+                    "s_sta_name": d['fromStation'],
                 }
                 if line_id == line.line_id:
                     update_attrs = info

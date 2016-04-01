@@ -264,7 +264,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=21, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "丹东市"}})
     sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "阜新市"}})
     sched.add_cron_job(bus_crawl, hour=22, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "葫芦岛市"}})
-    sched.add_cron_job(bus_crawl, hour=23, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "朝阳"}})
+    sched.add_cron_job(bus_crawl, hour=23, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "朝阳市"}})
 
     #张家港市民网页 & 无线苏州
     sched.add_cron_job(bus_crawl, hour=23, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "张家港"}})
