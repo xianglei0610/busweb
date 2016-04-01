@@ -655,7 +655,7 @@ class Rebot(db.Document):
             kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
         try:
             r = requests.get(url,
-                            timeout=30,
+                            timeout=15,
                             **kwargs)
         except Exception, e:
             self.modify(ip="")
@@ -667,7 +667,7 @@ class Rebot(db.Document):
             kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
         try:
             r = requests.post(url,
-                            timeout=30,
+                            timeout=15,
                             **kwargs)
         except Exception, e:
             self.modify(ip="")
