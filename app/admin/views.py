@@ -594,10 +594,10 @@ def wating_deal_order():
                     continue
                 if order.kefu_username:
                     continue
-                if order.crawl_source in ('bjky', 'lnky'):
-                    if current_user.username != 'yinlian':
-                        assign.enqueue_wating_lock(order)
-                        continue
+#                 if order.crawl_source in ('bjky', 'lnky'):
+#                     if current_user.username != 'yinlian':
+#                         assign.enqueue_wating_lock(order)
+#                         continue
                 order.update(kefu_username=current_user.username)
                 assign.add_dealing(order, current_user)
                 if order.status == STATUS_WAITING_LOCK:
