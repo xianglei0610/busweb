@@ -1461,6 +1461,14 @@ RK_PROXY_IP_SCQCP = "proxy:scqcp"
 RK_PROXY_CUR_SCQCP = "proxy:scqcp:current"        # 当前使用的
 
 
+ASSIGN_FLAG = True  #是否开启源站和账号分流
+
+ASSIGN_ACCOUNT = {
+                 'cqky': ['cqky'],
+                 'yinlian': ['bjky', 'lnky']
+ }
+
+
 # 短信模版
 
 DUAN_XIN_TEMPL = {

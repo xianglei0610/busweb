@@ -94,3 +94,16 @@ def dealed_but_not_issued_orders(user):
         rds.srem(key, *list(s_issued))
     return qs
 
+
+def deal_kefu_order(order, user):
+    flag = True
+    if ASSIGN_FLAG:
+        for k, v in ASSIGN_ACCOUNT.items():
+            if order.crawl_source in v and user.username != k:
+                enqueue_wating_lock(order)
+                return False
+            if user.username == k and order.crawl_source not in v:
+                return False
+        return flag
+    else:
+        return flag
