@@ -288,7 +288,7 @@ def main():
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=10)
     sched.add_interval_job(crawl_proxy_samair, minutes=15)
-    sched.add_interval_job(crawl_proxy_66ip, minutes=15)
+    #sched.add_interval_job(crawl_proxy_66ip, minutes=15)
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_proxy_cqky, minutes=1)
     sched.add_interval_job(check_proxy_tc, minutes=1)
