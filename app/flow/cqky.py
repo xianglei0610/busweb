@@ -128,13 +128,20 @@ class Flow(BaseFlow):
                         "result_code": 0,
                         "result_reason": res["msg"],
                     })
+                elif u"同一IP一天最多可订" in res["msg"]:
+                    rebot.modify(ip="")
+                    lock_result.update({
+                        "result_code": 2,
+                        "result_reason": res["msg"],
+                        "source_account": rebot.telephone,
+                    })
                 else:
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
-            elif "您未登录或登录已过期" in res["msg"]:
+            elif "您未登录或登录已过期" in res["msg"] or u"同一IP一天最多可订" in res["msg"]:
                 rebot.modify(ip="")
                 lock_result.update({
                      "result_code": 2,
