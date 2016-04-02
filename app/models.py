@@ -1086,10 +1086,10 @@ class ChangtuWebRebot(Rebot):
     is_for_lock = True
 
     def on_add_doing_order(self, order):
-        pass
+        self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        pass
+        self.modify(is_locked=False)
 
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
