@@ -83,9 +83,9 @@ class ProxyProducer(object):
 
     def crawl_from_xici(self):
         add_cnt = 0
-        for url in ["http://www.xicidaili.com/nn/%d", "http://www.xicidaili.com/nt/%d"]:
+        for t in ["http://www.xicidaili.com/nn/%d", "http://www.xicidaili.com/nt/%d"]:
             for i in range(1, 10):
-                url = url % i
+                url = t % i
                 try:
                     r = requests.get(url, timeout=10, headers={"User-Agent": "Chrome"})
                 except Exception:
