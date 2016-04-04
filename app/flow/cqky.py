@@ -109,7 +109,7 @@ class Flow(BaseFlow):
                         "source_account": account,
                         "result_reason": res["msg"],
                     })
-                elif u"拒绝售票" in res["msg"] or "提前时间不足" in res["msg"] or u"班次席位可售数不足" in res["msg"] or "班次站点无可售席位" in res["msg"]:
+                elif u"拒绝售票" in res["msg"] or "提前时间不足" in res["msg"] or u"班次席位可售数不足" in res["msg"] or "无可售席位" in res["msg"]:
                     self.close_line(line, reason=res["msg"])
                     lock_result.update({
                         "result_code": 0,
