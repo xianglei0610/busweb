@@ -39,60 +39,37 @@ class Flow(BaseFlow):
                                    source_account=rebot.telephone,
                                    result_reason="账号未登陆")
                 return lock_result
-            line = order.line
-            riders = order.riders
-            headers = rebot.http_header()
-            cookies = json.loads(rebot.cookies)
-            data = {
-                    "ScheduleString": line.extra_info['ScheduleString'],
-                    "StopString": line.extra_info['ArrivingStopJson']
-                    }
-            select_url = "http://www.e2go.com.cn/TicketOrder/SelectSchedule"
-            r = rebot.http_post(select_url, data=data, headers=headers, cookies=cookies)
-            cookies.update(dict(r.cookies))
-            ret = r.content
-            add_shopcart_url = 'http://www.e2go.com.cn/TicketOrder/AddScheduleTicket'
-            for i in riders:
-                data = {
-                    "AddToTicketOwnerList": "false",
-                    "CredentialNO": i['id_number'],
-                    'CredentialType': "Identity",
-                    "PassengerName": i['name'],
-                    "SelectedSchedule": '',
-                    "SelectedStop": '',
-                    "SellInsurance": "false",
-                    "WithChild": "false",
-                }
-                r = rebot.http_post(add_shopcart_url, data=data, headers=headers, cookies=cookies)
-                ret = r.content
-                if not isinstance(ret, unicode):
-                    ret = ret.decode('utf-8')
-                sel = etree.HTML(ret)
-                errmsg = sel.xpath('//*[@id="addOneTicket"]/ul/li[2]/div[3]/span/text()')
+            self.request_select_schedule(order, rebot)
+            shopcartct = self.request_query_shopcart(rebot)
+            if shopcartct != '0':
+                self.request_clear_shopcart(rebot)
+            errmsg = self.request_add_shopcart(order, rebot)
+            if errmsg:
+                lock_result.update(result_code=0,
+                                   source_account=rebot.telephone,
+                                   result_reason='add_shopcart1'+errmsg[0],
+                                   lock_info={'result_reason': errmsg[0]})
+                return lock_result
+            shopcartct = self.request_query_shopcart(rebot)
+            if shopcartct == '0':
+                errmsg = self.request_add_shopcart(order, rebot)
                 if errmsg:
                     lock_result.update(result_code=0,
                                        source_account=rebot.telephone,
-                                       result_reason='add_shopcart'+errmsg[0],
-                                       lock_info={'result_reason':errmsg[0]})
+                                       result_reason='add_shopcart2'+errmsg[0],
+                                       lock_info={'result_reason': errmsg[0]})
                     return lock_result
-            order_url = 'http://www.e2go.com.cn/TicketOrder/Order'
-            r = rebot.http_post(order_url, headers=headers, cookies=cookies)
-            content = r.content
-            if not isinstance(content, unicode):
-                content = content.decode('utf-8')
-            sel = etree.HTML(content)
-            order_no = sel.xpath('//div[@class="orderContainer"]/div[@class="importantBox orderTip"]/strong/text()')
-            pay_url = sel.xpath('//a[@id="payLink"]/@href')
-            res = {}
-            if order_no:
-                res['order_no'] = order_no[0]
-                res['order_id'] = pay_url[0].split('/')[-1]
+
+            res = self.request_create_order(order, rebot)
+            if res['order_no']:
+                res['order_no'] = res['order_no'][0]
+                res['order_id'] = res['pay_url'][0].split('/')[-1]
             lock_result = {
                 "lock_info": res,
                 "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
+                "pay_money": order.line.real_price()*order.ticket_amount,
             }
-            if res:
+            if res['order_no']:
                 order_no = res['order_no']
                 expire_time = dte.now()+datetime.timedelta(seconds=60*24)
                 lock_result.update({
@@ -113,8 +90,88 @@ class Flow(BaseFlow):
                 })
             return lock_result
 
+    def request_select_schedule(self, order, rebot):
+        line = order.line
+        headers = rebot.http_header()
+        cookies = json.loads(rebot.cookies)
+        data = {
+                "ScheduleString": line.extra_info['ScheduleString'],
+                "StopString": line.extra_info['ArrivingStopJson']
+                }
+        select_url = "http://e2go.com.cn/TicketOrder/SelectSchedule"
+        r = rebot.http_post(select_url, data=data, headers=headers, cookies=cookies)
+        cookies.update(dict(r.cookies))
+        ret = r.content
+        rebot.modify(cookies=json.dumps(cookies))
+        rebot.reload()
+
+    def request_add_shopcart(self, order, rebot):
+        riders = order.riders
+        headers = rebot.http_header()
+        cookies = json.loads(rebot.cookies)
+        add_shopcart_url = 'http://e2go.com.cn/TicketOrder/AddScheduleTicket'
+        errmsg = ''
+        for i in riders:
+            data = {
+                "AddToTicketOwnerList": "false",
+                "CredentialNO": i['id_number'],
+                'CredentialType': "Identity",
+                "PassengerName": i['name'],
+                "SelectedSchedule": '',
+                "SelectedStop": '',
+                "SellInsurance": "false",
+                "WithChild": "false",
+            }
+            r = rebot.http_post(add_shopcart_url, data=data, headers=headers, cookies=cookies)
+            ret = r.content
+            if not isinstance(ret, unicode):
+                ret = ret.decode('utf-8')
+            sel = etree.HTML(ret)
+            errmsg = sel.xpath('//*[@id="addOneTicket"]/ul/li[2]/div[3]/span/text()')
+        return errmsg
+
+    def request_query_shopcart(self, rebot):
+        headers = rebot.http_header()
+        cookies = json.loads(rebot.cookies)
+        url = "http://e2go.com.cn/TicketOrder/ShoppingCart"
+        r = rebot.http_get(url, headers=headers, cookies=cookies)
+        ret = r.content
+        if not isinstance(ret, unicode):
+            ret = ret.decode('utf-8')
+        sel = etree.HTML(ret)
+        shopinfo = sel.xpath('//*[@id="shoppingCartInfo"]/div[1]/b[1]/text()')[0]
+        shopcartct = shopinfo.replace('\r\n', '').replace('\t', '').replace(' ', '')
+        return shopcartct
+
+    def request_clear_shopcart(self, order, rebot): 
+        headers = rebot.http_header()
+        cookies = json.loads(rebot.cookies)
+        clear_url = 'http://e2go.com.cn/TicketOrder/ClearShoppingCart'
+        r = rebot.http_get(clear_url, headers=headers, cookies=cookies)
+        ret = r.content
+        if not isinstance(ret, unicode):
+            ret = ret.decode('utf-8')
+        sel = etree.HTML(ret)
+        shopinfo = sel.xpath('//*[@id="shoppingCartInfo"]/div[1]/b[1]/text()')[0]
+        shopcartct = shopinfo.replace('\r\n', '').replace('\t', '').replace(' ', '')
+        return shopcartct
+
+    def request_create_order(self, order, rebot):
+        headers = rebot.http_header()
+        cookies = json.loads(rebot.cookies)
+        order_url = 'http://e2go.com.cn/TicketOrder/Order'
+        r = rebot.http_post(order_url, headers=headers, cookies=cookies)
+        content = r.content
+        if not isinstance(content, unicode):
+            content = content.decode('utf-8')
+        sel = etree.HTML(content)
+        order_no = sel.xpath('//div[@class="orderContainer"]/div[@class="importantBox orderTip"]/strong/text()')
+        pay_url = sel.xpath('//a[@id="payLink"]/@href')
+        res = {"order_no": order_no, 'pay_url': pay_url}
+        return res
+
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
-        order_detail_url = "http://www.e2go.com.cn/TicketOrder/OrderDetail/%s?seed=0.3821293651129908"%order.lock_info['order_id']
+        order_detail_url = "http://e2go.com.cn/TicketOrder/OrderDetail/%s?seed=0.3821293651129908"%order.lock_info['order_id']
         headers = rebot.http_header()
 #         rebot.login()
 #         rebot.reload()
@@ -193,7 +250,6 @@ class Flow(BaseFlow):
             rebot = BjkyWebRebot.objects.get(telephone=order.source_account)
         else:
             rebot = BjkyWebRebot.get_one()
-            
         is_login = rebot.test_login_status()
         if is_login:
             if order.status == STATUS_LOCK_RETRY:
@@ -201,7 +257,7 @@ class Flow(BaseFlow):
 
             if order.status == STATUS_WAITING_ISSUE:
                 cookies = json.loads(rebot.cookies)
-                pay_url = "http://www.e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
+                pay_url = "http://e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                 headers = rebot.http_header()
                 r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
 #                 content = r.content
@@ -247,7 +303,8 @@ class Flow(BaseFlow):
                 return {"flag": "html", "content": r.content}
 
         if valid_code:#  登陆
-            data = json.loads(session["pay_login_info"])
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            data = json.loads(session[key])
             code_url = data["valid_url"]
             headers = data["headers"]
             cookies = data["cookies"]
@@ -258,7 +315,7 @@ class Flow(BaseFlow):
                 "Password": rebot.password,
                 "CheckCode": valid_code
             }
-            url = "http://www.e2go.com.cn/Home/Login"
+            url = "http://e2go.com.cn/Home/Login"
             r = rebot.http_post(url, data=data, headers=headers, cookies=cookies)
             new_cookies = r.cookies
             r = r.json()
@@ -269,7 +326,7 @@ class Flow(BaseFlow):
                     self.lock_ticket(order)
 
                 if order.status == STATUS_WAITING_ISSUE:
-                    pay_url = "http://www.e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
+                    pay_url = "http://e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                     r = rebot.http_get(pay_url, headers={"User-Agent": rebot.user_agent}, cookies=cookies)
                     return {"flag": "html", "content": r.content}
                 else:
@@ -280,16 +337,17 @@ class Flow(BaseFlow):
                     "headers": headers,
                     "valid_url": code_url,
                 }
-                session["pay_login_info"] = json.dumps(data)
+                key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+                session[key] = json.dumps(data)
                 return {"flag": "input_code", "content": ""}
             else:
                 return {"flag": "false", "content": r}
         else:
-            login_form_url = "http://www.e2go.com.cn/Home/Login?returnUrl=/TicketOrder/Notic"
+            login_form_url = "http://e2go.com.cn/Home/Login?returnUrl=/TicketOrder/Notic"
             headers = {"User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT)}
             r = rebot.http_get(login_form_url, headers=headers)
             cookies = dict(r.cookies)
-            code_url = 'http://www.e2go.com.cn/Home/LoginCheckCode/0.2769864823920234'
+            code_url = 'http://e2go.com.cn/Home/LoginCheckCode/0.2769864823920234'
             r = rebot.http_get(code_url, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             data = {
@@ -297,7 +355,8 @@ class Flow(BaseFlow):
                 "headers": headers,
                 "valid_url": code_url,
             }
-            session["pay_login_info"] = json.dumps(data)
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
@@ -313,7 +372,7 @@ class Flow(BaseFlow):
                 rebot = i
                 break
         if rebot:
-            queryline_url = "http://www.e2go.com.cn/TicketOrder/SearchSchedule"
+            queryline_url = "http://e2go.com.cn/TicketOrder/SearchSchedule"
             data = {
                 "ArrivingStop": line.d_city_name,
                 "ArrivingStopId": line.d_city_id,
@@ -325,9 +384,7 @@ class Flow(BaseFlow):
             }
             r = rebot.http_post(queryline_url, data=data, headers=rebot.http_header(), cookies=json.loads(rebot.cookies))
             content = r.content
-            if isinstance(content, unicode):
-                pass
-            else:
+            if not isinstance(content, unicode):
                 content = content.decode('utf-8')
             sel = etree.HTML(content)
             scheduleList = sel.xpath('//div[@id="scheduleList"]/table/tbody/tr')
@@ -364,51 +421,120 @@ class Flow(BaseFlow):
                 else:
                     obj.update(**info)
         else:
-            ua = random.choice(MOBILE_USER_AGENG)
-            headers = {"User-Agent": ua}
-            url = "http://m.daba.cn/jsp/line/newlines.jsp"
-            res = requests.get(url, headers=headers)
-            base_url = 'http://m.daba.cn'
-            line_url = base_url + re.findall(r'query_station : (.*),', res.content)[0][1:-1]
             s_sta_name = line.s_sta_name
             d_city_name = line.d_city_name
             if line.s_sta_name == u'首都机场站':
                 s_sta_name = line.s_sta_name.strip().rstrip("站")
+            s_sta_name = s_sta_name+'客运站'
+            ctrip_flag = True
+            kuaiba_flag = False
             try:
-                kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=s_sta_name, d_city_name=d_city_name,d_sta_name=line.d_sta_name, drv_time=line.drv_time )    
-                d_city_name = kuaiba_line.d_city_name
+                ctrip_line = Line.objects.get(crawl_source='ctrip',
+                                              s_sta_name=s_sta_name,
+                                              d_city_name=d_city_name,
+                                              d_sta_name=line.d_sta_name,
+                                              full_price=line.full_price,
+                                              drv_date=line.drv_date,
+                                              drv_time=line.drv_time,)
             except:
-                pass
-            params = {
-                  "endTime": '',
-                  "startCity": line.s_city_name,
-                  "startStation": s_sta_name,
-                  "arriveCity": d_city_name,
-                  "arriveStation": line.d_sta_name,
-                  "startDate": line.drv_date,
-                  "startTime": '',
-                  }
-            line_url = "%s&%s" % (line_url, urllib.urlencode(params))
-            r = requests.get(line_url, headers=headers)
-            res = r.json()
-            if res["code"] != 0:
-                result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-                return result_info
-            busTripInfoSet = res['data'].get('busTripInfoSet', [])
-            cityOpenSale = res['data']['cityOpenSale']
-            if not cityOpenSale or len(busTripInfoSet) == 0:
-                result_info.update(result_msg=" not open sale or not line list", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-                return result_info
-            update_attrs = {}
-            for d in busTripInfoSet:
-                if line.drv_time == d["time"][0:-3]:
-                    tickets = d['tickets']
-                    info = {
-                        "left_tickets": tickets,
-                        "refresh_datetime": now,
-                    }
-                    update_attrs = info
-                    break
+                ctrip_flag = False
+            if ctrip_flag:
+                params = dict(
+                    param="/api/home",
+                    method="product.getBusDetail",
+                    v="1.0",
+                    ref="ctrip.h5",
+                    partner="ctrip.h5",
+                    clientType="Android--hybrid",
+                    fromCity=ctrip_line.s_city_name,
+                    toCity=ctrip_line.d_city_name,
+                    busNumber=ctrip_line.bus_num,
+                    fromStation=ctrip_line.s_sta_name,
+                    toStation=ctrip_line.d_sta_name,
+                    fromDate=ctrip_line.drv_date,
+                    fromTime=ctrip_line.drv_time,
+                    contentType="json",
+                )
+                base_url = "http://m.ctrip.com/restapi/busphp/app/index.php"
+                url = "%s?%s" % (base_url, urllib.urlencode(params))
+                ua = random.choice(MOBILE_USER_AGENG)
+                r = requests.get(url, headers={"User-Agent": ua})
+                ret = r.json()
+                now = dte.now()
+                if ret["code"] == 1:
+                    info = ret["return"]
+                    if info:
+                        ticket_info = info["showTicketInfo"]
+                        left_tickets = 0
+                        if ticket_info == "有票":
+                            left_tickets = 45
+                        elif ticket_info.endswith("张"):
+                            left_tickets = int(ticket_info[:-1])
+                        elif ticket_info in ["预约购票", "无票"]:
+                            left_tickets = 0
+                        else:
+                            pass
+                        service_info = info["servicePackage"]
+                        fee = 0
+                        for d in service_info:
+                            if d["type"] == "service":
+                                fee = d["amount"]
+                                break
+                        info = {
+                            "full_price": info["fullPrice"],
+                            "fee": fee,
+                            "left_tickets": left_tickets,
+                            "refresh_datetime": now,
+                        }
+                        update_attrs = info
+                else:
+                    kuaiba_flag = True
+            if kuaiba_flag:
+                ua = random.choice(MOBILE_USER_AGENG)
+                headers = {"User-Agent": ua}
+                url = "http://m.daba.cn/jsp/line/newlines.jsp"
+                res = requests.get(url, headers=headers)
+                base_url = 'http://m.daba.cn'
+                line_url = base_url + re.findall(r'query_station : (.*),', res.content)[0][1:-1]
+                s_sta_name = line.s_sta_name
+                d_city_name = line.d_city_name
+                if line.s_sta_name == u'首都机场站':
+                    s_sta_name = line.s_sta_name.strip().rstrip("站")
+                try:
+                    kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=s_sta_name, d_city_name=d_city_name,d_sta_name=line.d_sta_name, drv_time=line.drv_time )    
+                    d_city_name = kuaiba_line.d_city_name
+                except:
+                    pass
+                params = {
+                      "endTime": '',
+                      "startCity": line.s_city_name,
+                      "startStation": s_sta_name,
+                      "arriveCity": d_city_name,
+                      "arriveStation": line.d_sta_name,
+                      "startDate": line.drv_date,
+                      "startTime": '',
+                      }
+                line_url = "%s&%s" % (line_url, urllib.urlencode(params))
+                r = requests.get(line_url, headers=headers)
+                res = r.json()
+                if res["code"] != 0:
+                    result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+                    return result_info
+                busTripInfoSet = res['data'].get('busTripInfoSet', [])
+                cityOpenSale = res['data']['cityOpenSale']
+                if not cityOpenSale or len(busTripInfoSet) == 0:
+                    result_info.update(result_msg=" not open sale or not line list", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+                    return result_info
+                update_attrs = {}
+                for d in busTripInfoSet:
+                    if line.drv_time == d["time"][0:-3]:
+                        tickets = d['tickets']
+                        info = {
+                            "left_tickets": tickets,
+                            "refresh_datetime": now,
+                        }
+                        update_attrs = info
+                        break
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:

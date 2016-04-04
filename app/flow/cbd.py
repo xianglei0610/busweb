@@ -262,11 +262,17 @@ class Flow(BaseFlow):
 
         update_attrs = {}
         for d in res["body"]["scheduleList"]:
-            line_id = md5("%s-%s-%s-%s-%s-cbd" % (d["departure"],
-                                                  d["destination"],
-                                                  d["dptStation"],
-                                                  d["arrStation"],
-                                                  d["dptDateTime"]))
+            drv_datetime = dte.strptime("%s %s" % (d["dptDate"], d["dptTime"]), "%Y-%m-%d %H:%M")
+            line_id_args = {
+                "s_city_name": line.s_city_name,
+                "d_city_name": line.d_city_name,
+                #"bus_num": d["coachNo"],
+                "s_sta_name": d["dptStation"],
+                "d_sta_name": d["arrStation"],
+                "crawl_source": line.crawl_source,
+                "drv_datetime": drv_datetime,
+            }
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
             try:
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:

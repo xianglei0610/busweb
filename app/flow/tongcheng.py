@@ -473,6 +473,8 @@ class Flow(BaseFlow):
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
+        return self.do_refresh_line_by_app(line)
+
         result_info = {
             "result_msg": "",
             "update_attrs": {},
@@ -510,11 +512,75 @@ class Flow(BaseFlow):
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
-                "bus_num": d["coachNo"],
+                #"bus_num": d["coachNo"],
+                "s_sta_name": d["dptStation"],
+                "d_sta_name": d["arrStation"],
                 "crawl_source": line.crawl_source,
                 "drv_datetime": drv_datetime,
             }
-            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+            try:
+                obj = Line.objects.get(line_id=line_id)
+            except Line.DoesNotExist:
+                continue
+            info = {
+                "full_price": float(d["ticketPrice"]),
+                "fee": 0,
+                "left_tickets": int(d["ticketLeft"]),
+                "refresh_datetime": now,
+                "extra_info": {},
+            }
+            if line_id == line.line_id:
+                update_attrs = info
+            else:
+                obj.update(**info)
+        if not update_attrs:
+            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        else:
+            result_info.update(result_msg="ok", update_attrs=update_attrs)
+        return result_info
+
+    def do_refresh_line_by_app(self, line):
+        result_info = {
+            "result_msg": "",
+            "update_attrs": {},
+        }
+        url = "http://tcmobileapi.17usoft.com/bus/QueryHandler.ashx"
+        rebot = TCAppRebot.get_one()
+        data = {
+            "departure": line.s_city_name,
+            "destination": line.d_city_name,
+            "dptDate": line.drv_date,
+            "queryType": 1,
+            "subCategory": 0,
+            "page": 1,
+            "pageSize": 25,
+            "hasCategory": 1,
+            "dptStation": "",
+            "arrStation": "",
+            "dptTimeSpan": 0
+        }
+        r = rebot.http_post(url, "getbusschedule", data)
+        res = r.json()
+        res = res["response"]
+        now = dte.now()
+        if res["header"]["rspCode"] != "0000":
+            result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            return result_info
+
+        update_attrs = {}
+        for d in res["body"]["schedule"]:
+            drv_datetime = dte.strptime("%s %s" % (d["dptDate"], d["dptTime"]), "%Y-%m-%d %H:%M")
+            line_id_args = {
+                "s_city_name": line.s_city_name,
+                "d_city_name": line.d_city_name,
+                #"bus_num": d["coachNo"],
+                "s_sta_name": d["dptStation"],
+                "d_sta_name": d["arrStation"],
+                "crawl_source": line.crawl_source,
+                "drv_datetime": drv_datetime,
+            }
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
             try:
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:

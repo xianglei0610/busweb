@@ -18,6 +18,7 @@ import re
 from app.constants import *
 from datetime import datetime as dte, timedelta
 from bs4 import BeautifulSoup
+from lxml import etree
 from app.utils import get_redis
 
 
@@ -80,7 +81,27 @@ class ProxyProducer(object):
                 add_cnt += 1
         return add_cnt
 
-
+    def crawl_from_xici(self):
+        add_cnt = 0
+        for t in ["http://www.xicidaili.com/nn/%d", "http://www.xicidaili.com/nt/%d"]:
+            for i in range(1, 10):
+                url = t % i
+                try:
+                    r = requests.get(url, timeout=10, headers={"User-Agent": "Chrome"})
+                except Exception:
+                    continue
+                sel = etree.HTML(r.content)
+                for s in sel.xpath("//tr"):
+                    try:
+                        lst = s.xpath("td/text()")
+                        ip, port = lst[0], lst[1]
+                    except:
+                        continue
+                    ipstr = "%s:%s" % (ip, port)
+                    if self.valid_proxy(ipstr):
+                        self.add_proxy(ipstr)
+                        add_cnt += 1
+        return add_cnt
 
     def add_proxy(self, ipstr):
         """
@@ -122,7 +143,7 @@ class ProxyProducer(object):
         try:
             r = requests.get("http://www.baidu.com",
                              proxies = {"http": "http://%s" % ipwithport},
-                             timeout=0.5)
+                             timeout=1)
         except:
             return False
         if r.status_code != 200:
@@ -207,7 +228,7 @@ class CqkyProxyConsumer(ProxyConsumer):
             r = requests.post(line_url,
                               data=urllib.urlencode(params),
                               headers=headers,
-                              timeout=2,
+                              timeout=4,
                               proxies={"http": "http://%s" % ipstr})
             content = r.content
             for k in set(re.findall("([A-Za-z]+):", content)):
@@ -312,7 +333,7 @@ class BjkyProxyConsumer(ProxyConsumer):
         try:
             r = requests.get(url,
                              headers=headers,
-                             timeout=10,
+                             timeout=2,
                              proxies={"http": "http://%s" % ipstr})
         except:
             return False

@@ -15,7 +15,7 @@ from celery import Celery, platforms
 from redis_session import RedisSessionInterface
 platforms.C_FORCE_ROOT = True    # celery需要这样
 from raven.contrib.flask import Sentry
-# from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler, SysLogHandler
 from logging import Formatter, StreamHandler, FileHandler
 
 
@@ -63,10 +63,16 @@ def init_logging(app, server_type):
         logger = v
         logger.setLevel(logging.DEBUG)
         s = logger.name
-        f = "logs/%s.log" % s
+        # f = "logs/%s.log" % s
         # file_hd = TimedRotatingFileHandler(os.path.join(BASE_DIR, f),
         #                                   when='D', interval=1)
-        file_hd = FileHandler(os.path.join(BASE_DIR, f))
+        # file_hd = FileHandler(os.path.join(BASE_DIR, f))
+        mapping = {
+            "order": SysLogHandler.LOG_LOCAL1,
+            "line": SysLogHandler.LOG_LOCAL2,
+            "common": SysLogHandler.LOG_LOCAL3,
+        }
+        file_hd = SysLogHandler(address=('10.51.9.34', 514), facility=mapping.get(s, SysLogHandler.LOG_LOCAL3))
         file_hd.setLevel(logging.INFO)
         file_hd.setFormatter(fmt)
         logger.addHandler(stdout_fhd)

@@ -128,13 +128,20 @@ class Flow(BaseFlow):
                         "result_code": 0,
                         "result_reason": res["msg"],
                     })
+                elif u"同一IP一天最多可订" in res["msg"]:
+                    rebot.modify(ip="")
+                    lock_result.update({
+                        "result_code": 2,
+                        "result_reason": res["msg"],
+                        "source_account": rebot.telephone,
+                    })
                 else:
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
-            elif "您未登录或登录已过期" in res["msg"]:
+            elif "您未登录或登录已过期" in res["msg"] or u"同一IP一天最多可订" in res["msg"]:
                 rebot.modify(ip="")
                 lock_result.update({
                      "result_code": 2,
@@ -166,6 +173,10 @@ class Flow(BaseFlow):
             r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+            if "@" in rebot.telephone:
+                mail = rebot.telephone
+            else:
+                mail = "%s@qq.com" % rebot.telephone
             params ={
                 "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
                 "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
@@ -176,7 +187,7 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$NavigationControl1$o_IdCard": order.contact_info["id_number"],
                 "ctl00$FartherMain$NavigationControl1$o_IdCardConfirm": order.contact_info["id_number"],
                 "ctl00$FartherMain$NavigationControl1$radioListPayType": "OnlineAliPay,支付宝在线支付",
-                "ctl00$FartherMain$NavigationControl1$o_Email": "kuo86106@qq.com",
+                "ctl00$FartherMain$NavigationControl1$o_Email": mail,
                 "ctl00$FartherMain$NavigationControl1$ContactAddress": "",
                 "ctl00$FartherMain$NavigationControl1$o_Memo": "",
                 "ctl00$FartherMain$NavigationControl1$hideIsSubmit": "true",
@@ -385,9 +396,16 @@ class Flow(BaseFlow):
             "Origin": "http://www.96096kp.com",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
+        def my_trans_js_str(s):
+            for k in set(re.findall("([A-Za-z]+):", s)):
+                s= re.sub(r"\b%s\b" % k, '"%s"' % k, s)
+            return s
         cookies = json.loads(rebot.cookies)
         r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
-        res = json.loads(trans_js_str(r.content))
+        try:
+            res = json.loads(trans_js_str(r.content))
+        except:
+            res = json.loads(my_trans_js_str(r.content))
         for d in res["data"]:
             if d["OrderNo"] == order.raw_order_no:
                 return d

@@ -654,7 +654,7 @@ class Rebot(db.Document):
             kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
         try:
             r = requests.get(url,
-                            timeout=30,
+                            timeout=15,
                             **kwargs)
         except Exception, e:
             self.modify(ip="")
@@ -666,7 +666,7 @@ class Rebot(db.Document):
             kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
         try:
             r = requests.post(url,
-                            timeout=30,
+                            timeout=15,
                             **kwargs)
         except Exception, e:
             self.modify(ip="")
@@ -1085,10 +1085,10 @@ class ChangtuWebRebot(Rebot):
     is_for_lock = True
 
     def on_add_doing_order(self, order):
-        pass
+        self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        pass
+        self.modify(is_locked=False)
 
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
@@ -1459,7 +1459,7 @@ class CqkyWebRebot(Rebot):
                               }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt >= 4:
+            if cnt >= 7:
                 droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)
@@ -2020,7 +2020,7 @@ class BjkyWebRebot(Rebot):
         rebot_log.info(">>>> end init bjky success %d", valid_cnt)
 
     def test_login_status(self):
-        url = "http://www.e2go.com.cn/TicketOrder/SearchSchedule"
+        url = "http://e2go.com.cn/TicketOrder/Notic"
 #         cookie ="Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06=1456970104,1457072900,1457316719,1457403102; ASP.NET_SessionId=uuppwd3q4j3qo5vwcka2v04y; Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06=1457415243"
 #         headers={"cookie":cookie}
 #         cookies = {"Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06": "1456970104,1457072900,1457316719,1457403102",
@@ -2033,7 +2033,19 @@ class BjkyWebRebot(Rebot):
         if result.path == '/Home/Login':
             return 0
         else:
-            return 1
+            content = res.content
+            if not isinstance(content, unicode):
+                content = content.decode('utf-8')
+            sel = etree.HTML(content)
+            telephone = sel.xpath('//*[@id="logoutContainer"]/text()')
+            if telephone:
+                telephone = telephone[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
+            if self.telephone == telephone:
+                return 1
+            else:
+                self.modify(cookies='{}')
+                self.reload()
+                return 0
 
 
 class LnkyWapRebot(Rebot):

@@ -184,7 +184,9 @@ def query_line_detail():
         data["left_tickets"] = 0
         return jsonify({"code": RET_OK, "message": "OK", "data": data})
     flow.refresh_line(new_line)
-    return jsonify({"code": RET_OK, "message": "OK", "data": new_line.get_json()})
+    data = new_line.get_json()
+    data["line_id"] = line.line_id
+    return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
 @api.route('/orders/submit', methods=['POST'])
