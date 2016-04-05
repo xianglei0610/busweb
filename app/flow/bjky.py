@@ -54,11 +54,12 @@ class Flow(BaseFlow):
             if shopcartct == '0':
                 errmsg = self.request_add_shopcart(order, rebot)
                 if errmsg:
-                    lock_result.update(result_code=0,
-                                       source_account=rebot.telephone,
-                                       result_reason='add_shopcart2'+errmsg[0],
-                                       lock_info={'result_reason': errmsg[0]})
-                    return lock_result
+                    if u'购物车中已经存在' not in errmsg[0]:
+                        lock_result.update(result_code=0,
+                                           source_account=rebot.telephone,
+                                           result_reason='add_shopcart2'+errmsg[0],
+                                           lock_info={'result_reason': errmsg[0]})
+                        return lock_result
 
             res = self.request_create_order(order, rebot)
             if res['order_no']:
