@@ -36,7 +36,7 @@ def dequeue_wating_lock(username=""):
     return order
 
 
-def wating_lock_size():
+def waiting_lock_size():
     rds = get_redis("order")
     return rds.llen(RK_WATING_LOCK_ORDERS)
 

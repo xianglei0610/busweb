@@ -32,7 +32,7 @@ def check(run_in_local=False):
                     cron_log.info("[ignore] forbid run at debug mode")
                     return None
                 t1 = time.time()
-                cron_log.info("[start] %s %s %s", func.__name__, args, kwargs)
+                #cron_log.info("[start] %s %s %s", func.__name__, args, kwargs)
                 with app.app_context():
                     res = func(*args, **kwargs)
                 cost = time.time() - t1

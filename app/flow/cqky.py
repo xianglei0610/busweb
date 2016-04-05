@@ -14,27 +14,12 @@ from datetime import datetime as dte
 from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
 from app import order_log
-from app.proxy import cqky_proxy
 from app.models import Order
 
 
 class Flow(BaseFlow):
 
     name = "cqky"
-
-    def get(self, url, **kwargs):
-        r = requests.get(url,
-                         proxies={"http": "http://%s" % cqky_proxy.current_proxy},
-                         timeout=10,
-                         **kwargs)
-        return r
-
-    def post(self, url, **kwargs):
-        r = requests.post(url,
-                          proxies={"http": "http://%s" % cqky_proxy.current_proxy},
-                          timeout=10,
-                          **kwargs)
-        return r
 
     def do_lock_ticket(self, order):
         lock_result = {
@@ -56,11 +41,6 @@ class Flow(BaseFlow):
             else:
                 mode = 1
 
-            # 查看购物车列表
-            res = self.request_get_shoptcart(rebot)
-            # 清空购物车列表
-            for ids in res["data"][u"ShopTable"].keys():
-                self.request_del_shoptcart(rebot, ids)
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
             ilst = re.findall(r"(\d) 张车票", res.get("msg", ""))
@@ -79,6 +59,23 @@ class Flow(BaseFlow):
                     })
                     return lock_result
 
+            def _check_fail(msg):
+                lst = [
+                    u"可售票数量不足",
+                    u"锁票超时超过10次",
+                    u"当前班次座位资源紧张",
+                    u"可能车站已调整票价",
+                    u"拒绝售票",
+                    u"提前时间不足",
+                    u"班次席位可售数不足",
+                    u"班次站点无可售席位",
+                    u"锁位失败",
+                ]
+                for s in lst:
+                    if s in msg:
+                        return True
+                return False
+
             if res["success"]:
                 res = self.request_lock(order, rebot, sta_mode=mode)
                 if res["success"]:
@@ -92,56 +89,25 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "pay_money": res["pay_money"]
                     })
-                elif u"同一IP一天最多可订、购20张" in res["msg"] or u"当前系统维护中" in res["msg"]:
-                    rebot.modify(ip="")
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
-                    })
-                elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"]:
-                    rebot.remove_doing_order(order)
-                    order.modify(source_account="")
-                    with CqkyWebRebot.get_and_lock(order) as newrebot:
-                        account = newrebot.telephone
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": account,
-                        "result_reason": res["msg"],
-                    })
-                elif u"拒绝售票" in res["msg"] or "提前时间不足" in res["msg"] or u"班次席位可售数不足" in res["msg"] or "班次站点无可售席位" in res["msg"]:
+                elif _check_fail(res["msg"]):
                     self.close_line(line, reason=res["msg"])
                     lock_result.update({
                         "result_code": 0,
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
-                    })
-                elif u"可售票数量不足" in res["msg"] or "锁票超时超过10次" in res["msg"] or "当前班次座位资源紧张" in res["msg"] or "可能车站已调整票价" in res["msg"]:
-                    self.close_line(line, reason=res["msg"])
-                    lock_result.update({
-                        "result_code": 0,
-                        "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
-                    })
-                elif u"锁位失败" in res["msg"]:
-                    lock_result.update({
-                        "result_code": 0,
-                        "result_reason": res["msg"],
-                    })
-                elif u"同一IP一天最多可订" in res["msg"]:
-                    rebot.modify(ip="")
-                    lock_result.update({
-                        "result_code": 2,
-                        "result_reason": res["msg"],
-                        "source_account": rebot.telephone,
                     })
                 else:
+                    if u"同一IP一天最多可订" in res["msg"]:
+                        res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
+                        rebot.modify(ip="")
+                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"]:
+                        rebot = order.change_lock_rebot()
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
                         "result_reason": res["msg"],
                     })
-            elif "您未登录或登录已过期" in res["msg"] or u"同一IP一天最多可订" in res["msg"]:
+            elif "您未登录或登录已过期" in res["msg"]:
                 rebot.modify(ip="")
                 lock_result.update({
                      "result_code": 2,
@@ -427,42 +393,25 @@ class Flow(BaseFlow):
         return {}
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = CqkyWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
         if order.status == STATUS_LOCK_RETRY:
-            if valid_code:
-                login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
+            is_login = rebot.test_login_status()
+            if not is_login and valid_code:
                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                 info = json.loads(session[key])
                 headers = info["headers"]
                 cookies = info["cookies"]
-                headers = {
-                    "User-Agent": headers.get("User-Agent", "") or rebot.user_agent,
-                    "Referer": "http://www.96096kp.com/CusLogin.aspx",
-                    "Origin": "http://www.96096kp.com",
-                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                }
-                params = {
-                    "loginID": rebot.telephone,
-                    "loginPwd": rebot.password,
-                    "getInfo": 1,
-                    "loginValid": valid_code,
-                    "cmd": "Login",
-                }
-                try:
-                    r = rebot.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
-                    order_log.info("[cqky login] order:%s rebot:%s %s ip:%s", order.order_no, rebot.telephone, r.content, rebot.proxy_ip)
-                    if u"用户名或密码错误" in r.content:
-                        rebot.remove_doing_order(order)
-                        order.modify(source_account="")
-                        with CqkyWebRebot.get_and_lock(order) as newrebot:
-                            order.update(source_account=newrebot.telephone)
-                            rebot = newrebot
-                except Exception,e:
-                    rebot.modify(ip="")
-                    raise e
-                cookies.update(dict(r.cookies))
-                rebot.modify(cookies=json.dumps(cookies))
-            self.lock_ticket(order)
+                msg = rebot.login(valid_code=valid_code, headers=headers, cookies=cookies)
+                if msg == "OK":
+                    is_login = True
+                    rebot.modify(cookies=json.dumps(cookies))
+                elif msg == "invalid_pwd":
+                    rebot.modify(is_active=False)
+                    rebot = order.change_lock_rebot()
+            if is_login:
+                self.lock_ticket(order)
+        order.reload()
+        rebot = order.get_lock_rebot()
 
         if order.status == STATUS_WAITING_ISSUE:
             self.check_raw_order_no(order)
@@ -473,7 +422,7 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            r = requests.get(base_url, headers=headers)
+            r = rebot.http_get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             headers.update({"Referer": "http://www.96096kp.com/GoodsDetail.aspx"})
@@ -491,9 +440,7 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$Hidden2": "",
                 "pageNum": ""
             }
-            r = requests.post(base_url,
-                            data=urllib.urlencode(params),
-                            headers=headers,)
+            r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
             return {"flag": "html", "content": r.content}
 
         if order.status == STATUS_LOCK_RETRY:
