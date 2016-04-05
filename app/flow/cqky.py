@@ -44,11 +44,11 @@ class Flow(BaseFlow):
 
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
-            ilst = re.findall(r"(\d+)", res.get("msg", ""))
+            ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
             if ilst:
-                amount = int(ilst[1])
+                amount = int(ilst[0])
                 if amount != order.ticket_amount:
-                    order_log.info("[locking] order: %s, 锁票数量不对 %s,%s" % (order.ticket_amount, amount))
+                    order_log.info("[locking] order: %s, 锁票数量不对 %s,%s", order.order_no, order.ticket_amount, amount)
                     # 查看购物车列表
                     res = self.request_get_shoptcart(rebot)
                     # 清空购物车列表
