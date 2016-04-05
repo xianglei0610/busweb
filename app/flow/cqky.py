@@ -448,7 +448,7 @@ class Flow(BaseFlow):
         if order.status == STATUS_LOCK_RETRY:
             cookies = json.loads(rebot.cookies)
             login_form = "http://www.96096kp.com/CusLogin.aspx"
-            valid_url = "http://www.96096kp.com/ValidateCode.aspx"
+            valid_url = "http://www.96096kp.com/ValidateCode.aspx?_=%s" % random.randint(1, 10000)
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
             r = rebot.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
