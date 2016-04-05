@@ -61,7 +61,11 @@ class Flow(BaseFlow):
                                            lock_info={'result_reason': errmsg[0]})
                         return lock_result
 
-            res = self.request_create_order(order, rebot)
+            try:
+                res = self.request_create_order(order, rebot)
+            except Exception, e:
+                order_log.info("[lock-error] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
+                res = self.request_create_order(order, rebot)
             if res['order_no']:
                 res['order_no'] = res['order_no'][0]
                 res['order_id'] = res['pay_url'][0].split('/')[-1]
