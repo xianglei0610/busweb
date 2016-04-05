@@ -44,9 +44,9 @@ class Flow(BaseFlow):
 
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
-            ilst = re.findall(r"(\d) 张车票", res.get("msg", ""))
+            ilst = re.findall(r"(\d+)", res.get("msg", ""))
             if ilst:
-                amount = int(ilst[0])
+                amount = int(ilst[1])
                 if amount != order.ticket_amount:
                     order_log.info("[locking] order: %s, 锁票数量不对 %s,%s" % (order.ticket_amount, amount))
                     # 查看购物车列表
