@@ -486,9 +486,10 @@ class Flow(BaseFlow):
             "Origin": "http://www.96096kp.com",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
-        r = self.post(line_url,
-                          data=urllib.urlencode(params),
-                          headers=headers)
+        rebot = CqkyWebRebot.get_one()
+        r = rebot.http_post(line_url,
+                      data=urllib.urlencode(params),
+                      headers=headers)
         content = r.content
         for k in set(re.findall("([A-Za-z]+):", content)):
             content = re.sub(r"\b%s\b" % k, '"%s"' % k, content)
