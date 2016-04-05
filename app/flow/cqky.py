@@ -102,6 +102,7 @@ class Flow(BaseFlow):
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
                         rebot.modify(ip="")
                     elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or "单笔订单一次只允许购买3张车票" in res["msg"]:
+                        rebot.modify(cookies="{}")
                         rebot = order.change_lock_rebot()
                     lock_result.update({
                         "result_code": 2,
@@ -116,6 +117,7 @@ class Flow(BaseFlow):
                      "result_reason": u"账号未登录",
                  })
             elif u"单笔订单一次只允许购买3张车票" in res["msg"]:
+                rebot.modify(cookies="{}")
                 rebot = order.change_lock_rebot()
                 lock_result.update({
                      "result_code": 2,
