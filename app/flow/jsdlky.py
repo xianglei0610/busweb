@@ -75,65 +75,35 @@ class Flow(BaseFlow):
                 name, val = obj.get("name"), obj.get("value")
                 if name in ["None", "none", '']:
                     continue
-                print name, val
                 raw_form[name] = val
-            return
-            # psgName 罗军平
-            # psgIdType   01
-            # psgIdCode   431021199004165616
-            # psgTel  15575101324
-            # psgEmail    luo86106@qq.com
-            # psgTicketType   0
-            # psgBabyFlg  0
-            submit_data = {
-                "p": raw_form.get("p", ""),
-                "sbId": raw_form["sbId"],
-                "stId": raw_form["stId"],
-                "busId": raw_form["busId"],
-                "beginStationName": line.s_sta_name,
-                "endStationName": line.d_sta_name,
-                "leaveDate": line.drv_date,
-                "leaveTime": line.drv_time,
-                "routeName": raw_form["routeName"],
-                "vehicleMode": raw_form["vehicleMode"],
-                "busType": raw_form["busType"],
-                "mileage": raw_form["mileage"],
-                "fullPrice": raw_form["fullPrice"],
-                "halfPrice": raw_form["halfPrice"],
-                "remainSeat": raw_form["remainSeat"],
-                "endStationId": raw_form["endStationId"],
-                "depotId": raw_form["depotId"],
-                "beginStationId": raw_form["beginStationId"],
-                "contactName": order.contact_info["name"],
-                "contactIdType": "1101",
-                "contactIdCode": order.contact_info["id_number"],
-                "contactPhone": order.contact_info["telephone"],
-                "contactEmail": "",
-            }
-            encode_list= [urllib.urlencode(submit_data),]
+            for k in ["psgName", "psgIdType", "psgIdCode", "psgTicketType", "psgBabyFlg", "psgTel", "psgEmail"]:
+                if k in raw_form:
+                    del raw_form[k]
+            raw_form["event"] = "retainSeat"
+            encode_list= [urllib.urlencode(raw_form),]
             for r in order.riders:
                 d = {
                     "psgName": r["name"],
-                    "psgIdType": "1101",
+                    "psgIdType": "01",
                     "psgIdCode": r["id_number"],
-                    "psgTicketType": 1,
+                    "psgTicketType": 0,
                     "psgBabyFlg": 0,
-                    "psgInsuranceTypeId": "",       # 保险
-                    "saveToName": "",
-                    "isSave": 0,
+                    "psgTel":  rebot.telephone,
+                    "psgEmail": raw_form["contactEmail"],
                 }
                 encode_list.append(urllib.urlencode(d))
             encode_str = "&".join(encode_list)
             ret = self.send_lock_request(order, rebot, encode_str)
+
             if ret["success"]:
                 expire_time = dte.now()+datetime.timedelta(seconds=15*60)
                 lock_result.update({
                     "result_code": 1,
-                    "result_reason": "%s %s" % (ret["msgType"], ret.get("errorMsg", "")),
-                    "pay_url": "",
-                    "raw_order_no": ret["billNo"],
+                    "result_reason": "",
+                    "raw_order_no": ret["order_no"],
                     "expire_datetime": expire_time,
                     "source_account": rebot.telephone,
+                    "lock_info": ret,
                 })
             else:
                 errmsg = ret.get("errorMsg", "").replace("\r\n", " ")
@@ -163,38 +133,50 @@ class Flow(BaseFlow):
         """
         单纯向源站发请求
         """
-        submit_url = "http://www.bababus.com//baba/order/createorder.htm"
+        submit_url = "http://www.jslw.gov.cn/busOrder.do"
         headers = {
             "User-Agent": rebot.user_agent,
             "Content-Type": "application/x-www-form-urlencoded",
         }
         cookies = json.loads(rebot.cookies)
-        resp = requests.post(submit_url, data=data, headers=headers, cookies=cookies)
-        ret = resp.json()
-        return ret
+        r = rebot.http_post(submit_url, data=data, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        if u"系统错误提示页面" in soup.title.text:
+            return {
+                "success": False,
+                "msg": soup.select_one(".main .error-box").text,
+            }
+        else:
+            detail_li = soup.select(".order_detail li")
+            order_no = detail_li[0].text.strip().lstrip(u"订  单 号 :").strip()
+            pay_money = float(soup.select(".l_pay_m_top_l li")[1].text.strip().lstrip(u"应付金额：").rstrip(u"元").strip())
+            qstr = urllib2.urlparse.urlparse(r.url).query
+            url_data = {l[0]:l[1] for l in [s.split("=") for s in qstr.split("&")]}
+            return {
+                "success": True,
+                "order_id": url_data["orderid"],
+                "order_no": order_no,
+                "pay_money": pay_money,
+                "msg": "锁票成功",
+            }
 
-    def send_order_request(self, rebot, order):
-        detail_url = "http://www.bababus.com/baba/order/detail.htm?billNo=%s" % order.raw_order_no
+    def send_order_request(self, order):
+        rebot = order.get_lock_rebot()
+        detail_url = "http://www.jslw.gov.cn/busOrder.do?event=orderInfo&orderid=%s" % order.lock_info["order_id"]
         headers = {
             "User-Agent": rebot.user_agent,
         }
         cookies = json.loads(rebot.cookies)
-        r = requests.get(detail_url, headers=headers, cookies=cookies)
+        r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
-        no, code ,site = "", "", ""
-        for tag in soup.select(".details_taketicket .details_passenger_num"):
-            s = tag.get_text().strip()
-            if s.startswith("取票号:"):
-                no = s.lstrip("取票号:")
-            elif s.startswith("取票密码:"):
-                code = s.lstrip("取票密码:")
-            elif s.startswith("取票地点:"):
-                site = s.lstrip("取票地点:")
+        pick_code = soup.select_one("#query_no").get('value')
+        pick_code = soup.select_one("#query_random").get('value')
+        seat_no = soup.select_one("#seat_no").get('value')
         return {
-            "state": soup.select(".pay_success")[0].get_text().split(u"：")[1].strip(),
-            "pick_no": no,
-            "pick_code": code,
-            "pick_site": site,
+            "state": state,
+            "pick_no": pick_no,
+            "pick_code": pick_code,
+            "seat_no": seat_no,
         }
 
     def do_refresh_issue(self, order):
@@ -207,41 +189,24 @@ class Flow(BaseFlow):
         if not self.need_refresh_issue(order):
             result_info.update(result_msg="状态未变化")
             return result_info
-        rebot = BabaWebRebot.objects.get(telephone=order.source_account)
-        ret = self.send_order_request(rebot, order=order)
+        ret = self.send_order_request(order)
         state = ret["state"]
         if state == "支付超时作废":
             result_info.update({
                 "result_code": 5,
                 "result_msg": state,
             })
-        elif state == "已作废":
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
-        elif state == "待出票":
-            result_info.update({
-                "result_code": 4,
-                "result_msg": state,
-            })
-        elif state=="出票异常":
-            self.close_line(order.line, "出票异常")
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
         elif state=="购票成功":
-            no, code, site = ret["pick_no"], ret["pick_code"], ret["pick_site"]
+            no, code  = ret["pick_no"], ret["pick_code"]
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "code": code,
                 "no": no,
-                "site": site,
+                "raw_order": order.raw_order_no,
             }
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_BABA]
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_JSDLKY]
             code_list = ["%s|%s" % (no, code)]
             msg_list = [dx_tmpl % dx_info]
             result_info.update({
@@ -267,23 +232,19 @@ class Flow(BaseFlow):
             if order.status == STATUS_LOCK_RETRY:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
-                pay_url = "http://www.bababus.com/baba/order/bankpay.htm"
+                pay_url = "http://www.jslw.gov.cn/bankPay.do"
                 headers = {
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
                 params = {
-                    "userCouponId": "",
                     "bankId": 1402,
-                    "billNo": order.raw_order_no,
+                    "gateId1":1402,
+                    "orderid": order.lock_info["order_id"],
+                    "pay_amounts": order.pay_money,
                 }
                 cookies = json.loads(rebot.cookies)
-                r = requests.post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
-                data = self.extract_alipay(r.content)
-                pay_money = float(data["total_fee"])
-                trade_no = data["out_trade_no"]
-                if order.pay_money != pay_money or order.pay_order_no != trade_no:
-                    order.modify(pay_money=pay_money, pay_order_no=trade_no)
+                r = rebot.http_post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
                 return {"flag": "html", "content": r.content}
         else:
             login_form = "http://www.jslw.gov.cn/login.do"
@@ -339,11 +300,12 @@ class Flow(BaseFlow):
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
-                "bus_num": d["busId"],
+                "s_sta_name": d["rst_name"],
+                "d_sta_name": d["dst_name"],
                 "crawl_source": line.crawl_source,
                 "drv_datetime": drv_datetime,
             }
-            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
             try:
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:
