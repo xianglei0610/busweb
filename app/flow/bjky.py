@@ -144,7 +144,7 @@ class Flow(BaseFlow):
         shopcartct = shopinfo.replace('\r\n', '').replace('\t', '').replace(' ', '')
         return shopcartct
 
-    def request_clear_shopcart(self, order, rebot): 
+    def request_clear_shopcart(self, rebot): 
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         clear_url = 'http://e2go.com.cn/TicketOrder/ClearShoppingCart'
