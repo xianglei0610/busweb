@@ -6,6 +6,7 @@ import requests
 import json
 import urllib
 import datetime
+import traceback
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -13,7 +14,7 @@ from app.models import Line, CqkyWebRebot
 from datetime import datetime as dte
 from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
-from app import order_log
+from app import order_log, line_log
 from app.models import Order
 
 
@@ -100,7 +101,7 @@ class Flow(BaseFlow):
                     if u"同一IP一天最多可订" in res["msg"]:
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
                         rebot.modify(ip="")
-                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"]:
+                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or "单笔订单一次只允许购买3张车票" in res["msg"]:
                         rebot = order.change_lock_rebot()
                     lock_result.update({
                         "result_code": 2,
@@ -115,6 +116,7 @@ class Flow(BaseFlow):
                      "result_reason": u"账号未登录",
                  })
             elif u"单笔订单一次只允许购买3张车票" in res["msg"]:
+                rebot = order.change_lock_rebot()
                 lock_result.update({
                      "result_code": 2,
                      "result_reason": res["msg"],
@@ -487,14 +489,19 @@ class Flow(BaseFlow):
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         rebot = CqkyWebRebot.get_one()
-        r = rebot.http_post(line_url,
-                      data=urllib.urlencode(params),
-                      headers=headers)
+        now = dte.now()
+        try:
+            r = rebot.http_post(line_url,
+                        data=urllib.urlencode(params),
+                        headers=headers)
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
+            line_log.error("%s\n%s", "".join(traceback.format_exc()), locals())
+            return result_info
         content = r.content
         for k in set(re.findall("([A-Za-z]+):", content)):
             content = re.sub(r"\b%s\b" % k, '"%s"' % k, content)
         res = json.loads(content)
-        now = dte.now()
         if res["success"] != "true":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
