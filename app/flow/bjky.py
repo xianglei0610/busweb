@@ -423,9 +423,9 @@ class Flow(BaseFlow):
         else:
             s_sta_name = line.s_sta_name
             d_city_name = line.d_city_name
-            if line.s_sta_name == u'首都机场站':
-                s_sta_name = line.s_sta_name.strip().rstrip("站")
-            s_sta_name = s_sta_name+'客运站'
+            if line.s_sta_name != u'首都机场站':
+                #s_sta_name = line.s_sta_name.strip().rstrip("站")
+                s_sta_name = s_sta_name+'客运站'
             ctrip_flag = True
             kuaiba_flag = False
             try:
