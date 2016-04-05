@@ -116,7 +116,7 @@ class Flow(BaseFlow):
                      "source_account": rebot.telephone,
                      "result_reason": u"账号未登录",
                  })
-            elif u"单笔订单一次只允许购买3张车票" in res["msg"]:
+            elif u"单笔订单一次只允许购买3张车票" in res["msg"] or u"单笔订单只能购买一个车站的票" in res["msg"]:
                 rebot.modify(cookies="{}")
                 rebot = order.change_lock_rebot()
                 lock_result.update({
