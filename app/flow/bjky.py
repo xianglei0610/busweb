@@ -54,13 +54,18 @@ class Flow(BaseFlow):
             if shopcartct == '0':
                 errmsg = self.request_add_shopcart(order, rebot)
                 if errmsg:
-                    lock_result.update(result_code=0,
-                                       source_account=rebot.telephone,
-                                       result_reason='add_shopcart2'+errmsg[0],
-                                       lock_info={'result_reason': errmsg[0]})
-                    return lock_result
+                    if u'购物车中已经存在' not in errmsg[0]:
+                        lock_result.update(result_code=0,
+                                           source_account=rebot.telephone,
+                                           result_reason='add_shopcart2'+errmsg[0],
+                                           lock_info={'result_reason': errmsg[0]})
+                        return lock_result
 
-            res = self.request_create_order(order, rebot)
+            try:
+                res = self.request_create_order(order, rebot)
+            except Exception, e:
+                order_log.info("[lock-error] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
+                res = self.request_create_order(order, rebot)
             if res['order_no']:
                 res['order_no'] = res['order_no'][0]
                 res['order_id'] = res['pay_url'][0].split('/')[-1]
@@ -143,7 +148,7 @@ class Flow(BaseFlow):
         shopcartct = shopinfo.replace('\r\n', '').replace('\t', '').replace(' ', '')
         return shopcartct
 
-    def request_clear_shopcart(self, order, rebot): 
+    def request_clear_shopcart(self, rebot): 
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         clear_url = 'http://e2go.com.cn/TicketOrder/ClearShoppingCart'
@@ -423,9 +428,9 @@ class Flow(BaseFlow):
         else:
             s_sta_name = line.s_sta_name
             d_city_name = line.d_city_name
-            if line.s_sta_name == u'首都机场站':
-                s_sta_name = line.s_sta_name.strip().rstrip("站")
-            s_sta_name = s_sta_name+'客运站'
+            if line.s_sta_name != u'首都机场站':
+                #s_sta_name = line.s_sta_name.strip().rstrip("站")
+                s_sta_name = s_sta_name+'客运站'
             ctrip_flag = True
             kuaiba_flag = False
             try:

@@ -15,7 +15,7 @@ from flask import json
 from lxml import etree
 from contextlib import contextmanager
 from app import db
-from app.utils import md5, getRedisObj, get_redis
+from app.utils import md5, getRedisObj, get_redis, trans_js_str
 from app import rebot_log, order_status_log, line_log
 
 
@@ -363,6 +363,32 @@ class Order(db.Document):
     def __str__(self):
         return "[Order object %s]" % self.order_no
 
+    def log_name(self):
+        return "%s %s" % (self.crawl_source, self.order_no)
+
+    def change_lock_rebot(self):
+        """
+        更换锁票账号
+        """
+        rebot_cls = None
+        for cls in get_rebot_class(self.crawl_source):
+            if cls.is_for_lock:
+                rebot_cls = cls
+                break
+        try:
+            rebot = rebot_cls.objects.get(telephone=self.source_account)
+        except rebot_cls.DoesNotExist:
+            rebot = None
+
+        if self.status not in [STATUS_WAITING_LOCK, STATUS_LOCK_RETRY]:
+            return rebot
+        if rebot:
+            rebot.remove_doing_order(self)
+        self.modify(source_account="")
+        with rebot_cls.get_and_lock(self) as newrebot:
+            self.modify(source_account=newrebot.telephone)
+            return newrebot
+
     @property
     def source_account_pass(self):
         rebot = self.get_lock_rebot()
@@ -385,7 +411,7 @@ class Order(db.Document):
         try:
             return rebot_cls.objects.get(telephone=self.source_account)
         except rebot_cls.DoesNotExist:
-            return None
+            return self.change_lock_rebot()
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
@@ -557,10 +583,8 @@ class Rebot(db.Document):
                 continue
             pwd, _ = accounts[bot.telephone]
             bot.modify(password=pwd)
-            if bot.login() == "OK":
-                rebot_log.info("%s %s 登陆成功", cls.crawl_source, bot.telephone)
-            else:
-                rebot_log.info("%s %s 登陆失败", cls.crawl_source, bot.telephone)
+            msg = bot.login()
+            rebot_log.info("[login_all] %s %s %s", cls.crawl_source, bot.telephone, msg)
 
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
@@ -570,10 +594,8 @@ class Rebot(db.Document):
                       telephone=tele,
                       password=pwd,)
             bot.save()
-            if bot.login() == "OK":
-                rebot_log.info("%s %s 登陆成功", cls.crawl_source, bot.telephone)
-            else:
-                rebot_log.info("%s %s 登陆失败", cls.crawl_source, bot.telephone)
+            msg = bot.login()
+            rebot_log.info("[login_all] %s %s %s", cls.crawl_source, bot.telephone, msg)
 
     @classmethod
     def get_one(cls, order=None):
@@ -1472,15 +1494,49 @@ class CqkyWebRebot(Rebot):
         rebot_log.info("[cqky] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
-    def login(self):
-        ua = random.choice(BROWSER_USER_AGENT)
-        self.last_login_time = dte.now()
-        self.user_agent = ua
-        self.is_active=True
-        self.cookies = "{}"
-        self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
-        return "OK"
+    def login(self, valid_code="", headers={}, cookies={}):
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", "") or self.user_agent,
+                "Referer": "http://www.96096kp.com/CusLogin.aspx",
+                "Origin": "http://www.96096kp.com",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
+            params = {
+                "loginID": self.telephone,
+                "loginPwd": self.password,
+                "getInfo": 1,
+                "loginValid": valid_code,
+                "cmd": "Login",
+            }
+            login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            res = json.loads(trans_js_str(r.content))
+            success = res.get("success", True)
+            if success:     # 登陆成功
+                username = res["Code"]
+                if username != self.telephone:  # cookie串了
+                    self.modify(cookies="{}")
+                    return "fail"
+                cookies.update(dict(r.cookies))
+                self.modify(cookies=json.dumps(cookies), is_active=True)
+                return "OK"
+            else:
+                msg = res["msg"]
+                rebot_log.info("[cqky]%s %s", self.telephone, msg)
+                if u"用户名或密码错误" in msg:
+                    return "invalid_pwd"
+                elif u"请正确输入验证码" in msg or u"验证码已过期" in msg:
+                    return "invalid_code"
+                return msg
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active=True
+            self.cookies = "{}"
+            self.save()
+            return "fail"
 
     def test_login_status(self):
         login_url= "http://www.96096kp.com/UserData/UserCmd.aspx"
@@ -1499,7 +1555,7 @@ class CqkyWebRebot(Rebot):
             "Code": "",
             "cmd": "GetMobileList",
         }
-        r = requests.post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
         lst = re.findall(r'success:"(\w+)"', r.content)
         succ = lst and lst[0] or ""
         if succ == "true":
@@ -2051,6 +2107,7 @@ class BjkyWebRebot(Rebot):
 class LnkyWapRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    ip = db.StringField(default="")
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -2058,6 +2115,17 @@ class LnkyWapRebot(Rebot):
     }
     crawl_source = SOURCE_LNKY
     is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        key = RK_PROXY_IP_LNKY
+        if ipstr and rds.sismember(key, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(key)
+        self.modify(ip=ipstr)
+        return ipstr
 
     def http_header(self, ua=""):
         return {
@@ -2083,7 +2151,7 @@ class LnkyWapRebot(Rebot):
                 "userInfo.password": pwd_info[self.password]
             }
         login_url = "http://www.jt306.cn/wap/login/ajaxLogin.do"
-        r = requests.post(login_url, data=data, headers=headers)
+        r = self.http_post(login_url, data=data, headers=headers)
         ret = r.json()
         if ret["returnCode"] == '0000':
             self.last_login_time = dte.now()
@@ -2102,7 +2170,7 @@ class LnkyWapRebot(Rebot):
             user_url = "http://www.jt306.cn/wap/userCenter/personalInformation.do"
             headers = self.http_header()
             cookies = json.loads(self.cookies)
-            res = requests.get(user_url, headers=headers, cookies=cookies)
+            res = self.http_get(user_url, headers=headers, cookies=cookies)
             result = urlparse.urlparse(res.url)
             if 'login/loginPage.do' in result.path:
                 return 0

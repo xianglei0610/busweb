@@ -54,15 +54,15 @@ class ProxyProducer(object):
         add_cnt = 0
         for i in range(1, 10):
             url = "http://www.samair.ru/proxy-by-country/China-%02d.htm" % i
-            try:
-                r = requests.get(url, timeout=10)
-            except Exception:
-                continue
-            lst = re.findall(r"(\d+.\d+.\d+.\d+:\d+)", r.content)
-            for ipstr in lst:
-                if self.valid_proxy(ipstr):
-                    self.add_proxy(ipstr)
-                    add_cnt += 1
+            from selenium import webdriver
+            driver = webdriver.PhantomJS()
+            driver.get(url)
+            for trobj in driver.find_elements_by_tag_name("tr"):
+                lst = re.findall(r"(\d+.\d+.\d+.\d+:\d+)", trobj.text)
+                for ipstr in lst:
+                    if self.valid_proxy(ipstr):
+                        self.add_proxy(ipstr)
+                        add_cnt += 1
         return add_cnt
 
     def crawl_from_66ip(self):
@@ -74,6 +74,18 @@ class ProxyProducer(object):
             except Exception:
                 continue
             proxy_lst=proxy_lst.union(set(re.findall(r"(\d+.\d+.\d+.\d+:\d+)", r.content)))
+        add_cnt = 0
+        for ipstr in proxy_lst:
+            if self.valid_proxy(ipstr):
+                self.add_proxy(ipstr)
+                add_cnt += 1
+        return add_cnt
+
+    def crawl_from_zdaye(self):
+        url = "http://api.zdaye.com/?api=201604061044324430&pw=efrfdaf&sleep=5%C3%EB%C4%DA&gb=2&post=%D6%A7%B3%D6&ct=200"
+        proxy_lst = set()
+        r = requests.get(url, timeout=6)
+        proxy_lst=proxy_lst.union(set(re.findall(r"(\d+.\d+.\d+.\d+:\d+)", r.content)))
         add_cnt = 0
         for ipstr in proxy_lst:
             if self.valid_proxy(ipstr):
@@ -229,12 +241,13 @@ class CqkyProxyConsumer(ProxyConsumer):
                               data=urllib.urlencode(params),
                               headers=headers,
                               timeout=4,
+                              allow_redirects=False,
                               proxies={"http": "http://%s" % ipstr})
             content = r.content
             for k in set(re.findall("([A-Za-z]+):", content)):
                 content = re.sub(r"\b%s\b" % k, '"%s"' % k, content)
             res = json.loads(content)
-        except:
+        except Exception, e:
             return False
         try:
             if res["success"] != "true" or not res["data"]:
@@ -242,7 +255,6 @@ class CqkyProxyConsumer(ProxyConsumer):
         except:
             return False
         return True
-
 
 
 class ScqcpProxyConsumer(ProxyConsumer):
@@ -342,6 +354,26 @@ class BjkyProxyConsumer(ProxyConsumer):
         return True
 
 
+class LnkyProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_LNKY
+
+    def valid_proxy(self, ipstr):
+        url = "http://www.jt306.cn/wap/login/home.do"
+        headers = {
+            "User-Agent": random.choice(MOBILE_USER_AGENG),
+        }
+        try:
+            r = requests.get(url,
+                             headers=headers,
+                             timeout=3,
+                             proxies={"http": "http://%s" % ipstr})
+            print r.content
+        except:
+            return False
+        if r.status_code != 200 or "辽宁省汽车客运网上售票系统" not in r.content:
+            return False
+        return True
+
 proxy_producer = ProxyProducer()
 
 cqky_proxy = CqkyProxyConsumer()
@@ -349,9 +381,11 @@ tc_proxy = TongChengProxyConsumer()
 cbd_proxy = CBDProxyConsumer()
 scqcp_proxy = ScqcpProxyConsumer()
 bjky_proxy = BjkyProxyConsumer()
+lnky_proxy = LnkyProxyConsumer()
 
 proxy_producer.registe_consumer(cqky_proxy)
 proxy_producer.registe_consumer(tc_proxy)
 proxy_producer.registe_consumer(cbd_proxy)
 proxy_producer.registe_consumer(scqcp_proxy)
 proxy_producer.registe_consumer(bjky_proxy)
+proxy_producer.registe_consumer(lnky_proxy)

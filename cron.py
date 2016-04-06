@@ -32,7 +32,7 @@ def check(run_in_local=False):
                     cron_log.info("[ignore] forbid run at debug mode")
                     return None
                 t1 = time.time()
-                cron_log.info("[start] %s %s %s", func.__name__, args, kwargs)
+                #cron_log.info("[start] %s %s %s", func.__name__, args, kwargs)
                 with app.app_context():
                     res = func(*args, **kwargs)
                 cost = time.time() - t1
@@ -198,6 +198,15 @@ def check_proxy_bjky():
     return con.proxy_size()
 
 
+@check(run_in_local=True)
+def check_proxy_lnky():
+    from app.proxy import lnky_proxy as con
+    for ipstr in con.all_proxy():
+        if not con.valid_proxy(ipstr):
+            con.remove_proxy(ipstr)
+    return con.proxy_size()
+
+
 def main():
     sched = Scheduler(daemonic=False)
 
@@ -288,7 +297,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=18, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "张家港"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "苏州"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "常熟"}})
-    sched.add_cron_job(bus_crawl, hour=29, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "太仓"}})
+    sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "太仓"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "吴江"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "昆山"}})
 
@@ -297,16 +306,17 @@ def main():
     sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['ctrip'], kwargs={"crawl_kwargs":{"province": "北京"}})
 
     # 代理ip相关
-    sched.add_interval_job(crawl_proxy_haodaili, minutes=10)
+    sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=15)
-    sched.add_interval_job(crawl_proxy_66ip, minutes=15)
-    sched.add_interval_job(crawl_proxy_xici, minutes=15)
+    sched.add_interval_job(crawl_proxy_66ip, minutes=12)
+    sched.add_interval_job(crawl_proxy_xici, minutes=12)
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_proxy_cqky, minutes=1)
     sched.add_interval_job(check_proxy_tc, minutes=1)
     sched.add_interval_job(check_proxy_cbd, minutes=1)
     sched.add_interval_job(check_proxy_scqcp, minutes=1)
     sched.add_interval_job(check_proxy_bjky, minutes=1)
+    sched.add_interval_job(check_proxy_lnky, minutes=1)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
