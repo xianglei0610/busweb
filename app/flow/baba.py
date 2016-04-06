@@ -131,7 +131,7 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = ret.get("errorMsg", "").replace("\r\n", " ")
-                for s in ["车次停班", "余票不足"]:
+                for s in ["车次停班", "余票不足", "关联车次不可售"]:
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break

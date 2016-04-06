@@ -411,7 +411,7 @@ class Order(db.Document):
         try:
             return rebot_cls.objects.get(telephone=self.source_account)
         except rebot_cls.DoesNotExist:
-            return None
+            return self.change_lock_rebot()
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
