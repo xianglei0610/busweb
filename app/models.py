@@ -400,8 +400,6 @@ class Order(db.Document):
         """
         获取用于锁票的rebot
         """
-        if not self.source_account:
-            return None
         cls_lst = get_rebot_class(self.crawl_source)
         rebot_cls = None
         for cls in cls_lst:
@@ -2125,14 +2123,15 @@ class LnkyWapRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        key = RK_PROXY_IP_LNKY
-        if ipstr and rds.sismember(key, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(key)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         key = RK_PROXY_IP_LNKY
+#         if ipstr and rds.sismember(key, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(key)
+#         self.modify(ip=ipstr)
+#         return ipstr
 
     def http_header(self, ua=""):
         return {
