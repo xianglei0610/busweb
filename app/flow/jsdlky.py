@@ -209,7 +209,7 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = JsdlkyWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
         is_login = rebot.test_login_status()
         if not is_login and valid_code:
             info = json.loads(session["pay_login_info"])

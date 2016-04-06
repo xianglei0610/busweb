@@ -279,10 +279,10 @@ class Flow(BaseFlow):
         if sta_mode == 2:
             lst = []
             for r in order.riders:
-                lst.append("1~%s~1~%s~%s~0~false" % (r["name"], r["id_number"], rebot.telephone))
+                lst.append("1~%s~1~%s~%s~0~false" % (r["name"], r["id_number"], r["telephone"]))
             params.update({
                 "passengerMsg": "|".join(lst),
-                "contactMsg": "%s~%s~" % (order.contact_info["name"], rebot.telephone),
+                "contactMsg": "%s~%s~" % (order.contact_info["name"], order.contact_info["telephone"]),
                 "isIns": "false",
             })
         r = rebot.http_post(base_url,
@@ -498,7 +498,7 @@ class Flow(BaseFlow):
                         headers=headers)
         except:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
-            line_log.error("%s\n%s", "".join(traceback.format_exc()), locals())
+            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
         content = r.content
         for k in set(re.findall("([A-Za-z]+):", content)):
