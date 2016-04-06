@@ -54,13 +54,16 @@ class Flow(BaseFlow):
             if shopcartct == '0':
                 errmsg = self.request_add_shopcart(order, rebot)
                 if errmsg:
-                    if u'购物车中已经存在' not in errmsg[0]:
-                        lock_result.update(result_code=0,
-                                           source_account=rebot.telephone,
-                                           result_reason='add_shopcart2'+errmsg[0],
-                                           lock_info={'result_reason': errmsg[0]})
-                        return lock_result
-
+                    lock_result.update(result_code=0,
+                                       source_account=rebot.telephone,
+                                       result_reason='add_shopcart2'+errmsg[0],
+                                       lock_info={'result_reason': errmsg[0]})
+                    return lock_result
+            if int(shopcartct) != len(order.riders):
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="购物车中数量和购票人数不相同")
+                return lock_result
             try:
                 res = self.request_create_order(order, rebot)
             except Exception, e:
