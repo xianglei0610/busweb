@@ -400,8 +400,6 @@ class Order(db.Document):
         """
         获取用于锁票的rebot
         """
-        if not self.source_account:
-            return None
         cls_lst = get_rebot_class(self.crawl_source)
         rebot_cls = None
         for cls in cls_lst:

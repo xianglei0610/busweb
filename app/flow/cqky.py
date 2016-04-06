@@ -41,6 +41,7 @@ class Flow(BaseFlow):
                 mode = 2
             else:
                 mode = 1
+            order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
 
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
