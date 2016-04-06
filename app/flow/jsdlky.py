@@ -106,22 +106,10 @@ class Flow(BaseFlow):
                     "lock_info": ret,
                 })
             else:
-                errmsg = ret.get("errorMsg", "").replace("\r\n", " ")
-                for s in ["车次停班", "余票不足"]:
-                    if s in errmsg:
-                        self.close_line(line, reason=errmsg)
-                        break
-                if u"服务器与客运站网络中断" in errmsg:
-                    body = "源站: 巴巴快巴, <br/> 城市: %s, <br/> 车站: %s" % (line.s_city_name, line.s_sta_name)
-                    async_send_email.delay("客运站联网中断", body)
-                elif "查询车次详情异常" in errmsg:
-                    lock_result.update({
-                        "result_code": 2,
-                        "result_reason": "%s %s" % (ret["msgType"], errmsg),
-                    })
+                msg = ret["msg"]
                 lock_result.update({
-                    "result_code": 0,
-                    "result_reason": "%s %s" % (ret["msgType"], errmsg),
+                    "result_code": 2,
+                    "result_reason": msg,
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": None,
