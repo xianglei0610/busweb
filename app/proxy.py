@@ -354,6 +354,26 @@ class BjkyProxyConsumer(ProxyConsumer):
         return True
 
 
+class LnkyProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_LNKY
+
+    def valid_proxy(self, ipstr):
+        url = "http://www.jt306.cn/wap/login/home.do"
+        headers = {
+            "User-Agent": random.choice(MOBILE_USER_AGENG),
+        }
+        try:
+            r = requests.get(url,
+                             headers=headers,
+                             timeout=3,
+                             proxies={"http": "http://%s" % ipstr})
+            print r.content
+        except:
+            return False
+        if r.status_code != 200 or "辽宁省汽车客运网上售票系统" not in r.content:
+            return False
+        return True
+
 proxy_producer = ProxyProducer()
 
 cqky_proxy = CqkyProxyConsumer()
@@ -361,9 +381,11 @@ tc_proxy = TongChengProxyConsumer()
 cbd_proxy = CBDProxyConsumer()
 scqcp_proxy = ScqcpProxyConsumer()
 bjky_proxy = BjkyProxyConsumer()
+lnky_proxy = LnkyProxyConsumer()
 
 proxy_producer.registe_consumer(cqky_proxy)
 proxy_producer.registe_consumer(tc_proxy)
 proxy_producer.registe_consumer(cbd_proxy)
 proxy_producer.registe_consumer(scqcp_proxy)
 proxy_producer.registe_consumer(bjky_proxy)
+proxy_producer.registe_consumer(lnky_proxy)
