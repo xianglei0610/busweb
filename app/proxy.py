@@ -367,7 +367,6 @@ class LnkyProxyConsumer(ProxyConsumer):
                              headers=headers,
                              timeout=3,
                              proxies={"http": "http://%s" % ipstr})
-            print r.content
         except:
             return False
         if r.status_code != 200 or "辽宁省汽车客运网上售票系统" not in r.content:
