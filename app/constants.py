@@ -21,8 +21,18 @@ SOURCE_CQKY = "cqky"
 SOURCE_LNKY = "lnky"
 SOURCE_ZJGSM = "zjgsm"
 SOURCE_WXSZ = "wxsz"
+SOURCE_JSDLKY = "jsdlky"
 
 SOURCE_INFO = {
+    SOURCE_JSDLKY: {
+        "name": "江苏道路客运",
+        "website": "www.jslw.gov.cn",
+        "accounts": {
+            "15575101324": ("123456", ""),
+        },
+        "pwd_encode": {
+        }
+    },
     SOURCE_ZJGSM: {
         "name": "张家港市民网页",
         "website": "www.zjgsmwy.com",
@@ -1607,6 +1617,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_WXSZ: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
     "changtu1": "车站订单号：%(raw_order)s,发车时间：%(time)s, %(start)s-%(end)s,请提前一小时以上到乘车站,取票信息将发至您的订单取票联系人手机上，如未收到取票账号信息请务必发车前2小时致电客服索取,超时不受理,如需改退票请到乘车站按规定办理。",
     "changtu2": "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
+    SOURCE_JSDLKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
 
     # 按省来分
     "江苏": "您购买了：%(time)s，%(start)s-%(end)s车次为%(bus)s的汽车票，取票号：%(no)s，取票密码：%(code)s"
