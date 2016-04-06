@@ -306,10 +306,10 @@ def main():
     sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['ctrip'], kwargs={"crawl_kwargs":{"province": "北京"}})
 
     # 代理ip相关
-    sched.add_interval_job(crawl_proxy_haodaili, minutes=10)
+    sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=15)
-    sched.add_interval_job(crawl_proxy_66ip, minutes=15)
-    sched.add_interval_job(crawl_proxy_xici, minutes=15)
+    sched.add_interval_job(crawl_proxy_66ip, minutes=12)
+    sched.add_interval_job(crawl_proxy_xici, minutes=12)
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_proxy_cqky, minutes=1)
     sched.add_interval_job(check_proxy_tc, minutes=1)
