@@ -198,6 +198,15 @@ def check_proxy_bjky():
     return con.proxy_size()
 
 
+@check(run_in_local=True)
+def check_proxy_lnky():
+    from app.proxy import lnky_proxy as con
+    for ipstr in con.all_proxy():
+        if not con.valid_proxy(ipstr):
+            con.remove_proxy(ipstr)
+    return con.proxy_size()
+
+
 def main():
     sched = Scheduler(daemonic=False)
 
@@ -288,7 +297,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=18, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "张家港"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "苏州"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "常熟"}})
-    sched.add_cron_job(bus_crawl, hour=29, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "太仓"}})
+    sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "太仓"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "吴江"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "昆山"}})
 
@@ -307,6 +316,7 @@ def main():
     sched.add_interval_job(check_proxy_cbd, minutes=1)
     sched.add_interval_job(check_proxy_scqcp, minutes=1)
     sched.add_interval_job(check_proxy_bjky, minutes=1)
+    sched.add_interval_job(check_proxy_lnky, minutes=1)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

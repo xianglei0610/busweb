@@ -41,8 +41,8 @@ class Flow(BaseFlow):
             riders = order.riders
             tickets = []
             for i in riders:
-                tmp = str(line.full_price)+'::'+i['id_number']+'::'+i['name']+'::'+'全'+'::'+i['telephone']
-                tickets.append(tmp)
+                lst = [str(line.full_price), i['id_number'], i['name'], "全", i['telephone']]
+                tickets.append("::".join(lst))
             data = {
                     "arrival": line.d_sta_name,
                     "departureStation": line.s_sta_name,
@@ -51,7 +51,6 @@ class Flow(BaseFlow):
                     "travelDate": line.drv_date,
                     "travelTime": line.drv_time,
                     }
-            print data
             order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
             try:
                 res = self.send_lock_request(order, rebot, data=data)
@@ -101,7 +100,7 @@ class Flow(BaseFlow):
         """
         order_url = "http://www.jt306.cn/wap/ticketSales/ajaxMakeOrder.do"
         headers = rebot.http_header()
-        r = requests.post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+        r = rebot.http_post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
         ret = r.content
         return {'flag': True, 'msg': ret}
 
@@ -109,7 +108,7 @@ class Flow(BaseFlow):
         cookies = json.loads(rebot.cookies)
         detail_url = "http://www.jt306.cn/wap/ticketSales/makeOrder.do?orderNo=%s"%order.raw_order_no
         headers = rebot.http_header()
-        r = requests.get(detail_url, headers=headers, cookies=cookies)
+        r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
         content = r.content
         if not isinstance(content, unicode):
             content = content.decode('utf-8')
@@ -124,6 +123,7 @@ class Flow(BaseFlow):
                 pay_url = orderDetail['payURL']
                 order.modify(pay_url=pay_url)
                 order.reload()
+                return {"state": u'等待出票'}
             elif orderDetail['status'] == '1':
                 return {"state": u"购票成功"}
 
@@ -191,13 +191,11 @@ class Flow(BaseFlow):
                 headers = rebot.http_header()
                 cookies = json.loads(rebot.cookies)
                 detail_url = "http://www.jt306.cn/wap/ticketSales/makeOrder.do?orderNo=%s"%order.raw_order_no
-                print detail_url
                 headers = rebot.http_header()
-                r = requests.get(detail_url, headers=headers, cookies=cookies)
+                r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
                 content = r.content
                 if not isinstance(content, unicode):
                     content = content.decode('utf-8')
-                print content
                 sel = etree.HTML(r.content)
                 orderDetail = sel.xpath('//div[@id="orderDetailJson"]/text()')
                 if orderDetail:
