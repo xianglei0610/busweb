@@ -207,6 +207,22 @@ class Flow(BaseFlow):
                         pay_url = orderDetail['payURL']
                         if not pay_url:
                             return {"flag": "error", "content": "没有获取到支付连接,请重试!"}
+                        r = requests.get(pay_url, headers=headers, cookies=cookies)
+                        sel = etree.HTML(r.content)
+                        params = {}
+                        for s in sel.xpath("//form[@id='bankPayForm']//input"):
+                            k, v = s.xpath("@name"), s.xpath("@value")
+                            k, v = k[0], v[0] if v else ""
+                            params[k] = v
+        
+                        url = "http://61.161.205.217/payment/payment/gotoChinaPay.do"
+                        r = requests.post(url, headers=headers, cookies=cookies, data=urllib.urlencode(params))
+                        sel = etree.HTML(r.content)
+                        pay_order_no = sel.xpath("//input[@name='OrdId']/@value")[0].strip()
+                        if order.pay_order_no != pay_order_no:
+                            order.update(pay_order_no=pay_order_no)
+                        return {"flag": "html", "content": r.content}
+
                         return {"flag": "url", "content": pay_url}
                     elif orderDetail['status'] == '1':
                         return {"flag": "false", "content": '订单已经支付'}
