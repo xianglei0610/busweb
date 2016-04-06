@@ -2,10 +2,10 @@
 # encoding: utf-8
 
 import random
-import requests
 import json
 import urllib
 import datetime
+import urllib2
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -13,7 +13,6 @@ from app.models import Line, JsdlkyWebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
-from tasks import async_send_email
 
 
 class Flow(BaseFlow):
@@ -104,6 +103,7 @@ class Flow(BaseFlow):
                     "expire_datetime": expire_time,
                     "source_account": rebot.telephone,
                     "lock_info": ret,
+                    "pay_money": ret["pay_money"],
                 })
             else:
                 msg = ret["msg"]
@@ -157,7 +157,10 @@ class Flow(BaseFlow):
         cookies = json.loads(rebot.cookies)
         r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
-        pick_code = soup.select_one("#query_no").get('value')
+        detail_li = soup.select(".order_detail li")
+        # order_no = detail_li[0].text.strip().lstrip(u"订  单 号 :").strip()
+        state = detail_li[1].text.strip().lstrip(u"订单状态 :").strip()
+        pick_no = soup.select_one("#query_no").get('value')
         pick_code = soup.select_one("#query_random").get('value')
         seat_no = soup.select_one("#seat_no").get('value')
         return {
@@ -237,7 +240,7 @@ class Flow(BaseFlow):
         else:
             login_form = "http://www.jslw.gov.cn/login.do"
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-            r = requests.get(login_form, headers=headers)
+            r = rebot.http_get(login_form, headers=headers)
             data = {
                 "cookies": dict(r.cookies),
                 "headers": headers,
@@ -251,40 +254,31 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        line_url = "http://s4mdata.bababus.com:80/app/v3/ticket/busList.htm"
+        line_url = "http://58.213.132.27:8082/nj_weixinService/2.0/queryBus"
         params = {
-            "content":{
-                "pageSize": 1025,
-                "beginCityName": line.s_city_name,
-                "currentPage": 1,
-                "endCityName": line.d_city_name,
-                "leaveDate": line.drv_date,
-            },
-            "common": {
-                "pushToken": "864895020513527",
-                "channelVer": "BabaBus",
-                "usId": "",
-                "appId": "com.hundsun.InternetSaleTicket",
-                "appVer": "1.0.0",
-                "loginStatus": "0",
-                "imei": "864895020513527",
-                "mobileVer": "4.4.4",
-                "terminalType": "1"
-            },
-            "key": ""
+            "drive_date": line.drv_datetime.strftime("%Y%m%d"),
+            "rst_name": line.s_sta_name,
+            "dst_name": line.d_city_name,
+            "v_source": "a",
+            "v_version": "v2.2",
+            "v_reg_id": ""
         }
-        ua = random.choice(MOBILE_USER_AGENG)
-        headers = {"User-Agent": ua}
-        r = requests.post(line_url, data=json.dumps(params), headers=headers)
+        req_data = {
+            "param_key": json.dumps(params),
+            "secret_key": md5("&".join(map(lambda a:"%s=%s" % (a[0], a[1]), sorted(params.items(), key=lambda i: i[0])))),
+        }
+        rebot = JsdlkyWebRebot.get_one()
+        url = "%s?%s" % (line_url, urllib.urlencode(req_data))
+        r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)})
         res = r.json()
         now = dte.now()
-        if res["returnNo"] != "0000":
+        if res["rtn_code"] != "00":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
         update_attrs = {}
-        for d in res["content"]["busList"]:
-            drv_datetime = dte.strptime("%s %s" % (d["leaveDate"], d["leaveTime"]), "%Y-%m-%d %H:%M")
+        for d in res["data"] or []:
+            drv_datetime = dte.strptime("%s %s" % (d["drive_date"], d["plan_time"]), "%Y%m%d %H%M")
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
@@ -298,11 +292,11 @@ class Flow(BaseFlow):
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:
                 continue
-            extra_info = {"depotName": d["depotName"], "sbId": d["sbId"], "stId": d["stId"], "depotId": d["depotId"]}
+            extra_info = {"startstation": d["sst_name"], "terminalstation": d["tst_name"], "startstationcode": d["sstcode"]},
             info = {
-                "full_price": float(d["fullPrice"]),
+                "full_price": float(d["full_price"]),
                 "fee": 0,
-                "left_tickets": int(d["remainCount"]),
+                "left_tickets": int(d["available_tickets"]),
                 "refresh_datetime": now,
                 "extra_info": extra_info,
             }
