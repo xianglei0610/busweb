@@ -2039,6 +2039,7 @@ class BjkyWebRebot(Rebot):
 class LnkyWapRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    ip = db.StringField(default="")
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -2046,6 +2047,17 @@ class LnkyWapRebot(Rebot):
     }
     crawl_source = SOURCE_LNKY
     is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        key = RK_PROXY_IP_LNKY
+        if ipstr and rds.sismember(key, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(key)
+        self.modify(ip=ipstr)
+        return ipstr
 
     def http_header(self, ua=""):
         return {
@@ -2071,7 +2083,7 @@ class LnkyWapRebot(Rebot):
                 "userInfo.password": pwd_info[self.password]
             }
         login_url = "http://www.jt306.cn/wap/login/ajaxLogin.do"
-        r = requests.post(login_url, data=data, headers=headers)
+        r = self.http_post(login_url, data=data, headers=headers)
         ret = r.json()
         if ret["returnCode"] == '0000':
             self.last_login_time = dte.now()
@@ -2090,7 +2102,7 @@ class LnkyWapRebot(Rebot):
             user_url = "http://www.jt306.cn/wap/userCenter/personalInformation.do"
             headers = self.http_header()
             cookies = json.loads(self.cookies)
-            res = requests.get(user_url, headers=headers, cookies=cookies)
+            res = self.http_get(user_url, headers=headers, cookies=cookies)
             result = urlparse.urlparse(res.url)
             if 'login/loginPage.do' in result.path:
                 return 0
