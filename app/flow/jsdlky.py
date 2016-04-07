@@ -164,6 +164,8 @@ class Flow(BaseFlow):
         pick_code = soup.select_one("#query_random").get('value')
         seat_no = soup.select_one("#seat_no").get('value')
         left_minu = soup.select_one("#remainM")
+        print r.content
+        print left_minu
         if left_minu:
             left_minu = int(left_minu.text)
         else:
@@ -237,8 +239,8 @@ class Flow(BaseFlow):
                 detail = self.send_order_request(order)
                 if detail["state"] <= "已作废":
                     return {"flag": "error", "content": "订单已作废"}
-                elif detail["left_minutes"] <= 0:
-                    return {"flag": "error", "content": "订单已过期"}
+                #elif detail["left_minutes"] <= 0:
+                #    return {"flag": "error", "content": "订单已过期"}
                 pay_url = "http://www.jslw.gov.cn/bankPay.do"
                 headers = {
                     "User-Agent": rebot.user_agent,
