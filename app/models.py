@@ -677,7 +677,8 @@ class Rebot(db.Document):
                             timeout=15,
                             **kwargs)
         except Exception, e:
-            self.modify(ip="")
+            if hasattr(self, "ip"):
+                self.modify(ip="")
             raise e
         return r
 
