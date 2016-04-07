@@ -1136,6 +1136,7 @@ class ChangtuWebRebot(Rebot):
 class JsdlkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    ip = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],

@@ -44,7 +44,7 @@ class Flow(BaseFlow):
             form_url = "http://www.jslw.gov.cn/busOrder.do"
             params = {
                 "event": "init_query",
-                "max_date": "2016-04-01",
+                "max_date": dte.now().strftime("%Y-%m-%d"),
                 "drive_date1": line.drv_date,
                 "bus_code": line.bus_num,
                 "sstcode": line.extra_info["startstationcode"],
@@ -163,11 +163,17 @@ class Flow(BaseFlow):
         pick_no = soup.select_one("#query_no").get('value')
         pick_code = soup.select_one("#query_random").get('value')
         seat_no = soup.select_one("#seat_no").get('value')
+        left_minu = soup.select_one("#remainM")
+        if left_minu:
+            left_minu = int(left_minu.text)
+        else:
+            left_minu = 0
         return {
             "state": state,
             "pick_no": pick_no,
             "pick_code": pick_code,
             "seat_no": seat_no,
+            "left_minutes": left_minu,
         }
 
     def do_refresh_issue(self, order):
@@ -206,6 +212,11 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
+        elif state == "购票中":
+            result_info.update({
+                "result_code": 4,
+                "result_msg": state,
+            })
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
@@ -223,6 +234,11 @@ class Flow(BaseFlow):
             if order.status == STATUS_LOCK_RETRY:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
+                detail = self.send_order_request(order)
+                if detail["state"] <= "已作废":
+                    return {"flag": "error", "content": "订单已作废"}
+                elif detail["left_minutes"] <= 0:
+                    return {"flag": "error", "content": "订单已过期"}
                 pay_url = "http://www.jslw.gov.cn/bankPay.do"
                 headers = {
                     "User-Agent": rebot.user_agent,
