@@ -1,6 +1,5 @@
 # -*- coding:utf-8 -*-
 import time
-import random
 import math
 import copy
 import urllib2
@@ -22,7 +21,7 @@ from flask import render_template, request, redirect, url_for, jsonify, session,
 from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.admin import admin
-from app.utils import getRedisObj
+from app.utils import get_redis
 from app.models import Order, Line, AdminUser, PushUserList
 from app.flow import get_flow
 from tasks import push_kefu_order, async_lock_ticket, issued_callback
@@ -180,21 +179,16 @@ def order_pay(order_no):
     code = request.args.get("valid_code", "")
     force = int(request.args.get("force", "0"))
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY]:
-        return redirect(url_for("admin.wating_deal_order"))
+        return "订单已成功或失败,不需要支付"
 #     if not order.pay_account:
 #         if token and token == TOKEN:
 #             return redirect(url_for("admin.pay_account_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
 #         else:
 #             return redirect(url_for("admin.pay_account_input", order_no=order_no))
-
-    r = getRedisObj()
-    limit_key = LAST_PAY_CLICK_TIME % order_no
-    click_time = r.get(limit_key)
-    if click_time and not code:
-        sec = time.time()-float(click_time)
-        return "点击支付按钮频率太快, 请%s秒后再试!" % (PAY_CLICK_EXPIR-sec)
-    r.set(limit_key, time.time())
-    r.expire(limit_key, PAY_CLICK_EXPIR)
+    rds = get_redis("order")
+    key = RK_ORDER_LOCKING % order.order_no
+    if rds.get(key):
+        return "正在锁票,请稍后重试"
 
     channel = request.args.get("channel", "alipay")
     flow = get_flow(order.crawl_source)
@@ -592,14 +586,14 @@ def wating_deal_order():
                 push_kefu_order.apply_async((current_user.username, order.order_no))
     qs = assign.dealing_orders(current_user).order_by("create_date_time")
 
-    r = getRedisObj()
+    rds = get_redis("order")
     if client == 'web':
-        expire_seconds = {}
+        locking = {}
         for o in qs:
-            click_time = r.get(LAST_PAY_CLICK_TIME % o.order_no)
-            expire_seconds[o.order_no] = 0
-            if click_time or o.status == STATUS_WAITING_LOCK:
-                expire_seconds[o.order_no] = 5
+            if rds.get(RK_ORDER_LOCKING % o.order_no):
+                locking[o.order_no] = 1
+            else:
+                locking[o.order_no] = 0
         not_issued = assign.dealed_but_not_issued_orders(current_user)
         today = dte.now().strftime("%Y-%m-%d")
         dealed_count = Order.objects.filter(kefu_username=current_user.username,
@@ -610,7 +604,7 @@ def wating_deal_order():
                                page=parse_page_data(qs),
                                status_msg=STATUS_MSG,
                                source_info=SOURCE_INFO,
-                               expire_seconds=expire_seconds,
+                               locking=locking,
                                not_issued=not_issued,
                                dealed_count=dealed_count)
     elif client in ['android', 'ios']:
