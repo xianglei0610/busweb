@@ -1602,6 +1602,7 @@ ACCOUNT_ORDER_COUNT = "account_order_count"
 CURRENT_ACCOUNT = "current_account"
 RK_ISSUE_FAIL_COUNT = "%s_issue_fail"
 RK_ISSUEING_COUNT = "issueing_count"
+RK_ORDER_LOCKING = "order:locking:%s"
 
 RK_WATING_LOCK_ORDERS = "wating_lock_orders"       # 等待下单的订单
 RK_DEALING_ORDERS = "dealing_orders:%s"            # 客服正在处理的订单
