@@ -3,12 +3,14 @@ import urllib2
 import json
 import traceback
 import os
+import time
 
 from app.constants import *
 from app import order_log, line_log
 from datetime import datetime as dte
 from tasks import issued_callback
 from bs4 import BeautifulSoup
+from app.utils import get_redis
 
 
 class Flow(object):
@@ -24,11 +26,21 @@ class Flow(object):
     def lock_ticket(self, order, **kwargs):
         """
         锁票主流程, 子类不用复写此方法
-
-        Return:
-            expire_time: "2015-11-11 11:11:11",     # 订单过期时间
-            total_price: 322，          # 车票价格
         """
+        rds = get_redis("order")
+        key = RK_ORDER_LOCKING % order.order_no
+        if rds.get(key):
+            return
+        rds.set(key, time.time())
+        rds.expire(key, 90)
+        time.sleep(60)
+        try:
+            ret = self.lock_ticket2(order, **kwargs)
+            return ret
+        finally:
+            rds.delete(key)
+
+    def lock_ticket2(self, order, **kwargs):
         order.reload()
         notify_url = order.locked_return_url
         data = {
