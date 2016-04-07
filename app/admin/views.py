@@ -127,7 +127,12 @@ def src_code_img(order_no):
         code_url = data.get("valid_url")
         headers = data.get("headers")
         cookies = data.get("cookies")
-        r = rebot.http_get(code_url, headers=headers, cookies=cookies)
+        for i in range(3):
+            r = rebot.http_get(code_url, headers=headers, cookies=cookies)
+            if "image" not in r.headers.get('content-type'):
+                rebot.modify(ip="")
+            else:
+                break
         cookies.update(dict(r.cookies))
         data["cookies"] = cookies
         session[key] = json.dumps(data)
