@@ -188,7 +188,7 @@ def order_pay(order_no):
     rds = get_redis("order")
     key = RK_ORDER_LOCKING % order.order_no
     if rds.get(key):
-        return "正在锁票,请稍后重试"
+        return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("admin.order_pay", order_no=order.order_no)
 
     channel = request.args.get("channel", "alipay")
     flow = get_flow(order.crawl_source)
@@ -198,11 +198,11 @@ def order_pay(order_no):
     flag = ret.get("flag", "")
     if flag == "url":
         if order.pay_money != order.order_price and not force:
-            return "订单金额不等于支付金额, 禁止支付"
+            return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("admin.order_pay", order_no=order.order_no, force=1)
         return redirect(ret["content"])
     elif flag == "html":
         if order.pay_money != order.order_price and not force:
-            return "订单金额不等于支付金额, 禁止支付"
+            return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("admin.order_pay", order_no=order.order_no, force=1)
         return ret["content"]
     elif flag == "input_code":
         if token and token == TOKEN:
