@@ -695,6 +695,72 @@ class Rebot(db.Document):
         return r
 
 
+class TzkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "tzkyweb_rebot",
+    }
+    crawl_source = SOURCE_TZKY
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def login(self):
+        url = "http://www.tzfeilu.com:8086/index.php/login/index"
+        ua = random.choice(BROWSER_USER_AGENT)
+        headers = {"User-Agent": ua}
+        r = self.http_get(url, headers=headers)
+        cookies = dict(r.cookies)
+
+        params = {
+            "returnurl":  "",
+            "event": "login",
+            "password1":  add_secret(self.password),
+            "user_code1": add_secret(self.telephone),
+            "user_code": self.telephone,
+            "password": self.password,
+            "rememberMe": "yes",
+        }
+        if valid_code:
+            params.update(checkcode=valid_code)
+
+        login_url = "http://www.jslw.gov.cn/login.do"
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        r = self.http_post(login_url,
+                           data=urllib.urlencode(params),
+                           allow_redirects=False,
+                           headers=headers, cookies=cookies)
+        r_cookies = dict(r.cookies)
+        cookies.update(r_cookies)
+        if r.headers.get("location", "") and r_cookies["userId"]:
+            self.last_login_time = dte.now()
+            self.user_agent = headers["User-Agent"]
+            self.is_active=True
+            self.cookies = json.dumps(cookies)
+            self.save()
+            return "OK"
+        else:
+            return "fail"
+
+    def test_login_status(self):
+        user_url = "http://www.jslw.gov.cn/registerUser.do"
+        headers = {"User-Agent": self.user_agent}
+        r= self.http_get(user_url, headers=headers, cookies=json.loads(self.cookies))
+        sel = etree.HTML(r.content)
+        try:
+            username = sel.xpath("//li[@class='user']/text()")[0]
+            assert username == self.telephone
+            return 1
+        except:
+            self.modify(cookies="{}")
+            return 0
+
 class WxszRebot(Rebot):
     user_agent = db.StringField(default="Apache-HttpClient/UNAVAILABLE (java 1.4)")
     uid = db.StringField()

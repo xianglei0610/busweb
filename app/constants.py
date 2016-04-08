@@ -22,8 +22,16 @@ SOURCE_LNKY = "lnky"
 SOURCE_ZJGSM = "zjgsm"
 SOURCE_WXSZ = "wxsz"
 SOURCE_JSDLKY = "jsdlky"
+SOURCE_TZKY = "tzky"
 
 SOURCE_INFO = {
+    SOURCE_TZKY: {
+        "name": "泰州客运",
+        "website": "www.tzfeilu.com",
+        "accounts": {
+            "15575101324": ("123456", ""),
+        }
+    },
     SOURCE_JSDLKY: {
         "name": "江苏道路客运",
         "website": "www.jslw.gov.cn",
