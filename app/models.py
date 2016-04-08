@@ -910,7 +910,7 @@ class ScqcpAppRebot(Rebot):
         "indexes": ["telephone", "is_active", "is_locked"],
         "collection": "scqcpapp_rebot",
     }
-    crawl_source = "SOURCE_SCQCP"
+    crawl_source = SOURCE_SCQCP
     is_for_lock = True
 
     def on_add_doing_order(self, order):

@@ -318,6 +318,9 @@ def main():
 
     #携程
     sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['ctrip'], kwargs={"crawl_kwargs":{"province": "北京"}})
+    
+    #北京省网
+    sched.add_cron_job(bus_crawl, hour=13, minute=30, args=['bjky'])
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
