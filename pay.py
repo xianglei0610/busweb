@@ -20,6 +20,7 @@ COMPANY_TO_SOURCE = {
     "江苏长运交通科技有限公司": SOURCE_JSKY,
     "苏州世纪飞越网络信息有限公司": SOURCE_WXSZ,
     "苏州汽车客运集团有限公司汽车客运总站": SOURCE_ZJGSM,
+    "南京市道路客运联网售票管理服务中心": SOURCE_JSDLKY,
 }
 
 def parse_alipay_record(f):
