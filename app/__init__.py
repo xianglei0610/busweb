@@ -63,16 +63,16 @@ def init_logging(app, server_type):
         logger = v
         logger.setLevel(logging.DEBUG)
         s = logger.name
-        # f = "logs/%s.log" % s
-        # file_hd = TimedRotatingFileHandler(os.path.join(BASE_DIR, f),
-        #                                   when='D', interval=1)
-        # file_hd = FileHandler(os.path.join(BASE_DIR, f))
-        mapping = {
-            "order": SysLogHandler.LOG_LOCAL1,
-            "line": SysLogHandler.LOG_LOCAL2,
-            "common": SysLogHandler.LOG_LOCAL3,
-        }
-        file_hd = SysLogHandler(address=('10.51.9.34', 514), facility=mapping.get(s, SysLogHandler.LOG_LOCAL3))
+        if config.DEBUG:
+            f = "logs/%s.log" % s
+            file_hd = FileHandler(os.path.join(BASE_DIR, f))
+        else:
+            mapping = {
+                "order": SysLogHandler.LOG_LOCAL1,
+                "line": SysLogHandler.LOG_LOCAL2,
+                "common": SysLogHandler.LOG_LOCAL3,
+            }
+            file_hd = SysLogHandler(address=('10.51.9.34', 514), facility=mapping.get(s, SysLogHandler.LOG_LOCAL3))
         file_hd.setLevel(logging.INFO)
         file_hd.setFormatter(fmt)
         logger.addHandler(stdout_fhd)

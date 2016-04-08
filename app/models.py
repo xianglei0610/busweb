@@ -400,8 +400,6 @@ class Order(db.Document):
         """
         获取用于锁票的rebot
         """
-        if not self.source_account:
-            return None
         cls_lst = get_rebot_class(self.crawl_source)
         rebot_cls = None
         for cls in cls_lst:
@@ -672,28 +670,38 @@ class Rebot(db.Document):
         return ""
 
     def http_get(self, url, **kwargs):
-        if self.proxy_ip:
-            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
-        try:
-            r = requests.get(url,
-                            timeout=15,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
+        retry = 3
+        for i in range(retry):  # 重试三次
+            if self.proxy_ip:
+                kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+            if "timeout" not in kwargs:
+                kwargs["timeout"] = 15
+            try:
+                r = requests.get(url, **kwargs)
+            except Exception, e:
+                if hasattr(self, "ip"):
+                    self.modify(ip="")
+                if i >= retry-1:
+                    raise e
+                continue
+            return r
 
     def http_post(self, url, **kwargs):
-        if self.proxy_ip:
-            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
-        try:
-            r = requests.post(url,
-                            timeout=15,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
+        retry = 3
+        for i in range(retry):  # 重试三次
+            if self.proxy_ip:
+                kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+            if "timeout" not in kwargs:
+                kwargs["timeout"] = 15
+            try:
+                r = requests.post(url, **kwargs)
+            except Exception, e:
+                if hasattr(self, "ip"):
+                    self.modify(ip="")
+                if i >= retry-1:
+                    raise e
+                continue
+            return r
 
 
 class WxszRebot(Rebot):
@@ -1237,6 +1245,75 @@ class ChangtuWebRebot(Rebot):
         if res["loginFlag"] == "true":
             return 1
         return 0
+
+class JsdlkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "jsdlkyweb_rebot",
+    }
+    crawl_source = SOURCE_JSDLKY
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def login(self, headers=None, cookies={}, valid_code=""):
+        index_url = "http://www.jslw.gov.cn/"
+        if not headers:
+            ua = random.choice(BROWSER_USER_AGENT)
+            headers = {"User-Agent": ua}
+        if not cookies:
+            r = self.http_get(index_url, headers=headers)
+            cookies = dict(r.cookies)
+
+        add_secret = lambda s: "".join(map(lambda b: str(hex(ord(b))).lstrip("0x"), s))
+        params = {
+            "returnurl":  "",
+            "event": "login",
+            "password1":  add_secret(self.password),
+            "user_code1": add_secret(self.telephone),
+            "user_code": self.telephone,
+            "password": self.password,
+            "rememberMe": "yes",
+        }
+        if valid_code:
+            params.update(checkcode=valid_code)
+
+        login_url = "http://www.jslw.gov.cn/login.do"
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        r = self.http_post(login_url,
+                           data=urllib.urlencode(params),
+                           allow_redirects=False,
+                           headers=headers, cookies=cookies)
+        r_cookies = dict(r.cookies)
+        cookies.update(r_cookies)
+        if r.headers.get("location", "") and r_cookies["userId"]:
+            self.last_login_time = dte.now()
+            self.user_agent = headers["User-Agent"]
+            self.is_active=True
+            self.cookies = json.dumps(cookies)
+            self.save()
+            return "OK"
+        else:
+            return "fail"
+
+    def test_login_status(self):
+        user_url = "http://www.jslw.gov.cn/registerUser.do"
+        headers = {"User-Agent": self.user_agent}
+        r= self.http_get(user_url, headers=headers, cookies=json.loads(self.cookies))
+        sel = etree.HTML(r.content)
+        try:
+            username = sel.xpath("//li[@class='user']/text()")[0]
+            assert username == self.telephone
+            return 1
+        except:
+            self.modify(cookies="{}")
+            return 0
 
 
 class BabaWebRebot(Rebot):
@@ -2161,14 +2238,15 @@ class LnkyWapRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        key = RK_PROXY_IP_LNKY
-        if ipstr and rds.sismember(key, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(key)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         key = RK_PROXY_IP_LNKY
+#         if ipstr and rds.sismember(key, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(key)
+#         self.modify(ip=ipstr)
+#         return ipstr
 
     def http_header(self, ua=""):
         return {

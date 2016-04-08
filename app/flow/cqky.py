@@ -41,6 +41,13 @@ class Flow(BaseFlow):
                 mode = 2
             else:
                 mode = 1
+            order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
+
+            # 查看购物车列表
+            res = self.request_get_shoptcart(rebot)
+            # 清空购物车列表
+            for ids in res["data"][u"ShopTable"].keys():
+                self.request_del_shoptcart(rebot, ids)
 
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
@@ -177,7 +184,8 @@ class Flow(BaseFlow):
             r = rebot.http_post(base_url,
                         data=urllib.urlencode(params),
                         headers=headers,
-                        cookies=cookies,)
+                        cookies=cookies,
+                        timeout=40)
         except requests.exceptions.Timeout, e:
             rebot.modify(ip="")
             lock_info = order.lock_info
@@ -279,10 +287,10 @@ class Flow(BaseFlow):
         if sta_mode == 2:
             lst = []
             for r in order.riders:
-                lst.append("1~%s~1~%s~%s~0~false" % (r["name"], r["id_number"], rebot.telephone))
+                lst.append("1~%s~1~%s~%s~0~false" % (r["name"], r["id_number"], r["telephone"]))
             params.update({
                 "passengerMsg": "|".join(lst),
-                "contactMsg": "%s~%s~" % (order.contact_info["name"], rebot.telephone),
+                "contactMsg": "%s~%s~" % (order.contact_info["name"], order.contact_info["telephone"]),
                 "isIns": "false",
             })
         r = rebot.http_post(base_url,
@@ -398,8 +406,8 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
+        is_login = rebot.test_login_status()
         if order.status == STATUS_LOCK_RETRY:
-            is_login = rebot.test_login_status()
             if not is_login and valid_code:
                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                 info = json.loads(session[key])
@@ -426,7 +434,8 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            r = rebot.http_get(base_url, headers=headers)
+            #r = rebot.http_get(base_url, headers=headers)
+            r = requests.get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             headers.update({"Referer": "http://www.96096kp.com/GoodsDetail.aspx"})
@@ -444,8 +453,12 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$Hidden2": "",
                 "pageNum": ""
             }
-            r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
+            #r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
+            r = requests.post(base_url, data=urllib.urlencode(params), headers=headers,)
             return {"flag": "html", "content": r.content}
+
+        if is_login:
+            return {"flag": "error", "content": "锁票失败"}
 
         if order.status == STATUS_LOCK_RETRY:
             cookies = json.loads(rebot.cookies)
@@ -498,7 +511,7 @@ class Flow(BaseFlow):
                         headers=headers)
         except:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
-            line_log.error("%s\n%s", "".join(traceback.format_exc()), locals())
+            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
         content = r.content
         for k in set(re.findall("([A-Za-z]+):", content)):

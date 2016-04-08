@@ -70,38 +70,38 @@ def match_alipay_order(trade_info):
     except Order.DoesNotExist:
         order = None
 
-    if not order:
-        # 通过金额和下单时间匹配,应该避免走到这一步,因为有可能匹配到多个或者匹配错
-        for i in range(1, 10):
-            qs = Order.objects.filter(order_price=pay_money,
-                                      crawl_source=crawl_source,
-                                    lock_datetime__gte=pay_datetime-timedelta(seconds=i*60),
-                                    lock_datetime__lte=pay_datetime+timedelta(seconds=i*60))
-            qs = qs.filter(db.Q(pay_trade_no="")|db.Q(pay_trade_no=None)|db.Q(pay_trade_no=trade_no))
-            qs.order_by("lock_datetime")
-            if qs:
-                try:
-                    has_matched = Order.objects.get(db.Q(pay_trade_no=trade_no)| \
-                                                    db.Q(refund_trade_no=trade_no),
-                                                    crawl_source=crawl_source)
-                except Order.DoesNotExist:
-                    has_matched = None
-                lst = []
-                for i in qs:
-                    if has_matched and has_matched.order_no != i.order_no:
-                        continue
-                    lst.append(i)
+    #if not order:
+    #    # 通过金额和下单时间匹配,应该避免走到这一步,因为有可能匹配到多个或者匹配错
+    #    for i in range(1, 10):
+    #        qs = Order.objects.filter(order_price=pay_money,
+    #                                  crawl_source=crawl_source,
+    #                                lock_datetime__gte=pay_datetime-timedelta(seconds=i*60),
+    #                                lock_datetime__lte=pay_datetime+timedelta(seconds=i*60))
+    #        qs = qs.filter(db.Q(pay_trade_no="")|db.Q(pay_trade_no=None)|db.Q(pay_trade_no=trade_no))
+    #        qs.order_by("lock_datetime")
+    #        if qs:
+    #            try:
+    #                has_matched = Order.objects.get(db.Q(pay_trade_no=trade_no)| \
+    #                                                db.Q(refund_trade_no=trade_no),
+    #                                                crawl_source=crawl_source)
+    #            except Order.DoesNotExist:
+    #                has_matched = None
+    #            lst = []
+    #            for i in qs:
+    #                if has_matched and has_matched.order_no != i.order_no:
+    #                    continue
+    #                lst.append(i)
 
-                for i in lst:
-                    if i.status == 14 and trade_status == "交易成功":
-                        order = i
-                        break
-                    elif i.status in [13, 6] and trade_status == "退款成功":
-                        order = i
-                        break
+    #            for i in lst:
+    #                if i.status == 14 and trade_status == "交易成功":
+    #                    order = i
+    #                    break
+    #                elif i.status in [13, 6] and trade_status == "退款成功":
+    #                    order = i
+    #                    break
 
-                if not order and lst:
-                    order = lst[0]
+    #            if not order and lst:
+    #                order = lst[0]
     return order
 
 
@@ -140,6 +140,8 @@ def import_alipay_record(filename):
         if trade_status == "交易关闭":
             if give_back:
                 status = PAY_STATUS_REFUND
+            else:
+                status = PAY_STATUS_UNPAID
             pay_trade_no = trade_no
         elif trade_status == "交易成功":
             status = PAY_STATUS_PAID

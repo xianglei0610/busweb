@@ -23,11 +23,7 @@
      <td class="color4">{{status_msg[order.status]}}</td>
      <td>
        <p>
-       {% if order.crawl_source == "scqcp" %}
-       <a href="{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay" class="btsize payclick" data-expire="{{expire_seconds[order.order_no]}}">立即支付</a>
-       {%else%}
-       <a href="{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay" class="btsize payclick" data-expire="{{expire_seconds[order.order_no]}}">立即支付</a> 
-       {%endif%}
+       <a href="{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay" class="btsize payclick" data-expire="{{locking[order.order_no]}}">立即支付</a> 
        </p>
        <p class="pt">
          <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a>
@@ -65,6 +61,7 @@ $(function (){
     if(t>0){
       $(this).attr("href", "#");
       $(this).addClass("btgray");
+      $(this).text("正在锁票...")
     }
     else{
       $(this).attr("target", "_blank");
