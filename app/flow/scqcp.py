@@ -391,7 +391,7 @@ class Flow(BaseFlow):
             result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         return result_info
 
-    def get_pay_page(self, order, valid_code="", session=None, pay_channel="wy" ,**kwargs):
+    def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", bank='',**kwargs):
         rebot = ScqcpWebRebot.objects.get(telephone=order.source_account)
         headers = rebot.http_header()
         # 验证码处理
@@ -432,7 +432,7 @@ class Flow(BaseFlow):
                 self.lock_ticket(order)
             order.reload()
             if order.status == STATUS_WAITING_ISSUE:
-                r = rebot.http_get(order.pay_url, headers=headers, cookies=json.loads(rebot.cookies))
+                r = rebot.http_get(order.pay_url, headers=headers, cookies=json.loads(rebot.cookies),timeout=30)
                 r_url = urllib2.urlparse.urlparse(r.url)
                 if r_url.path in ["/error.html", "/error.htm"]:
                     order.modify(status=STATUS_ISSUE_FAIL)
@@ -444,14 +444,14 @@ class Flow(BaseFlow):
                 plateform = pay_channel
                 data = dict(
                     payid=sel.xpath("//input[@name='payid']/@value")[0],
-                    bank='BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
+                    bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
                     plate=sel.xpath("//input[@id='s_plate']/@value")[0],
                     plateform=plateform,
                     qr_pay_mode=0,
                     discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
                 )
                 info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
-                r = rebot.http_post(info_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+                r = rebot.http_post(info_url, data=data, headers=headers, cookies=json.loads(rebot.cookies),timeout=60)
                 sel = etree.HTML(r.content)
                 try:
                     pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
