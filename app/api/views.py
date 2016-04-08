@@ -10,6 +10,7 @@ from app.models import Line, Order, OpenCity
 from app.flow import get_compatible_flow, get_flow
 from app import order_log, access_log
 from tasks import async_lock_ticket
+from app import db
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -298,6 +299,7 @@ def query_order_detail():
     Input:
         {
             "sys_order_no": "1111"          # 系统订单号
+            "out_order_no": "2222"          #12308订单号
         }
 
 
@@ -340,12 +342,13 @@ def query_order_detail():
         data = {}
         post = json.loads(request.get_data())
         sys_order_no = post["sys_order_no"]
+        out_order_no = post.get("out_order_no", "")
     except:
         return jsonify({"code": RET_PARAM_ERROR,
                         "message": "parameter error",
                         "data": data})
     try:
-        order = Order.objects.get(order_no=sys_order_no)
+        order = Order.objects.get(db.Q(order_no=sys_order_no)|db.Q(out_order_no=out_order_no))
     except Order.DoesNotExist:
         return jsonify({"code": RET_ORDER_404, "message": "order not exist", "data": ""})
     pick_info = []

@@ -43,7 +43,7 @@ def async_refresh_order(self, order_no, retry_seq=1):
                 seconds = random.randint(10, 15)
             else:
                 seconds = random.randint(90, 120)
-        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=seconds, max_retries=60*12)
+        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=seconds, max_retries=120*12)
 
 
 @celery.task(bind=True, ignore_result=True)
