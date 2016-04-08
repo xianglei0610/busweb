@@ -183,7 +183,7 @@ def order_pay(order_no):
     username = request.args.get("username",'')
     code = request.args.get("valid_code", "")
     force = int(request.args.get("force", "0"))
-    if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY]:
+    if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
         return "订单已成功或失败,不需要支付"
 #     if not order.pay_account:
 #         if token and token == TOKEN:
@@ -215,7 +215,7 @@ def order_pay(order_no):
         else:
             return redirect(url_for("admin.src_code_input", order_no=order_no))
     elif flag == "error":
-        return ret["content"]
+        return "%s  <a href='%s'>点击重试</a>" % (ret["content"], url_for("admin.order_pay", order_no=order.order_no))
     return "异常页面 %s" % str(json.dumps(ret,ensure_ascii = False))
 
 

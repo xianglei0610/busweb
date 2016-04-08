@@ -184,7 +184,8 @@ class Flow(BaseFlow):
             r = rebot.http_post(base_url,
                         data=urllib.urlencode(params),
                         headers=headers,
-                        cookies=cookies,)
+                        cookies=cookies,
+                        timeout=40)
         except requests.exceptions.Timeout, e:
             rebot.modify(ip="")
             lock_info = order.lock_info
@@ -405,8 +406,8 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
+        is_login = rebot.test_login_status()
         if order.status == STATUS_LOCK_RETRY:
-            is_login = rebot.test_login_status()
             if not is_login and valid_code:
                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                 info = json.loads(session[key])
@@ -455,6 +456,9 @@ class Flow(BaseFlow):
             #r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
             r = requests.post(base_url, data=urllib.urlencode(params), headers=headers,)
             return {"flag": "html", "content": r.content}
+
+        if is_login:
+            return {"flag": "error", "content": "锁票失败"}
 
         if order.status == STATUS_LOCK_RETRY:
             cookies = json.loads(rebot.cookies)

@@ -670,29 +670,38 @@ class Rebot(db.Document):
         return ""
 
     def http_get(self, url, **kwargs):
-        if self.proxy_ip:
-            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
-        try:
-            r = requests.get(url,
-                            timeout=15,
-                            **kwargs)
-        except Exception, e:
-            if hasattr(self, "ip"):
-                self.modify(ip="")
-            raise e
-        return r
+        retry = 3
+        for i in range(retry):  # 重试三次
+            if self.proxy_ip:
+                kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+            if "timeout" not in kwargs:
+                kwargs["timeout"] = 15
+            try:
+                r = requests.get(url, **kwargs)
+            except Exception, e:
+                if hasattr(self, "ip"):
+                    self.modify(ip="")
+                if i >= retry-1:
+                    raise e
+                continue
+            return r
 
     def http_post(self, url, **kwargs):
-        if self.proxy_ip:
-            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
-        try:
-            r = requests.post(url,
-                            timeout=15,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
+        retry = 3
+        for i in range(retry):  # 重试三次
+            if self.proxy_ip:
+                kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+            if "timeout" not in kwargs:
+                kwargs["timeout"] = 15
+            try:
+                r = requests.post(url, **kwargs)
+            except Exception, e:
+                if hasattr(self, "ip"):
+                    self.modify(ip="")
+                if i >= retry-1:
+                    raise e
+                continue
+            return r
 
 
 class WxszRebot(Rebot):
