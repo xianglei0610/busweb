@@ -19,7 +19,7 @@ def async_refresh_order(self, order_no, retry_seq=1):
     """
     定时刷新订单状态
     """
-    order_log.info("[async_refresh_order] order:%s retry_seq: %s", order_no, retry_seq)
+    #order_log.info("[async_refresh_order] order:%s retry_seq: %s", order_no, retry_seq)
     order = Order.objects.get(order_no=order_no)
     status = order.status
     if order.crawl_source == SOURCE_FB:
