@@ -119,7 +119,7 @@ def src_code_img(order_no):
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
-    elif order.crawl_source in ["bjky", "cqky"]:
+    elif order.crawl_source in ["bjky", "cqky", 'scqcp']:
         rebot = order.get_lock_rebot()
         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
         data = json.loads(session[key])
@@ -196,8 +196,13 @@ def order_pay(order_no):
         return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("admin.order_pay", order_no=order.order_no)
 
     channel = request.args.get("channel", "alipay")
+    bank = request.args.get("bank", "")  #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行
+    if not bank:
+        bank = 'CMB'
+        if DG_BANK.get(current_user.username, ''):
+            bank = DG_BANK.get(current_user.username, '')
     flow = get_flow(order.crawl_source)
-    ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
+    ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel,bank=bank)
     if not ret:
         ret = {}
     flag = ret.get("flag", "")

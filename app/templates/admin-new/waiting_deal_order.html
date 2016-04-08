@@ -23,7 +23,7 @@
      <td class="color4">{{status_msg[order.status]}}</td>
      <td>
        <p>
-       <a href="{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay" class="btsize payclick" data-expire="{{locking[order.order_no]}}">立即支付</a> 
+       <a href="{{url_for('admin.order_pay', order_no=order.order_no)}}?channel=alipay&bank=" class="btsize payclick" data-expire="{{locking[order.order_no]}}">立即支付</a> 
        </p>
        <p class="pt">
          <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a>
