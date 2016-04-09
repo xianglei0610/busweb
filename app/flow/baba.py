@@ -6,6 +6,7 @@ import requests
 import json
 import urllib
 import datetime
+import traceback
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -14,6 +15,7 @@ from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
 from tasks import async_send_email
+from app import line_log
 
 
 class Flow(BaseFlow):
@@ -343,9 +345,14 @@ class Flow(BaseFlow):
         }
         ua = random.choice(MOBILE_USER_AGENG)
         headers = {"User-Agent": ua}
-        r = requests.post(line_url, data=json.dumps(params), headers=headers)
-        res = r.json()
         now = dte.now()
+        try:
+            r = requests.post(line_url, data=json.dumps(params), headers=headers)
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
+            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+            return result_info
+        res = r.json()
         if res["returnNo"] != "0000":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
