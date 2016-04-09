@@ -911,7 +911,7 @@ class ScqcpAppRebot(Rebot):
         "collection": "scqcpapp_rebot",
     }
     crawl_source = SOURCE_SCQCP
-    is_for_lock = True
+    is_for_lock = False
 
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)

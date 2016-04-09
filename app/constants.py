@@ -1696,5 +1696,5 @@ PAY_ACCOUNTS = [
 DG_BANK = {
     "luoxiangyun": 'CMB',
     "lf12308": 'CCB',
-    "ck12308": 'BOCB2C',
+    "ck12308": 'CCB',
 }
