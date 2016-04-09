@@ -37,8 +37,8 @@ def get_compatible_flow(line):
             if src in weights:
                 weights[src] = w
     # 江苏省网不卖当天的票
-    if line.s_province == "江苏" and line.drv_date == dte.now().strftime("%Y-%m-%d"):
-        weights.update(jsky=0)
+    #if line.s_province == "江苏" and line.drv_date == dte.now().strftime("%Y-%m-%d"):
+    #    weights.update(jsky=0)
 
     choose = weight_choice(weights)
     from app.models import Line
