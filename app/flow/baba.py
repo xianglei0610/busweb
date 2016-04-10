@@ -348,6 +348,30 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
+        params = {
+            "startPlace":line.s_city_name,
+            "endPlace": line.d_city_name,
+            "sbId": line.extra_info["sbId"],
+            "stId": line.extra_info["stId"],
+            "depotId": line.extra_info["depotId"],
+            "busId": line.bus_num,
+            "leaveDate": line.drv_date,
+            "beginStationId": line.s_sta_id,
+            "endStationId": line.d_sta_id,
+            "endStationName": line.d_sta_name,
+        }
+        now = dte.now()
+        check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
+        ua = random.choice(BROWSER_USER_AGENT)
+        r = requests.post(check_url,
+                            data=urllib.urlencode(params),
+                            headers={"User-Agent": ua, "Content-Type": "application/x-www-form-urlencoded"})
+        res = r.json()
+        if not res["success"]:
+            if res["msg"] != "查询失败":
+                result_info.update(result_msg=res["msg"], update_attrs={"left_tickets": 0, "refresh_datetime": now})
+                return result_info
+
         line_url = "http://s4mdata.bababus.com:80/app/v3/ticket/busList.htm"
         params = {
             "content":{
@@ -372,7 +396,6 @@ class Flow(BaseFlow):
         }
         ua = random.choice(MOBILE_USER_AGENG)
         headers = {"User-Agent": ua}
-        now = dte.now()
         try:
             r = requests.post(line_url, data=json.dumps(params), headers=headers)
         except:
