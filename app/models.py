@@ -1327,11 +1327,12 @@ class BabaWebRebot(Rebot):
     is_for_lock = True
 
     def clear_riders(self):
+        return
         is_login = self.test_login_status()
         if not is_login:
             return
-        rider_url = "http://www.bababus.com/baba/passenger/list.htm"
-        del_url = "http://www.bababus.com/baba/passenger/del.htm"
+        rider_url = "http://www.bababus.com/passenger/list.htm"
+        del_url = "http://www.bababus.com/passenger/del.htm"
         headers = {"User-Agent": self.user_agent}
         post_headers = {
             "User-Agent": self.user_agent,
@@ -1376,7 +1377,7 @@ class BabaWebRebot(Rebot):
         return 1
 
     def test_login_status(self):
-        undone_order_url = "http://www.bababus.com/baba/order/list.htm?billStatus=0&currentLeft=11"
+        undone_order_url = "http://www.bababus.com/order/list.htm?billStatus=0&currentLeft=11"
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
         resp = requests.get(undone_order_url, headers=headers, cookies=cookies)
