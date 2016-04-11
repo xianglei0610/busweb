@@ -134,7 +134,7 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = ret['msg']
-                for s in ["余票不足","只能预售2小时之后的票"]:
+                for s in ["余票不足","只能预售2小时之后的票","余位不够"]:
                     if s in errmsg:
                         self.close_line(order.line, reason=errmsg)
                         break
