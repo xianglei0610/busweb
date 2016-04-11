@@ -136,6 +136,8 @@ def issued_callback(order_no):
     order = Order.objects.get(order_no=order_no)
     cb_url = order.issued_return_url
     order_log.info("[issue-callback-start] order:%s, callback:%s", order_no, cb_url)
+    order_log.info("[issue-callback-ignore] 测试 order:%s", order_no)
+    return
     if not cb_url:
         return
     if order.status == STATUS_ISSUE_SUCC:
