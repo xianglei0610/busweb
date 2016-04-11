@@ -263,6 +263,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "常州"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "昆山,太仓"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['jsky'], kwargs={"crawl_kwargs":{"city": "常熟,吴江"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=30, args=['jsky'], kwargs={"crawl_kwargs":{"city": "泰州"}})
 
     # 车巴达
     sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['cbd'], kwargs={"crawl_kwargs":{"city": "苏州, 张家港"}})
@@ -318,6 +319,9 @@ def main():
 
     #携程
     sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['ctrip'], kwargs={"crawl_kwargs":{"province": "北京"}})
+
+    #北京省网
+    sched.add_cron_job(bus_crawl, hour=13, minute=30, args=['bjky'])
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)

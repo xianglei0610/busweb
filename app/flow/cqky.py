@@ -43,12 +43,6 @@ class Flow(BaseFlow):
                 mode = 1
             order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
 
-            # 查看购物车列表
-            res = self.request_get_shoptcart(rebot)
-            # 清空购物车列表
-            for ids in res["data"][u"ShopTable"].keys():
-                self.request_del_shoptcart(rebot, ids)
-
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
             ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
@@ -60,7 +54,8 @@ class Flow(BaseFlow):
                     res = self.request_get_shoptcart(rebot)
                     # 清空购物车列表
                     for ids in res["data"][u"ShopTable"].keys():
-                        self.request_del_shoptcart(rebot, ids)
+                        d = self.request_del_shoptcart(rebot, ids)
+                        order_log.info("[locking] order: %s, %s", order.order_no, d)
                     lock_result.update({
                         "result_code": 2,
                         "result_reason": u"锁票数量不对",
@@ -184,7 +179,8 @@ class Flow(BaseFlow):
             r = rebot.http_post(base_url,
                         data=urllib.urlencode(params),
                         headers=headers,
-                        cookies=cookies,)
+                        cookies=cookies,
+                        timeout=40)
         except requests.exceptions.Timeout, e:
             rebot.modify(ip="")
             lock_info = order.lock_info
@@ -405,8 +401,8 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
+        is_login = rebot.test_login_status()
         if order.status == STATUS_LOCK_RETRY:
-            is_login = rebot.test_login_status()
             if not is_login and valid_code:
                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                 info = json.loads(session[key])
@@ -455,6 +451,9 @@ class Flow(BaseFlow):
             #r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
             r = requests.post(base_url, data=urllib.urlencode(params), headers=headers,)
             return {"flag": "html", "content": r.content}
+
+        if is_login:
+            return {"flag": "error", "content": "锁票失败"}
 
         if order.status == STATUS_LOCK_RETRY:
             cookies = json.loads(rebot.cookies)

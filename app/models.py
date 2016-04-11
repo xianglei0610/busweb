@@ -670,29 +670,38 @@ class Rebot(db.Document):
         return ""
 
     def http_get(self, url, **kwargs):
-        if self.proxy_ip:
-            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
-        try:
-            r = requests.get(url,
-                            timeout=15,
-                            **kwargs)
-        except Exception, e:
-            if hasattr(self, "ip"):
-                self.modify(ip="")
-            raise e
-        return r
+        retry = 3
+        for i in range(retry):  # 重试三次
+            if self.proxy_ip:
+                kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+            if "timeout" not in kwargs:
+                kwargs["timeout"] = 15
+            try:
+                r = requests.get(url, **kwargs)
+            except Exception, e:
+                if hasattr(self, "ip"):
+                    self.modify(ip="")
+                if i >= retry-1:
+                    raise e
+                continue
+            return r
 
     def http_post(self, url, **kwargs):
-        if self.proxy_ip:
-            kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
-        try:
-            r = requests.post(url,
-                            timeout=15,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
+        retry = 3
+        for i in range(retry):  # 重试三次
+            if self.proxy_ip:
+                kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
+            if "timeout" not in kwargs:
+                kwargs["timeout"] = 15
+            try:
+                r = requests.post(url, **kwargs)
+            except Exception, e:
+                if hasattr(self, "ip"):
+                    self.modify(ip="")
+                if i >= retry-1:
+                    raise e
+                continue
+            return r
 
 
 class TzkyWebRebot(Rebot):
@@ -950,13 +959,13 @@ class ZjgsmWebRebot(Rebot):
     def login(self):
         self.last_login_time = dte.now()
         self.user_agent = random.choice(BROWSER_USER_AGENT)
-        self.is_active=True
+        self.is_active = True
         self.cookies = "{}"
         self.save()
         return "OK"
 
 
-class ScqcpRebot(Rebot):
+class ScqcpAppRebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
     token = db.StringField()
@@ -965,10 +974,10 @@ class ScqcpRebot(Rebot):
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
-        "collection": "scqcp_rebot",
+        "collection": "scqcpapp_rebot",
     }
     crawl_source = SOURCE_SCQCP
-    is_for_lock = True
+    is_for_lock = False
 
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)
@@ -985,7 +994,6 @@ class ScqcpRebot(Rebot):
         ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
         self.modify(ip=ipstr)
         return ipstr
-
 
     @classmethod
     def get_one(cls, order=None):
@@ -1069,6 +1077,110 @@ class ScqcpRebot(Rebot):
         if ret['status'] == 1:
             return 1
         return 0
+
+
+class ScqcpWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default='{}')
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "scqcpweb_rebot",
+    }
+    crawl_source = SOURCE_SCQCP
+    is_for_lock = True
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": ua or self.user_agent,
+        }
+
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def login(self, valid_code="", token='', headers={}, cookies={}):
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", "") or self.user_agent,
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
+            data = {
+                "uname": self.telephone,
+                "passwd": self.password,
+                "code": valid_code,
+                "token": token,
+            }
+            login_url = "http://scqcp.com/login/check.json"
+            r = self.http_post(login_url, data=data, headers=headers, cookies=cookies)
+            res = r.json()
+            if res["success"]:     # 登陆成功
+                cookies.update(dict(r.cookies))
+                self.modify(cookies=json.dumps(cookies), is_active=True)
+                return "OK"
+            else:
+                msg = res["msg"]
+                rebot_log.info("[scqcp]%s %s", self.telephone, msg)
+                if u"验证码不正确" in msg:
+                    return "invalid_code"
+                return msg
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active = True
+            self.cookies = "{}"
+            self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+    def test_login_status(self):
+        try:
+#             url = 'http://scqcp.com/login/isLogin.json?r=0.5511045664326151&is_show=no&_=1459936544981'
+            headers = self.http_header()
+#             res = self.http_post(url, headers=headers, cookies=json.loads(self.cookies))
+#             ret = res.json()
+
+            user_url = 'http://scqcp.com/user/get.html?new=0.%s' % random.randint(10000000,100000000000)
+            res = self.http_get(user_url, headers=headers, cookies=json.loads(self.cookies))
+            result = urlparse.urlparse(res.url)
+            if result.path == '/login/index.html':
+                return 0
+            else:
+                content = res.content
+                if not isinstance(content, unicode):
+                    content = content.decode('utf-8')
+                sel = etree.HTML(content)
+                telephone = sel.xpath('//*[@id="infoDiv"]/dl/dd[8]/text()')
+                if telephone:
+                    telephone = telephone[1].replace('\r\n', '').replace('\t', '').replace(' ', '')
+                if self.telephone == telephone:
+                    return 1
+                else:
+                    self.modify(cookies='{}')
+                    self.modify(ip="")
+                    self.reload()
+                    return 0
+        except:
+            self.modify(cookies='{}')
+            self.modify(ip="")
+            self.reload()
+            return 0
 
 
 class CBDRebot(Rebot):
@@ -1281,11 +1393,12 @@ class BabaWebRebot(Rebot):
     is_for_lock = True
 
     def clear_riders(self):
+        return
         is_login = self.test_login_status()
         if not is_login:
             return
-        rider_url = "http://www.bababus.com/baba/passenger/list.htm"
-        del_url = "http://www.bababus.com/baba/passenger/del.htm"
+        rider_url = "http://www.bababus.com/passenger/list.htm"
+        del_url = "http://www.bababus.com/passenger/del.htm"
         headers = {"User-Agent": self.user_agent}
         post_headers = {
             "User-Agent": self.user_agent,
@@ -1330,7 +1443,7 @@ class BabaWebRebot(Rebot):
         return 1
 
     def test_login_status(self):
-        undone_order_url = "http://www.bababus.com/baba/order/list.htm?billStatus=0&currentLeft=11"
+        undone_order_url = "http://www.bababus.com/order/list.htm?billStatus=0&currentLeft=11"
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
         resp = requests.get(undone_order_url, headers=headers, cookies=cookies)

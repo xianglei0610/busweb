@@ -119,7 +119,7 @@ def src_code_img(order_no):
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
-    elif order.crawl_source in ["bjky", "cqky"]:
+    elif order.crawl_source in ["bjky", "cqky", 'scqcp']:
         rebot = order.get_lock_rebot()
         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
         data = json.loads(session[key])
@@ -183,7 +183,7 @@ def order_pay(order_no):
     username = request.args.get("username",'')
     code = request.args.get("valid_code", "")
     force = int(request.args.get("force", "0"))
-    if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY]:
+    if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
         return "订单已成功或失败,不需要支付"
 #     if not order.pay_account:
 #         if token and token == TOKEN:
@@ -196,8 +196,13 @@ def order_pay(order_no):
         return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("admin.order_pay", order_no=order.order_no)
 
     channel = request.args.get("channel", "alipay")
+    bank = request.args.get("bank", "")  #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行
+    if not bank:
+        bank = 'CMB'
+        if DG_BANK.get(current_user.username, ''):
+            bank = DG_BANK.get(current_user.username, '')
     flow = get_flow(order.crawl_source)
-    ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel)
+    ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel,bank=bank)
     if not ret:
         ret = {}
     flag = ret.get("flag", "")
@@ -215,7 +220,7 @@ def order_pay(order_no):
         else:
             return redirect(url_for("admin.src_code_input", order_no=order_no))
     elif flag == "error":
-        return ret["content"]
+        return "%s  <a href='%s'>点击重试</a>" % (ret["content"], url_for("admin.order_pay", order_no=order.order_no))
     return "异常页面 %s" % str(json.dumps(ret,ensure_ascii = False))
 
 

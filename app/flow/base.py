@@ -32,7 +32,7 @@ class Flow(object):
         if rds.get(key):
             return
         rds.set(key, time.time())
-        rds.expire(key, 90)
+        rds.expire(key, 120)
         try:
             ret = self.lock_ticket2(order, **kwargs)
             return ret
@@ -103,7 +103,7 @@ class Flow(object):
         if notify_url:
             order_log.info("[lock-callback] order:%s, %s %s", order.order_no, notify_url, json_str)
             response = urllib2.urlopen(notify_url, json_str, timeout=20)
-            order_log.info("[lock-callback-response] order:%s, %s", order.order_no, str(response))
+            order_log.info("[lock-callback-response] order:%s, %s", order.order_no, response.read())
 
     def do_lock_ticket(self, order, **kwargs):
         """
