@@ -379,7 +379,7 @@ def query_order_detail():
             },
             "pick_info": pick_info
         }
-        return jsonify({"code": RET_OK, "message": "OK", "data": data})
+        ret = {"code": RET_OK, "message": "OK", "data": data}
     else:
         data = {
             "out_order_no": order.out_order_no,
@@ -391,4 +391,6 @@ def query_order_detail():
             "ticket_info": {},
             "pick_info": pick_info
         }
-        return jsonify({"code": RET_OK, "message": "OK", "data": data})
+        ret = {"code": RET_OK, "message": "OK", "data": data}
+    access_log.info("[query_order_detail] order:%s out_order_no:%s %s", order.order_no, order.out_order_no, ret)
+    return jsonify(ret)
