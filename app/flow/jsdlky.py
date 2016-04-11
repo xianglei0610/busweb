@@ -107,6 +107,14 @@ class Flow(BaseFlow):
                 })
             else:
                 msg = ret["msg"]
+                if "该站限售人数不够" in msg:
+                    self.close_line(line, reason=msg)
+                    lock_result.update({
+                        "result_code": 0,
+                        "result_reason": msg,
+                        "source_account": rebot.telephone,
+                    })
+                    return lock_result
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": msg,
