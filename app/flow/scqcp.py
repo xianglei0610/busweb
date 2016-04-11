@@ -357,6 +357,10 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
+        now = dte.now()
+        if (line.drv_datetime-now).total_seconds() <= 150*60:
+            result_info.update(result_msg="time in two hours ", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            return result_info
         params = dict(
             carry_sta_id=line.s_sta_id,
             stop_name=line.d_city_name,
@@ -373,8 +377,7 @@ class Flow(BaseFlow):
         }
         r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers)
         ret = r.json()
- 
-        now = dte.now()
+
         if ret["status"] == 1:
             if ret["plan_info"]:
                 raw = ret["plan_info"][0]
