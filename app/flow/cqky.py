@@ -43,12 +43,6 @@ class Flow(BaseFlow):
                 mode = 1
             order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
 
-            # 查看购物车列表
-            res = self.request_get_shoptcart(rebot)
-            # 清空购物车列表
-            for ids in res["data"][u"ShopTable"].keys():
-                self.request_del_shoptcart(rebot, ids)
-
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
             ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
@@ -60,7 +54,8 @@ class Flow(BaseFlow):
                     res = self.request_get_shoptcart(rebot)
                     # 清空购物车列表
                     for ids in res["data"][u"ShopTable"].keys():
-                        self.request_del_shoptcart(rebot, ids)
+                        d = self.request_del_shoptcart(rebot, ids)
+                        order_log.info("[locking] order: %s, %s", order.order_no, d)
                     lock_result.update({
                         "result_code": 2,
                         "result_reason": u"锁票数量不对",
