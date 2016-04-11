@@ -164,8 +164,6 @@ class Flow(BaseFlow):
         pick_code = soup.select_one("#query_random").get('value')
         seat_no = soup.select_one("#seat_no").get('value')
         left_minu = soup.select_one("#remainM")
-        print r.content
-        print left_minu
         if left_minu:
             left_minu = int(left_minu.text)
         else:
