@@ -439,9 +439,9 @@ class Flow(BaseFlow):
             kuaiba_flag = False
             try:
                 ctrip_line = Line.objects.get(crawl_source='ctrip',
-                                              s_sta_name=s_sta_name,
+                                              s_sta_name=line.s_sta_name,
                                               d_city_name=d_city_name,
-                                              d_sta_name=line.d_sta_name,
+                                              bus_num=line.bus_num,
                                               full_price=line.full_price,
                                               drv_date=line.drv_date,
                                               drv_time=line.drv_time,)
@@ -458,7 +458,7 @@ class Flow(BaseFlow):
                     fromCity=ctrip_line.s_city_name,
                     toCity=ctrip_line.d_city_name,
                     busNumber=ctrip_line.bus_num,
-                    fromStation=ctrip_line.s_sta_name,
+                    fromStation=s_sta_name,
                     toStation=ctrip_line.d_sta_name,
                     fromDate=ctrip_line.drv_date,
                     fromTime=ctrip_line.drv_time,
