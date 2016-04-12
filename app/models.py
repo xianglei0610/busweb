@@ -13,6 +13,7 @@ from app.constants import *
 from datetime import datetime as dte
 from flask import json
 from lxml import etree
+from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str
@@ -287,6 +288,11 @@ class Line(db.Document):
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
 
+    def refresh(self, force=False):
+        from app.flow import get_flow
+        flow = get_flow(self.crawl_source)
+        return flow.refresh_line(self, force=force)
+
 
 class Order(db.Document):
     """
@@ -546,6 +552,11 @@ class Order(db.Document):
         srand = "%02d" % random.randrange(10, 100)
         return "%s%s%s" % (sdate, micro, srand)
 
+    def refresh_status(self, force=False):
+        from app.flow import get_flow
+        flow = get_flow(self.crawl_source)
+        return flow.refresh_issue(self, force=force)
+
 
 class Rebot(db.Document):
     """
@@ -721,54 +732,47 @@ class TzkyWebRebot(Rebot):
         return ""
 
     def login(self):
+        if self.test_login_status():
+            return "OK"
+
         url = "http://www.tzfeilu.com:8086/index.php/login/index"
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {"User-Agent": ua}
         r = self.http_get(url, headers=headers)
         cookies = dict(r.cookies)
-
         params = {
-            "returnurl":  "",
-            "event": "login",
-            "password1":  add_secret(self.password),
-            "user_code1": add_secret(self.telephone),
-            "user_code": self.telephone,
+            "ispost": 1,
+            "username": self.telephone,
             "password": self.password,
-            "rememberMe": "yes",
         }
-        if valid_code:
-            params.update(checkcode=valid_code)
 
-        login_url = "http://www.jslw.gov.cn/login.do"
         headers["Content-Type"] = "application/x-www-form-urlencoded"
-        r = self.http_post(login_url,
+        r = self.http_post(url,
                            data=urllib.urlencode(params),
-                           allow_redirects=False,
                            headers=headers, cookies=cookies)
-        r_cookies = dict(r.cookies)
-        cookies.update(r_cookies)
-        if r.headers.get("location", "") and r_cookies["userId"]:
+        soup = BeautifulSoup(r.content, "lxml")
+        tel = soup.select_one("#login_user").text
+        if tel == self.telephone:
+            r_cookies = dict(r.cookies)
+            cookies.update(r_cookies)
             self.last_login_time = dte.now()
-            self.user_agent = headers["User-Agent"]
+            self.user_agent = ua
             self.is_active=True
             self.cookies = json.dumps(cookies)
             self.save()
             return "OK"
         else:
+            self.update(cookies="{}")
             return "fail"
 
     def test_login_status(self):
-        user_url = "http://www.jslw.gov.cn/registerUser.do"
+        user_url = "http://www.tzfeilu.com:8086/index.php/profile/index"
         headers = {"User-Agent": self.user_agent}
         r= self.http_get(user_url, headers=headers, cookies=json.loads(self.cookies))
-        sel = etree.HTML(r.content)
-        try:
-            username = sel.xpath("//li[@class='user']/text()")[0]
-            assert username == self.telephone
-            return 1
-        except:
-            self.modify(cookies="{}")
+        parse = urllib2.urlparse.urlparse(r.url)
+        if u"login" in parse.path:
             return 0
+        return 1
 
 class WxszRebot(Rebot):
     user_agent = db.StringField(default="Apache-HttpClient/UNAVAILABLE (java 1.4)")

@@ -6,10 +6,11 @@ import json
 import urllib
 import datetime
 import urllib2
+import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import Line, JsdlkyWebRebot
+from app.models import Line, TzkyWebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
@@ -17,7 +18,8 @@ from bs4 import BeautifulSoup
 
 class Flow(BaseFlow):
 
-    name = "jsdlky"
+    name = "tzky"
+    BASE_URL = "http://www.tzfeilu.com:8086"
 
     def do_lock_ticket(self, order):
         lock_result = {
@@ -30,7 +32,7 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with JsdlkyWebRebot.get_and_lock(order) as rebot:
+        with TzkyWebRebot.get_and_lock(order) as rebot:
             line = order.line
             # 未登录
             if not rebot.test_login_status():
@@ -41,54 +43,32 @@ class Flow(BaseFlow):
                 })
                 return lock_result
 
-            form_url = "http://www.jslw.gov.cn/busOrder.do"
-            params = {
-                "event": "init_query",
-                "max_date": dte.now().strftime("%Y-%m-%d"),
-                "drive_date1": line.drv_date,
-                "bus_code": line.bus_num,
-                "sstcode": line.extra_info["startstationcode"],
-                "rstcode": line.s_sta_id,
-                "dstcode": line.d_sta_id,
-                "rst_name1": line.s_sta_name,
-                "dst_name1": line.d_sta_name,
-                "rst_name": line.s_sta_name,
-                "dst_name": line.d_sta_name,
-                "drive_date": line.drv_date,
-                "checkcode": "",
-            }
+            form_url = self.BASE_URL+line.extra_info["lock_form_url"]
             cookies = json.loads(rebot.cookies)
             headers = {
-                "Content-Type": "application/x-www-form-urlencoded",
+                #"Content-Type": "application/x-www-form-urlencoded",
                 "User-Agent": rebot.user_agent,
             }
-            r = rebot.http_post(form_url,
-                                data=urllib.urlencode(params),
-                                headers=headers,
-                                cookies=cookies)
+            r = rebot.http_get(form_url, headers=headers, cookies=cookies)
 
             soup = BeautifulSoup(r.content, "lxml")
             # 构造表单参数
             raw_form = {}
-            for obj in soup.find_all("input"):
+            for obj in soup.select("#busSearchForm input"):
                 name, val = obj.get("name"), obj.get("value")
                 if name in ["None", "none", '']:
                     continue
                 raw_form[name] = val
-            for k in ["psgName", "psgIdType", "psgIdCode", "psgTicketType", "psgBabyFlg", "psgTel", "psgEmail"]:
-                if k in raw_form:
-                    del raw_form[k]
-            raw_form["event"] = "retainSeat"
+            raw_form["cardtype"] = "01"
+            raw_for["mian"] = 0
             encode_list= [urllib.urlencode(raw_form),]
             for r in order.riders:
                 d = {
-                    "psgName": r["name"],
-                    "psgIdType": "01",
-                    "psgIdCode": r["id_number"],
-                    "psgTicketType": 0,
-                    "psgBabyFlg": 0,
-                    "psgTel":  rebot.telephone,
-                    "psgEmail": raw_form["contactEmail"],
+                    "psgName[]": r["name"],
+                    "psgIdType[]": "01",
+                    "psgIdCode[]": r["id_number"],
+                    "psgTel[]": rebot.telephone,
+                    "psgTicketType[]": 0,
                 }
                 encode_list.append(urllib.urlencode(d))
             encode_str = "&".join(encode_list)
@@ -164,8 +144,6 @@ class Flow(BaseFlow):
         pick_code = soup.select_one("#query_random").get('value')
         seat_no = soup.select_one("#seat_no").get('value')
         left_minu = soup.select_one("#remainM")
-        print r.content
-        print left_minu
         if left_minu:
             left_minu = int(left_minu.text)
         else:
@@ -224,84 +202,69 @@ class Flow(BaseFlow):
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
         is_login = rebot.test_login_status()
-        if not is_login and valid_code:
-            info = json.loads(session["pay_login_info"])
-            headers = info["headers"]
-            cookies = info["cookies"]
-            flag = rebot.login(headers=headers, cookies=cookies, valid_code=valid_code)
-            if flag == "OK":
-                is_login = 1
-
-        if is_login:
-            if order.status == STATUS_LOCK_RETRY:
-                self.lock_ticket(order)
-            if order.status == STATUS_WAITING_ISSUE:
-                detail = self.send_order_request(order)
-                if detail["state"] <= "已作废":
-                    return {"flag": "error", "content": "订单已作废"}
-                #elif detail["left_minutes"] <= 0:
-                #    return {"flag": "error", "content": "订单已过期"}
-                pay_url = "http://www.jslw.gov.cn/bankPay.do"
-                headers = {
-                    "User-Agent": rebot.user_agent,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                }
-                params = {
-                    "bankId": 1402,
-                    "gateId1":1402,
-                    "orderid": order.lock_info["order_id"],
-                    "pay_amounts": order.pay_money,
-                }
-                cookies = json.loads(rebot.cookies)
-                r = rebot.http_post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
-                return {"flag": "html", "content": r.content}
-        else:
-            login_form = "http://www.jslw.gov.cn/login.do"
-            headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-            r = rebot.http_get(login_form, headers=headers)
-            data = {
-                "cookies": dict(r.cookies),
-                "headers": headers,
-                "valid_url": "http://www.jslw.gov.cn/verifyCode",
+        if not is_login:
+            rebot.login()
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+            self.lock_ticket(order)
+        if order.status == STATUS_WAITING_ISSUE:
+            detail = self.send_order_request(order)
+            if detail["state"] <= "已作废":
+                return {"flag": "error", "content": "订单已作废"}
+            #elif detail["left_minutes"] <= 0:
+            #    return {"flag": "error", "content": "订单已过期"}
+            pay_url = "http://www.jslw.gov.cn/bankPay.do"
+            headers = {
+                "User-Agent": rebot.user_agent,
+                "Content-Type": "application/x-www-form-urlencoded",
             }
-            session["pay_login_info"] = json.dumps(data)
-            return {"flag": "input_code", "content": ""}
+            params = {
+                "bankId": 1402,
+                "gateId1":1402,
+                "orderid": order.lock_info["order_id"],
+                "pay_amounts": order.pay_money,
+            }
+            cookies = json.loads(rebot.cookies)
+            r = rebot.http_post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            return {"flag": "html", "content": r.content}
 
     def do_refresh_line(self, line):
         result_info = {
             "result_msg": "",
             "update_attrs": {},
         }
-        line_url = "http://58.213.132.27:8082/nj_weixinService/2.0/queryBus"
-        params = {
-            "drive_date": line.drv_datetime.strftime("%Y%m%d"),
-            "rst_name": line.s_sta_name,
-            "dst_name": line.d_city_name,
-            "v_source": "a",
-            "v_version": "v2.2",
-            "v_reg_id": ""
-        }
-        req_data = {
-            "param_key": json.dumps(params),
-            "secret_key": md5("&".join(map(lambda a:"%s=%s" % (a[0], a[1]), sorted(params.items(), key=lambda i: i[0])))),
-        }
-        rebot = JsdlkyWebRebot.get_one()
-        url = "%s?%s" % (line_url, urllib.urlencode(req_data))
-        r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)})
-        res = r.json()
         now = dte.now()
-        if res["rtn_code"] != "00":
-            result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-            return result_info
-
+        line_url = self.BASE_URL+"/index.php/search/getBuslist"
+        params = {
+            "ispost": 1,
+            "start_city": line.s_sta_name,
+            "dd_city": line.d_city_name,
+            "dd_code": line.d_city_id,
+            "orderdate": line.drv_date,
+        }
+        rebot = TzkyWebRebot.get_one()
+        headers = {
+            "User-Agent": random.choice(BROWSER_USER_AGENT),
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        }
+        r = rebot.http_post(line_url, headers=headers, data=urllib.urlencode(params))
+        soup = BeautifulSoup(r.content.replace("<!--", "").replace("-->", ""), "lxml")
         update_attrs = {}
-        for d in res["data"] or []:
-            drv_datetime = dte.strptime("%s %s" % (d["drive_date"], d["plan_time"]), "%Y%m%d %H%M")
+        for e in soup.findAll("tr"):
+            lst = e.findAll("td")
+            if not lst:
+                continue
+            # bus_num = lst[0].text.strip()
+            drv_date = lst[2].text.strip()
+            drv_time = lst[3].text.strip()
+            price = float(lst[6].text.strip())
+            left_tickets = int(lst[7].text.strip())
+            lock_form_url = re.findall(r"href='(\S+)'", lst[9].select_one("a").get("onclick"))[0]
+            drv_datetime = dte.strptime("%s %s" % (drv_date, drv_time), "%Y-%m-%d %H:%M")
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
-                "s_sta_name": d["rst_name"],
-                "d_sta_name": d["dst_name"],
+                "s_sta_name": line.s_sta_name,
+                "d_sta_name": line.d_sta_name,
                 "crawl_source": line.crawl_source,
                 "drv_datetime": drv_datetime,
             }
@@ -310,13 +273,12 @@ class Flow(BaseFlow):
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:
                 continue
-            extra_info = {"startstation": d["sst_name"], "terminalstation": d["tst_name"], "startstationcode": d["sstcode"]}
             info = {
-                "full_price": float(d["full_price"]),
+                "full_price": price,
                 "fee": 0,
-                "left_tickets": int(d["available_tickets"]),
+                "left_tickets": left_tickets,
                 "refresh_datetime": now,
-                "extra_info": extra_info,
+                "extra_info": {"lock_form_url": lock_form_url},
             }
             if line_id == line.line_id:
                 update_attrs = info
