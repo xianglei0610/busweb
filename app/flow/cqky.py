@@ -48,15 +48,19 @@ class Flow(BaseFlow):
             ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
             # 清理购物车
             amount = ilst and int(ilst[0]) or 0
-            if (amount and amount != order.ticket_amount) or u"单笔订单一次只允许购买3张车票" in res["msg"] or u"单笔订单只能购买一个车站的票" in res["msg"]:
+            msg = res.get("msg", "")
+            if (amount and amount != order.ticket_amount) or u"单笔订单一次只允许购买3张车票" in msg or u"单笔订单只能购买一个车站的票" in msg:
                 order_log.info("[locking] order: %s, 购物车数量不对: %s,", order.order_no, res["msg"])
                 res = self.request_get_shoptcart(rebot)
                 for ids in res["data"][u"ShopTable"].keys():
                     d = self.request_del_shoptcart(rebot, ids)
                     order_log.info("[locking] order: %s, %s", order.order_no, d)
+                rebot.modify(cookies="{}")
+                rebot = order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
-                    "result_reason": u"购物车数量不对:%s" % res["msg"],
+                    "result_reason": u"购物车数量不对:%s" % msg,
+                    "source_account": rebot.telephone,
                 })
                 return lock_result
 
