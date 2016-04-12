@@ -170,7 +170,7 @@ class Flow(BaseFlow):
             is_login = (rebot.login() == "OK")
 
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
                 url = "http://apppay.wisesz.mobi/payment_mobile/order/set_pay"
