@@ -2300,6 +2300,78 @@ class LnkyWapRebot(Rebot):
         except:
             return 0
 
+class E8sAppRebot(Rebot):
+    user_agent = db.StringField()
+    user_id = db.StringField()
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "e8sapp_rebot",
+    }
+    crawl_source = SOURCE_E8S
+    is_for_lock = True
+
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_E8S, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_E8S)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        device = "android" if "android" in ua else "ios"
+        # 获取token
+        uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        headers = {
+            "User-Agent": ua,
+            "Authorization": self.token,
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        r = self.http_get(url, headers=headers)
+        ret = r.json()
+        token = ret["token"]
+        self.user_agent = ua
+        self.token = token
+
+        is_encrypt = self.is_encrypt or 1
+        # 登陆
+        uri = "/api/v1/user/login_phone"
+        data = {
+            "username": self.telephone,
+            "password": self.password,
+            "is_encrypt": is_encrypt,
+        }
+        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+        headers.update({"Authorization": self.token})
+        r = self.http_post(url, data=urllib.urlencode(data), headers=headers)
+        ret = r.json()
+
+        if "open_id" not in ret:
+            # 登陆失败
+            self.is_active = False
+            self.last_login_time = dte.now()
+            self.save()
+            return ret.get("msg", "fail")
+        else:
+            # 登陆成功
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.open_id = ret["open_id"]
+            self.is_encrypt = is_encrypt
+            self.save()
+            return "OK"
 
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))

@@ -22,6 +22,7 @@ SOURCE_LNKY = "lnky"
 SOURCE_ZJGSM = "zjgsm"
 SOURCE_WXSZ = "wxsz"
 SOURCE_JSDLKY = "jsdlky"
+SOURCE_E8S = "e8s"
 
 SOURCE_INFO = {
     SOURCE_JSDLKY: {
@@ -1497,6 +1498,15 @@ SOURCE_INFO = {
             "123456": "e10adc3949ba59abbe56e057f20f883e",
         }
     },
+    SOURCE_E8S: {
+        "name": "易巴士",
+        "website": "http://www.e8s.com.cn",
+        "accounts": {
+            # telephone: {password, auth)
+            "15575101324": ("a123456", ''),
+
+        }
+    },
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
@@ -1635,6 +1645,7 @@ RK_PROXY_IP_ZJGSM = "proxy:zjgsm"
 RK_PROXY_IP_WXSZ = "proxy:wxsz"
 RK_PROXY_IP_BJKY = "proxy:cbd"
 RK_PROXY_IP_LNKY = "proxy:lnky"
+RK_PROXY_IP_E8S = "proxy:e8s"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"        # 当前使用的
 
 RK_PROXY_IP_SCQCP = "proxy:scqcp"
