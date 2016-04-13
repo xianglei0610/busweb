@@ -258,18 +258,24 @@ class Line(db.Document):
             qs = Line.objects.filter(s_sta_name=self.s_sta_name,
                                      s_city_name__startswith=unicode(s_city),
                                      d_sta_name=self.d_sta_name,
-                                     bus_num =self.bus_num,
+                                     bus_num=self.bus_num,
                                      drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
             d_line.update({self.crawl_source: self.line_id})
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
         elif self.s_province == "北京":
-            qs = Line.objects.filter(s_sta_name=self.s_sta_name,
+            if self.crawl_source == SOURCE_CTRIP:
+                s_sta_name = self.s_sta_name
+                if s_sta_name != u'首都机场站':
+                    s_sta_name = self.s_sta_name.decode("utf-8").strip().rstrip(u"客运站")
+            qs = Line.objects.filter(
                                      s_city_name=self.s_city_name,
-                                     #d_sta_name=self.d_sta_name,
-                                     full_price=self.full_price,
+                                     s_sta_name__startswith=unicode(s_sta_name),
                                      d_city_name=self.d_city_name,
+                                     d_sta_name=self.d_sta_name,
+                                     full_price=self.full_price,
+                                     bus_num=self.bus_num,
                                      drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
             d_line.update({self.crawl_source: self.line_id})
@@ -280,7 +286,7 @@ class Line(db.Document):
                                      s_city_name=self.s_city_name,
                                      d_sta_name=self.d_sta_name,
                                      d_city_name=self.d_city_name,
-                                     bus_num =self.bus_num,
+                                     bus_num=self.bus_num,
                                      drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
             d_line.update({self.crawl_source: self.line_id})

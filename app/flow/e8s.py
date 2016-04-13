@@ -182,13 +182,14 @@ class Flow(BaseFlow):
             if order.status == STATUS_WAITING_ISSUE:
                 pay_url = "http://www.bawangfen.cn/site/bwf/aliWapPay_doPay.action"
                 headers = rebot.http_header()
-                ret = rebot.send_orderDetail_request(rebot, order=order)
+                ret = self.send_orderDetail_request(rebot, order=order)
                 order_status = ret["order_status"]
                 pay_status = ret["pay_status"]
                 order_date = ret["order_date"]
 
                 if order_status in ('1', '3', '4', '5', '16') and pay_status == '1':
                     now = time.time()*1000
+                    print now-order_date
                     if now-order_date < 600000:
                         data = {
                             "payModel": "205",
