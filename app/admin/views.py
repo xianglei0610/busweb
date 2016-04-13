@@ -571,7 +571,8 @@ def all_order():
 @admin.route('/myorder', methods=['GET'])
 @login_required
 def my_order():
-    return render_template("admin-new/my_order.html")
+    working_kefus = AdminUser.objects.filter(is_kefu=1)
+    return render_template("admin-new/my_order.html", working_kefus=working_kefus)
 
 
 @admin.route('/orders/<order_no>', methods=['GET'])

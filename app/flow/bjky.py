@@ -151,7 +151,7 @@ class Flow(BaseFlow):
         shopcartct = shopinfo.replace('\r\n', '').replace('\t', '').replace(' ', '')
         return shopcartct
 
-    def request_clear_shopcart(self, rebot): 
+    def request_clear_shopcart(self, rebot):
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         clear_url = 'http://e2go.com.cn/TicketOrder/ClearShoppingCart'
@@ -221,8 +221,8 @@ class Flow(BaseFlow):
                 u"购票成功": "出票成功",
                 u"已取消": "出票失败",
                 u"已释放": "出票失败",
-		u"出票失败":"出票失败"，
                 u"出票中": "正在出票",
+                u"出票失败": "出票失败",
                 }
         if state in(u"购票成功"): #"出票成功":
             code_list = []
@@ -247,7 +247,7 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
             })
-        elif state in (u"已取消",u'已释放',u'出票失败'):#取消购票,购票失败,退票成功
+        elif state in (u"已取消", u'已释放', u"出票失败"):#取消购票,购票失败,退票成功
             result_info.update({
                 "result_code": 2,
                 "result_msg": order_status_mapping[state],
@@ -510,7 +510,7 @@ class Flow(BaseFlow):
                 if line.s_sta_name == u'首都机场站':
                     s_sta_name = line.s_sta_name.strip().rstrip("站")
                 try:
-                    kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=s_sta_name, d_city_name=d_city_name,d_sta_name=line.d_sta_name, drv_time=line.drv_time )    
+                    kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=s_sta_name, d_city_name=d_city_name,d_sta_name=line.d_sta_name, drv_time=line.drv_time )
                     d_city_name = kuaiba_line.d_city_name
                 except:
                     pass

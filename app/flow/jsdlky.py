@@ -107,6 +107,14 @@ class Flow(BaseFlow):
                 })
             else:
                 msg = ret["msg"]
+                if "该站限售人数不够" in msg:
+                    self.close_line(line, reason=msg)
+                    lock_result.update({
+                        "result_code": 0,
+                        "result_reason": msg,
+                        "source_account": rebot.telephone,
+                    })
+                    return lock_result
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": msg,
@@ -164,8 +172,6 @@ class Flow(BaseFlow):
         pick_code = soup.select_one("#query_random").get('value')
         seat_no = soup.select_one("#seat_no").get('value')
         left_minu = soup.select_one("#remainM")
-        print r.content
-        print left_minu
         if left_minu:
             left_minu = int(left_minu.text)
         else:

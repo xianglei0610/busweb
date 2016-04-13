@@ -43,29 +43,26 @@ class Flow(BaseFlow):
                 mode = 1
             order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
 
-            # 查看购物车列表
-            res = self.request_get_shoptcart(rebot)
-            # 清空购物车列表
-            for ids in res["data"][u"ShopTable"].keys():
-                self.request_del_shoptcart(rebot, ids)
-
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
             ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
-            if ilst:
-                amount = int(ilst[0])
-                if amount != order.ticket_amount:
-                    order_log.info("[locking] order: %s, 锁票数量不对 %s,%s", order.order_no, order.ticket_amount, amount)
-                    # 查看购物车列表
-                    res = self.request_get_shoptcart(rebot)
-                    # 清空购物车列表
-                    for ids in res["data"][u"ShopTable"].keys():
-                        self.request_del_shoptcart(rebot, ids)
-                    lock_result.update({
-                        "result_code": 2,
-                        "result_reason": u"锁票数量不对",
-                    })
-                    return lock_result
+            # 清理购物车
+            amount = ilst and int(ilst[0]) or 0
+            msg = res.get("msg", "")
+            if (amount and amount != order.ticket_amount) or u"单笔订单一次只允许购买3张车票" in msg or u"单笔订单只能购买一个车站的票" in msg:
+                order_log.info("[locking] order: %s, 购物车数量不对: %s,", order.order_no, res["msg"])
+                res = self.request_get_shoptcart(rebot)
+                for ids in res["data"][u"ShopTable"].keys():
+                    d = self.request_del_shoptcart(rebot, ids)
+                    order_log.info("[locking] order: %s, %s", order.order_no, d)
+                rebot.modify(cookies="{}")
+                rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "result_reason": u"购物车数量不对:%s" % msg,
+                    "source_account": rebot.telephone,
+                })
+                return lock_result
 
             def _check_fail(msg):
                 lst = [
@@ -108,7 +105,7 @@ class Flow(BaseFlow):
                     if u"同一IP一天最多可订" in res["msg"]:
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
                         rebot.modify(ip="")
-                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or "单笔订单一次只允许购买3张车票" in res["msg"]:
+                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"]:
                         rebot.modify(cookies="{}")
                         rebot = order.change_lock_rebot()
                     lock_result.update({
@@ -122,13 +119,6 @@ class Flow(BaseFlow):
                      "result_code": 2,
                      "source_account": rebot.telephone,
                      "result_reason": u"账号未登录",
-                 })
-            elif u"单笔订单一次只允许购买3张车票" in res["msg"] or u"单笔订单只能购买一个车站的票" in res["msg"]:
-                rebot.modify(cookies="{}")
-                rebot = order.change_lock_rebot()
-                lock_result.update({
-                     "result_code": 2,
-                     "result_reason": res["msg"],
                  })
             else:
                 lock_result.update({

@@ -113,7 +113,7 @@ def async_lock_ticket(self, order_no, retry_seq=1):
 
 
 @celery.task(ignore_result=True)
-def issued_callback(order_no):
+def issued_callback(order_no, retry_seq=1):
     """
     出票回调
 
@@ -135,7 +135,7 @@ def issued_callback(order_no):
     from app.models import Order
     order = Order.objects.get(order_no=order_no)
     cb_url = order.issued_return_url
-    order_log.info("[issue-callback-start] order:%s, callback:%s", order_no, cb_url)
+    order_log.info("[issue-callback-start] order:%s, retry_seq: %s, callback:%s", retry_seq, order_no, cb_url)
     if not cb_url:
         return
     if order.status == STATUS_ISSUE_SUCC:
@@ -172,5 +172,10 @@ def issued_callback(order_no):
         order_log.info("[issue-callback-ignore] status incorrect")
         return
     order_log.info("[issue-callback] %s %s", order_no, str(ret))
-    response = urllib2.urlopen(cb_url, json.dumps(ret), timeout=10)
-    order_log.info("[issue-callback-response]%s %s", order_no, response.read())
+    try:
+        response = urllib2.urlopen(cb_url, json.dumps(ret), timeout=15)
+    except:
+        order_log.exception("issued_callback")
+        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=30, max_retries=120)
+    else:
+        order_log.info("[issue-callback-response]%s %s", order_no, response.read())
