@@ -27,6 +27,8 @@
        </p>
        <p class="pt">
          <a href="#" class="tablelink" onclick="disp_confirm({{order.order_no}})">已处理</a>
+         &nbsp;&nbsp;
+         <a href="#" class="tablelink" onclick="transfer_kefu({{order.order_no}})">转移</a>
        </p>
      </td>
     </tr>
@@ -49,8 +51,7 @@
      <td class="color5">{{status_msg[order.status]}}</td>
      <td>
      </td>
-    </tr>
-    {%endfor%}
+    </tr> {%endfor%}
     </tbody>
 </table>
 
