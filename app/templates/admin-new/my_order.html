@@ -106,7 +106,7 @@ $(function (){
 });
 
 function load_orders(){
-  $("#wating-deal-table").load("{{url_for('admin.wating_deal_order')}}");
+  $("#wating-deal-table").load("{{url_for('admin.wating_deal_order')}}"+"?dc="+new Date().getTime());
 }
 
 function set_switch(i){
