@@ -11,6 +11,7 @@
     <script type="text/javascript" src="{{url_for('static',filename='admin-new/js/layer/layer.js')}}"></script>
     <script language="javascript">
         $(function (){
+            layer.config({extend: 'extend/layer.ext.js'});
 			//全选
 			$("#checkall").checkall({ chname: "test[]", callback: function (e) { } });
 
@@ -63,6 +64,27 @@
               load_orders();
            }
         window.setInterval("run();", 3000);
+
+        function transfer_kefu(orderno){
+            layer.prompt({
+                title: '请输入对方账户名',
+                formType: 0 //prompt风格，支持0-2
+            }, function(name){
+                $.ajax({
+                    cache: true,
+                    type: "POST",
+                    url: "/orders/"+orderno+"/change_kefu",
+                    data:"kefuname="+name,
+                    async: false,
+                    error: function(request) {
+                        layer.msg("网络错误!");
+                    },
+                    success: function(data) {
+                        layer.msg(data);
+                    }
+                });
+            });
+        }
     </script>
 </head>
 <body>
