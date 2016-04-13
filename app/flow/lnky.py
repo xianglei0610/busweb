@@ -81,6 +81,14 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = res['msg']
+                if "E008" in errmsg:
+                    rebot = order.change_lock_rebot()
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
+                    return lock_result
                 for s in ["E015"]: #余票不足
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)

@@ -174,6 +174,23 @@ def pay_account_input(order_no):
                            pay_accounts=PAY_ACCOUNTS
                            )
 
+@admin.route('/orders/<order_no>/change_kefu', methods=['POST'])
+@login_required
+def change_kefu(order_no):
+    order = Order.objects.get(order_no=order_no)
+    if order.status in [12, 13, 14]:
+        return "已支付,不许转!"
+    kefu_name = request.form.get("kefuname", "")
+    if not kefu_name:
+        return "请选择目标账号!"
+    if order.kefu_username != current_user.username:
+        return "这个单不是你的!"
+    target = AdminUser.objects.get(username=kefu_name)
+    order.update(kefu_username=target.username)
+    assign.add_dealing(order, target)
+    assign.remove_dealing(order, current_user)
+    return "成功转给%s, 请关闭弹窗." % target.username
+
 
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 @login_required
@@ -550,7 +567,8 @@ def all_order():
 @admin.route('/myorder', methods=['GET'])
 @login_required
 def my_order():
-    return render_template("admin-new/my_order.html")
+    working_kefus = AdminUser.objects.filter(is_kefu=1)
+    return render_template("admin-new/my_order.html", working_kefus=working_kefus)
 
 
 @admin.route('/orders/<order_no>', methods=['GET'])

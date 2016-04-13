@@ -162,25 +162,21 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                 })
             else:
-                for s in ["车次停班", "余票不足", "关联车次不可售", "未找到对应的车次"]:
-                    if s in errmsg:
-                        self.close_line(line, reason=errmsg)
-                        break
-                if u"服务器与客运站网络中断" in errmsg:
-                    body = "源站: 巴巴快巴, <br/> 城市: %s, <br/> 车站: %s" % (line.s_city_name, line.s_sta_name)
-                    async_send_email.delay("客运站联网中断", body)
-                elif u"查询车次详情异常" in errmsg:
+                #if u"服务器与客运站网络中断" in errmsg:
+                #    body = "源站: 巴巴快巴, <br/> 城市: %s, <br/> 车站: %s" % (line.s_city_name, line.s_sta_name)
+                #    async_send_email.delay("客运站联网中断", body)
+                if u"错误信息：null" in errmsg:
                     lock_result.update({
-                        "result_code": 2,
-                        "result_reason": "%s %s" % (ret["msgType"], errmsg),
+                        "result_code": 0,
+                        "result_reason": errmsg,
                         "source_account": rebot.telephone,
                     })
-                    return lock_result
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": errmsg,
-                    "source_account": rebot.telephone,
-                })
+                else:
+                    lock_result.update({
+                        "result_code": 0,
+                        "result_reason": errmsg,
+                        "source_account": rebot.telephone,
+                    })
             return lock_result
 
     def send_lock_request(self, order, rebot, data):
@@ -348,6 +344,30 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
+        params = {
+            "startPlace":line.s_city_name,
+            "endPlace": line.d_city_name,
+            "sbId": line.extra_info["sbId"],
+            "stId": line.extra_info["stId"],
+            "depotId": line.extra_info["depotId"],
+            "busId": line.bus_num,
+            "leaveDate": line.drv_date,
+            "beginStationId": line.s_sta_id,
+            "endStationId": line.d_sta_id,
+            "endStationName": line.d_sta_name,
+        }
+        now = dte.now()
+        check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
+        ua = random.choice(BROWSER_USER_AGENT)
+        r = requests.post(check_url,
+                            data=urllib.urlencode(params),
+                            headers={"User-Agent": ua, "Content-Type": "application/x-www-form-urlencoded"})
+        res = r.json()
+        if not res["success"]:
+            if res["msg"] != "查询失败":
+                result_info.update(result_msg=res["msg"], update_attrs={"left_tickets": 0, "refresh_datetime": now})
+                return result_info
+
         line_url = "http://s4mdata.bababus.com:80/app/v3/ticket/busList.htm"
         params = {
             "content":{
@@ -372,7 +392,6 @@ class Flow(BaseFlow):
         }
         ua = random.choice(MOBILE_USER_AGENG)
         headers = {"User-Agent": ua}
-        now = dte.now()
         try:
             r = requests.post(line_url, data=json.dumps(params), headers=headers)
         except:

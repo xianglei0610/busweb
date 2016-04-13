@@ -63,6 +63,21 @@
               load_orders();
            }
         window.setInterval("run();", 3000);
+
+        function transfer_kefu(orderno){
+            var content = $("#transfer_select").html();
+            content=content.replace(/rep_order_no/g, orderno)
+            layer.open({
+                type: 1,
+                title:'订单转移',
+                area: ['580px', ''],
+                //skin: 'layui-layer-lan',
+                moveType: 1, //拖拽风格，0是默认，1是传统拖动
+                shift: 0, //0-6的动画形式，-1不开启
+                content: content
+            });
+
+        }
     </script>
 </head>
 <body>
@@ -98,15 +113,44 @@
     <div id="wating-deal-table">
     </div>
     </div>
-<script languge="javascript">
 
+  <div id="transfer_select" style="display: none">
+        <div class="regbox_bd">
+            <div class="signup_box">
+                <form method="post" action="{{url_for('admin.change_kefu', order_no="rep_order_no")}}" id="transform_form">
+                    <div class="pub-form reg-form">
+                        <div class="fm-li pbot-5">
+                            <span class="fm-label">
+                                <label for="txt_userName">选择目标账号：</label></span>
+                            <select name="kefuname" id="levelName" datatype="*" sucmsg=" " class="single-select">
+                                {% for u in working_kefus %}
+                                    {% if u.username != current_user.username %}
+                                    <option value="{{u.username}}">{{u.username}}</option>
+                                    {%endif%}
+                                {%endfor%}
+                            </select>
+                        </div>
+
+                        <div class="fm-li">
+                            <span class="fm-label">
+                                <label for="txt_input6"></label>
+                            </span>
+                            <input name="" value="确定" class="btn_login" id="" type="button" onclick="javascript:transfer_submit(rep_order_no)">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script languge="javascript">
 $(function (){
   load_orders();
   set_switch({{current_user.is_switch}});
 });
 
 function load_orders(){
-  $("#wating-deal-table").load("{{url_for('admin.wating_deal_order')}}");
+  $("#wating-deal-table").load("{{url_for('admin.wating_deal_order')}}"+"?dc="+new Date().getTime());
 }
 
 function set_switch(i){
@@ -121,6 +165,22 @@ function set_switch(i){
     $("#switch_button").attr("class", cls);
     $("#switch_button").attr("data-status", v);
     $("#switch_button").val(text);
+}
+
+function transfer_submit(orderno){
+    $.ajax({
+        cache: true,
+        type: "POST",
+        url:$("#transform_form").attr("action").replace("rep_order_no", orderno),
+        data:$('#transform_form').serialize(),// 你的formid
+        async: false,
+        error: function(request) {
+            alert("Connection error");
+        },
+        success: function(data) {
+            alert(data);
+        }
+    });
 }
 </script>
 </body>
