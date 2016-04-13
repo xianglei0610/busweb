@@ -185,11 +185,15 @@ def change_kefu(order_no):
         return "请选择目标账号!"
     if order.kefu_username != current_user.username:
         return "这个单不是你的!"
-    target = AdminUser.objects.get(username=kefu_name)
+    try:
+        target = AdminUser.objects.get(username=kefu_name)
+    except:
+        return "不存在%s这个账号" % kefu_name
+    access_log.info("%s 将%s转给 %s", current_user.username, order_no, kefu_name)
     order.update(kefu_username=target.username)
     assign.add_dealing(order, target)
     assign.remove_dealing(order, current_user)
-    return "成功转给%s, 请关闭弹窗." % target.username
+    return "成功转给%s" % target.username
 
 
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
