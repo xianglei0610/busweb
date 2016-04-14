@@ -373,6 +373,32 @@ class LnkyProxyConsumer(ProxyConsumer):
             return False
         return True
 
+
+class E8sProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_E8S
+
+    def valid_proxy(self, ipstr):
+        url = "http://m.e8s.com.cn/bwfpublicservice/notice.action"
+        headers = {
+            "User-Agent": random.choice(MOBILE_USER_AGENG),
+        }
+        data = {
+                "page": "1",
+                "rowNum": "10"
+                }
+        try:
+            r = requests.post(url,
+                              data=data,
+                              headers=headers,
+                              timeout=3,
+                              proxies={"http": "http://%s" % ipstr})
+        except:
+            return False
+        print r.content
+        if r.status_code != 200:
+            return False
+        return True
+
 proxy_producer = ProxyProducer()
 
 cqky_proxy = CqkyProxyConsumer()
@@ -381,6 +407,7 @@ cbd_proxy = CBDProxyConsumer()
 scqcp_proxy = ScqcpProxyConsumer()
 bjky_proxy = BjkyProxyConsumer()
 lnky_proxy = LnkyProxyConsumer()
+e8s_proxy = E8sProxyConsumer()
 
 proxy_producer.registe_consumer(cqky_proxy)
 proxy_producer.registe_consumer(tc_proxy)
@@ -388,3 +415,4 @@ proxy_producer.registe_consumer(cbd_proxy)
 proxy_producer.registe_consumer(scqcp_proxy)
 proxy_producer.registe_consumer(bjky_proxy)
 proxy_producer.registe_consumer(lnky_proxy)
+proxy_producer.registe_consumer(e8s_proxy)

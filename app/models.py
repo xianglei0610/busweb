@@ -258,18 +258,24 @@ class Line(db.Document):
             qs = Line.objects.filter(s_sta_name=self.s_sta_name,
                                      s_city_name__startswith=unicode(s_city),
                                      d_sta_name=self.d_sta_name,
-                                     bus_num =self.bus_num,
+                                     bus_num=self.bus_num,
                                      drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
             d_line.update({self.crawl_source: self.line_id})
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
         elif self.s_province == "北京":
-            qs = Line.objects.filter(s_sta_name=self.s_sta_name,
+            if self.crawl_source == SOURCE_CTRIP:
+                s_sta_name = self.s_sta_name
+                if s_sta_name != u'首都机场站':
+                    s_sta_name = self.s_sta_name.decode("utf-8").strip().rstrip(u"客运站")
+            qs = Line.objects.filter(
                                      s_city_name=self.s_city_name,
-                                     #d_sta_name=self.d_sta_name,
-                                     full_price=self.full_price,
+                                     s_sta_name__startswith=unicode(s_sta_name),
                                      d_city_name=self.d_city_name,
+                                     d_sta_name=self.d_sta_name,
+                                     full_price=self.full_price,
+                                     bus_num=self.bus_num,
                                      drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
             d_line.update({self.crawl_source: self.line_id})
@@ -280,7 +286,7 @@ class Line(db.Document):
                                      s_city_name=self.s_city_name,
                                      d_sta_name=self.d_sta_name,
                                      d_city_name=self.d_city_name,
-                                     bus_num =self.bus_num,
+                                     bus_num=self.bus_num,
                                      drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
             d_line.update({self.crawl_source: self.line_id})
@@ -2299,6 +2305,66 @@ class LnkyWapRebot(Rebot):
                 return 1
         except:
             return 0
+
+
+class E8sAppRebot(Rebot):
+    user_agent = db.StringField(default="Apache-HttpClient/UNAVAILABLE (java 1.4)")
+    user_id = db.StringField()
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "e8sapp_rebot",
+    }
+    crawl_source = SOURCE_E8S
+    is_for_lock = True
+
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_E8S, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_E8S)
+        self.modify(ip=ipstr)
+        return ipstr
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": self.user_agent or ua,
+        }
+
+    def login(self):
+        headers = self.http_header()
+        data = {
+            "password": self.password,
+            "userName": self.telephone
+        }
+        url = "http://m.e8s.com.cn/bwfpublicservice/login.action"
+        r = self.http_post(url, data=data, headers=headers)
+        ret = r.json()
+        print ret["detail"]
+        if not ret["detail"]:
+            # 登陆失败
+            self.is_active = False
+            self.last_login_time = dte.now()
+            self.save()
+            return ret.get("msg", "fail")
+        else:
+            # 登陆成功
+            self.user_id = str(ret["detail"]['USER_ID'])
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.save()
+            return "OK"
 
 
 class Bus100Rebot(Rebot):
