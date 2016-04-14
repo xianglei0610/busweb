@@ -206,6 +206,8 @@ def order_pay(order_no):
     force = int(request.args.get("force", "0"))
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
         return "订单已成功或失败,不需要支付"
+    if order.kefu_username != current_user.username:
+        return "请先要%s把单转给你再支付" % order.kefu_username
 #     if not order.pay_account:
 #         if token and token == TOKEN:
 #             return redirect(url_for("admin.pay_account_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
