@@ -69,10 +69,6 @@ class Flow(BaseFlow):
             ret = r.json()
             msg = ret["errorMsg"]
             if ret["errorCode"] == 0:
-                try:
-                    self.refresh_issue(order)
-                except:
-                    pass
                 expire_time = dte.now()+datetime.timedelta(seconds=15*60)
                 lock_result.update({
                     "result_code": 1,
@@ -175,8 +171,8 @@ class Flow(BaseFlow):
             if order.status == STATUS_WAITING_ISSUE:
                 url = "http://apppay.wisesz.mobi/payment_mobile/order/set_pay"
                 st = str(int(time.time()*1000))
-                if not order.pay_order_no:
-                    self.refresh_issue(order)
+                self.refresh_issue(order)
+                order.reload()
                 pay_sn = order.pay_order_no
                 params = {
                     "sign": md5(pay_sn+st),
