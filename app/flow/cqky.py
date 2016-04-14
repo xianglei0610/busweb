@@ -175,7 +175,7 @@ class Flow(BaseFlow):
                         data=urllib.urlencode(params),
                         headers=headers,
                         cookies=cookies,
-                        timeout=40)
+                        timeout=90)
         except requests.exceptions.Timeout, e:
             rebot.modify(ip="")
             lock_info = order.lock_info
