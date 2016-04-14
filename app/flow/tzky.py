@@ -97,15 +97,46 @@ class Flow(BaseFlow):
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
+        issue_url = self.BASE_URL + "/index.php/busorder/has_ticket"
+        today = dte.now().strftime("%Y-%m-%d")
+        params = {
+            "ispost": 1,
+            "type": 1,
+            "startdate": today,
+            "enddate": today,
+        }
+        cookies = json.loads(rebot.cookies)
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": rebot.user_agent,
+        }
+        r = rebot.http_post(issue_url, headers=headers, cookies=cookies, data=urllib.urlencode(params))
+        soup = BeautifulSoup(r.content, "lxml")
+        tag_obj = soup.find(href=re.compile(r"tiket/index/%s" % order.raw_order_no))
+        if tag_obj:
+            td_lst = tag_obj.parent.parent.find_all("td")
+            pick_no = td_lst[7].text
+            pick_code  = td_lst[8].text
+            state = td_lst[9].text
+            money = float(td_lst[6].text)
+            if money != order.pay_money:
+                raise Exception()
+            if state == "有效":
+                return {
+                    "state": "购票成功",
+                    "pick_no": pick_no,
+                    "pick_code": pick_code,
+                }
+            else:
+                # 暂时抛异常, 遇到之后再处理
+                raise Exception()
+
         detail_url = order.lock_info["detail_url"]
         headers = {"User-Agent": rebot.user_agent}
-        cookies = json.loads(rebot.cookies)
         r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
         if "订单已过期" in r.content:
             state = "已过期"
-            return {
-                "state": state,
-            }
+            return {"state": state,}
         else:
             soup = BeautifulSoup(r.content, "lxml")
             detail_li = soup.select(".order_detail li")
@@ -113,12 +144,6 @@ class Flow(BaseFlow):
             state = detail_li[1].text.strip().lstrip(u"订单状态 :").strip()
             subject = soup.find("input", attrs={"name": "subject"}).get("value")
             pay_money = float(soup.select(".l_pay_m_top_l li")[1].text.strip().lstrip(u"应付金额：").rstrip(u"元").strip())
-            #pick_no = soup.select_one("#query_no").get('value')
-            #print pick_no
-            #pick_code = soup.select_one("#query_random").get('value')
-            #print pick_code
-            #seat_no = soup.select_one("#seat_no").get('value')
-            #print seat_no
             return {
                 "state": state,
                 "pick_no": "",
@@ -161,7 +186,7 @@ class Flow(BaseFlow):
                 "no": no,
                 "raw_order": order.raw_order_no,
             }
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_JSDLKY]
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_TZKY]
             code_list = ["%s|%s" % (no, code)]
             msg_list = [dx_tmpl % dx_info]
             result_info.update({
