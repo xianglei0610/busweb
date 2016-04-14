@@ -7,6 +7,7 @@ import json
 import urllib
 import datetime
 import traceback
+import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -153,6 +154,11 @@ class Flow(BaseFlow):
             errmsg = ret["msg"]
             if ret["success"]:
                 expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+                order.raw_order_no = ret["content"]
+                try:
+                    pay_money = self.send_order_request(order)["pay_money"]
+                except:
+                    pay_money = 0
                 lock_result.update({
                     "result_code": 1,
                     "result_reason": errmsg,
@@ -160,6 +166,7 @@ class Flow(BaseFlow):
                     "raw_order_no": ret["content"],
                     "expire_datetime": expire_time,
                     "source_account": rebot.telephone,
+                    "pay_money": pay_money,
                 })
             else:
                 #if u"服务器与客运站网络中断" in errmsg:
@@ -211,11 +218,13 @@ class Flow(BaseFlow):
                 code = s.lstrip("取票密码:")
             elif s.startswith("取票地点:"):
                 site = s.lstrip("取票地点:")
+        pay_money = float(re.findall(r"(\d+.\d)",soup.select_one(".order_Aprice").text)[0])
         return {
             "state": soup.select(".pay_success")[0].get_text().split(u"：")[1].strip(),
             "pick_no": no,
             "pick_code": code,
             "pick_site": site,
+            "pay_money": pay_money,
         }
 
     def do_refresh_issue(self, order):
