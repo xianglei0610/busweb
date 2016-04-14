@@ -11,6 +11,7 @@
     <script type="text/javascript" src="{{url_for('static',filename='admin-new/js/layer/layer.js')}}"></script>
     <script language="javascript">
         $(function (){
+            layer.config({extend: 'extend/layer.ext.js'});
 			//全选
 			$("#checkall").checkall({ chname: "test[]", callback: function (e) { } });
 
@@ -63,6 +64,27 @@
               load_orders();
            }
         window.setInterval("run();", 3000);
+
+        function transfer_kefu(orderno){
+            layer.prompt({
+                title: '请输入对方账户名',
+                formType: 0 //prompt风格，支持0-2
+            }, function(name){
+                $.ajax({
+                    cache: true,
+                    type: "POST",
+                    url: "/orders/"+orderno+"/change_kefu",
+                    data:"kefuname="+name,
+                    async: false,
+                    error: function(request) {
+                        layer.msg("网络错误!");
+                    },
+                    success: function(data) {
+                        layer.msg(data);
+                    }
+                });
+            });
+        }
     </script>
 </head>
 <body>
@@ -98,8 +120,37 @@
     <div id="wating-deal-table">
     </div>
     </div>
-<script languge="javascript">
 
+  <div id="transfer_select" style="display: none">
+        <div class="regbox_bd">
+            <div class="signup_box">
+                <form method="post" action="{{url_for('admin.change_kefu', order_no="rep_order_no")}}" id="transform_form">
+                    <div class="pub-form reg-form">
+                        <div class="fm-li pbot-5">
+                            <span class="fm-label">
+                                <label for="txt_userName">选择目标账号：</label></span>
+                            <select name="kefuname" id="levelName" datatype="*" sucmsg=" " class="single-select">
+                                {% for u in working_kefus %}
+                                    {% if u.username != current_user.username %}
+                                    <option value="{{u.username}}">{{u.username}}</option>
+                                    {%endif%}
+                                {%endfor%}
+                            </select>
+                        </div>
+
+                        <div class="fm-li">
+                            <span class="fm-label">
+                                <label for="txt_input6"></label>
+                            </span>
+                            <input name="" value="确定" class="btn_login" id="" type="button" onclick="javascript:transfer_submit(rep_order_no)">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script languge="javascript">
 $(function (){
   load_orders();
   set_switch({{current_user.is_switch}});
@@ -121,6 +172,22 @@ function set_switch(i){
     $("#switch_button").attr("class", cls);
     $("#switch_button").attr("data-status", v);
     $("#switch_button").val(text);
+}
+
+function transfer_submit(orderno){
+    $.ajax({
+        cache: true,
+        type: "POST",
+        url:$("#transform_form").attr("action").replace("rep_order_no", orderno),
+        data:$('#transform_form').serialize(),// 你的formid
+        async: false,
+        error: function(request) {
+            alert("Connection error");
+        },
+        success: function(data) {
+            alert(data);
+        }
+    });
 }
 </script>
 </body>
