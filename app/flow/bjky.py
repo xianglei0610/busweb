@@ -400,11 +400,9 @@ class Flow(BaseFlow):
             for i in range(0, len(scheduleList), 2):
                 s = scheduleList[i]
                 time = s.xpath('td[@class="departureTimeCell"]/span/text()')[0]
-                #station = s.xpath('td[@class="routeNameCell"]/span/text()')
                 scheduleIdSpan = s.xpath('td[@class="scheduleAndBusLicenseCes"]/span[@class="scheduleSpan"]/span[@class="scheduleIdSpan"]/text()')[0]
                 scheduleIdSpan = scheduleIdSpan.replace('\r\n', '').replace('\t',  '').replace(' ',  '')
                 price = s.xpath('td[@class="ticketPriceCell"]/span[@class="ticketPriceSpan"]/span[@class="ticketPriceValueSpan"]/text()')[0]
-                #ScheduleString = s.xpath('td[@class="operationCell"]/@data-schedule')[0]
 
                 drv_datetime = dte.strptime("%s %s" % (line.drv_date, time), "%Y-%m-%d %H:%M")
                 line_id_args = {
@@ -429,19 +427,18 @@ class Flow(BaseFlow):
                     update_attrs = info
                 else:
                     obj.update(**info)
-        else:
+        if not update_attrs:
             s_sta_name = line.s_sta_name
             d_city_name = line.d_city_name
             if line.s_sta_name != u'首都机场站':
                 #s_sta_name = line.s_sta_name.strip().rstrip("站")
                 s_sta_name = s_sta_name+'客运站'
             ctrip_flag = True
-            kuaiba_flag = False
             try:
                 ctrip_line = Line.objects.get(crawl_source='ctrip',
                                               s_sta_name=s_sta_name,
                                               d_city_name=d_city_name,
-                                              d_sta_name=line.d_sta_name,
+                                              bus_num=line.bus_num,
                                               full_price=line.full_price,
                                               drv_date=line.drv_date,
                                               drv_time=line.drv_time,)
@@ -496,54 +493,6 @@ class Flow(BaseFlow):
                             "refresh_datetime": now,
                         }
                         update_attrs = info
-                else:
-                    kuaiba_flag = True
-            if kuaiba_flag:
-                ua = random.choice(MOBILE_USER_AGENG)
-                headers = {"User-Agent": ua}
-                url = "http://m.daba.cn/jsp/line/newlines.jsp"
-                res = requests.get(url, headers=headers)
-                base_url = 'http://m.daba.cn'
-                line_url = base_url + re.findall(r'query_station : (.*),', res.content)[0][1:-1]
-                s_sta_name = line.s_sta_name
-                d_city_name = line.d_city_name
-                if line.s_sta_name == u'首都机场站':
-                    s_sta_name = line.s_sta_name.strip().rstrip("站")
-                try:
-                    kuaiba_line = Line.objects.get(crawl_source='kuaiba', drv_date=line.drv_date,s_sta_name=s_sta_name, d_city_name=d_city_name,d_sta_name=line.d_sta_name, drv_time=line.drv_time )
-                    d_city_name = kuaiba_line.d_city_name
-                except:
-                    pass
-                params = {
-                      "endTime": '',
-                      "startCity": line.s_city_name,
-                      "startStation": s_sta_name,
-                      "arriveCity": d_city_name,
-                      "arriveStation": line.d_sta_name,
-                      "startDate": line.drv_date,
-                      "startTime": '',
-                      }
-                line_url = "%s&%s" % (line_url, urllib.urlencode(params))
-                r = requests.get(line_url, headers=headers)
-                res = r.json()
-                if res["code"] != 0:
-                    result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-                    return result_info
-                busTripInfoSet = res['data'].get('busTripInfoSet', [])
-                cityOpenSale = res['data']['cityOpenSale']
-                if not cityOpenSale or len(busTripInfoSet) == 0:
-                    result_info.update(result_msg=" not open sale or not line list", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-                    return result_info
-                update_attrs = {}
-                for d in busTripInfoSet:
-                    if line.drv_time == d["time"][0:-3]:
-                        tickets = d['tickets']
-                        info = {
-                            "left_tickets": tickets,
-                            "refresh_datetime": now,
-                        }
-                        update_attrs = info
-                        break
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
