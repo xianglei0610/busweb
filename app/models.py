@@ -831,7 +831,7 @@ class WxszRebot(Rebot):
             if "该身份证号已存在" in res["errorMsg"]:
                 if not exists_lst:
                     exists_lst = self.get_riders()
-                id_lst.append(exists_lst[c["id_number"]])
+                id_lst.append(exists_lst[c["id_number"].upper()])
             else:
                 id_lst.append(res["data"]["id"])
         return id_lst
