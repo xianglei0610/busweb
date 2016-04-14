@@ -60,7 +60,8 @@ class Flow(BaseFlow):
                     continue
                 raw_form[name] = val
             raw_form["cardtype"] = "01"
-            raw_for["mian"] = 0
+            raw_form["mian"] = 0
+            raw_form["bxFlag"] = 0      # 保险
             encode_list= [urllib.urlencode(raw_form),]
             for r in order.riders:
                 d = {
@@ -72,89 +73,61 @@ class Flow(BaseFlow):
                 }
                 encode_list.append(urllib.urlencode(d))
             encode_str = "&".join(encode_list)
-            ret = self.send_lock_request(order, rebot, encode_str)
 
-            if ret["success"]:
+            submit_url = soup.select_one("#busSearchForm").get("action")
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            r = rebot.http_post(submit_url, headers=headers, cookies=cookies, data=encode_str)
+            if u"busOrder/zhifu" in r.url:
                 expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+                lock_info = {"detail_url": r.url}
                 lock_result.update({
                     "result_code": 1,
                     "result_reason": "",
-                    "raw_order_no": ret["order_no"],
                     "expire_datetime": expire_time,
                     "source_account": rebot.telephone,
-                    "lock_info": ret,
-                    "pay_money": ret["pay_money"],
+                    "lock_info": lock_info,
                 })
             else:
-                msg = ret["msg"]
                 lock_result.update({
                     "result_code": 2,
-                    "result_reason": msg,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
+                    "result_reason": u"不明原因",
                     "source_account": rebot.telephone,
                 })
             return lock_result
 
-    def send_lock_request(self, order, rebot, data):
-        """
-        单纯向源站发请求
-        """
-        submit_url = "http://www.jslw.gov.cn/busOrder.do"
-        headers = {
-            "User-Agent": rebot.user_agent,
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
-        cookies = json.loads(rebot.cookies)
-        r = rebot.http_post(submit_url, data=data, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, "lxml")
-        if u"系统错误提示页面" in soup.title.text:
-            return {
-                "success": False,
-                "msg": soup.select_one(".main .error-box").text,
-            }
-        else:
-            detail_li = soup.select(".order_detail li")
-            order_no = detail_li[0].text.strip().lstrip(u"订  单 号 :").strip()
-            pay_money = float(soup.select(".l_pay_m_top_l li")[1].text.strip().lstrip(u"应付金额：").rstrip(u"元").strip())
-            qstr = urllib2.urlparse.urlparse(r.url).query
-            url_data = {l[0]:l[1] for l in [s.split("=") for s in qstr.split("&")]}
-            return {
-                "success": True,
-                "order_id": url_data["orderid"],
-                "order_no": order_no,
-                "pay_money": pay_money,
-                "msg": "锁票成功",
-            }
-
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
-        detail_url = "http://www.jslw.gov.cn/busOrder.do?event=orderInfo&orderid=%s" % order.lock_info["order_id"]
-        headers = {
-            "User-Agent": rebot.user_agent,
-        }
+        detail_url = order.lock_info["detail_url"]
+        headers = {"User-Agent": rebot.user_agent}
         cookies = json.loads(rebot.cookies)
         r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, "lxml")
-        detail_li = soup.select(".order_detail li")
-        # order_no = detail_li[0].text.strip().lstrip(u"订  单 号 :").strip()
-        state = detail_li[1].text.strip().lstrip(u"订单状态 :").strip()
-        pick_no = soup.select_one("#query_no").get('value')
-        pick_code = soup.select_one("#query_random").get('value')
-        seat_no = soup.select_one("#seat_no").get('value')
-        left_minu = soup.select_one("#remainM")
-        if left_minu:
-            left_minu = int(left_minu.text)
+        if "订单已过期" in r.content:
+            state = "已过期"
+            return {
+                "state": state,
+            }
         else:
-            left_minu = 0
-        return {
-            "state": state,
-            "pick_no": pick_no,
-            "pick_code": pick_code,
-            "seat_no": seat_no,
-            "left_minutes": left_minu,
-        }
+            soup = BeautifulSoup(r.content, "lxml")
+            detail_li = soup.select(".order_detail li")
+            order_no = detail_li[0].text.strip().lstrip(u"订  单 号 :").strip()
+            state = detail_li[1].text.strip().lstrip(u"订单状态 :").strip()
+            subject = soup.find("input", attrs={"name": "subject"}).get("value")
+            pay_money = float(soup.select(".l_pay_m_top_l li")[1].text.strip().lstrip(u"应付金额：").rstrip(u"元").strip())
+            #pick_no = soup.select_one("#query_no").get('value')
+            #print pick_no
+            #pick_code = soup.select_one("#query_random").get('value')
+            #print pick_code
+            #seat_no = soup.select_one("#seat_no").get('value')
+            #print seat_no
+            return {
+                "state": state,
+                "pick_no": "",
+                "pick_code": "",
+                "seat_no": "",
+                "subject": subject,
+                "order_no": order_no,
+                "pay_money": pay_money,
+            }
 
     def do_refresh_issue(self, order):
         result_info = {
@@ -167,8 +140,13 @@ class Flow(BaseFlow):
             result_info.update(result_msg="状态未变化")
             return result_info
         ret = self.send_order_request(order)
+        if ret.get("order_no", "") and order.raw_order_no != ret["order_no"]:
+            lock_info = order.lock_info
+            lock_info["subject"] = ret["subject"]
+            order.modify(raw_order_no=ret["order_no"], lock_info=lock_info, pay_money=ret["pay_money"])
+
         state = ret["state"]
-        if state == "支付超时作废":
+        if state == "已过期":
             result_info.update({
                 "result_code": 5,
                 "result_msg": state,
@@ -207,21 +185,22 @@ class Flow(BaseFlow):
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         if order.status == STATUS_WAITING_ISSUE:
-            detail = self.send_order_request(order)
-            if detail["state"] <= "已作废":
-                return {"flag": "error", "content": "订单已作废"}
-            #elif detail["left_minutes"] <= 0:
-            #    return {"flag": "error", "content": "订单已过期"}
-            pay_url = "http://www.jslw.gov.cn/bankPay.do"
+            self.refresh_issue(order)
+            order.reload()
+            pay_url = "http://www.tzfeilu.com:8086/index.php/blank"
             headers = {
                 "User-Agent": rebot.user_agent,
                 "Content-Type": "application/x-www-form-urlencoded",
             }
-            params = {
+            params={
                 "bankId": 1402,
-                "gateId1":1402,
-                "orderid": order.lock_info["order_id"],
+                "gateId": 1010,
+                "gateId1": "ali",
+                "gateId5": "upop",
+                "gateId6": "kjzh",
+                "orderid": order.raw_order_no,
                 "pay_amounts": order.pay_money,
+                "subject": order.lock_info["subject"],
             }
             cookies = json.loads(rebot.cookies)
             r = rebot.http_post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)

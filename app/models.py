@@ -717,7 +717,7 @@ class Rebot(db.Document):
 
 class TzkyWebRebot(Rebot):
     user_agent = db.StringField()
-    cookies = db.StringField()
+    cookies = db.StringField(default="{}")
     ip = db.StringField()
 
     meta = {
