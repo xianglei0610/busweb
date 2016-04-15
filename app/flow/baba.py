@@ -180,7 +180,7 @@ class Flow(BaseFlow):
                 })
             else:
                 lock_result.update({
-                    "result_code": 0,
+                    "result_code": 2,
                     "result_reason": errmsg,
                     "source_account": rebot.telephone,
                 })
