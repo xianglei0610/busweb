@@ -388,8 +388,6 @@ class Order(db.Document):
 
         if self.status not in [STATUS_WAITING_LOCK, STATUS_LOCK_RETRY]:
             return rebot
-        if rebot:
-            rebot.remove_doing_order(self)
         self.modify(source_account="")
         with rebot_cls.get_and_lock(self) as newrebot:
             self.modify(source_account=newrebot.telephone)
@@ -437,10 +435,6 @@ class Order(db.Document):
             return
         order_status_log.info("[on_lock_fail] order: %s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        rebot = self.get_lock_rebot()
-        if rebot:
-            rebot.remove_doing_order(self)
-
     def on_lock_success(self, reason=""):
         if self.status != STATUS_WAITING_ISSUE:
             return
@@ -459,10 +453,6 @@ class Order(db.Document):
             return
         order_status_log.info("[on_give_back] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
-        rebot = self.get_lock_rebot()
-        if rebot:
-            rebot.remove_doing_order(self)
-
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
         r.delete(key)
@@ -471,10 +461,6 @@ class Order(db.Document):
         if self.status != STATUS_ISSUE_FAIL:
             return
         order_status_log.info("[on_issue_fail] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
-
-        rebot = self.get_lock_rebot()
-        if rebot:
-            rebot.remove_doing_order(self)
 
         from tasks import issue_fail_send_email
         r = getRedisObj()
@@ -488,10 +474,6 @@ class Order(db.Document):
         if self.status != STATUS_ISSUE_ING:
             return
         order_status_log.info("[on_issueing] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
-
-        rebot = self.get_lock_rebot()
-        if rebot:
-            rebot.remove_doing_order(self)
 
         r = getRedisObj()
         key = RK_ISSUEING_COUNT
@@ -507,10 +489,6 @@ class Order(db.Document):
         r.delete(key)
         key = RK_ISSUEING_COUNT
         r.delete(key)
-
-        rebot = self.get_lock_rebot()
-        if rebot:
-            rebot.remove_doing_order(self)
 
     def get_contact_info(self):
         """
@@ -622,6 +600,17 @@ class Rebot(db.Document):
     @classmethod
     @contextmanager
     def get_and_lock(cls, order):
+        # 检查释放被锁的账号
+        for rebot in cls.objects.filter(is_locked=True, is_active=True):
+            for no in rebot.doing_orders.keys():
+                try:
+                    tmp_order = Order.objects.get(order_no=no)
+                except:
+                    tmp_order = None
+                if tmp_order:
+                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL]:
+                        rebot.remove_doing_order(order)
+
         if order.source_account:
             obj = cls.objects.get(telephone=order.source_account)
         else:
@@ -638,7 +627,32 @@ class Rebot(db.Document):
                 obj.remove_doing_order(order)
             raise e
 
+    @classmethod
+    def get_lock_one(cls, order):
+        """
+        后面会逐步替代get_and_lock
+        """
+        # 检查释放被锁的账号
+        for rebot in cls.objects.filter(is_locked=True, is_active=True):
+            for no in rebot.doing_orders.keys():
+                try:
+                    tmp_order = Order.objects.get(order_no=no)
+                except:
+                    tmp_order = None
+                if tmp_order:
+                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL]:
+                        rebot.remove_doing_order(order)
+
+        if order.source_account:
+            obj = cls.objects.get(telephone=order.source_account)
+        else:
+            obj = cls.get_one(order=order)
+        if obj:
+            obj.add_doing_order(order)
+        return obj
+
     def add_doing_order(self, order):
+        order.modify(source_account=self.telephone)
         d = self.doing_orders
         if order.order_no in d:
             return
