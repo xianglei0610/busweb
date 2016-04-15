@@ -282,7 +282,7 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = BabaWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
