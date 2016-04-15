@@ -44,6 +44,13 @@ class Flow(BaseFlow):
             if shopcartct != '0':
                 self.request_clear_shopcart(rebot)
             errmsg = self.request_add_shopcart(order, rebot)
+            if "您今天可购票数" in errmsg:
+                rebot.modify(cookies="{}")
+                rebot = order.change_lock_rebot()
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="可购票数超过了")
+                return lock_result
             if errmsg:
                 lock_result.update(result_code=0,
                                    source_account=rebot.telephone,
