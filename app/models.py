@@ -609,7 +609,7 @@ class Rebot(db.Document):
                     tmp_order = None
                 if tmp_order:
                     if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL]:
-                        rebot.remove_doing_order(order)
+                        rebot.remove_doing_order(tmp_order)
 
         if order.source_account:
             obj = cls.objects.get(telephone=order.source_account)
@@ -641,7 +641,7 @@ class Rebot(db.Document):
                     tmp_order = None
                 if tmp_order:
                     if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL]:
-                        rebot.remove_doing_order(order)
+                        rebot.remove_doing_order(tmp_order)
 
         if order.source_account:
             obj = cls.objects.get(telephone=order.source_account)
@@ -661,6 +661,7 @@ class Rebot(db.Document):
         self.on_add_doing_order(order)
 
     def remove_doing_order(self, order):
+        rebot_log.info("[remove_doing_order] %s order: %s account: %s %s", self.crawl_source, order.order_no, self.telephone, self.doing_orders)
         d = self.doing_orders
         if order.order_no in d:
             del d[order.order_no]
