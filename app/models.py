@@ -273,9 +273,9 @@ class Line(db.Document):
                                      s_city_name=self.s_city_name,
                                      s_sta_name__startswith=unicode(s_sta_name),
                                      d_city_name=self.d_city_name,
-                                     d_sta_name=self.d_sta_name,
+#                                      d_sta_name=self.d_sta_name,
                                      full_price=self.full_price,
-                                     bus_num=self.bus_num,
+#                                      bus_num=self.bus_num,
                                      drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
             d_line.update({self.crawl_source: self.line_id})
