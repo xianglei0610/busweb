@@ -7,6 +7,7 @@ import json
 import urllib
 import datetime
 import traceback
+import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -39,145 +40,144 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with BabaWebRebot.get_and_lock(order) as rebot:
-            line = order.line
-            params = {
-                "startPlace":line.s_city_name,
-                "endPlace": line.d_city_name,
-                "sbId": line.extra_info["sbId"],
-                "stId": line.extra_info["stId"],
-                "depotId": line.extra_info["depotId"],
-                "busId": line.bus_num,
-                "leaveDate": line.drv_date,
-                "beginStationId": line.s_sta_id,
-                "endStationId": line.d_sta_id,
-                "endStationName": line.d_sta_name,
-            }
+        rebot = BabaWebRebot.get_lock_one(order)
+        line = order.line
+        params = {
+            "startPlace":line.s_city_name,
+            "endPlace": line.d_city_name,
+            "sbId": line.extra_info["sbId"],
+            "stId": line.extra_info["stId"],
+            "depotId": line.extra_info["depotId"],
+            "busId": line.bus_num,
+            "leaveDate": line.drv_date,
+            "beginStationId": line.s_sta_id,
+            "endStationId": line.d_sta_id,
+            "endStationName": line.d_sta_name,
+        }
 
-            check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
-            r = requests.post(check_url,
-                              data=urllib.urlencode(params),
-                              headers={"User-Agent": rebot.user_agent, "Content-Type": "application/x-www-form-urlencoded"})
-            res = r.json()
-            if not res["success"]:
-                msg = res["msg"]
-                if res["msg"] == "查询失败":
-                    lock_result.update({
-                        "result_code": 2,
-                        "result_reason": msg,
-                        "source_account": rebot.telephone,
-                    })
-                    return lock_result
-                else:
-                    lock_result.update({
-                        "result_code": 0,
-                        "result_reason": msg,
-                        "source_account": rebot.telephone,
-                    })
-                    return lock_result
-
-            cookies = json.loads(rebot.cookies)
-            form_url = "http://www.bababus.com/order/writeorder.htm"
-            r = requests.get("%s?%s" %(form_url,urllib.urlencode(params)),
-                             headers={"User-Agent": rebot.user_agent},
-                             cookies=cookies)
-            # 未登录
-            if not rebot.check_login_by_resp(r):
+        check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
+        r = requests.post(check_url,
+                            data=urllib.urlencode(params),
+                            headers={"User-Agent": rebot.user_agent, "Content-Type": "application/x-www-form-urlencoded"})
+        res = r.json()
+        if not res["success"]:
+            msg = res["msg"]
+            if res["msg"] == "查询失败":
                 lock_result.update({
                     "result_code": 2,
+                    "result_reason": msg,
                     "source_account": rebot.telephone,
-                    "result_reason": "账号未登录",
                 })
                 return lock_result
-
-            soup = BeautifulSoup(r.content, "lxml")
-            wrong_info = soup.select(".wrong_body .wrong_inf")
-            # 订单填写页获取错误
-            if wrong_info:
-                inf = wrong_info[0].get_text()
-                tip = soup.select(".wrong_body .wrong_tip")[1].get_text()
+            else:
                 lock_result.update({
                     "result_code": 0,
+                    "result_reason": msg,
                     "source_account": rebot.telephone,
-                    "result_reason": "%s %s" % (inf, tip),
                 })
                 return lock_result
 
-            # 构造表单参数
-            raw_form = {}
-            for obj in soup.find_all("input"):
-                name, val = obj.get("name"), obj.get("value")
-                if name in ["None", "none", '']:
-                    continue
-                raw_form[name] = val
-
-            submit_data = {
-                "sbId": raw_form["sbId"],
-                "stId": raw_form["stId"],
-                "busId": raw_form["busId"],
-                "beginStationName": line.s_sta_name,
-                "endStationName": line.d_sta_name,
-                "leaveDate": line.drv_date,
-                "leaveTime": line.drv_time,
-                "routeName": raw_form["routeName"],
-                "vehicleMode": raw_form["vehicleMode"],
-                "busType": raw_form["busType"],
-                "mileage": raw_form["mileage"],
-                "fullPrice": raw_form["fullPrice"],
-                "halfPrice": raw_form["halfPrice"],
-                "remainSeat": raw_form["remainSeat"],
-                "endStationId": raw_form["endStationId"],
-                "depotId": raw_form["depotId"],
-                "beginStationId": raw_form["beginStationId"],
-                "totalPrice": raw_form["totalPrice"],
-                "contactName": order.contact_info["name"],
-                "contactIdType": "1",
-                "contactIdCode": order.contact_info["id_number"],
-                "contactPhone": order.contact_info["telephone"],
-                "contactEmail": "",
-            }
-            encode_list= [urllib.urlencode(submit_data),]
-            for r in order.riders:
-                d = {
-                    "psgName": r["name"],
-                    "psgIdType": "1",
-                    "psgIdCode": r["id_number"],
-                    "psgTicketType": 1,
-                    "psgBabyFlg": 0,
-                    "psgInsuranceTypeId": "",       # 保险
-                    "isSave": 0,
-                }
-                encode_list.append(urllib.urlencode(d))
-            encode_str = "&".join(encode_list)
-            ret = self.send_lock_request(order, rebot, encode_str)
-            errmsg = ret["msg"]
-            if ret["success"]:
-                expire_time = dte.now()+datetime.timedelta(seconds=15*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": errmsg,
-                    "pay_url": "",
-                    "raw_order_no": ret["content"],
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                })
-            else:
-                #if u"服务器与客运站网络中断" in errmsg:
-                #    body = "源站: 巴巴快巴, <br/> 城市: %s, <br/> 车站: %s" % (line.s_city_name, line.s_sta_name)
-                #    async_send_email.delay("客运站联网中断", body)
-                if u"错误信息：null" in errmsg:
-                    lock_result.update({
-                        "result_code": 0,
-                        "result_reason": errmsg,
-                        "source_account": rebot.telephone,
-                    })
-                else:
-                    lock_result.update({
-                        "result_code": 0,
-                        "result_reason": errmsg,
-                        "source_account": rebot.telephone,
-                    })
+        cookies = json.loads(rebot.cookies)
+        form_url = "http://www.bababus.com/order/writeorder.htm"
+        r = requests.get("%s?%s" %(form_url,urllib.urlencode(params)),
+                            headers={"User-Agent": rebot.user_agent},
+                            cookies=cookies)
+        # 未登录
+        if not rebot.check_login_by_resp(r):
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": "账号未登录",
+            })
             return lock_result
+
+        soup = BeautifulSoup(r.content, "lxml")
+        wrong_info = soup.select(".wrong_body .wrong_inf")
+        # 订单填写页获取错误
+        if wrong_info:
+            inf = wrong_info[0].get_text()
+            tip = soup.select(".wrong_body .wrong_tip")[1].get_text()
+            lock_result.update({
+                "result_code": 0,
+                "source_account": rebot.telephone,
+                "result_reason": "%s %s" % (inf, tip),
+            })
+            return lock_result
+
+        # 构造表单参数
+        raw_form = {}
+        for obj in soup.find_all("input"):
+            name, val = obj.get("name"), obj.get("value")
+            if name in ["None", "none", '']:
+                continue
+            raw_form[name] = val
+
+        submit_data = {
+            "sbId": raw_form["sbId"],
+            "stId": raw_form["stId"],
+            "busId": raw_form["busId"],
+            "beginStationName": line.s_sta_name,
+            "endStationName": line.d_sta_name,
+            "leaveDate": line.drv_date,
+            "leaveTime": line.drv_time,
+            "routeName": raw_form["routeName"],
+            "vehicleMode": raw_form["vehicleMode"],
+            "busType": raw_form["busType"],
+            "mileage": raw_form["mileage"],
+            "fullPrice": raw_form["fullPrice"],
+            "halfPrice": raw_form["halfPrice"],
+            "remainSeat": raw_form["remainSeat"],
+            "endStationId": raw_form["endStationId"],
+            "depotId": raw_form["depotId"],
+            "beginStationId": raw_form["beginStationId"],
+            "totalPrice": raw_form["totalPrice"],
+            "contactName": order.contact_info["name"],
+            "contactIdType": "1",
+            "contactIdCode": order.contact_info["id_number"],
+            "contactPhone": order.contact_info["telephone"],
+            "contactEmail": "",
+        }
+        encode_list= [urllib.urlencode(submit_data),]
+        for r in order.riders:
+            d = {
+                "psgName": r["name"],
+                "psgIdType": "1",
+                "psgIdCode": r["id_number"],
+                "psgTicketType": 1,
+                "psgBabyFlg": 0,
+                "psgInsuranceTypeId": "",       # 保险
+                "isSave": 0,
+            }
+            encode_list.append(urllib.urlencode(d))
+        encode_str = "&".join(encode_list)
+        ret = self.send_lock_request(order, rebot, encode_str)
+        errmsg = ret["msg"]
+        if ret["success"]:
+            expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+            order.raw_order_no = ret["content"]
+            try:
+                pay_money = self.send_order_request(order)["pay_money"]
+            except:
+                pay_money = 0
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": errmsg,
+                "pay_url": "",
+                "raw_order_no": ret["content"],
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                "pay_money": pay_money,
+            })
+        else:
+            #if u"服务器与客运站网络中断" in errmsg:
+            #    body = "源站: 巴巴快巴, <br/> 城市: %s, <br/> 车站: %s" % (line.s_city_name, line.s_sta_name)
+            #    async_send_email.delay("客运站联网中断", body)
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": errmsg,
+                "source_account": rebot.telephone,
+            })
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         """
@@ -211,11 +211,13 @@ class Flow(BaseFlow):
                 code = s.lstrip("取票密码:")
             elif s.startswith("取票地点:"):
                 site = s.lstrip("取票地点:")
+        pay_money = float(re.findall(r"(\d+.\d)",soup.select_one(".order_Aprice").text)[0])
         return {
             "state": soup.select(".pay_success")[0].get_text().split(u"：")[1].strip(),
             "pick_no": no,
             "pick_code": code,
             "pick_site": site,
+            "pay_money": pay_money,
         }
 
     def do_refresh_issue(self, order):
@@ -273,7 +275,7 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = BabaWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
@@ -321,7 +323,7 @@ class Flow(BaseFlow):
         is_login = rebot.test_login_status()
 
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
             return _get_page(rebot)
         else:
@@ -344,6 +346,10 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
+        now = dte.now()
+        if (line.drv_datetime-now).total_seconds() <= 65*60:    # 不卖一小时之内的票
+            result_info.update(result_msg="1小时内的票不卖", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            return result_info
         params = {
             "startPlace":line.s_city_name,
             "endPlace": line.d_city_name,
@@ -356,7 +362,6 @@ class Flow(BaseFlow):
             "endStationId": line.d_sta_id,
             "endStationName": line.d_sta_name,
         }
-        now = dte.now()
         check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
         ua = random.choice(BROWSER_USER_AGENT)
         r = requests.post(check_url,
