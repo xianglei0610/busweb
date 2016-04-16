@@ -409,7 +409,7 @@ class Flow(BaseFlow):
 
         is_login = rebot.test_login_status()
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
                 headers = {

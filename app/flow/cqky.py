@@ -397,7 +397,7 @@ class Flow(BaseFlow):
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
         is_login = rebot.test_login_status()
-        if order.status == STATUS_LOCK_RETRY:
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             if not is_login and valid_code:
                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                 info = json.loads(session[key])
@@ -450,7 +450,7 @@ class Flow(BaseFlow):
         if is_login:
             return {"flag": "error", "content": "锁票失败"}
 
-        if order.status == STATUS_LOCK_RETRY:
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             cookies = json.loads(rebot.cookies)
             login_form = "http://www.96096kp.com/CusLogin.aspx"
             valid_url = "http://www.96096kp.com/ValidateCode.aspx?_=%s" % random.randint(1, 10000)
