@@ -252,6 +252,12 @@ def submit_order():
     if not flow:
         return jsonify({"code": RET_LINE_404, "message": "未找到合适路线", "data": ""})
 
+    try:
+        Order.objects.get(out_order_no=out_order_no)
+        return jsonify({"code": RET_PARAM_ERROR, "message": "重建建单", "data": ""})
+    except Order.DoesNotExist:
+        pass
+
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
