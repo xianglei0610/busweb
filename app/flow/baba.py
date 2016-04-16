@@ -346,6 +346,10 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
+        now = dte.now()
+        if (line.drv_datetime-now).total_seconds() <= 65*60:    # 不卖一小时之内的票
+            result_info.update(result_msg="1小时内的票不卖", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            return result_info
         params = {
             "startPlace":line.s_city_name,
             "endPlace": line.d_city_name,
@@ -358,7 +362,6 @@ class Flow(BaseFlow):
             "endStationId": line.d_sta_id,
             "endStationName": line.d_sta_name,
         }
-        now = dte.now()
         check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
         ua = random.choice(BROWSER_USER_AGENT)
         r = requests.post(check_url,
