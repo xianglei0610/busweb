@@ -253,8 +253,14 @@ def submit_order():
         return jsonify({"code": RET_LINE_404, "message": "未找到合适路线", "data": ""})
 
     try:
-        Order.objects.get(out_order_no=out_order_no)
-        return jsonify({"code": RET_PARAM_ERROR, "message": "重建建单", "data": ""})
+        order = Order.objects.get(out_order_no=out_order_no)
+        ret = {
+            "code": RET_OK,
+            "message": u"已存在这个单",
+            "data": {"sys_order_no": order.order_no}
+        }
+        order_log.info("[submit-response] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret)
+        return jsonify(ret)
     except Order.DoesNotExist:
         pass
 
