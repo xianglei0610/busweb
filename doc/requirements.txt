@@ -19,3 +19,4 @@ redis==2.10.5
 Flask-Login==0.3.2
 beautifulsoup4==4.4.1
 selenium==2.53.1
+flask_profiler
