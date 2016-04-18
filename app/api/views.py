@@ -406,3 +406,7 @@ def query_order_detail():
         ret = {"code": RET_OK, "message": "OK", "data": data}
     access_log.info("[query_order_detail] order:%s out_order_no:%s %s", order.order_no, order.out_order_no, ret)
     return jsonify(ret)
+
+@api.route('/check', methods=['GET'])
+def check_status():
+    return "working well! %s " % dte.now()
