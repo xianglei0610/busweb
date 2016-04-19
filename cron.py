@@ -263,10 +263,13 @@ def main():
 
     # 畅途网
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "南京"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "济南"}})
 
     # 江苏客运
-    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
-    sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['jsky'], kwargs={"crawl_kwargs":{"city": "江阴,宜兴"}})
+    sched.add_cron_job(bus_crawl, hour=8, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
+    sched.add_cron_job(bus_crawl, hour=9, minute=30, args=['jsky'], kwargs={"crawl_kwargs":{"city": "江阴,宜兴"}})
+    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "宿迁"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "徐州"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南京"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南通"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "无锡"}})
@@ -294,6 +297,9 @@ def main():
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "常熟,吴江"}})
     sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "镇江,宜兴"}})
     sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "兴化,江阴"}})
+    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "徐州"}})
+    sched.add_cron_job(bus_crawl, hour=0, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "连云港,扬州"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "盐城"}})
 
     # 快巴
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['kuaiba'], kwargs={"crawl_kwargs":{"province": "北京"}})
