@@ -394,7 +394,6 @@ class E8sProxyConsumer(ProxyConsumer):
                               proxies={"http": "http://%s" % ipstr})
         except:
             return False
-        print r.content
         if r.status_code != 200:
             return False
         return True

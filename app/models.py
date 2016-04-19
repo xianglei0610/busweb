@@ -1534,7 +1534,7 @@ class CTripRebot(Rebot):
         dcap["phantomjs.page.settings.userAgent"] = (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0 "
         )
-        #driver = webdriver.PhantomJS(desired_capabilities=dcap)
+        # driver = webdriver.PhantomJS(desired_capabilities=dcap)
         driver = webdriver.Firefox()
         driver.set_window_size(1120, 550)
         login = "https://accounts.ctrip.com/H5Login/Index"

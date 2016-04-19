@@ -295,7 +295,7 @@ class SubmitOrder(MethodView):
         fd = request.form
         data = {
             "line_id": fd.get("line_id"),
-            "out_order_no": "12345678910",
+            "out_order_no": str(int(time.time()*1000)),
             "order_price": float(fd.get("order_price")),
             "contact_info": {
                 "name": fd.get("contact_name"),

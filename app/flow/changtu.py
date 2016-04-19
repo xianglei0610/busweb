@@ -239,10 +239,17 @@ class Flow(BaseFlow):
                 "code": pick_code,
                 "no": pick_no,
                 "raw_order": order.raw_order_no,
+                "order": order.raw_order_no,
+                "amount": order.ticket_amount,
             }
+            province = getattr(order.line, "s_province", None)
             if pick_code and pick_no:
                 dx_tmpl = DUAN_XIN_TEMPL["changtu2"]
                 code_list.append(pick_code)
+                msg_list.append(dx_tmpl % dx_info)
+            elif province and province == "山东":
+                dx_tmpl = DUAN_XIN_TEMPL["changtu_sd"]
+                code_list.append("")
                 msg_list.append(dx_tmpl % dx_info)
             else:
                 dx_tmpl = DUAN_XIN_TEMPL["changtu1"]
