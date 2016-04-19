@@ -477,16 +477,17 @@ def all_order():
 
     qs = Order.objects.filter(Q_query, **query).order_by("-create_date_time")
     kefu_count = {str(k): v for k,v in qs.item_frequencies('kefu_username', normalize=False).items()}
+    site_count = {str(k): v for k,v in qs.item_frequencies('crawl_source', normalize=False).items()}
     status_count = {}
     for st in STATUS_MSG.keys():
         status_count[st] = qs.filter(status=st).count()
     stat = {
         "issued_total": int(qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount')),
         "money_total": qs.sum("order_price"),
-        "dealed_total": qs.filter(kefu_order_status=1).count(),
         "order_total": qs.count(),
         "status_count": status_count,
         "kefu_count": kefu_count,
+        "site_count": site_count,
     }
     if client == 'web':
         action = params.get("action", "查询")
