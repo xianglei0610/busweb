@@ -281,6 +281,7 @@ class Flow(BaseFlow):
             session[ses_key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
         else:
+            rebot = order.change_lock_rebot()
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
             index_url = "http://www.zjgsmwy.com/portal/index.jsp"
             r = rebot.http_get(index_url, headers=headers)
