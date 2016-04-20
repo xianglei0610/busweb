@@ -151,9 +151,9 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "lock_info": ret,
                     })
-                else:
+                else:   # 未知错误
                     lock_result.update({
-                        "result_code": 0,
+                        "result_code": 2,
                         "result_reason": "%s-%s" % (fail_code, msg),
                         "pay_url": "",
                         "raw_order_no": "",
