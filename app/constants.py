@@ -1671,7 +1671,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_GZQCP: "您已购票成功！请在%(time)s前至%(site)s领取车票。本次购票取票号：%(no)s，取票密码：%(code)s。",
     SOURCE_KUAIBA: "您已成功购买%(time)s%(start)s-%(end)s的车票,请到出发车站自助取票机或服务台凭身份证取票。",
     SOURCE_BJKY: "您已成功购买发车时间：%(time)s,%(start)s-%(end)s,对应网站取票单号：%(raw_order)s,取票时请出示您购票时登记的有效证件和网站取票单号。",
-    SOURCE_CQKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
+    SOURCE_CQKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭%(person)s身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_LNKY: "温馨提醒：您有%(ticket_amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order_no)s；请在发车前两小时内凭乘车人身份证取票。祝您旅途愉快！",
     SOURCE_WXSZ: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
     "changtu1": "车站订单号：%(raw_order)s,发车时间：%(time)s, %(start)s-%(end)s,请提前一小时以上到乘车站,取票信息将发至您的订单取票联系人手机上，如未收到取票账号信息请务必发车前2小时致电客服索取,超时不受理,如需改退票请到乘车站按规定办理。",
