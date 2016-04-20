@@ -4,7 +4,6 @@
 from fabric.api import env
 from fabric.operations import run
 from fabric.context_managers import cd
-from fabric.api import execute
 
 SERVER_LIST = {
     "banana": "120.27.150.94",
@@ -14,12 +13,6 @@ SERVER_LIST = {
 
 env.user = '12308'
 env.hosts = SERVER_LIST.values()
-
-
-def update_code():
-    run("git checkout master")
-    run("git fetch")
-    run("git reset --hard origin/master")
 
 
 def deploy(name=""):
@@ -37,6 +30,12 @@ def deploy(name=""):
 
 
 def deploy_all():
-    execute(deploy, "api")
-    execute(deploy, "admin")
-    execute(deploy, "celery")
+    with cd("/home/12308/code/busweb/"):
+        # 拉代码
+        run("git checkout master")
+        run("git fetch")
+        run("git merge origin/master")
+
+        for name in ["admin", "api", "celery"]:
+            # 重启supervisor
+            run("sudo supervisorctl restart server:%s" % name)

@@ -66,7 +66,7 @@ class Config:
     @staticmethod
     def init_app(app):
         app.config["flask_profiler"] = {
-            "enabled": True,
+            "enabled": False,
             "storage": {
                 "engine": "mongodb",
                 "MONGO_URL": "mongodb://%s" % app.config["MONGODB_SETTINGS"]["host"],
