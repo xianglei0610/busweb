@@ -5,6 +5,7 @@ reload(sys)
 sys.setdefaultencoding("utf-8")
 import redis
 import logging
+import flask_profiler
 
 from flask import Flask
 from flask.ext.mail import Mail
@@ -109,6 +110,7 @@ def setup_api_app():
     from api import api as main_blueprint
     app.register_blueprint(main_blueprint)
     app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
+    flask_profiler.init_app(app)
     return app
 
 
@@ -126,4 +128,5 @@ def setup_admin_app():
     from admin import admin as admin_blueprint
     app.register_blueprint(admin_blueprint)
     app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
+    flask_profiler.init_app(app)
     return app

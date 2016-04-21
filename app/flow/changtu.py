@@ -151,9 +151,9 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "lock_info": ret,
                     })
-                else:
+                else:   # 未知错误
                     lock_result.update({
-                        "result_code": 0,
+                        "result_code": 2,
                         "result_reason": "%s-%s" % (fail_code, msg),
                         "pay_url": "",
                         "raw_order_no": "",
@@ -228,6 +228,11 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
+        elif state == "已退款":
+            result_info.update({
+                "result_code": 3,
+                "result_msg": state,
+            })
         elif state=="订单成功":
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]
             msg_list = []
@@ -239,10 +244,17 @@ class Flow(BaseFlow):
                 "code": pick_code,
                 "no": pick_no,
                 "raw_order": order.raw_order_no,
+                "order": order.raw_order_no,
+                "amount": order.ticket_amount,
             }
+            province = getattr(order.line, "s_province", None)
             if pick_code and pick_no:
                 dx_tmpl = DUAN_XIN_TEMPL["changtu2"]
                 code_list.append(pick_code)
+                msg_list.append(dx_tmpl % dx_info)
+            elif province and province == "山东":
+                dx_tmpl = DUAN_XIN_TEMPL["changtu_sd"]
+                code_list.append("")
                 msg_list.append(dx_tmpl % dx_info)
             else:
                 dx_tmpl = DUAN_XIN_TEMPL["changtu1"]

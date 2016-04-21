@@ -92,7 +92,8 @@ class Flow(BaseFlow):
                         "raw_order_no": res["raw_order_no"],
                         "expire_datetime": expire_time,
                         "source_account": rebot.telephone,
-                        "pay_money": res["pay_money"]
+                        "pay_money": res["pay_money"],
+                        "lock_info": {"mode": mode},
                     })
                 elif _check_fail(res["msg"]):
                     self.close_line(line, reason=res["msg"])
@@ -119,6 +120,12 @@ class Flow(BaseFlow):
                      "result_code": 2,
                      "source_account": rebot.telephone,
                      "result_reason": u"账号未登录",
+                 })
+            elif u"当前系统维护中" in res["msg"]:
+                lock_result.update({
+                     "result_code": 2,
+                     "source_account": rebot.telephone,
+                     "result_reason": res["msg"],
                  })
             else:
                 lock_result.update({
@@ -330,12 +337,14 @@ class Flow(BaseFlow):
         state = ret.get("OrderStatus", "")
         if state == "已支付":
             msg_list = []
+            mode = order.lock_info["mode"]
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CQKY]
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "raw_order": order.raw_order_no,
+                "person": "乘车人" if mode==2 else "取票人",
             }
             msg_list.append(dx_tmpl % dx_info)
             result_info.update({

@@ -295,7 +295,7 @@ class SubmitOrder(MethodView):
         fd = request.form
         data = {
             "line_id": fd.get("line_id"),
-            "out_order_no": "12345678910",
+            "out_order_no": str(int(time.time()*1000)),
             "order_price": float(fd.get("order_price")),
             "contact_info": {
                 "name": fd.get("contact_name"),
@@ -477,16 +477,17 @@ def all_order():
 
     qs = Order.objects.filter(Q_query, **query).order_by("-create_date_time")
     kefu_count = {str(k): v for k,v in qs.item_frequencies('kefu_username', normalize=False).items()}
+    site_count = {str(k): v for k,v in qs.item_frequencies('crawl_source', normalize=False).items()}
     status_count = {}
     for st in STATUS_MSG.keys():
         status_count[st] = qs.filter(status=st).count()
     stat = {
         "issued_total": int(qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount')),
         "money_total": qs.sum("order_price"),
-        "dealed_total": qs.filter(kefu_order_status=1).count(),
         "order_total": qs.count(),
         "status_count": status_count,
         "kefu_count": kefu_count,
+        "site_count": site_count,
     }
     if client == 'web':
         action = params.get("action", "查询")
@@ -615,7 +616,7 @@ def wating_deal_order():
                     continue
                 order.update(kefu_username=current_user.username)
                 assign.add_dealing(order, current_user)
-                if order.status == STATUS_WAITING_LOCK:
+                if order.status == STATUS_WAITING_LOCK and order.crawl_source not in [SOURCE_WXSZ]:
                     async_lock_ticket.delay(order.order_no)
                 push_kefu_order.apply_async((current_user.username, order.order_no))
     qs = assign.dealing_orders(current_user).order_by("create_date_time")

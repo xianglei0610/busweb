@@ -228,7 +228,7 @@ class Flow(BaseFlow):
         self.refresh_issue(order)
         if order.status != STATUS_WAITING_ISSUE:
             return {"flag": "refuse", "content": ""}
-        rebot = CTripRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3  (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
             "Content-Type": "application/json;charset=utf-8",
