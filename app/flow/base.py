@@ -19,8 +19,6 @@ class Flow(object):
     def check_lock_condition(self, order):
         if order.status not in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             return "%s状态不允许再发起锁票" % STATUS_MSG[order.status]
-        if order.lock_info.get('orderId', ''):
-            return "已经锁票成功:%s，不需要重新锁票" % order.lock_info.get('orderId', '')
         return ""
 
     def lock_ticket(self, order, **kwargs):
@@ -183,6 +181,7 @@ class Flow(object):
             order.on_issueing()
         elif code == 5:         # 超时过期, 进入锁票重试
             order_log.info("[issue-refresh-result] order: %s expire. msg:%s", order.order_no, ret["result_msg"])
+            order.modify(pay_order_no="", raw_order_no="", lock_info={})
             self.lock_ticket_retry(order)
         else:
             order_log.error("[issue-refresh-result] order: %s error, 未处理状态 status:%s", order.order_no, code)
