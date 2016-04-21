@@ -847,7 +847,7 @@ class WxszRebot(Rebot):
                 "uid": self.uid,
                 "idcard" : c["id_number"],
                 "uname": c["name"],
-                "tel": c["telephone"],
+                "tel": c["telephone"] or order.contact_info["telephone"],
             }
             r = self.http_post(add_url, headers=headers, data=urllib.urlencode(params))
             res = r.json()
