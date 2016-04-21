@@ -28,7 +28,7 @@ class Flow(BaseFlow):
                     "name": r["name"],
                     "mobileNo": r["telephone"],
                     "idCard": r["id_number"],
-                    "idType": 1,
+                    "idType": 0,
                 })
             body = {
                 "activityId": "0",

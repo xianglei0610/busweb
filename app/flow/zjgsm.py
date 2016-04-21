@@ -45,10 +45,11 @@ class Flow(BaseFlow):
             # 检验验证码
             headers = {"User-Agent": rebot.user_agent}
             cookies = json.loads(rebot.cookies)
-            verify_url = "https://zjgsmwy.com/sso/servlet/checkCode?veryCode=%s" % valid_code
+            verify_url = "https://zjgsmwy.com/sso/servlet/checkCode?veryCode=%s&_t=%s" % (valid_code, time.time())
             r = rebot.http_get(verify_url, headers=headers, cookies=cookies)
             res = json.loads(r.content[r.content.index("(")+1: r.content.rindex(")")])
             if res["rtn_code"] != "000000":
+                rebot.modify(cookies="{}")
                 lock_result.update(result_code=2, result_reason="需要锁票验证码")
                 return lock_result
             rtn_key = res["rtn_key"]
@@ -91,15 +92,12 @@ class Flow(BaseFlow):
                     "result_code": 2,
                     "result_reason": msg,
                 })
-            elif "您当日购票数量(含本次购买票数)已超过5张" in msg:
-                rebot.remove_doing_order(order)
-                order.modify(source_account="")
-                with ZjgsmWebRebot.get_and_lock(order) as newrebot:
-                    account = newrebot.telephone
+            elif "您当日购票数量" in msg:
+                rebot = order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": msg,
-                    "source_account": account,
+                    "source_account": rebot.telephone,
                 })
             else:
                 lock_result.update({

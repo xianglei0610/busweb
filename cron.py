@@ -215,6 +215,24 @@ def check_proxy_lnky():
     return con.proxy_size()
 
 
+@check(run_in_local=True)
+def check_proxy_e8s():
+    from app.proxy import e8s_proxy as con
+    for ipstr in con.all_proxy():
+        if not con.valid_proxy(ipstr):
+            con.remove_proxy(ipstr)
+    return con.proxy_size()
+
+
+@check(run_in_local=True)
+def check_proxy_changtu():
+    from app.proxy import changtu_proxy as con
+    for ipstr in con.all_proxy():
+        if not con.valid_proxy(ipstr):
+            con.remove_proxy(ipstr)
+    return con.proxy_size()
+
+
 def main():
     sched = Scheduler(daemonic=False)
 
@@ -254,9 +272,13 @@ def main():
 
     # 畅途网
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "南京"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "济南"}})
 
     # 江苏客运
-    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
+    sched.add_cron_job(bus_crawl, hour=8, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
+    sched.add_cron_job(bus_crawl, hour=9, minute=30, args=['jsky'], kwargs={"crawl_kwargs":{"city": "江阴,宜兴"}})
+    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "宿迁"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "徐州"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南京"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "南通"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['jsky'], kwargs={"crawl_kwargs":{"city": "无锡"}})
@@ -282,6 +304,11 @@ def main():
     sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "常州"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "昆山,太仓"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "常熟,吴江"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "镇江,宜兴"}})
+    sched.add_cron_job(bus_crawl, hour=22, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "兴化,江阴"}})
+    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "徐州"}})
+    sched.add_cron_job(bus_crawl, hour=0, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "连云港,扬州"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['tongcheng'], kwargs={"crawl_kwargs":{"city": "盐城"}})
 
     # 快巴
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['kuaiba'], kwargs={"crawl_kwargs":{"province": "北京"}})
@@ -336,6 +363,8 @@ def main():
     sched.add_interval_job(check_proxy_scqcp, minutes=1)
     sched.add_interval_job(check_proxy_bjky, minutes=1)
     sched.add_interval_job(check_proxy_lnky, minutes=1)
+    sched.add_interval_job(check_proxy_e8s, minutes=1)
+    sched.add_interval_job(check_proxy_changtu, minutes=1)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

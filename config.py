@@ -65,7 +65,20 @@ class Config:
 
     @staticmethod
     def init_app(app):
-        pass
+        app.config["flask_profiler"] = {
+            "enabled": False,
+            "storage": {
+                "engine": "mongodb",
+                "MONGO_URL": "mongodb://%s" % app.config["MONGODB_SETTINGS"]["host"],
+                "DATABASE": app.config["MONGODB_SETTINGS"]["db"],
+                "COLLECTION": "flaskprofile",
+            },
+            "basicAuth": {
+                "enabled": True,
+                "username": "admin",
+                "password": "profile@12308"
+            }
+        }
 
 
 class ApiDevConfig(Config):

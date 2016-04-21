@@ -119,7 +119,7 @@ def src_code_img(order_no):
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
-    elif order.crawl_source in ["bjky", "cqky", 'scqcp']:
+    elif order.crawl_source in ["bjky", "cqky", 'scqcp', "changtu"]:
         rebot = order.get_lock_rebot()
         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
         data = json.loads(session[key])
@@ -174,6 +174,27 @@ def pay_account_input(order_no):
                            pay_accounts=PAY_ACCOUNTS
                            )
 
+@admin.route('/orders/<order_no>/change_kefu', methods=['POST'])
+@login_required
+def change_kefu(order_no):
+    order = Order.objects.get(order_no=order_no)
+    if order.status in [12, 13, 14]:
+        return "已支付,不许转!"
+    kefu_name = request.form.get("kefuname", "")
+    if not kefu_name:
+        return "请选择目标账号!"
+    if order.kefu_username != current_user.username:
+        return "这个单不是你的!"
+    try:
+        target = AdminUser.objects.get(username=kefu_name)
+    except:
+        return "不存在%s这个账号" % kefu_name
+    access_log.info("%s 将%s转给 %s", current_user.username, order_no, kefu_name)
+    order.update(kefu_username=target.username)
+    assign.add_dealing(order, target)
+    assign.remove_dealing(order, current_user)
+    return "成功转给%s" % target.username
+
 
 @admin.route('/orders/<order_no>/pay', methods=['GET'])
 @login_required
@@ -185,6 +206,8 @@ def order_pay(order_no):
     force = int(request.args.get("force", "0"))
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
         return "订单已成功或失败,不需要支付"
+    if order.kefu_username != current_user.username:
+        return "请先要%s把单转给你再支付" % order.kefu_username
 #     if not order.pay_account:
 #         if token and token == TOKEN:
 #             return redirect(url_for("admin.pay_account_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
@@ -272,7 +295,7 @@ class SubmitOrder(MethodView):
         fd = request.form
         data = {
             "line_id": fd.get("line_id"),
-            "out_order_no": "12345678910",
+            "out_order_no": str(int(time.time()*1000)),
             "order_price": float(fd.get("order_price")),
             "contact_info": {
                 "name": fd.get("contact_name"),
@@ -454,16 +477,17 @@ def all_order():
 
     qs = Order.objects.filter(Q_query, **query).order_by("-create_date_time")
     kefu_count = {str(k): v for k,v in qs.item_frequencies('kefu_username', normalize=False).items()}
+    site_count = {str(k): v for k,v in qs.item_frequencies('crawl_source', normalize=False).items()}
     status_count = {}
     for st in STATUS_MSG.keys():
         status_count[st] = qs.filter(status=st).count()
     stat = {
         "issued_total": int(qs.filter(status=STATUS_ISSUE_SUCC).sum('ticket_amount')),
         "money_total": qs.sum("order_price"),
-        "dealed_total": qs.filter(kefu_order_status=1).count(),
         "order_total": qs.count(),
         "status_count": status_count,
         "kefu_count": kefu_count,
+        "site_count": site_count,
     }
     if client == 'web':
         action = params.get("action", "查询")
@@ -550,7 +574,8 @@ def all_order():
 @admin.route('/myorder', methods=['GET'])
 @login_required
 def my_order():
-    return render_template("admin-new/my_order.html")
+    working_kefus = AdminUser.objects.filter(is_kefu=1)
+    return render_template("admin-new/my_order.html", working_kefus=working_kefus)
 
 
 @admin.route('/orders/<order_no>', methods=['GET'])
@@ -591,7 +616,7 @@ def wating_deal_order():
                     continue
                 order.update(kefu_username=current_user.username)
                 assign.add_dealing(order, current_user)
-                if order.status == STATUS_WAITING_LOCK:
+                if order.status == STATUS_WAITING_LOCK and order.crawl_source not in [SOURCE_WXSZ]:
                     async_lock_ticket.delay(order.order_no)
                 push_kefu_order.apply_async((current_user.username, order.order_no))
     qs = assign.dealing_orders(current_user).order_by("create_date_time")

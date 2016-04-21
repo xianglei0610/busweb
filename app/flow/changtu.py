@@ -9,6 +9,7 @@ import time
 import re
 
 from app.constants import *
+from app import line_log
 from app.flow.base import Flow as BaseFlow
 from app.models import ChangtuWebRebot
 from datetime import datetime as dte
@@ -55,7 +56,7 @@ class Flow(BaseFlow):
                 schSource=0,
             )
             cookies = json.loads(rebot.cookies)
-            r = requests.get("%s?%s" %(form_url,urllib.urlencode(params)),
+            r = rebot.http_get("%s?%s" %(form_url,urllib.urlencode(params)),
                              headers={"User-Agent": rebot.user_agent},
                              cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
@@ -105,10 +106,11 @@ class Flow(BaseFlow):
             }
 
             ret = self.send_lock_request(order, rebot, submit_data)
+            msg = ret.get("msg", "")
             if not ret:
                 lock_result.update({
                     "result_code": 2,
-                    "result_reason": "存在待支付单",
+                    "result_reason": "存在待支付单 "+msg,
                     "source_account": rebot.telephone,
                     "lock_info": ret,
                 })
@@ -119,7 +121,7 @@ class Flow(BaseFlow):
                 expire_time = dte.now()+datetime.timedelta(seconds=10*60)
                 lock_result.update({
                     "result_code": 1,
-                    "result_reason": "",
+                    "result_reason": msg,
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": expire_time,
@@ -143,7 +145,7 @@ class Flow(BaseFlow):
                     "000495": "不能重复购买",
                 }
                 fail_code = ret.get("failReason", "")
-                msg = code_names.get(fail_code, "")
+                msg = code_names.get(fail_code, "")+" "+msg
                 if fail_code in ["13", "11", "12", "000010", "14"]:   # 要输字母验证码
                     lock_result.update({
                         "result_code": 2,
@@ -151,9 +153,9 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "lock_info": ret,
                     })
-                else:
+                else:   # 未知错误
                     lock_result.update({
-                        "result_code": 0,
+                        "result_code": 2,
                         "result_reason": "%s-%s" % (fail_code, msg),
                         "pay_url": "",
                         "raw_order_no": "",
@@ -173,7 +175,7 @@ class Flow(BaseFlow):
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
-        resp = requests.post(submit_url,
+        resp = rebot.http_post(submit_url,
                              data=urllib.urlencode(data),
                              headers=headers,
                              cookies=cookies,)
@@ -228,6 +230,11 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
+        elif state == "已退款":
+            result_info.update({
+                "result_code": 3,
+                "result_msg": state,
+            })
         elif state=="订单成功":
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]
             msg_list = []
@@ -239,10 +246,17 @@ class Flow(BaseFlow):
                 "code": pick_code,
                 "no": pick_no,
                 "raw_order": order.raw_order_no,
+                "order": order.raw_order_no,
+                "amount": order.ticket_amount,
             }
+            province = getattr(order.line, "s_province", None)
             if pick_code and pick_no:
                 dx_tmpl = DUAN_XIN_TEMPL["changtu2"]
                 code_list.append(pick_code)
+                msg_list.append(dx_tmpl % dx_info)
+            elif province and province == "山东":
+                dx_tmpl = DUAN_XIN_TEMPL["changtu_sd"]
+                code_list.append("")
                 msg_list.append(dx_tmpl % dx_info)
             else:
                 dx_tmpl = DUAN_XIN_TEMPL["changtu1"]
@@ -257,11 +271,12 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = ChangtuWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
 
         is_login = rebot.test_login_status()
         if not is_login and valid_code:
-            info = json.loads(session["pay_login_info"])
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            info = json.loads(session[key])
             headers = info["headers"]
             cookies = info["cookies"]
             params = {
@@ -273,7 +288,7 @@ class Flow(BaseFlow):
             custom_headers = {}
             custom_headers.update(headers)
             custom_headers.update({"Content-Type": "application/x-www-form-urlencoded"})
-            r = requests.post("https://passport.changtu.com/login/ttslogin.htm",
+            r = rebot.http_post("https://passport.changtu.com/login/ttslogin.htm",
                               data=urllib.urlencode(params),
                               headers=custom_headers,
                               allow_redirects=False,
@@ -293,7 +308,8 @@ class Flow(BaseFlow):
                         "headers": {"User-Agent": rebot.user_agent},
                         "valid_url": "http://www.changtu.com/dverifyCode/order?t=%s" % time.time(),
                     }
-                    session["pay_login_info"] = json.dumps(data)
+                    key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+                    session[key] = json.dumps(data)
                     return {"flag": "input_code", "content": ""}
             if order.status == STATUS_WAITING_ISSUE:
                 pay_url = "http://www.changtu.com/pay/submitOnlinePay.htm"
@@ -331,7 +347,8 @@ class Flow(BaseFlow):
                 "headers": {"User-Agent": random.choice(BROWSER_USER_AGENT)},
                 "valid_url": "https://passport.changtu.com/dverifyCode/login?ts=%s" % time.time()
             }
-            session["pay_login_info"] = json.dumps(data)
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
@@ -348,7 +365,13 @@ class Flow(BaseFlow):
             schSource=0
         )
         headers={"User-Agent": random.choice(BROWSER_USER_AGENT)}
-        r = requests.get("%s?%s" % (detail_url, urllib.urlencode(params)), headers=headers)
+        rebot = ChangtuWebRebot.get_one()
+        try:
+            r = rebot.http_get("%s?%s" % (detail_url, urllib.urlencode(params)), headers=headers)
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
+            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+            return result_info
         res = r.json()
         if res["flag"] != "true":
             result_info.update(result_msg="flag is false", update_attrs={"left_tickets": 0})
@@ -366,7 +389,7 @@ class Flow(BaseFlow):
             drvDate=line.drv_date,
             cityId=sta_city_id,
         )
-        r = requests.get("%s?%s" % (confim_url, urllib.urlencode(params)), headers=headers)
+        r = rebot.http_get("%s?%s" % (confim_url, urllib.urlencode(params)), headers=headers)
         res = r.json()
         if res["flag"] != "true":
             result_msg = res["msg"]

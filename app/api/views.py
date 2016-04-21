@@ -252,6 +252,18 @@ def submit_order():
     if not flow:
         return jsonify({"code": RET_LINE_404, "message": "未找到合适路线", "data": ""})
 
+    try:
+        order = Order.objects.get(out_order_no=out_order_no)
+        ret = {
+            "code": RET_OK,
+            "message": u"已存在这个单",
+            "data": {"sys_order_no": order.order_no}
+        }
+        order_log.info("[submit-response] out_order:%s order:%s ret:%s", out_order_no, order.order_no, ret)
+        return jsonify(ret)
+    except Order.DoesNotExist:
+        pass
+
     ticket_amount = len(rider_list)
     locked_return_url = post.get("locked_return_url", None) or None
     issued_return_url = post.get("issued_return_url", None) or None
@@ -394,3 +406,7 @@ def query_order_detail():
         ret = {"code": RET_OK, "message": "OK", "data": data}
     access_log.info("[query_order_detail] order:%s out_order_no:%s %s", order.order_no, order.out_order_no, ret)
     return jsonify(ret)
+
+@api.route('/check', methods=['GET'])
+def check_status():
+    return "working well! %s " % dte.now()

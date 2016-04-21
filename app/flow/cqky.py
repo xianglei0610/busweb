@@ -92,7 +92,8 @@ class Flow(BaseFlow):
                         "raw_order_no": res["raw_order_no"],
                         "expire_datetime": expire_time,
                         "source_account": rebot.telephone,
-                        "pay_money": res["pay_money"]
+                        "pay_money": res["pay_money"],
+                        "lock_info": {"mode": mode},
                     })
                 elif _check_fail(res["msg"]):
                     self.close_line(line, reason=res["msg"])
@@ -105,7 +106,7 @@ class Flow(BaseFlow):
                     if u"同一IP一天最多可订" in res["msg"]:
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
                         rebot.modify(ip="")
-                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"]:
+                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
                         rebot.modify(cookies="{}")
                         rebot = order.change_lock_rebot()
                     lock_result.update({
@@ -175,7 +176,7 @@ class Flow(BaseFlow):
                         data=urllib.urlencode(params),
                         headers=headers,
                         cookies=cookies,
-                        timeout=40)
+                        timeout=90)
         except requests.exceptions.Timeout, e:
             rebot.modify(ip="")
             lock_info = order.lock_info
@@ -330,12 +331,14 @@ class Flow(BaseFlow):
         state = ret.get("OrderStatus", "")
         if state == "已支付":
             msg_list = []
+            mode = order.lock_info["mode"]
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CQKY]
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "raw_order": order.raw_order_no,
+                "person": "乘车人" if mode==2 else "取票人",
             }
             msg_list.append(dx_tmpl % dx_info)
             result_info.update({
@@ -397,7 +400,7 @@ class Flow(BaseFlow):
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
         is_login = rebot.test_login_status()
-        if order.status == STATUS_LOCK_RETRY:
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             if not is_login and valid_code:
                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                 info = json.loads(session[key])
@@ -450,7 +453,7 @@ class Flow(BaseFlow):
         if is_login:
             return {"flag": "error", "content": "锁票失败"}
 
-        if order.status == STATUS_LOCK_RETRY:
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             cookies = json.loads(rebot.cookies)
             login_form = "http://www.96096kp.com/CusLogin.aspx"
             valid_url = "http://www.96096kp.com/ValidateCode.aspx?_=%s" % random.randint(1, 10000)

@@ -166,6 +166,7 @@ class Flow(BaseFlow):
             msg_list = []
             dx_templ = DUAN_XIN_TEMPL[SOURCE_LNKY]
             dx_info = {
+                "start": "%s(%s)" % (order.line.s_city_name, order.line.s_sta_name),
                 "end": order.line.d_sta_name,
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "order_no": order.raw_order_no,
