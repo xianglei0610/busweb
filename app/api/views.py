@@ -179,6 +179,7 @@ def query_line_detail():
     except Line.DoesNotExist:
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
     flow, new_line = get_compatible_flow(line)
+    print flow, new_line
     if not flow:
         data = line.get_json()
         data["left_tickets"] = 0
