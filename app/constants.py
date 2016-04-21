@@ -23,6 +23,7 @@ SOURCE_ZJGSM = "zjgsm"
 SOURCE_WXSZ = "wxsz"
 SOURCE_JSDLKY = "jsdlky"
 SOURCE_E8S = "e8s"
+SOURCE_HEBKY = 'hebky'
 
 SOURCE_INFO = {
     SOURCE_JSDLKY: {
@@ -626,7 +627,7 @@ SOURCE_INFO = {
     SOURCE_CQKY: {
         "name": "重庆客运",
         "limit_payct": 100,
-        "website": "http://http://www.96096kp.com/",
+        "website": "http://www.96096kp.com/",
         "accounts": {
             "15315398538": ("123456", ""),
             "15046678450": ("123456", ""),
@@ -1507,6 +1508,15 @@ SOURCE_INFO = {
 
         }
     },
+    SOURCE_HEBKY: {
+        "name": "河北客运",
+        "website": "http://www.hb96505.com",
+        "accounts": {
+            # telephone: {password, auth)
+            "1367109876": ("a123456", ''),
+
+        }
+    },
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
@@ -1679,7 +1689,9 @@ DUAN_XIN_TEMPL = {
     SOURCE_JSDLKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票号(%(no)s)、取票密码(%(code)s)或身份证、车站订单号取票,如需改签、退票请前往始发客运站按规定办理。",
 
     # 按省来分
-    "江苏": "您购买了：%(time)s，%(start)s-%(end)s车次为%(bus)s的汽车票，取票号：%(no)s，取票密码：%(code)s"
+    "江苏": "您购买了：%(time)s，%(start)s-%(end)s车次为%(bus)s的汽车票，取票号：%(no)s，取票密码：%(code)s",
+    
+    SOURCE_HEBKY:"您已购票成功！请在%(time)s前至%(site)s领取车票。本次购票取票号：%(no)s，取票密码：%(code)s。",
 }
 
 CITY_NAME_TRANS = {
