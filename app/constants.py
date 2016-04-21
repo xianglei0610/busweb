@@ -1514,7 +1514,7 @@ SOURCE_INFO = {
         "accounts": {
             # telephone: {password, auth)
             "1367109876": ("a123456", ''),
-            
+
             "17095215068": ("a123456", ""), #梁飞
             "17095214683": ("a123456", ""),
             "17095215438": ("a123456", ""),
@@ -1788,5 +1788,5 @@ DG_BANK = {
     "luoxiangyun": 'CMB', #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行
     "lf12308": 'SPABANK',
     #"lf12308": 'BOCB2C',
-    "ck12308": 'CCB',
+    "ck12308": 'BOCB2C',
 }
