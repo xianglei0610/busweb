@@ -191,7 +191,7 @@ class Flow(BaseFlow):
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "site": order.line.s_sta_name,
+                "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "code": pick_code,
                 "no": pick_no,
