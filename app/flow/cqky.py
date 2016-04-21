@@ -74,7 +74,6 @@ class Flow(BaseFlow):
                     u"提前时间不足",
                     u"班次席位可售数不足",
                     u"班次站点无可售席位",
-                    u"锁位失败",
                 ]
                 for s in lst:
                     if s in msg:
@@ -106,7 +105,7 @@ class Flow(BaseFlow):
                     if u"同一IP一天最多可订" in res["msg"]:
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
                         rebot.modify(ip="")
-                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"]:
+                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
                         rebot.modify(cookies="{}")
                         rebot = order.change_lock_rebot()
                     lock_result.update({
@@ -120,12 +119,6 @@ class Flow(BaseFlow):
                      "result_code": 2,
                      "source_account": rebot.telephone,
                      "result_reason": u"账号未登录",
-                 })
-            elif u"当前系统维护中" in res["msg"]:
-                lock_result.update({
-                     "result_code": 2,
-                     "source_account": rebot.telephone,
-                     "result_reason": res["msg"],
                  })
             else:
                 lock_result.update({
