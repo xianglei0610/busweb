@@ -105,10 +105,11 @@ class Flow(BaseFlow):
             }
 
             ret = self.send_lock_request(order, rebot, submit_data)
+            msg = ret.get("msg", "")
             if not ret:
                 lock_result.update({
                     "result_code": 2,
-                    "result_reason": "存在待支付单",
+                    "result_reason": "存在待支付单 "+msg,
                     "source_account": rebot.telephone,
                     "lock_info": ret,
                 })
@@ -119,7 +120,7 @@ class Flow(BaseFlow):
                 expire_time = dte.now()+datetime.timedelta(seconds=10*60)
                 lock_result.update({
                     "result_code": 1,
-                    "result_reason": "",
+                    "result_reason": msg,
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": expire_time,
@@ -143,7 +144,7 @@ class Flow(BaseFlow):
                     "000495": "不能重复购买",
                 }
                 fail_code = ret.get("failReason", "")
-                msg = code_names.get(fail_code, "")
+                msg = code_names.get(fail_code, "")+" "+msg
                 if fail_code in ["13", "11", "12", "000010", "14"]:   # 要输字母验证码
                     lock_result.update({
                         "result_code": 2,
