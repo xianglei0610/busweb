@@ -67,6 +67,8 @@ class Flow(BaseFlow):
                                        lock_info={'result_reason': errmsg[0]})
                     return lock_result
             if int(shopcartct) != len(order.riders):
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
                 lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
                                    result_reason="购物车中数量和购票人数不相同")

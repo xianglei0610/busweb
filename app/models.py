@@ -2382,6 +2382,162 @@ class E8sAppRebot(Rebot):
             return "OK"
 
 
+class HebkyAppRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "hebkyapp_rebot",
+    }
+    crawl_source = SOURCE_HEBKY
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         key = RK_PROXY_IP_HEBKY
+#         if ipstr and rds.sismember(key, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(key)
+#         self.modify(ip=ipstr)
+#         return ipstr
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": ua or self.user_agent,
+        }
+
+    @classmethod
+    def get_one(cls, order=None):
+        now = dte.now()
+        start = now.strftime("%Y-%m-%d")+' 00:00:00'
+        start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
+        all_accounts = SOURCE_INFO[SOURCE_HEBKY]["accounts"].keys()
+        used = Order.objects.filter(crawl_source=SOURCE_HEBKY,
+                                    status=STATUS_ISSUE_SUCC,
+                                    create_date_time__gt=start) \
+                            .item_frequencies("source_account")
+        accounts_list = filter(lambda k: used.get(k, 0)<10, all_accounts)
+        for i in range(100):
+            choose = random.choice(accounts_list)
+            rebot = cls.objects.get(telephone=choose)
+            if rebot.is_active:
+                return rebot
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[hebky] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[hebky] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        header = {
+            "User-Agent": ua,
+        }
+        data = {
+                "username": self.telephone,
+                "password": self.password
+            }
+        log_url = "http://60.2.147.28/com/yxd/pris/openapi/personLogin.action"
+        r = self.http_post(log_url, data=data, headers=header)
+        ret = r.json()
+        if int(ret["akfAjaxResult"]) == 0 and int(ret["values"]['result']["code"])==1 :
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.is_active = True
+            self.save()
+            rebot_log.info("登陆成功 hebky %s", self.telephone)
+            return "OK"
+        else:
+            rebot_log.error("登陆错误 hebky %s, %s", self.telephone, str(ret))
+            return "fail"
+
+    def test_login_status(self):
+        try:
+            user_url = "http://60.2.147.28/com/yxd/pris/grzx/grzl/detailPersonalData.action"
+            headers = {"User-Agent": self.user_agent}
+            cookies = json.loads(self.cookies)
+            data = {"memberId": "2"}
+            res = requests.post(user_url, data=data, headers=headers, cookies=cookies)
+            res = res.json()
+            if res.get('akfAjaxResult', '') == '0' and res['values']['member']:
+                userName = res['values']['member']['userName']
+                if userName == self.telephone:
+                    return 1
+                else:
+                    self.modify(cookies='')
+                    return 0
+        except:
+            return 0
+
+
+class HebkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "hebkyweb_rebot",
+    }
+    crawl_source = SOURCE_HEBKY
+
+    def test_login_status(self):
+        try:
+            user_url = "http://www.hb96505.com//com/yxd/pris/grzx/grzl/detailPersonalData.action"
+            headers = {"User-Agent": self.user_agent}
+            cookies = json.loads(self.cookies)
+            data = {}
+            res = self.http_post(user_url, data=data, headers=headers, cookies=cookies)
+            res = res.json()
+            if res.get('akfAjaxResult', '') == '0' and res['values']['member']:
+                userName = res['values']['member']['userName']
+                if userName == self.telephone:
+                    return 1
+                else:
+                    self.modify(cookies='')
+                    return 0
+            else:
+                return 0
+        except:
+            return 0
+
+    @classmethod
+    def login_all(cls):
+        """预设账号"""
+        rebot_log.info(">>>> start to init hebky web:")
+        valid_cnt = 0
+        has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_HEBKY]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd = accounts[bot.telephone][0]
+            bot.modify(password=pwd)
+
+        for tele, (pwd, _) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      user_agent=random.choice(BROWSER_USER_AGENT),
+                      password=pwd,)
+            bot.save()
+            valid_cnt += 1
+        rebot_log.info(">>>> end init hebky web  success %d", valid_cnt)
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()

@@ -117,6 +117,13 @@ class Flow(BaseFlow):
                 }
                 data.update(tmp)
             ret = self.send_lock_request(rebot, data)
+            if not ret:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="锁票时ip异常")
+                return lock_result
             lock_result = {
                 "lock_info": ret,
                 "source_account": rebot.telephone,
