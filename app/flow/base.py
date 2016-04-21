@@ -19,8 +19,6 @@ class Flow(object):
     def check_lock_condition(self, order):
         if order.status not in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             return "%s状态不允许再发起锁票" % STATUS_MSG[order.status]
-        if order.lock_info.get('orderId', ''):
-            return "已经锁票成功:%s，不需要重新锁票" % order.lock_info.get('orderId', '')
         return ""
 
     def lock_ticket(self, order, **kwargs):

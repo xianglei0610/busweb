@@ -67,6 +67,8 @@ class Flow(BaseFlow):
                                        lock_info={'result_reason': errmsg[0]})
                     return lock_result
             if int(shopcartct) != len(order.riders):
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
                 lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
                                    result_reason="购物车中数量和购票人数不相同")
@@ -186,15 +188,13 @@ class Flow(BaseFlow):
         return res
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
-        order_detail_url = "http://e2go.com.cn/TicketOrder/OrderDetail/%s?seed=0.3821293651129908"%order.lock_info['order_id']
+        order_detail_url = "http://e2go.com.cn/TicketOrder/OrderDetail/%s?seed=0.%s"%(order.lock_info['order_id'],random.randint(10000000,100000000000))
         headers = rebot.http_header()
 #         rebot.login()
 #         rebot.reload()
         r = rebot.http_get(order_detail_url, headers=headers, cookies=json.loads(rebot.cookies))
         content = r.content
-        if isinstance(content, unicode):
-            pass
-        else:
+        if not isinstance(content, unicode):
             content = content.decode('utf-8')
         sel = etree.HTML(content)
         status = sel.xpath('//*[@id="orderItemsContainer"]/table/tbody/tr/td[12]/text()')[0]
@@ -363,7 +363,7 @@ class Flow(BaseFlow):
             headers = {"User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT)}
             r = rebot.http_get(login_form_url, headers=headers)
             cookies = dict(r.cookies)
-            code_url = 'http://e2go.com.cn/Home/LoginCheckCode/0.2769864823920234'
+            code_url = 'http://e2go.com.cn/Home/LoginCheckCode/0.%s' % random.randint(10000000,100000000000)
             r = rebot.http_get(code_url, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             data = {
