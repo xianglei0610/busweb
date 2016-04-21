@@ -553,6 +553,18 @@ class Rebot(db.Document):
     def __str__(self):
         return self.telephone
 
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        key = "proxy:%s" % self.crawl_source
+        print key
+        if ipstr and rds.sismember(key, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(key)
+        self.modify(ip=ipstr)
+        return ipstr
+
     @classmethod
     def login_all(cls):
         # 登陆所有预设账号
@@ -685,10 +697,6 @@ class Rebot(db.Document):
         登录成功返回"OK", 失败返回其他字符串。
         """
         raise Exception("Not Implemented")
-
-    @property
-    def proxy_ip(self):
-        return ""
 
     def http_get(self, url, **kwargs):
         retry = 3
@@ -839,7 +847,7 @@ class WxszRebot(Rebot):
                 "uid": self.uid,
                 "idcard" : c["id_number"],
                 "uname": c["name"],
-                "tel": c["telephone"],
+                "tel": c["telephone"] or order.contact_info["telephone"],
             }
             r = self.http_post(add_url, headers=headers, data=urllib.urlencode(params))
             res = r.json()
@@ -1229,6 +1237,7 @@ class CBDRebot(Rebot):
 class ChangtuWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    ip = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
