@@ -112,24 +112,25 @@ class Flow(BaseFlow):
         }
         r = rebot.http_post(issue_url, headers=headers, cookies=cookies, data=urllib.urlencode(params))
         soup = BeautifulSoup(r.content, "lxml")
-        tag_obj = soup.find(href=re.compile(r"tiket/index/%s" % order.raw_order_no))
-        if tag_obj:
-            td_lst = tag_obj.parent.parent.find_all("td")
-            pick_no = td_lst[7].text
-            pick_code  = td_lst[8].text
-            state = td_lst[9].text
-            money = float(td_lst[6].text)
-            if money != order.pay_money:
-                raise Exception()
-            if state == "有效":
-                return {
-                    "state": "购票成功",
-                    "pick_no": pick_no,
-                    "pick_code": pick_code,
-                }
-            else:
-                # 暂时抛异常, 遇到之后再处理
-                raise Exception()
+        if order.raw_order_no:
+            tag_obj = soup.find(href=re.compile(r"tiket/index/%s" % order.raw_order_no))
+            if tag_obj:
+                td_lst = tag_obj.parent.parent.find_all("td")
+                pick_no = td_lst[7].text
+                pick_code  = td_lst[8].text
+                state = td_lst[9].text
+                money = float(td_lst[6].text)
+                if money != order.pay_money:
+                    raise Exception()
+                if state == "有效":
+                    return {
+                        "state": "购票成功",
+                        "pick_no": pick_no,
+                        "pick_code": pick_code,
+                    }
+                else:
+                    # 暂时抛异常, 遇到之后再处理
+                    raise Exception()
 
         detail_url = order.lock_info["detail_url"]
         headers = {"User-Agent": rebot.user_agent}
