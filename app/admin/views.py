@@ -856,11 +856,19 @@ admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 @login_required
 def set_yh_type():
     username = request.args.get("username", '')
-    yh_type = request.args.get("yh_type", '') #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行  SPDB 浦发银行
-    if not (username and yh_type ):
+    yinhang = request.args.get("yinhang", '') #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行  SPDB 浦发银行
+    if not (username and yinhang):
         return jsonify({"status": "error", "msg": "参数错误"})
+    yh_dict = {
+               u"中行":"BOCB2C",
+               u"招行":"CMB",
+               u"建行":"CCB",
+               u"平安":"SPABANK",
+               u"浦发":"SPDB",
+               }
+    yh_type = yh_dict.get(yinhang,'')
     if yh_type not in ("BOCB2C", "CMB", "CCB", "SPABANK", "SPDB"):
-        return jsonify({"status": "error", "msg": "银行类型错误 请选择(BOCB2C:中国银行 CMB:招商银行 CCB:建设银行  SPABANK:平安银行  SPDB:浦发银行)"})
+        return jsonify({"status": "error", "msg": "银行类型错误 请选择(中行, 招行, 建行,平安,浦发)"})
     orderObj = AdminUser.objects.get(username=username)
     orderObj.modify(yh_type=yh_type)
     return jsonify({"status": "success"})
