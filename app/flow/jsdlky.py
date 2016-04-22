@@ -107,7 +107,7 @@ class Flow(BaseFlow):
                 })
             else:
                 msg = ret["msg"]
-                if "该站限售人数不够" in msg:
+                if "该站限售人数不够" in msg or "班次余票数不够" in msg:
                     self.close_line(line, reason=msg)
                     lock_result.update({
                         "result_code": 0,

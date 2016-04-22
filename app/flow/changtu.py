@@ -369,7 +369,7 @@ class Flow(BaseFlow):
         try:
             r = rebot.http_get("%s?%s" % (detail_url, urllib.urlencode(params)), headers=headers)
         except:
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": dte.now()})
             line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
         res = r.json()
