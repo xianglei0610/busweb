@@ -30,6 +30,7 @@ class AdminUser(db.Document):
     is_switch = db.IntField()
     is_kefu = db.IntField()
     is_admin = db.IntField(default=0)
+    yh_type = db.StringField(default="BOCB2C")
 
     meta = {
         "indexes": [

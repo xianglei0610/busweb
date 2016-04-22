@@ -219,11 +219,11 @@ def order_pay(order_no):
         return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("admin.order_pay", order_no=order.order_no)
 
     channel = request.args.get("channel", "alipay")
-    bank = request.args.get("bank", "")  #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行
+    bank = request.args.get("bank", "")  #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行  SPDB 浦发银行
     if not bank:
-        bank = 'CMB'
-        if DG_BANK.get(current_user.username, ''):
-            bank = DG_BANK.get(current_user.username, '')
+        bank = 'BOCB2C'
+        if current_user.yh_type:
+            bank = current_user.yh_type
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel,bank=bank)
     if not ret:
@@ -850,3 +850,28 @@ def order_pick_info(order_no):
 
 admin.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
 admin.add_url_rule("/login", view_func=LoginInView.as_view('login'))
+
+
+@admin.route('/set_yh_type', methods=["GET"])
+@login_required
+def set_yh_type():
+    username = request.args.get("username", '')
+    yinhang = request.args.get("yinhang", '') #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行  SPDB 浦发银行
+    if not (username and yinhang):
+        return jsonify({"status": "error", "msg": "参数错误"})
+    yh_dict = {
+               u"中行":"BOCB2C",
+               u"招行":"CMB",
+               u"建行":"CCB",
+               u"平安":"SPABANK",
+               u"浦发":"SPDB",
+               }
+    yh_type = yh_dict.get(yinhang,'')
+    if yh_type not in ("BOCB2C", "CMB", "CCB", "SPABANK", "SPDB"):
+        return jsonify({"status": "error", "msg": "银行类型错误 请选择(中行, 招行, 建行,平安,浦发)"})
+    orderObj = AdminUser.objects.get(username=username)
+    orderObj.modify(yh_type=yh_type)
+    return jsonify({"status": "success"})
+
+
+
