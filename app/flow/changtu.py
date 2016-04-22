@@ -185,7 +185,7 @@ class Flow(BaseFlow):
     def send_order_request(self, order, rebot=None):
         if not rebot:
             rebot = order.get_lock_rebot()
-        detail_url = "http://www.changtu.com/user/orderDetail.htm?orderId=%s" % order.lock_info["orderIds"][0]["orderId"]
+        detail_url = "http://www.changtu.com/user/orderDetail.htm?orderId=%s&_=%s" % (order.lock_info["orderIds"][0]["orderId"], time.time())
         headers = {
             "User-Agent": rebot.user_agent,
         }
