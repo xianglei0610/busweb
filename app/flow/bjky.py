@@ -59,7 +59,9 @@ class Flow(BaseFlow):
                                    source_account=rebot.telephone,
                                    result_reason="可购票数超过了")
                 return lock_result
-            if errmsg:
+            if "购物车中已经存在发车日期" in errmsg:
+                self.request_clear_shopcart(rebot)
+            elif errmsg:
                 lock_result.update(result_code=0,
                                    source_account=rebot.telephone,
                                    result_reason='add_shopcart1'+errmsg[0],
