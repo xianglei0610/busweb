@@ -74,6 +74,7 @@ class Flow(BaseFlow):
                     u"提前时间不足",
                     u"班次席位可售数不足",
                     u"班次站点无可售席位",
+                    u"班次状态为停班",
                 ]
                 for s in lst:
                     if s in msg:

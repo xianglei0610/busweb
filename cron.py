@@ -271,9 +271,15 @@ def main():
     # 江苏道路客运
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['jsdlky'])
 
+    # 泰州客运
+    sched.add_cron_job(bus_crawl, hour=19, minute=30, args=['tzky'])
+
     # 畅途网
     sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "南京"}})
     sched.add_cron_job(bus_crawl, hour=21, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "济南"}})
+    sched.add_cron_job(bus_crawl, hour=22, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "淄博"}})
+    sched.add_cron_job(bus_crawl, hour=23, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "临沂"}})
+    sched.add_cron_job(bus_crawl, hour=0, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "威海"}})
 
     # 江苏客运
     sched.add_cron_job(bus_crawl, hour=8, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
