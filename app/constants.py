@@ -1804,8 +1804,13 @@ PAY_ACCOUNTS = [
 
 
 DG_BANK = {
-    "luoxiangyun": 'CMB', #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行
+    "luoxiangyun": 'CMB', #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行  SPDB 浦发银行
     "lf12308": 'SPABANK',
-    #"lf12308": 'BOCB2C',
     "ck12308": 'CCB',
+    "liyong": 'BOCB2C',
+    "liguangyao": 'BOCB2C',
+    "huangtiancheng": 'BOCB2C',
+    "chenzongshi": 'BOCB2C',
+    "tangjiang": 'SPDB',
+    "xiangleilei": 'SPDB',
 }

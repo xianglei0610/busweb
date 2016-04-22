@@ -40,7 +40,15 @@ class Flow(BaseFlow):
                                    result_reason="账号未登陆")
                 return lock_result
             self.request_select_schedule(order, rebot)
-            shopcartct = self.request_query_shopcart(rebot)
+            try:
+                shopcartct = self.request_query_shopcart(rebot)
+            except:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="查询购物车1异常")
+                return lock_result
             if shopcartct != '0':
                 self.request_clear_shopcart(rebot)
             errmsg = self.request_add_shopcart(order, rebot)
@@ -51,7 +59,9 @@ class Flow(BaseFlow):
                                    source_account=rebot.telephone,
                                    result_reason="可购票数超过了")
                 return lock_result
-            if errmsg:
+            if "购物车中已经存在发车日期" in errmsg:
+                self.request_clear_shopcart(rebot)
+            elif errmsg:
                 lock_result.update(result_code=0,
                                    source_account=rebot.telephone,
                                    result_reason='add_shopcart1'+errmsg[0],
