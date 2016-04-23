@@ -335,8 +335,8 @@ class Flow(BaseFlow):
             mode = order.lock_info["mode"]
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CQKY]
             start_trans = {
-                "龙头寺汽车北站": "龙头寺汽车北站(重庆北站北广场汽车站)",
-                "龙头寺汽车南站": "龙头寺汽车南站(重庆北站南广场汽车站)",
+                u"龙头寺汽车北站": "龙头寺汽车北站(重庆北站北广场汽车站)",
+                u"龙头寺汽车南站": "龙头寺汽车南站(重庆北站南广场汽车站)",
             }
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
