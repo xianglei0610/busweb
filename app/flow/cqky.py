@@ -333,9 +333,13 @@ class Flow(BaseFlow):
             msg_list = []
             mode = order.lock_info["mode"]
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_CQKY]
+            start_trans = {
+                "龙头寺汽车北站": "龙头寺汽车北站(重庆北站北广场汽车站)",
+                "龙头寺汽车南站": "龙头寺汽车南站(重庆北站南广场汽车站)",
+            }
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "start": order.line.s_sta_name,
+                "start": start_trans.get(order.line.s_sta_name, order.line.s_sta_name),
                 "end": order.line.d_sta_name,
                 "raw_order": order.raw_order_no,
                 "person": "乘车人" if mode==2 else "取票人",
