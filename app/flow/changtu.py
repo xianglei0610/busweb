@@ -153,6 +153,13 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "lock_info": ret,
                     })
+                elif fail_code in ["000124", "000240"]:
+                    lock_result.update({
+                        "result_code": 0,
+                        "result_reason": "%s-%s" % (fail_code, msg),
+                        "source_account": rebot.telephone,
+                        "lock_info": ret,
+                    })
                 else:   # 未知错误
                     if "无效订单" in msg:
                         rebot.modify(cookies="{}", ip="")
