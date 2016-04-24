@@ -7,6 +7,7 @@ import urllib
 import datetime
 import time
 import re
+import traceback
 
 from app.constants import *
 from app import line_log
@@ -60,7 +61,11 @@ class Flow(BaseFlow):
                              headers={"User-Agent": rebot.user_agent},
                              cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
-            token = soup.select("#token")[0].get("value")
+            try:
+                token = soup.select("#token")[0].get("value")
+            except:
+                rebot.modify(ip="")
+                return
             passenger_info = {}
             for i, r in enumerate(order.riders):
                 passenger_info.update({
@@ -149,6 +154,13 @@ class Flow(BaseFlow):
                 if fail_code in ["13", "11", "12", "000010", "14"]:   # 要输字母验证码
                     lock_result.update({
                         "result_code": 2,
+                        "result_reason": "%s-%s" % (fail_code, msg),
+                        "source_account": rebot.telephone,
+                        "lock_info": ret,
+                    })
+                elif fail_code in ["000124", "000240"]:
+                    lock_result.update({
+                        "result_code": 0,
                         "result_reason": "%s-%s" % (fail_code, msg),
                         "source_account": rebot.telephone,
                         "lock_info": ret,
