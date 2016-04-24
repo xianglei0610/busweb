@@ -115,6 +115,9 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                     })
                     return lock_result
+                elif u"今天的订票次数(未支付)已满3次" in msg:
+                    rebot.modify(is_active=False)
+                    order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": msg,
