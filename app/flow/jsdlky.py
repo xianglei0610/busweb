@@ -196,7 +196,7 @@ class Flow(BaseFlow):
             return result_info
         ret = self.send_order_request(order)
         state = ret["state"]
-        if state == "支付超时作废":
+        if state == "已作废":
             result_info.update({
                 "result_code": 5,
                 "result_msg": state,
