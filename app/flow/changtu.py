@@ -317,7 +317,7 @@ class Flow(BaseFlow):
 
         is_login = is_login or rebot.test_login_status()
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order, valid_code=valid_code, login_checked=True)
                 order.reload()
                 fail_code = order.lock_info.get("failReason", "")
