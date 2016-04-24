@@ -60,7 +60,11 @@ class Flow(BaseFlow):
                              headers={"User-Agent": rebot.user_agent},
                              cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
-            token = soup.select("#token")[0].get("value")
+            try:
+                token = soup.select("#token")[0].get("value")
+            except:
+                rebot.modify(ip="")
+                return
             passenger_info = {}
             for i, r in enumerate(order.riders):
                 passenger_info.update({
