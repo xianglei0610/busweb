@@ -632,7 +632,7 @@ class Rebot(db.Document):
                 except:
                     tmp_order = None
                 if tmp_order:
-                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL]:
+                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL, STATUS_GIVE_BACK]:
                         rebot.remove_doing_order(tmp_order)
 
         if order.source_account:
@@ -664,7 +664,7 @@ class Rebot(db.Document):
                 except:
                     tmp_order = None
                 if tmp_order:
-                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL]:
+                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL, STATUS_GIVE_BACK]:
                         rebot.remove_doing_order(tmp_order)
 
         if order.source_account:
