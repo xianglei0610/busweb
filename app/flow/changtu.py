@@ -244,7 +244,7 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif state == "已退款":
+        elif state in ["已退款", "退款处理中"]:
             result_info.update({
                 "result_code": 3,
                 "result_msg": state,
