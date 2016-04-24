@@ -249,6 +249,11 @@ class Flow(BaseFlow):
                 "result_code": 3,
                 "result_msg": state,
             })
+        elif state == "订单处理中":
+            result_info.update({
+                "result_code": 4,
+                "result_msg": state,
+            })
         elif state=="订单成功":
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]
             msg_list = []
