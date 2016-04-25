@@ -23,6 +23,12 @@
 <div class="row">
   <div class="col-xs-4">
     <div class="dataTables_filter" id="example_filter">
+      <label>开车日期: <input type="text" id="in_drvdate" value="{{drv_date}}" onchange="search()"></label>
+    </div>
+  </div>
+
+  <div class="col-xs-4">
+    <div class="dataTables_filter" id="example_filter">
       <label>爬取来源: <input type="text" id="in_crawlsource" value="{{crawl_source}}" onchange="search()"></label>
     </div>
   </div>
@@ -69,6 +75,7 @@ function search(){
     "starting="+$("#in_starting").val(),
     "destination="+$("#in_dest").val(),
     "crawl_source="+$("#in_crawlsource").val(),
+    "drv_date="+$("#in_drvdate").val(),
   ]
   var url = "{{page.req_path2}}";
   window.location.href = url+params.join("&");
