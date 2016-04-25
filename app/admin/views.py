@@ -88,6 +88,7 @@ def line_list():
     starting_name = request.args.get("starting", "").strip()
     dest_name = request.args.get("destination", "").strip()
     crawl_source = request.args.get("crawl_source", "").strip()
+    drv_date = request.args.get("drv_date", "").strip()
     query = {"drv_datetime__gt": dte.now()}
     if lineid:
         query.update(line_id=lineid)
@@ -97,6 +98,8 @@ def line_list():
         query.update(d_city_name__startswith=dest_name)
     if crawl_source:
         query.update(crawl_source=crawl_source)
+    if drv_date:
+        query.update(drv_date=drv_date)
     queryset = Line.objects(**query).order_by("full_price")
 
     return render_template('admin/line_list.html',
