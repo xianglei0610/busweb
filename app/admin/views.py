@@ -108,6 +108,7 @@ def line_list():
                            destination=dest_name,
                            line_id=lineid,
                            crawl_source=crawl_source,
+                           drv_date=drv_date,
                            )
 
 
