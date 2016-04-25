@@ -267,8 +267,8 @@ class Line(db.Document):
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
         elif self.s_province == "北京":
+            s_sta_name = self.s_sta_name
             if self.crawl_source == SOURCE_CTRIP:
-                s_sta_name = self.s_sta_name
                 if s_sta_name != u'首都机场站':
                     s_sta_name = self.s_sta_name.decode("utf-8").strip().rstrip(u"客运站")
             qs = Line.objects.filter(
