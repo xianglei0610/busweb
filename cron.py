@@ -358,6 +358,9 @@ def main():
     #北京省网
     sched.add_cron_job(bus_crawl, hour=13, minute=30, args=['bjky'])
 
+    #唐山省网
+    sched.add_cron_job(bus_crawl, hour=3, minute=10, args=['hebky'], kwargs={"crawl_kwargs":{"city": "唐山"}})
+
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=15)
