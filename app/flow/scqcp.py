@@ -120,6 +120,7 @@ class Flow(BaseFlow):
             if not ret:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
+                rebot = order.change_lock_rebot()
                 lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
                                    result_reason="锁票时ip异常")
