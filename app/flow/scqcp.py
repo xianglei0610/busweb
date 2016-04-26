@@ -441,7 +441,7 @@ class Flow(BaseFlow):
                     is_login = True
                     rebot.modify(cookies=json.dumps(cookies))
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
             order.reload()
             if order.status == STATUS_WAITING_ISSUE:
