@@ -9,6 +9,7 @@ import cStringIO
 import random
 import urlparse
 import datetime
+import time
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -421,6 +422,7 @@ class Flow(BaseFlow):
                 sel = etree.HTML(r.content)
                 cookies = dict(r.cookies)
                 code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+                code_url = code_url.split('?')[0]+"?d=0.%s" % random.randint(1, 10000)
                 token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
                 r = rebot.http_get(code_url, headers=headers, cookies=cookies)
                 cookies.update(dict(r.cookies))
@@ -478,6 +480,7 @@ class Flow(BaseFlow):
             sel = etree.HTML(r.content)
             cookies = dict(r.cookies)
             code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+            code_url = code_url.split('?')[0]+"?d=0.%s"% random.randint(1, 10000)
             token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
             r = rebot.http_get(code_url, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
