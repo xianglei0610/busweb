@@ -7,46 +7,60 @@
     <link href="{{url_for('static', filename='admin-new/css/select.css')}}" rel="stylesheet" type="text/css" />
     <script language="JavaScript" src="{{url_for('static', filename='admin-new/js/jquery.js')}}"></script>
     <script type="text/javascript" src="{{url_for('static', filename='admin-new/js/select-ui.min.js')}}"></script>
-    <script type="text/javascript" src="{{url_for('static',filename='admin-new/js/datepicker/WdatePicker.js')}}"></script>
-    <script type="text/javascript" src="{{url_for('static',filename='admin-new/js/layer/layer.js')}}"></script>
+    <script language="javascript">
+        $(function (){
+			$(".single-select").uedSelect({width : 240});
+            $("#btn_submit").click(function(){
+                $(this).css("background-color", "#ccc");
+                $(this).attr("disabled", "disabled");
+                $('#pay-form').submit();
+            });
+        })
+    </script>
 </head>
 <body>
-    <div id="btsizebox">
-        <div class="regbox_bd">
-            <div class="signup_box">
-              <form method="get" action="{{url_for('admin.order_pay', order_no=order.order_no)}}" id="pay-form">
-                    <div class="pub-form reg-form">
-                        <div class="fm-li pbot-5">
-                            <span class="fm-label">
-                                <label for="txt_userName">我的账号： {{order.source_account}}</label>
-                            </span>
-                        </div>
 
-                        <div class="fm-li pbot-5">
-                            <span class="fm-label">
-                                <label for="txt_input6">验证码：</label></span>
-                            <div class="code_box">
-                                <input value="" name="valid_code" id="verifyCode" class="i-input w220" type="text">``
-                            </div>
-                        </div>
-
-                        <div class="fm-li pbot-5">
-                            <span class="fm-label"></span>
-                            <span class="code_img">
-                              <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}" alt="" class="regimg" id="imgVerifyCode"></span>
-                        </div>
-
-                        <div class="fm-li">
-                            <span class="fm-label">
-                                <label for="txt_input6"></label>
-                            </span>
-                            <input onclick="javascript:$('#pay-form').submit();" name="" value="提交订单" class="btn_login" id="btn_submit" type="button">
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <p class="signup_bot">正在尝试下单，来着12308汽车票</p>
+   
+   <div id="btsizebox" style=" display:">
+   
+   <div class="regbox_bd">
+     <div class="signup_hd"></div>
+     <div class="signup_box">
+         <form method="get" action="{{url_for('admin.order_pay', order_no=order.order_no)}}" id="pay-form">
+		<div class="pub-form reg-form">
+         <div class="fm-li pbot-5">
         </div>
-    </div>
+        <div class="fm-li pbot-5">
+          <span class="fm-label"><label for="txt_input6">验证码：</label></span>
+             <input value="" name="valid_code" id="verifyCode" class="i-input w220" type="text">
+        </div>
+        {%if token %}
+         <input value="{{token}}" name="token" hidden="hidden" type="text">
+         <input value="{{username}}" name="username" hidden="hidden" type="text">
+        {%endif%}
+        <div class="fm-li pbot-5">
+          <span class="fm-label"></span>
+          <span class="code_img">
+            {% if order.crawl_source == "scqcp" %}
+             <img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=alipay&bank=" alt="" class="regimg" id="imgVerifyCode"></span>
+            {%else%}
+            	{%if token %}
+             		<img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=alipay&bank=&token={{token}}&username={{username}}" alt="" class="regimg" id="imgVerifyCode"></span>
+             	{%else%}
+             		<img  src="{{url_for('admin.src_code_img', order_no=order.order_no)}}?channel=alipay&bank=" alt="" class="regimg" id="imgVerifyCode"></span>
+            	{%endif%}
+            {%endif%}
+
+          </span>
+        </div>
+        <div class="fm-li">
+          <span class="fm-label"><label for="txt_input6"></label></span>
+          <input name="" value="提交订单" class="btn_login" id="btn_submit" type="button" />
+          </div>
+        </div>
+        </form>
+        </div>
+  </div>
+   </div>
 </body>
 </html>
