@@ -63,6 +63,8 @@ class Flow(BaseFlow):
                 if "购物车中已经存在发车日期" in errmsg[0]:
                     self.request_clear_shopcart(rebot)
                 elif errmsg:
+                    if "余票数不足" in errmsg[0]:
+                        self.close_line(order.line, reason=errmsg)
                     lock_result.update(result_code=0,
                                        source_account=rebot.telephone,
                                        result_reason='add_shopcart1'+errmsg[0],
