@@ -68,7 +68,7 @@ class Flow(BaseFlow):
                     "expire_datetime": "",
                 })
             return lock_result
- 
+
     def do_lock_ticket_by_web(self, order):
         lock_result = {
             "lock_info": {},
@@ -169,7 +169,7 @@ class Flow(BaseFlow):
         sel = etree.HTML(r.content)
         token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')
         return token[0]
-    
+
     def send_lock_request(self, rebot, data):
         """
         单纯向源站发锁票请求
@@ -201,7 +201,7 @@ class Flow(BaseFlow):
             elif errorMsg:
                 res = {"status": 0, 'msg': errorMsg[0].decode('utf8')}
         return res
- 
+
     def do_refresh_issue(self, order):
         return self.do_refresh_issue_by_web(order)
         result_info = {
@@ -213,13 +213,13 @@ class Flow(BaseFlow):
         if not self.need_refresh_issue(order):
             result_info.update(result_msg="状态未变化")
             return result_info
- 
+
         rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
         tickets = self.send_order_request(order, rebot)
         if not tickets:
             result_info.update(result_code=2, result_msg="已过期")
             return result_info
- 
+
         status = tickets.values()[0]["order_status"]
         if status == "sell_succeeded":
             code_list, msg_list = [], []
@@ -310,16 +310,16 @@ class Flow(BaseFlow):
     def send_order_request(self, order, rebot):
         return self.send_order_request_by_web(order, rebot)
         data = {"open_id": rebot.open_id}
-        uri = "/api/v1/ticket_lines/query_order"
+        uri = "/api/v1/ticket_lines/query_order?_=%s" % time.time()
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         headers = {
             "User-Agent": rebot.user_agent,
             "Authorization": rebot.token,
             "Content-Type": "application/json; charset=UTF-8",
         }
-        r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
+        r = requests.post(url, data=urllib.urlencode(data), headers=headers)
         ret = r.json()
- 
+
         ticket_ids = order.lock_info["ticket_ids"]
         amount = len(ticket_ids)
         data = {}
@@ -329,7 +329,7 @@ class Flow(BaseFlow):
             if len(data) >= amount:
                 break
         return data
- 
+
     def mock_send_order_request(self, order, rebot):
         ret_info = {}
         for tid in order.lock_info["ticket_ids"]:
