@@ -2240,14 +2240,14 @@ class BjkyWebRebot(Rebot):
         all_accounts = SOURCE_INFO[SOURCE_BJKY]["accounts"].keys()
         used = Order.objects.filter(crawl_source=SOURCE_BJKY,
                                     status=STATUS_ISSUE_SUCC,
-                                    create_date_time__gt=start) \
+                                    lock_datetime__gt=start) \
                             .item_frequencies("source_account")
         accounts_list = filter(lambda k: used.get(k, 0) < 3, all_accounts)
         random.shuffle(accounts_list)
         rebot = None
         source_account = ''
         for account in accounts_list:
-            count = Order.objects.filter(create_date_time__gt=start, status=STATUS_ISSUE_SUCC,source_account = account).sum('ticket_amount')
+            count = Order.objects.filter(lock_datetime__gt=start, status=STATUS_ISSUE_SUCC,source_account = account).sum('ticket_amount')
             if count + int(order.ticket_amount) <= 3:
                 source_account = account
                 break
