@@ -331,7 +331,7 @@ class Flow(BaseFlow):
             })
         elif state == "已取消":
             result_info.update({
-                "result_code": 2,
+                "result_code": 5,
                 "result_msg": state,
             })
         elif state=="出票成功":
