@@ -89,7 +89,7 @@ class Flow(BaseFlow):
                         "result_reason": res["msg"],
                     })
                     return lock_result
-                for s in ["E015"]: #余票不足
+                for s in ["E015", "E001"]: #余票不足
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break
