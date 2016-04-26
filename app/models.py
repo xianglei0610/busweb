@@ -2232,28 +2232,28 @@ class BjkyWebRebot(Rebot):
         self.modify(ip=ipstr)
         return ipstr
 
-    @classmethod
-    def get_one(cls, order=None):
-        now = dte.now()
-        start = now.strftime("%Y-%m-%d")+' 00:00:00'
-        start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
-        all_accounts = SOURCE_INFO[SOURCE_BJKY]["accounts"].keys()
-        used = Order.objects.filter(crawl_source=SOURCE_BJKY,
-                                    status=STATUS_ISSUE_SUCC,
-                                    lock_datetime__gt=start) \
-                            .item_frequencies("source_account")
-        accounts_list = filter(lambda k: used.get(k, 0) < 3, all_accounts)
-        random.shuffle(accounts_list)
-        rebot = None
-        source_account = ''
-        for account in accounts_list:
-            count = Order.objects.filter(lock_datetime__gt=start, status=STATUS_ISSUE_SUCC,source_account = account).sum('ticket_amount')
-            if count + int(order.ticket_amount) <= 3:
-                source_account = account
-                break
-        if source_account:
-            rebot = cls.objects.get(telephone=source_account, is_active=True)
-        return rebot
+#     @classmethod
+#     def get_one(cls, order=None):
+#         now = dte.now()
+#         start = now.strftime("%Y-%m-%d")+' 00:00:00'
+#         start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
+#         all_accounts = SOURCE_INFO[SOURCE_BJKY]["accounts"].keys()
+#         used = Order.objects.filter(crawl_source=SOURCE_BJKY,
+#                                     status=STATUS_ISSUE_SUCC,
+#                                     lock_datetime__gt=start) \
+#                             .item_frequencies("source_account")
+#         accounts_list = filter(lambda k: used.get(k, 0) < 3, all_accounts)
+#         random.shuffle(accounts_list)
+#         rebot = None
+#         source_account = ''
+#         for account in accounts_list:
+#             count = Order.objects.filter(lock_datetime__gt=start, status=STATUS_ISSUE_SUCC,source_account = account).sum('ticket_amount')
+#             if count + int(order.ticket_amount) <= 3:
+#                 source_account = account
+#                 break
+#         if source_account:
+#             rebot = cls.objects.get(telephone=source_account, is_active=True)
+#         return rebot
 
     @classmethod
     def login_all(cls):
