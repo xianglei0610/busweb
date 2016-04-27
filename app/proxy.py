@@ -260,36 +260,17 @@ class CqkyProxyConsumer(ProxyConsumer):
 class ScqcpProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_SCQCP
 
-    @property
-    def current_proxy(self):
-        rds = get_redis("default")
-        ipstr = rds.get(RK_PROXY_CUR_SCQCP)
-        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        rds.set(RK_PROXY_CUR_SCQCP, ipstr)
-        return ipstr
-
-    def clear_current_proxy(self):
-        rds = get_redis("default")
-        return rds.set(RK_PROXY_CUR_SCQCP, "")
-
     def valid_proxy(self, ipstr):
-        ua = random.choice(MOBILE_USER_AGENG)
-        device = "android" if "android" in ua else "ios"
-
-        # 获取token
-        uri = "/api/v1/api_token/get_token_for_app?channel=dxcd&version_code=40&oper_system=%s" % device
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
-        headers = {
-            "User-Agent": ua,
-            "Authorization": '',
-            "Content-Type": "application/json; charset=UTF-8",
-        }
+        url = "http://scqcp.com/login/index.html"
         try:
-            r = requests.get(url, headers=headers, timeout=2, proxies={"http": "http://%s" % ipstr})
-            ret = r.json()
-            if ret["token"]:
+            ua = random.choice(BROWSER_USER_AGENT)
+            r = requests.get(url,
+                             headers={"User-Agent": ua},
+                             timeout=4,
+                             proxies={"http": "http://%s" % ipstr})
+            sel = etree.HTML(r.content)
+            token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+            if token:
                 return True
         except:
             return False
