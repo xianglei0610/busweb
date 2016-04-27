@@ -26,6 +26,24 @@ SOURCE_TZKY = "tzky"
 SOURCE_E8S = "e8s"
 SOURCE_HEBKY = 'hebky'
 
+PAY_TYPE_SOURCE = {
+    "zfb": [SOURCE_BUS100,
+            SOURCE_CTRIP,
+            SOURCE_CBD,
+            SOURCE_JSKY,
+            SOURCE_BABA,
+            SOURCE_TC,
+            SOURCE_KUAIBA,
+            SOURCE_CHANGTU,
+            SOURCE_JSDLKY,
+            SOURCE_ZJGSM,
+            SOURCE_WXSZ,
+            SOURCE_TZKY,
+            SOURCE_CQKY],
+    "zfb_wy": [SOURCE_SCQCP],
+    "yl": [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S],
+}
+
 SOURCE_INFO = {
     SOURCE_TZKY: {
         "name": "泰州客运",
@@ -1927,6 +1945,7 @@ RK_ISSUEING_COUNT = "issueing_count"
 RK_ORDER_LOCKING = "order:locking:%s"
 
 RK_WATING_LOCK_ORDERS = "wating_lock_orders"       # 等待下单的订单
+RK_WATING_LOCK_ORDERS2 = "wating_lock_orders2"       # 需要紧急处理的
 RK_DEALING_ORDERS = "dealing_orders:%s"            # 客服正在处理的订单
 RK_DEALED_NOT_ISSUED = "dealed_not_issued:%s"      # 客服处理了,但没获取到出票状态的订单
 
@@ -2010,4 +2029,11 @@ DG_BANK = {
     "chenzongshi": 'BOCB2C',
     "tangjiang": 'SPDB',
     "xiangleilei": 'SPDB',
+}
+ALIPAY_WY = {
+    u"中行": "BOCB2C",
+    u"招行": "CMB",
+    u"建行": "CCB",
+    u"平安": "SPABANK",
+    u"浦发": "SPDB",
 }
