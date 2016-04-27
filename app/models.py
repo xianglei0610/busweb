@@ -31,6 +31,7 @@ class AdminUser(db.Document):
     is_kefu = db.IntField()
     is_admin = db.IntField(default=0)
     yh_type = db.StringField(default="BOCB2C")
+    source_include = db.ListField(default=[])        # 该用户处理的源站
 
     meta = {
         "indexes": [
@@ -54,6 +55,12 @@ class AdminUser(db.Document):
 
     def get_id(self):
         return self.username
+
+    @property
+    def is_superuser(self):
+        if self.username in ["luojunping", "xiangleilei", "liuquan", "luocky"]:
+            return True
+        return False
 
 
 class PushUserList(db.Document):

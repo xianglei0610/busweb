@@ -11,34 +11,37 @@ def enqueue_wating_lock(order):
     """
     等待下单队列
     """
-    rds = get_redis("order")
-    rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
+    now = dte.now()
+    priority_flag = False   # 是否优先处理
+    line = order.line
+    if (line.drv_datetime-now).total_seconds() <= 2*60*60+20:       # 2个小时内的车优先处理
+        priority_flag = True
 
-
-def dequeue_wating_lock(username=""):
     rds = get_redis("order")
-    no = rds.rpop(RK_WATING_LOCK_ORDERS)
-    if not no:
-        return None
-    order = Order.objects.get(order_no=no)
-    if order.crawl_source in [SOURCE_SCQCP, SOURCE_CBD]:
-        today = dte.now().strftime("%Y-%m-%d")
-        orderct = Order.objects.filter(crawl_source=order.crawl_source,
-                                       create_date_time__gt=today,
-                                       kefu_username=username,
-                                       status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_ING]).count()
-        if orderct > 0:
-            rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
-            return None
-    if order.crawl_source == SOURCE_CBD and username not in ["luocky", "liuquan"]:
+    if priority_flag:
+        rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
+    else:
         rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
-        return None
-    return order
+
+
+def dequeue_wating_lock(user):
+    rds = get_redis("order")
+    no = rds.rpop(RK_WATING_LOCK_ORDERS2)
+    if not no:
+        no = rds.rpop(RK_WATING_LOCK_ORDERS)
+        if not no:
+            return None
+    order = Order.objects.get(order_no=no)
+    for ptype in user.source_include:
+        if order.crawl_source in PAY_TYPE_SOURCE[ptype]:
+            return order
+    enqueue_wating_lock(order)
+    return None
 
 
 def waiting_lock_size():
     rds = get_redis("order")
-    return rds.llen(RK_WATING_LOCK_ORDERS)
+    return rds.llen(RK_WATING_LOCK_ORDERS) + rds.llen(RK_WATING_LOCK_ORDERS2)
 
 
 def add_dealing(order, user):
@@ -93,17 +96,3 @@ def dealed_but_not_issued_orders(user):
     if s_issued:
         rds.srem(key, *list(s_issued))
     return qs
-
-
-def deal_kefu_order(order, user):
-    flag = True
-    if ASSIGN_FLAG:
-        for k, v in ASSIGN_ACCOUNT.items():
-            if order.crawl_source in v and user.username != k:
-                enqueue_wating_lock(order)
-                return False
-            if user.username == k and order.crawl_source not in v:
-                return False
-        return flag
-    else:
-        return flag
