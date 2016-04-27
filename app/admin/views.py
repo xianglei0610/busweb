@@ -193,6 +193,8 @@ def change_kefu(order_no):
         target = AdminUser.objects.get(username=kefu_name)
     except:
         return "不存在%s这个账号" % kefu_name
+    if not target.is_switch and target.username not in ["luojunping", "xiangleilei"]:
+        return "%s没在接单，禁止转单给他。" % target.username
     access_log.info("%s 将%s转给 %s", current_user.username, order_no, kefu_name)
     order.update(kefu_username=target.username)
     assign.add_dealing(order, target)
@@ -637,8 +639,10 @@ def wating_deal_order():
             o.complete_by(current_user)
 
         if current_user.is_switch:
-            order_ct = assign.dealing_size(current_user)
-            for i in range(max(0, KF_ORDER_CT-order_ct)):
+            for i in range(20):
+                order_ct = assign.dealing_size(current_user)
+                if order_ct >= KF_ORDER_CT:
+                    break
                 order = assign.dequeue_wating_lock(current_user)
                 if not order:
                     continue
