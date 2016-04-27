@@ -26,6 +26,24 @@ SOURCE_TZKY = "tzky"
 SOURCE_E8S = "e8s"
 SOURCE_HEBKY = 'hebky'
 
+PAY_TYPE_SOURCE = {
+    "zfb": [SOURCE_BUS100,
+            SOURCE_CTRIP,
+            SOURCE_CBD,
+            SOURCE_JSKY,
+            SOURCE_BABA,
+            SOURCE_TC,
+            SOURCE_KUAIBA,
+            SOURCE_CHANGTU,
+            SOURCE_JSDLKY,
+            SOURCE_ZJGSM,
+            SOURCE_WXSZ,
+            SOURCE_TZKY,
+            SOURCE_CQKY],
+    "zfb_wy": [SOURCE_SCQCP],
+    "yl": [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S],
+}
+
 SOURCE_INFO = {
     SOURCE_TZKY: {
         "name": "泰州客运",

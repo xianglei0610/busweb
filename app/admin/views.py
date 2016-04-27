@@ -434,10 +434,16 @@ def all_adminuser():
         "SPABANK": "平安银行",
         "SPDB": "浦发银行",
     }
+    pay_types = {
+        u"yl": "银联在线",
+        u"zfb": "支付宝",
+        u"zfb_wy": "支付宝网银",
+    }
     return render_template('admin-new/alluser.html',
                            condition=params,
                            yh_names=yh_dict,
                            stat={"total_user": qs.count()},
+                           pay_types=pay_types,
                            source_info=SOURCE_INFO,
                            page=parse_page_data(qs))
 
@@ -909,5 +915,10 @@ def user_config():
         }
         user = AdminUser.objects.get(username=request.args["username"])
         user.modify(yh_type=yh_dict[request.args["yhtype"]])
+        return "success"
+    elif action == "set_source":
+        lst = request.args.getlist("sourcetype")
+        user = AdminUser.objects.get(username=request.args["username"])
+        user.modify(source_include=lst)
         return "success"
     return "fail"

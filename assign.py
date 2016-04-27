@@ -32,10 +32,11 @@ def dequeue_wating_lock(user):
         if not no:
             return None
     order = Order.objects.get(order_no=no)
-    if user.source_include and order.crawl_source not in user.source_include:
-        enqueue_wating_lock(order)
-        return None
-    return order
+    for ptype in user.source_include:
+        if order.crawl_source in PAY_TYPE_SOURCE[ptype]:
+            return order
+    enqueue_wating_lock(order)
+    return None
 
 
 def waiting_lock_size():

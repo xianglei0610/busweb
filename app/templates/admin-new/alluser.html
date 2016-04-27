@@ -62,7 +62,11 @@
          <td><input type="checkbox"  name="test[]" class="chkID" value="6"/></td>
          <td>{{d.username}}</td>
          <td>{{yh_names[d.yh_type]}}</td>
-         <td>{{d.yh_type}}</td>
+         <td>
+             {%for t in d.source_include %}
+             [{{pay_types[t]}}]
+             {%endfor%}
+         </td>
          <td>{{d.create_datetime|format_datetime}}</td>
          <td><a href="javascript:set_wy('{{d.username}}')" class="tablelink">设置支付宝网银 </br> <a href="javascript:set_source('{{d.username}}')" class="tablelink">选择接单类型</a></td>
         </tr>
@@ -96,7 +100,7 @@
             <input type="hidden" name="action" value="set_yhtype" />
             <input id="id-username" type="hidden" name="username" value="" />
             &nbsp;&nbsp;
-            选择银行：<br /><br />
+            选择银行：<br /><br/>
             &nbsp;&nbsp;<label><input name="yhtype" type="radio" value="中行" />中国银行</label>
             <label><input name="yhtype" type="radio" value="建行" />建设银行</label>
             <label><input name="yhtype" type="radio" value="平安" />平安银行</label>
@@ -111,12 +115,10 @@
         <form action="#" method="post" id="id-source-form">
             <input type="hidden" name="action" value="set_source" />
             <input id="id-source-username" type="hidden" name="username" value="" />
-            &nbsp;&nbsp;
             选择要处理源站：<br /><br />
-            &nbsp;&nbsp;
-            {% for s in source_info %}
-                <label style="margin-left:20px"><input name="sourcetype" type="checkbox" value="{{s}}" />{{source_info[s]["name"]}}</label>
-            {%endfor%}
+            <label style="margin-left:20px"><input name="sourcetype" type="checkbox" value="zfb"/>支付宝支付</label>
+            <label style="margin-left:20px"><input name="sourcetype" type="checkbox" value="yl" />银联支付</label>
+            <label style="margin-left:20px"><input name="sourcetype" type="checkbox" value="zfb_wy" />支付宝网银</label>
             </br></br>
             <center><input type="button" value="确定修改" onclick="ajax_userconfig('id-source-form')" /></center>
         </form>
