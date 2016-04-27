@@ -58,7 +58,7 @@ def parse_page_data(qs):
         "items": qs[skip: skip+pageCount],
         "req_path": "%s?%s" % (request.path, query_string),
         "req_path2": "%s?" % request.path,
-        "old_range": old_range,     # 旧管理系统用到
+        "old_range": old_range,
     }
 
 
@@ -158,7 +158,7 @@ def src_code_input(order_no):
     order = Order.objects.get(order_no=order_no)
     token = request.args.get("token", "")
     username = request.args.get("username", '')
-    return render_template('admin-new/code_input2.html',
+    return render_template('admin-new/code_input.html',
                            order=order,
                            token=token,
                            username=username
@@ -422,6 +422,35 @@ def left_page():
     return render_template("admin-new/left.html")
 
 
+@admin.route('/alluser', methods=['GET','POST'])
+@login_required
+def all_adminuser():
+    params = request.values.to_dict()
+    tabtype = params.get("tabtype", "all")
+    query = {}
+    if tabtype == "online":
+        query["is_switch"] = 1
+    qs = AdminUser.objects.filter(**query)
+    yh_dict = {
+        "BOCB2C": "中国银行",
+        "CMB": "招商银行",
+        "CCB": "建设银行",
+        "SPABANK": "平安银行",
+        "SPDB": "浦发银行",
+    }
+    pay_types = {
+        u"yl": "银联在线",
+        u"zfb": "支付宝",
+        u"zfb_wy": "支付宝网银",
+    }
+    return render_template('admin-new/alluser.html',
+                           condition=params,
+                           yh_names=yh_dict,
+                           stat={"total_user": qs.count()},
+                           pay_types=pay_types,
+                           source_info=SOURCE_INFO,
+                           page=parse_page_data(qs))
+
 @admin.route('/allorder', methods=['GET','POST'])
 @login_required
 def all_order():
@@ -610,13 +639,10 @@ def wating_deal_order():
         if current_user.is_switch:
             order_ct = assign.dealing_size(current_user)
             for i in range(max(0, KF_ORDER_CT-order_ct)):
-                order = assign.dequeue_wating_lock(username=current_user.username)
+                order = assign.dequeue_wating_lock(current_user)
                 if not order:
                     continue
                 if order.kefu_username:
-                    continue
-                flag = assign.deal_kefu_order(order, current_user)
-                if not flag:
                     continue
                 order.update(kefu_username=current_user.username)
                 assign.add_dealing(order, current_user)
@@ -634,11 +660,12 @@ def wating_deal_order():
             else:
                 locking[o.order_no] = 0
         not_issued = assign.dealed_but_not_issued_orders(current_user)
-        today = dte.now().strftime("%Y-%m-%d")
-        dealed_count = Order.objects.filter(kefu_username=current_user.username,
-                                            create_date_time__gte=today,
-                                            status__in=[STATUS_ISSUE_ING, STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL]) \
-                            .item_frequencies("crawl_source")
+        # today = dte.now().strftime("%Y-%m-%d")
+        # dealed_count = Order.objects.filter(kefu_username=current_user.username,
+        #                                     create_date_time__gte=today,
+        #                                     status__in=[STATUS_ISSUE_ING, STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL]) \
+        #                     .item_frequencies("crawl_source")
+        dealed_count = {}
         return render_template("admin-new/waiting_deal_order.html",
                                page=parse_page_data(qs),
                                status_msg=STATUS_MSG,
@@ -878,4 +905,24 @@ def set_yh_type():
     return jsonify({"status": "success"})
 
 
-
+@admin.route('/users/config', methods=["GET", "POST"])
+@login_required
+def user_config():
+    action = request.args.get("action", '')
+    if action == "set_yhtype":
+        yh_dict = {
+            u"中行":"BOCB2C",
+            u"招行":"CMB",
+            u"建行":"CCB",
+            u"平安":"SPABANK",
+            u"浦发":"SPDB",
+        }
+        user = AdminUser.objects.get(username=request.args["username"])
+        user.modify(yh_type=yh_dict[request.args["yhtype"]])
+        return "success"
+    elif action == "set_source":
+        lst = request.args.getlist("sourcetype")
+        user = AdminUser.objects.get(username=request.args["username"])
+        user.modify(source_include=lst)
+        return "success"
+    return "fail"
