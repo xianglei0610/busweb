@@ -11,6 +11,8 @@ import traceback
 
 from app.constants import *
 from app import line_log
+from app.utils import md5
+from app.models import Line
 from app.flow.base import Flow as BaseFlow
 from app.models import ChangtuWebRebot
 from datetime import datetime as dte
@@ -371,6 +373,10 @@ class Flow(BaseFlow):
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line_new(self, line):
+        result_info = {
+            "result_msg": "",
+            "update_attrs": {},
+        }
         line_url = "http://www.changtu.com/chepiao/querySchList.htm"
         sta_city_id, s_pinyin = line.s_city_id.split("|")
         d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
@@ -386,6 +392,7 @@ class Flow(BaseFlow):
         )
         url = "%s?%s" % (line_url, urllib.urlencode(params))
         headers={"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        rebot = ChangtuWebRebot.get_one()
         try:
             r = rebot.http_get(url, headers=headers)
             res = r.json()
@@ -394,6 +401,8 @@ class Flow(BaseFlow):
             line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
 
+        now = dte.now()
+        update_attrs = {}
         for d in res["schList"]:
             if int(d["bookFlag"]) != 2:
                 continue
