@@ -370,7 +370,67 @@ class Flow(BaseFlow):
             session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
 
+    def do_refresh_line_new(self, line):
+        line_url = "http://www.changtu.com/chepiao/querySchList.htm"
+        sta_city_id, s_pinyin = line.s_city_id.split("|")
+        d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
+        params = dict(
+            endTypeId=d_end_type,
+            endId=end_city_id,
+            planDate=line.drv_date,
+            startCityUrl=s_pinyin,
+            endCityUrl=d_pinyin,
+            querySch=0,
+            startCityId=sta_city_id,
+            endCityId=end_city_id,
+        )
+        url = "%s?%s" % (line_url, urllib.urlencode(params))
+        headers={"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        try:
+            r = rebot.http_get(url, headers=headers)
+            res = r.json()
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": dte.now()})
+            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+            return result_info
+
+        for d in res["schList"]:
+            if int(d["bookFlag"]) != 2:
+                continue
+            drv_datetime = dte.strptime("%s %s" % (d["drvDate"], d["drvTime"]), "%Y-%m-%d %H:%M")
+            line_id_args = {
+                "s_city_name": line.s_city_name,
+                "d_city_name": line.d_city_name,
+                "s_sta_name": d["localCarrayStaName"],
+                "d_sta_name": d["stopName"],
+                "crawl_source": line.crawl_source,
+                "drv_datetime": drv_datetime,
+            }
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+            try:
+                obj = Line.objects.get(line_id=line_id)
+            except Line.DoesNotExist:
+                continue
+            extra_info = {"id": d["id"], "getModel": d["getModel"], "ticketTypeStr": d["ticketTypeStr"], "stationMapId": d["stationMapId"]}
+            info = {
+                "full_price": float(d["fullPrice"]),
+                "fee": 0,
+                "left_tickets": int(d["seatAmount"]),
+                "refresh_datetime": now,
+                "extra_info": extra_info,
+            }
+            if line_id == line.line_id:
+                update_attrs = info
+            else:
+                obj.update(**info)
+        if not update_attrs:
+            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        else:
+            result_info.update(result_msg="ok", update_attrs=update_attrs)
+        return result_info
+
     def do_refresh_line(self, line):
+        return self.do_refresh_line_new(line)
         result_info = {
             "result_msg": "",
             "update_attrs": {},
