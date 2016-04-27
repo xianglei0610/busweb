@@ -417,7 +417,7 @@ class Flow(BaseFlow):
                 cookies = data["cookies"]
                 token = data["token"]
             else:
-                login_form_url = "http://scqcp.com/login/index.html"
+                login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
                 r = rebot.http_get(login_form_url, headers=headers)
                 sel = etree.HTML(r.content)
                 cookies = dict(r.cookies)
@@ -475,7 +475,7 @@ class Flow(BaseFlow):
                 return {"flag": "html", "content": r.content}
         else:
             cookies = json.loads(rebot.cookies)
-            login_form_url = "http://scqcp.com/login/index.html"
+            login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
             r = rebot.http_get(login_form_url, headers=headers)
             sel = etree.HTML(r.content)
             cookies = dict(r.cookies)
