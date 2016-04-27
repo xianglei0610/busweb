@@ -178,8 +178,14 @@ def query_line_detail():
         line = Line.objects.get(line_id=post["line_id"])
     except Line.DoesNotExist:
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
+
+    open_city = line.get_open_city()
+    if open_city and not open_city.is_active:
+        return jsonify({"code": RET_CITY_NOT_OPEN,
+                        "message": "%s is not open" % open_city.city_name,
+                        "data": ""})
+
     flow, new_line = get_compatible_flow(line)
-    print flow, new_line
     if not flow:
         data = line.get_json()
         data["left_tickets"] = 0
