@@ -90,7 +90,7 @@ class Flow(BaseFlow):
                     "name": order.contact_info["name"],
                     "IDCard": order.contact_info["id_number"],
                     "IDType": 1,
-                    "mobileNo": rebot.telephone
+                    "mobileNo": order.contact_info["telephone"],
                 },
                 "passengersInfo": riders,
                 "totalAmount": order.order_price,
@@ -193,7 +193,7 @@ class Flow(BaseFlow):
                 ],
                 "ContactInfo": {
                     "Name": order.contact_info["name"],
-                    "MobileNo": rebot.telephone,
+                    "MobileNo": order.contact_info["telephone"],
                     "IDType": 1,
                     "IDCard": order.contact_info["id_number"],
                 },
