@@ -218,9 +218,9 @@ class Flow(BaseFlow):
 
         rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
         tickets = self.send_order_request(order, rebot)
-        if not tickets:
-            result_info.update(result_code=2, result_msg="已过期")
-            return result_info
+#         if not tickets:
+#             result_info.update(result_code=2, result_msg="已过期")
+#             return result_info
 
         status = tickets.values()[0]["order_status"]
         if status == "sell_succeeded":
