@@ -218,9 +218,9 @@ class Flow(BaseFlow):
 
         rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
         tickets = self.send_order_request(order, rebot)
-        if not tickets:
-            result_info.update(result_code=2, result_msg="已过期")
-            return result_info
+#         if not tickets:
+#             result_info.update(result_code=2, result_msg="已过期")
+#             return result_info
 
         status = tickets.values()[0]["order_status"]
         if status == "sell_succeeded":
@@ -266,9 +266,9 @@ class Flow(BaseFlow):
         }
         rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
         tickets = self.send_order_request(order, rebot)
-        if not tickets:
-            result_info.update(result_code=2, result_msg="已过期")
-            return result_info
+#         if not tickets:
+#             result_info.update(result_code=2, result_msg="已过期")
+#             return result_info
         if not order.raw_order_no:
             web_order_list = []
             for i in tickets:
@@ -417,7 +417,7 @@ class Flow(BaseFlow):
                 cookies = data["cookies"]
                 token = data["token"]
             else:
-                login_form_url = "http://scqcp.com/login/index.html"
+                login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
                 r = rebot.http_get(login_form_url, headers=headers)
                 sel = etree.HTML(r.content)
                 cookies = dict(r.cookies)
@@ -475,7 +475,7 @@ class Flow(BaseFlow):
                 return {"flag": "html", "content": r.content}
         else:
             cookies = json.loads(rebot.cookies)
-            login_form_url = "http://scqcp.com/login/index.html"
+            login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
             r = rebot.http_get(login_form_url, headers=headers)
             sel = etree.HTML(r.content)
             cookies = dict(r.cookies)

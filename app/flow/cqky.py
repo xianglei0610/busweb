@@ -77,6 +77,8 @@ class Flow(BaseFlow):
                     u"班次状态为停班",
                     u"无可售席位资源",
                     u"可售数不足",
+                    u"班次状态为保班",
+                    u"无可售席位",
                 ]
                 for s in lst:
                     if s in msg:
