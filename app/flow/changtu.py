@@ -11,8 +11,9 @@ import traceback
 
 from app.constants import *
 from app import line_log
+from app.utils import md5
 from app.flow.base import Flow as BaseFlow
-from app.models import ChangtuWebRebot
+from app.models import ChangtuWebRebot, Line
 from datetime import datetime as dte
 from bs4 import BeautifulSoup
 
@@ -376,6 +377,7 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
+        now = dte.now()
         line_url = "http://www.changtu.com/chepiao/querySchList.htm"
         sta_city_id, s_pinyin = line.s_city_id.split("|")
         d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
