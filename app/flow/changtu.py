@@ -371,6 +371,10 @@ class Flow(BaseFlow):
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line_new(self, line):
+        result_info = {
+            "result_msg": "",
+            "update_attrs": {},
+        }
         line_url = "http://www.changtu.com/chepiao/querySchList.htm"
         sta_city_id, s_pinyin = line.s_city_id.split("|")
         d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
@@ -394,6 +398,7 @@ class Flow(BaseFlow):
             line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
 
+        update_attrs = {}
         for d in res["schList"]:
             if int(d["bookFlag"]) != 2:
                 continue
