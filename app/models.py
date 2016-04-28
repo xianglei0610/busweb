@@ -613,11 +613,17 @@ class Rebot(db.Document):
     @classmethod
     def get_one(cls, order=None):
         sta_bind = SOURCE_INFO[cls.crawl_source].get("station_bind", {})
+        city_bind = SOURCE_INFO[cls.crawl_source].get("city_bind", {})
         query = {}
         if order and sta_bind:
             s_sta_name = order.starting_name.split(";")[1]
             if s_sta_name in sta_bind:
                 query.update(telephone__in=sta_bind[s_sta_name])
+        elif order and city_bind:
+            s_city_name = order.starting_name.split(";")[0]
+            if s_city_name in city_bind:
+                query.update(telephone__in=city_bind[s_city_name])
+
         qs = cls.objects.filter(is_active=True, is_locked=False)
         if not qs:
             return

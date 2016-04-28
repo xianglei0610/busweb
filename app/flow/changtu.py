@@ -393,6 +393,7 @@ class Flow(BaseFlow):
         )
         url = "%s?%s" % (line_url, urllib.urlencode(params))
         headers={"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        rebot = ChangtuWebRebot.get_one()
         try:
             rebot = ChangtuWebRebot.get_one()
             r = rebot.http_get(url, headers=headers)
