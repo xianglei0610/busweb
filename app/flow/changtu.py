@@ -25,8 +25,8 @@ class Flow(BaseFlow):
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
-            "result_code": 0,
-            "result_reason": "",
+            "result_code": 2,
+            "result_reason": "null msg",
             "pay_url": "",
             "raw_order_no": "",
             "expire_datetime": "",
@@ -64,8 +64,9 @@ class Flow(BaseFlow):
             try:
                 token = soup.select("#token")[0].get("value")
             except:
-                rebot.modify(ip="")
-                return
+                if r.status_code == 200 and "畅途网" in r.content:
+                    lock_result.update({"result_code": 0, "result_reason": "没拿到到token"})
+                return lock_result
             passenger_info = {}
             for i, r in enumerate(order.riders):
                 passenger_info.update({
