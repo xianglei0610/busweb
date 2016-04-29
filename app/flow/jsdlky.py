@@ -107,7 +107,7 @@ class Flow(BaseFlow):
                 })
             else:
                 msg = ret["msg"]
-                if "该站限售人数不够" in msg or "班次余票数不够" in msg:
+                if "该站限售人数不够" in msg or "班次余票数不够" in msg or "申请座位失败" in msg:
                     self.close_line(line, reason=msg)
                     lock_result.update({
                         "result_code": 0,
@@ -242,7 +242,7 @@ class Flow(BaseFlow):
                 is_login = 1
 
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
                 detail = self.send_order_request(order)
