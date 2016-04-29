@@ -88,7 +88,15 @@ class Flow(BaseFlow):
                                    source_account=rebot.telephone,
                                    result_reason="账号未登陆")
                 return lock_result
-            token = self.request_query_token_by_web(rebot, order)
+            try:
+                token = self.request_query_token_by_web(rebot, order)
+            except:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="获取token失败")
+                return lock_result
             data = {
               "sdfgfgfg": "on",
               "contact_name": order.contact_info['name'],
@@ -143,7 +151,7 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = ret['msg']
-                for s in ["余票不足","只能预售2小时之后的票","余位不够"]:
+                for s in ["余票不足","只能预售2小时之后的票","余位不够","车票已售完"]:
                     if s in errmsg:
                         self.close_line(order.line, reason=errmsg)
                         break
