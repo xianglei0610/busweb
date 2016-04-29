@@ -402,9 +402,12 @@ class Order(db.Document):
 
         if self.status not in [STATUS_WAITING_LOCK, STATUS_LOCK_RETRY]:
             return rebot
+        old = self.source_account
         self.modify(source_account="")
         with rebot_cls.get_and_lock(self) as newrebot:
             self.modify(source_account=newrebot.telephone)
+            new = self.source_account
+            rebot_log.info("[change_lock_rebot] succ. order: %s %s => %s", self.order_no, old, new)
             return newrebot
 
     @property
