@@ -113,7 +113,7 @@ def async_lock_ticket(self, order_no, retry_seq=1):
 
 
 @celery.task(bind=True, ignore_result=True)
-def issued_callback(order_no, retry_seq=1):
+def issued_callback(self, order_no, retry_seq=1):
     """
     出票回调
 
