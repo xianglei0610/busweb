@@ -16,6 +16,7 @@ def enqueue_wating_lock(order, is_first=True):
     line = order.line
     if (line.drv_datetime-now).total_seconds() <= 2*60*60+20:       # 2个小时内的车优先处理
         priority_flag = True
+    is_first = True     # tmp fix
 
     rds = get_redis("order")
     if priority_flag:
