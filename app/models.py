@@ -402,9 +402,12 @@ class Order(db.Document):
 
         if self.status not in [STATUS_WAITING_LOCK, STATUS_LOCK_RETRY]:
             return rebot
+        old = self.source_account
         self.modify(source_account="")
         with rebot_cls.get_and_lock(self) as newrebot:
             self.modify(source_account=newrebot.telephone)
+            new = self.source_account
+            rebot_log.info("[change_lock_rebot] succ. order: %s %s => %s", self.order_no, old, new)
             return newrebot
 
     @property
@@ -613,11 +616,17 @@ class Rebot(db.Document):
     @classmethod
     def get_one(cls, order=None):
         sta_bind = SOURCE_INFO[cls.crawl_source].get("station_bind", {})
+        city_bind = SOURCE_INFO[cls.crawl_source].get("city_bind", {})
         query = {}
         if order and sta_bind:
             s_sta_name = order.starting_name.split(";")[1]
             if s_sta_name in sta_bind:
                 query.update(telephone__in=sta_bind[s_sta_name])
+        elif order and city_bind:
+            s_city_name = order.starting_name.split(";")[0]
+            if s_city_name in city_bind:
+                query.update(telephone__in=city_bind[s_city_name])
+
         qs = cls.objects.filter(is_active=True, is_locked=False)
         if not qs:
             return
