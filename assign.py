@@ -7,7 +7,7 @@ from app.models import Order
 from datetime import datetime as dte
 
 
-def enqueue_wating_lock(order):
+def enqueue_wating_lock(order, is_first=True):
     """
     等待下单队列
     """
@@ -19,9 +19,15 @@ def enqueue_wating_lock(order):
 
     rds = get_redis("order")
     if priority_flag:
-        rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
+        if is_first:    # 第一次加入，放到最后
+            rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
+        else:       # 重复加入，放入到10号位置
+            rds.lset(RK_WATING_LOCK_ORDERS2, -10, order.order_no)
     else:
-        rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
+        if is_first:    # 第一次加入，放到最后
+            rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
+        else:       # 重复加入，放入到10号位置
+            rds.lset(RK_WATING_LOCK_ORDERS, -10, order.order_no)
 
 
 def dequeue_wating_lock(user):
@@ -35,7 +41,7 @@ def dequeue_wating_lock(user):
     for ptype in user.source_include:
         if order.crawl_source in PAY_TYPE_SOURCE[ptype]:
             return order
-    enqueue_wating_lock(order)
+    enqueue_wating_lock(order, is_first=False)
     return None
 
 
