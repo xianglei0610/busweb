@@ -2283,7 +2283,7 @@ class BjkyWebRebot(Rebot):
                               }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt >= 3:
+            if cnt + int(order.ticket_amount) > 3:
                 droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)

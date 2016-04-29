@@ -456,11 +456,12 @@ class Flow(BaseFlow):
                 r = rebot.http_get(order.pay_url, headers=headers, cookies=json.loads(rebot.cookies),timeout=30)
                 r_url = urllib2.urlparse.urlparse(r.url)
                 if r_url.path in ["/error.html", "/error.htm"]:
-                    order.modify(status=STATUS_ISSUE_FAIL)
-                    order.on_issue_fail(reason="get error page when pay")
-                    order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
-                    issued_callback.delay(order.order_no)
-                    return {"flag": "html", "content": r.content}
+                    self.lock_ticket_retry(order)
+#                     order.modify(status=STATUS_ISSUE_FAIL)
+#                     order.on_issue_fail(reason="get error page when pay")
+#                     order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
+#                     issued_callback.delay(order.order_no)
+                    return {"flag": "error", "content": ''}
                 sel = etree.HTML(r.content)
                 plateform = pay_channel
                 data = dict(
