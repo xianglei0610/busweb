@@ -1544,13 +1544,6 @@ SOURCE_INFO = {
             "ygggh699": ("ygggh699", ""),
             "tytf46797": ("tytf46797", ""),
             "yygfhh467": ("yygfhh467", ""),
-            
-            "yugduj577": ("yugduj577", ""),
-            "piitrr677": ("piitrr677", ""),
-            "yughj676": ("yughj676", ""),
-            "tyhfgii4674": ("tyhfgii4674", ""),
-            "yuts34": ("yuts34", ""),
-            "efd222w": ("efd222w", ""),
             "yugduj577": ("yugduj577", ""),
             "piitrr677": ("piitrr677", ""),
             "yughj676": ("yughj676", ""),
