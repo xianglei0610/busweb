@@ -412,10 +412,8 @@ class Order(db.Document):
 
     @property
     def source_account_pass(self):
-        rebot = self.get_lock_rebot()
-        if rebot:
-            return rebot.password
-        return ""
+        accounts = SOURCE_INFO[self.crawl_source]["accounts"]
+        return accounts.get(self.source_account, [""])[0]
 
     def get_lock_rebot(self):
         """
