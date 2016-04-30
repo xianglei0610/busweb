@@ -38,14 +38,14 @@ $(function(){
       <li><cite></cite><a href="{{url_for('admin.all_order')}}" target="rightFrame">所有订单</a><i></i></li>
      </ul>    
   </dd>
+ {%if current_user.is_superuser %}
   <dd>
     <div class="title"><span><img src="{{url_for('static', filename='admin-new/images/leftico01.png')}}" /></span>账号管理</div>
     <ul class="menuson">
-      {%if current_user.is_superuser %}
       <li class="active"><cite></cite><a href="{{url_for('admin.all_adminuser')}}" target="rightFrame">系统用户</a><i></i></li>
-      {% endif %}
      </ul> 
   </dd>
+  {% endif %}
 </dl>  
 </body>
 </html>
