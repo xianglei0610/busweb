@@ -37,6 +37,7 @@ def get_compatible_flow(line):
             if src in weights:
                 weights[src] = w
 
+    from app.models import Line
     # 同程不卖当天票， 转交给江苏客运
     if line.crawl_source== "tongcheng" and line.drv_date == dte.now().strftime("%Y-%m-%d"):
         jsky_lineid = line.compatible_lines.get("jsky", "")
@@ -44,7 +45,6 @@ def get_compatible_flow(line):
             return get_flow("jsky"), Line.objects.get(line_id=jsky_lineid)
 
     choose = weight_choice(weights)
-    from app.models import Line
     if not choose:
         return None, None
     new_line = Line.objects.get(line_id=line.compatible_lines[choose])
