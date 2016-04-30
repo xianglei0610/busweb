@@ -36,12 +36,15 @@ def get_compatible_flow(line):
         for src, w in weight_config.items():
             if src in weights:
                 weights[src] = w
-    # 江苏省网不卖当天的票
-    #if line.s_province == "江苏" and line.drv_date == dte.now().strftime("%Y-%m-%d"):
-    #    weights.update(jsky=0)
+
+    from app.models import Line
+    # 同程不卖当天票， 转交给江苏客运
+    if line.crawl_source== "tongcheng" and line.drv_date == dte.now().strftime("%Y-%m-%d"):
+        jsky_lineid = line.compatible_lines.get("jsky", "")
+        if jsky_lineid:
+            return get_flow("jsky"), Line.objects.get(line_id=jsky_lineid)
 
     choose = weight_choice(weights)
-    from app.models import Line
     if not choose:
         return None, None
     new_line = Line.objects.get(line_id=line.compatible_lines[choose])
