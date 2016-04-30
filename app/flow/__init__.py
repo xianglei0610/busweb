@@ -41,7 +41,7 @@ def get_compatible_flow(line):
     # 同程不卖当天票， 转交给江苏客运
     if line.crawl_source== "tongcheng" and line.drv_date == dte.now().strftime("%Y-%m-%d"):
         jsky_lineid = line.compatible_lines.get("jsky", "")
-        if jsky_lineid:
+        if False:
             return get_flow("jsky"), Line.objects.get(line_id=jsky_lineid)
 
     choose = weight_choice(weights)
