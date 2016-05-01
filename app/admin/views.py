@@ -711,6 +711,8 @@ def kefu_complete():
 def kefu_on_off():
     is_switch = int(request.form.get('is_switch', 0))
     current_user.modify(is_switch=is_switch)
+    trans = {0: u"关闭", 1: u"开启"}
+    access_log.info("[kefu_on_off] %s %s接单", current_user.username, trans[is_switch])
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
 
 
