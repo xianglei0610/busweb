@@ -89,8 +89,8 @@ class Flow(BaseFlow):
                 })
             else:
                 lock_result.update({
-                    "result_code": 2,
-                    "result_reason": u"不明原因",
+                    "result_code": 0,
+                    "result_reason": u"不明原因:"+r.url,
                     "source_account": rebot.telephone,
                 })
             return lock_result
