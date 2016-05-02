@@ -16,19 +16,24 @@ def enqueue_wating_lock(order, is_first=True):
     line = order.line
     if (line.drv_datetime-now).total_seconds() <= 2*60*60+20:       # 2个小时内的车优先处理
         priority_flag = True
-    is_first = True     # tmp fix
 
     rds = get_redis("order")
     if priority_flag:
         if is_first:    # 第一次加入，放到最后
             rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
-        else:       # 重复加入，放入到10号位置
-            rds.lset(RK_WATING_LOCK_ORDERS2, -10, order.order_no)
+        else:       # 重复加入，放入到-4号位置
+            pivot = rds.lindex(RK_WATING_LOCK_ORDERS2, -4)
+            l = rds.linsert(RK_WATING_LOCK_ORDERS2, "before", pivot, order.order_no)
+            if int(l) == -1:
+                rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
     else:
         if is_first:    # 第一次加入，放到最后
             rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
         else:       # 重复加入，放入到10号位置
-            rds.lset(RK_WATING_LOCK_ORDERS, -10, order.order_no)
+            pivot = rds.lindex(RK_WATING_LOCK_ORDERS, -6)
+            l = rds.linsert(RK_WATING_LOCK_ORDERS, "before", pivot, order.order_no)
+            if int(l) == -1:
+                rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
 
 
 def dequeue_wating_lock(user):
