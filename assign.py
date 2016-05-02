@@ -18,6 +18,7 @@ def enqueue_wating_lock(order, is_first=True):
         priority_flag = True
 
     rds = get_redis("order")
+    is_first = True
     if priority_flag:
         if is_first:    # 第一次加入，放到最后
             rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
