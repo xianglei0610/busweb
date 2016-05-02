@@ -877,7 +877,10 @@ class WxszRebot(Rebot):
             "Content-Type": "application/json;charset=UTF-8",
         }
         r = self.http_post(user_url, headers=headers, data=json.dumps(params))
-        res = r.json()
+        try:
+            res = r.json()
+        except:
+            return 0
         if res["errorCode"] != 0:
             return 0
         if res["data"]["mobile"] != self.telephone:
