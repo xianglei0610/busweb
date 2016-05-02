@@ -22,7 +22,7 @@ def enqueue_wating_lock(order, score=0, is_first=True):
         else:
             rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, int(time.time()))
     else:
-        rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, min(int(time.time(), score+1)))
+        rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, min(int(time.time()), score+1))
 
 
 def dequeue_wating_lock(user):
