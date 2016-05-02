@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
+import time
 
 from app.constants import *
 from app.utils import get_redis
@@ -7,48 +8,35 @@ from app.models import Order
 from datetime import datetime as dte
 
 
-def enqueue_wating_lock(order, is_first=True):
+def enqueue_wating_lock(order, score=0, is_first=True):
     """
     等待下单队列
     """
     now = dte.now()
-    priority_flag = False   # 是否优先处理
     line = order.line
-    if (line.drv_datetime-now).total_seconds() <= 2*60*60+20:       # 2个小时内的车优先处理
-        priority_flag = True
-
     rds = get_redis("order")
-    is_first = True
-    if priority_flag:
-        if is_first:    # 第一次加入，放到最后
-            rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
-        else:       # 重复加入，放入到-4号位置
-            pivot = rds.lindex(RK_WATING_LOCK_ORDERS2, -4)
-            l = rds.linsert(RK_WATING_LOCK_ORDERS2, "before", pivot, order.order_no)
-            if int(l) == -1:
-                rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
+
+    if is_first:
+        if (line.drv_datetime-now).total_seconds() <= 3*60*60+20:       # 3个小时内的车优先处理
+            rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, 0)
+        else:
+            rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, int(time.time()))
     else:
-        if is_first:    # 第一次加入，放到最后
-            rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
-        else:       # 重复加入，放入到10号位置
-            pivot = rds.lindex(RK_WATING_LOCK_ORDERS, -6)
-            l = rds.linsert(RK_WATING_LOCK_ORDERS, "before", pivot, order.order_no)
-            if int(l) == -1:
-                rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
+        rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, score+10)
 
 
 def dequeue_wating_lock(user):
     rds = get_redis("order")
-    no = rds.rpop(RK_WATING_LOCK_ORDERS2)
-    if not no:
-        no = rds.rpop(RK_WATING_LOCK_ORDERS)
-        if not no:
-            return None
+    lst = rds.zrange(RK_WATING_LOCK_ORDERS, 0, 0, withscores=True)
+    if not lst:
+        return None
+    no, score = lst[0]
+    rds.zrem(RK_WATING_LOCK_ORDERS, no)
     order = Order.objects.get(order_no=no)
     for ptype in user.source_include:
         if order.crawl_source in PAY_TYPE_SOURCE[ptype]:
             return order
-    enqueue_wating_lock(order, is_first=False)
+    enqueue_wating_lock(order, is_first=False, score=score)
     return None
 
 
