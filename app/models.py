@@ -2604,6 +2604,10 @@ class HebkyWebRebot(Rebot):
     }
     crawl_source = SOURCE_HEBKY
 
+    @property
+    def proxy_ip(self):
+        return ''
+
     def test_login_status(self):
         try:
             user_url = "http://www.hb96505.com//com/yxd/pris/grzx/grzl/detailPersonalData.action"
