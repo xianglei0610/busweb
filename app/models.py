@@ -32,6 +32,7 @@ class AdminUser(db.Document):
     is_admin = db.IntField(default=0)
     yh_type = db.StringField(default="BOCB2C")
     source_include = db.ListField(default=[])        # 该用户处理的源站
+    is_close = db.BooleanField(default=False)
 
     meta = {
         "indexes": [
@@ -367,6 +368,8 @@ class Order(db.Document):
     kefu_username = db.StringField()
     kefu_order_status = db.IntField()   # 1表示已处理
     kefu_updatetime = db.DateTimeField()
+    
+    kefu_assigntime = db.DateTimeField()
 
 
     meta = {
@@ -1180,7 +1183,7 @@ class ScqcpWebRebot(Rebot):
                               }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt >= 10:
+            if cnt >= 20:
                 droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)
@@ -2499,6 +2502,7 @@ class E8sAppRebot(Rebot):
 class HebkyAppRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    ip = db.StringField(default="")
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -2506,6 +2510,14 @@ class HebkyAppRebot(Rebot):
     }
     crawl_source = SOURCE_HEBKY
     is_for_lock = True
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[hebky] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[hebky] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
 
     @property
     def proxy_ip(self):
@@ -2528,28 +2540,23 @@ class HebkyAppRebot(Rebot):
 
     @classmethod
     def get_one(cls, order=None):
-        now = dte.now()
-        start = now.strftime("%Y-%m-%d")+' 00:00:00'
-        start = dte.strptime(start, '%Y-%m-%d %H:%M:%S')
-        all_accounts = SOURCE_INFO[SOURCE_HEBKY]["accounts"].keys()
-        used = Order.objects.filter(crawl_source=SOURCE_HEBKY,
-                                    status=STATUS_ISSUE_SUCC,
-                                    create_date_time__gt=start) \
-                            .item_frequencies("source_account")
-        accounts_list = filter(lambda k: used.get(k, 0)<10, all_accounts)
-        for i in range(100):
-            choose = random.choice(accounts_list)
-            rebot = cls.objects.get(telephone=choose)
-            if rebot.is_active:
-                return rebot
-
-    def on_add_doing_order(self, order):
-        rebot_log.info("[hebky] %s locked", self.telephone)
-        self.modify(is_locked=True)
-
-    def on_remove_doing_order(self, order):
-        rebot_log.info("[hebky] %s unlocked", self.telephone)
-        self.modify(is_locked=False)
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source=SOURCE_HEBKY,
+                                      lock_datetime__gt=today) \
+                              .aggregate({
+                                  "$group":{
+                                      "_id": {"phone": "$source_account"},
+                                      "count": {"$sum": "$ticket_amount"}}
+                              }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt + int(order.ticket_amount) > 10:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts-droped))
+        return cls.objects.get(telephone=tele)
 
     def login(self):
         ua = random.choice(MOBILE_USER_AGENG)
@@ -2581,7 +2588,7 @@ class HebkyAppRebot(Rebot):
             headers = {"User-Agent": self.user_agent}
             cookies = json.loads(self.cookies)
             data = {"memberId": "2"}
-            res = requests.post(user_url, data=data, headers=headers, cookies=cookies)
+            res = self.http_post(user_url, data=data, headers=headers, cookies=cookies)
             res = res.json()
             if res.get('akfAjaxResult', '') == '0' and res['values']['member']:
                 userName = res['values']['member']['userName']

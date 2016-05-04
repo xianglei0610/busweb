@@ -52,6 +52,7 @@
         <th>账号</th>
         <th>支付宝网银</th>
         <th>接单类型</th>
+        <th>是否关闭</th>
         <th>创建时间<i class="sort"><img src="{{url_for('static', filename='admin-new/images/px.gif')}}" /></i></th>
         <th>操作</th>
         </tr>
@@ -67,8 +68,15 @@
              [{{pay_types[t]}}]
              {%endfor%}
          </td>
+         <td>{%if d.is_close %} 是 {%else%} 否 {%endif%}</td>
          <td>{{d.create_datetime|format_datetime}}</td>
-         <td><a href="javascript:set_wy('{{d.username}}')" class="tablelink">设置支付宝网银 </br> <a href="javascript:set_source('{{d.username}}')" class="tablelink">选择接单类型</a></td>
+         <td><a href="javascript:set_wy('{{d.username}}')" class="tablelink">设置支付宝网银 </br> 
+     		 <a href="javascript:set_source('{{d.username}}')" class="tablelink">选择接单类型</a> 
+     		 {%if d.is_close %}
+     		 	&nbsp;&nbsp;&nbsp;&nbsp;
+     		 	<a href="javascript:open_account('{{d.username}}')" class="tablelink">解封账号</a>
+     		 {% endif %}	
+     		 </td>
         </tr>
         {% endfor %}
         </tbody>
@@ -177,5 +185,26 @@ function ajax_userconfig(formid){
         }
     });
 }
+
+
+function open_account(username){
+		$.ajax({
+			url : '/open_account',
+			type : 'post',
+			data : {
+				username : username
+			},
+			success : function(data){
+				if(data.status==0){
+	              alert(data.msg);
+	              window.location.reload();
+			    }else{
+         			alert(data.msg);
+         			window.location.reload();
+                }
+		    }
+		});
+}
+
 </script>
 </html>
