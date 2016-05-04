@@ -31,7 +31,8 @@ class AdminUser(db.Document):
     is_kefu = db.IntField()
     is_admin = db.IntField(default=0)
     yh_type = db.StringField(default="BOCB2C")
-    source_include = db.ListField(default=[])        # 该用户处理的源站
+    source_include = db.ListField(default=["yhzf", "zfb"])        # 该用户处理的源站
+    is_close = db.BooleanField(default=False)
 
     meta = {
         "indexes": [
@@ -367,6 +368,7 @@ class Order(db.Document):
     kefu_username = db.StringField()
     kefu_order_status = db.IntField()   # 1表示已处理
     kefu_updatetime = db.DateTimeField()
+    kefu_assigntime = db.DateTimeField()
 
 
     meta = {

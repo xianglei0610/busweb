@@ -441,9 +441,8 @@ def all_adminuser():
         "SPDB": "浦发银行",
     }
     pay_types = {
-        u"yl": "银联在线",
+        u"yhzf": "银行支付",
         u"zfb": "支付宝",
-        u"zfb_wy": "支付宝网银",
     }
     return render_template('admin-new/alluser.html',
                            condition=params,
@@ -650,9 +649,9 @@ def wating_deal_order():
                     continue
                 order.update(kefu_username=current_user.username)
                 assign.add_dealing(order, current_user)
-                if order.status == STATUS_WAITING_LOCK:
-                    async_lock_ticket.delay(order.order_no)
-                push_kefu_order.apply_async((current_user.username, order.order_no))
+                # if order.status == STATUS_WAITING_LOCK:
+                #     async_lock_ticket.delay(order.order_no)
+                # push_kefu_order.apply_async((current_user.username, order.order_no))
     qs = assign.dealing_orders(current_user).order_by("create_date_time")
 
     rds = get_redis("order")

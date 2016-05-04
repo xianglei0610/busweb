@@ -1947,10 +1947,13 @@ RK_ISSUE_FAIL_COUNT = "%s_issue_fail"
 RK_ISSUEING_COUNT = "issueing_count"
 RK_ORDER_LOCKING = "order:locking:%s"
 
-RK_WATING_LOCK_ORDERS = "wating_lock_orders"       # 等待下单的订单
-RK_WATING_LOCK_ORDERS2 = "wating_lock_orders2"       # 需要紧急处理的
 RK_DEALING_ORDERS = "dealing_orders:%s"            # 客服正在处理的订单
 RK_DEALED_NOT_ISSUED = "dealed_not_issued:%s"      # 客服处理了,但没获取到出票状态的订单
+
+RK_ORDER_QUEUE_ZFB = "order_queue:zfb"
+RK_ORDER_QUEUE_ZFB2 = "order_queue:zfb2"
+RK_ORDER_QUEUE_YH = "order_queue:yh"
+RK_ORDER_QUEUE_YH2 = "order_queue:yh2"
 
 RK_PROXY_IP_ALL = "proxy:all"
 RK_PROXY_IP_CQKY = "proxy:cqky"
