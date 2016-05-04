@@ -109,8 +109,7 @@ class OpenCity(db.Document):
     }
 
     def check_new_dest(self):
-        qs = Line.objects.filter(crawl_source=self.crawl_source,
-                                 s_city_name__startswith=starting_name) \
+        qs = Line.objects.filter(s_province=self.province, s_city_name__startswith=self.city_name) \
                          .aggregate({
                              "$group": {
                                  "_id": {
