@@ -441,9 +441,8 @@ def all_adminuser():
         "SPDB": "浦发银行",
     }
     pay_types = {
-        u"yl": "银联在线",
+        u"yhzf": "银行支付",
         u"zfb": "支付宝",
-        u"zfb_wy": "支付宝网银",
     }
     return render_template('admin-new/alluser.html',
                            condition=params,

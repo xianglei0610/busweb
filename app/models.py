@@ -31,7 +31,7 @@ class AdminUser(db.Document):
     is_kefu = db.IntField()
     is_admin = db.IntField(default=0)
     yh_type = db.StringField(default="BOCB2C")
-    source_include = db.ListField(default=[])        # 该用户处理的源站
+    source_include = db.ListField(default=["yhzf", "zfb"])        # 该用户处理的源站
     is_close = db.BooleanField(default=False)
 
     meta = {
@@ -109,8 +109,7 @@ class OpenCity(db.Document):
     }
 
     def check_new_dest(self):
-        qs = Line.objects.filter(crawl_source=self.crawl_source,
-                                 s_city_name__startswith=starting_name) \
+        qs = Line.objects.filter(s_province=self.province, s_city_name__startswith=self.city_name) \
                          .aggregate({
                              "$group": {
                                  "_id": {
@@ -368,7 +367,6 @@ class Order(db.Document):
     kefu_username = db.StringField()
     kefu_order_status = db.IntField()   # 1表示已处理
     kefu_updatetime = db.DateTimeField()
-    
     kefu_assigntime = db.DateTimeField()
 
 
