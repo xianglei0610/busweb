@@ -22,6 +22,7 @@ COMPANY_TO_SOURCE = {
     "苏州汽车客运集团有限公司汽车客运总站": SOURCE_ZJGSM,
     "南京市道路客运联网售票管理服务中心": SOURCE_JSDLKY,
     "南京趣普电子商务有限公司": SOURCE_CHANGTU,
+    "南京晨之义软件科技有限公司": SOURCE_TZKY,
 }
 
 def parse_alipay_record(f):
@@ -115,15 +116,16 @@ def import_alipay_record(filename):
     for trade_info in trade_list:
         order = match_alipay_order(trade_info)
         site = trade_info["交易对方"]
+        trade_status = trade_info["交易状态"]
         if site == "深圳市一二三零八网络科技有限公司":
             continue
-        if not order :
-            kefu_log.error("not found order %s", json.dumps(trade_info, ensure_ascii=False))
+        if not order:
+            if trade_status not in ["交易关闭", "等待付款"]:
+                kefu_log.info("not found order %s", json.dumps(trade_info, ensure_ascii=False))
             continue
         trade_no = trade_info["交易号"]
         give_back = float(trade_info["成功退款（元）"])
         pay_money = float(trade_info["金额（元）"])
-        trade_status = trade_info["交易状态"]
 
         pay_trade_no, refund_trade_no = order.pay_trade_no, order.refund_trade_no
         if trade_status == "退款成功":
