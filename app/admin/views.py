@@ -652,7 +652,6 @@ def wating_deal_order():
                 #     async_lock_ticket.delay(order.order_no)
                 # push_kefu_order.apply_async((current_user.username, order.order_no))
     qs = assign.dealing_orders(current_user).order_by("create_date_time")
-
     rds = get_redis("order")
     is_warn = False
     if client == 'web':
@@ -662,7 +661,7 @@ def wating_deal_order():
                 locking[o.order_no] = 1
             else:
                 locking[o.order_no] = 0
-        if not current_user.is_superuser and not current_user.is_close:
+        if not current_user.is_superuser and not current_user.is_close and qs.count()==KF_ORDER_CT:
             is_close_tmp = True
             is_close = False
             for o in qs:
@@ -963,5 +962,6 @@ def open_account():
     if not userObj.is_close:
         return jsonify({"status": "0", "msg": "账号已经开启"})
     userObj.modify(is_close=False)
+    access_log.info("[open_account] %s 开启账号: %s ", current_user.username, username)
     return jsonify({"status": "0", "msg": "开启成功"})
 
