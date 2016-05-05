@@ -55,9 +55,13 @@ def dequeue_wating_lock(user):
         if not val:
             val = _cmp_rpop(RK_ORDER_QUEUE_YH, RK_ORDER_QUEUE_ZFB)
     elif "yhzf" in user.source_include:
-        val = _cmp_rpop(RK_ORDER_QUEUE_YH, RK_ORDER_QUEUE_YH2)
+        val = rds.rpop(RK_ORDER_QUEUE_YH2)
+        if not val:
+            val = rds.rpop(RK_ORDER_QUEUE_YH)
     elif "zfb" in user.source_include:
-        val = _cmp_rpop(RK_ORDER_QUEUE_ZFB, RK_ORDER_QUEUE_ZFB2)
+        val = rds.rpop(RK_ORDER_QUEUE_ZFB2)
+        if not val:
+            val = rds.rpop(RK_ORDER_QUEUE_ZFB)
 
     if val:
         no, t = val.split("_")
