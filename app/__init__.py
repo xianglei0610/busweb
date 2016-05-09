@@ -16,7 +16,7 @@ from celery import Celery, platforms
 from redis_session import RedisSessionInterface
 platforms.C_FORCE_ROOT = True    # celery需要这样
 from raven.contrib.flask import Sentry
-from logging.handlers import TimedRotatingFileHandler, SysLogHandler
+from logging.handlers import SysLogHandler
 from logging import Formatter, StreamHandler, FileHandler
 
 
@@ -38,6 +38,7 @@ access_log = logging.getLogger("access")
 rebot_log = logging.getLogger("rebot")
 cron_log = logging.getLogger("cron")
 http_log = logging.getLogger("http")
+dashboard_log = logging.getLogger("dashboard")
 
 
 def init_celery(app):
@@ -84,6 +85,7 @@ def setup_app():
     servers = {
         "api": setup_api_app,
         "admin": setup_admin_app,
+        "dashboard": setup_dashboard_app,
     }
     server_type = config_name.split("_")[0]
     app = servers[server_type]()
@@ -126,6 +128,24 @@ def setup_admin_app():
     init_celery(app)
 
     from admin import admin as admin_blueprint
+    app.register_blueprint(admin_blueprint)
+    app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
+    flask_profiler.init_app(app)
+    return app
+
+
+def setup_dashboard_app():
+    app = Flask(__name__)
+    app.config.from_object(config)
+    config.init_app(app)
+    print ">>> run dashboard server, use", config.__name__
+
+    mail.init_app(app)
+    db.init_app(app)
+    login_manager.init_app(app)
+    init_celery(app)
+
+    from dashboard import dashboard as admin_blueprint
     app.register_blueprint(admin_blueprint)
     app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
     flask_profiler.init_app(app)

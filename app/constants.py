@@ -1885,6 +1885,7 @@ STATUS_ISSUE_FAIL = 13      # 出票失败, 支付完成后，已确认源网站
 STATUS_ISSUE_SUCC = 14      # 出票成功, 支付完成后，源网站也出票成功
 
 STATUS_MSG = {
+    0: "全部订单",
     STATUS_WAITING_ISSUE: "等待出票",
     STATUS_WAITING_LOCK: "等待下单",
     STATUS_ISSUE_FAIL: "出票失败",

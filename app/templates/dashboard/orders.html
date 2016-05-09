@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+{% extends 'dashboard/base.html'%}
+
+{% block style %}
+<style type="text/css">
+    .query-form .col-md-1, .query-form .col-md-4 {
+        padding-left: 2px;
+        padding-right: 6px;
+    }
+    table caption .pull-right span{
+        padding-right: 20px;
+    }
+    .price{
+        color: #f60;
+        font-size:16px;
+        font-family: Verdana,Geneva,sans-serif;
+    }
+</style>
+{%endblock%}
+
+{%block body%}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <ul class="breadcrumb">
+                <li><a href="#">首页</a></li>
+                <li class="active">所有订单</li>
+            </ul>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs">
+        {% for i in ["0", "4", "7", "5", "3", "12", "14", "13", "6"]%}
+        <li role="presentation" class="{%if condition.status==i %}active{%endif%}"><a href="javascript:search('1', '{{i}}')">{{status_msg[i]}} <span class="badge">{{status_count[i]}}</span></a></li>
+        {%endfor%}
+    </ul>
+
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <form class="query-form" class="form-horizontal" method="POST">
+                <input type="hidden" name="status" id="id-status" value="0"/>
+                <input type="hidden" name="page" id="id-page" value="1"/>
+                <div class="row">
+                    <div class="form-group col-md-1">
+                        <label for="sourceSite" class="sr-only">源站</label>
+                        <select class="form-control" name="source" id="id-site">
+                            <option value="">选择源站</option>
+                            {% for k,v in source_info.items() %}
+                            <option value="{{k}}" {%if condition.source==k %}selected{% endif %}>{{source_info[k]["name"]}}{%if site_count[k]%}({{site_count[k]}}){%endif%}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-1">
+                        <label for="sourceSite" class="sr-only">源站账号</label>
+                        <select class="form-control" id="id-account" name="source_account">
+                            <option value="">源站账号</option>
+                            {%if condition.source%}
+                            {% for u,t in source_info[condition.source]["accounts"].items() %}
+                            <option value="{{u}}" {%if condition.source_account==u %} selected {%endif%}>{{u}}{%if account_count[u]%}({{account_count[u]}}){%endif%}</option>
+                            {% endfor %}
+                            {%endif%}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-1">
+                        <label for="sourceSite" class="sr-only">操作人员</label>
+                        <select class="form-control" id="id-kefu" name="kefu_name">
+                        <option value="">操作人员</option>
+                        {%for k,v in kefu_count.items()%}
+                        <option value="{{k}}" {%if condition.kefu_name==k%} selected {%endif%}>{{k}}({{v}})</option>
+                        {%endfor%}
+                    </select>
+                    </div>
+                    <div class="form-group col-md-1">
+                        <label for="sourceSite" class="sr-only">支付状态</label>
+                        <select class="form-control" name="pay_status">
+                        <option value="">支付状态</option>
+                        {% for k,v in pay_status_msg.items() %}
+                        <option value="{{k}}" {%if condition.pay_status==k|string%} selected {%endif%}>{{v}}</option>
+                        {% endfor %}
+                    </select>
+                    </div>
+                    <div class="form-group col-md-1">
+                        <label for="sourceSite" class="sr-only">支付账号</label>
+                        <select class="form-control" name="pay_account">
+                        <option value="">支付账号</option>
+                        {% for k in pay_account_list %}
+                        <option value="{{k}}" {%if condition.pay_account==k%} selected {%endif%}>{{k}}</option>
+                        {% endfor %}
+                    </select>
+                    </div>
+                    <div class="form-group  col-md-2" style="padding-left: 6px; padding-right: 5px;">
+                        <label for="sourceSite" class="sr-only">起始日期</label>
+                        <div class="input-group date form_datetime" data-date="" data-date-format="" data-link-field="dtp_input2" data-link-format="yyyy-mm-dd">
+                            <input class="form-control" size="16" type="text" value="{{condition.str_date}}" readonly name="str_date">
+                            <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                        </div>
+                    </div>
+                    <p class="form-group col-md-1" style="width: 20px;padding: 7px 0px;">至</p>
+                    <div class="form-group  col-md-2" style="padding-left: 0px; padding-right: 5px;">
+                        <label for="sourceSite" class="sr-only">起始日期</label>
+                        <div class="input-group date form_datetime" data-date="" data-date-format="" data-link-field="dtp_input2" data-link-format="yyyy-mm-dd">
+                            <input class="form-control" size="16" type="text" value="{{condition.end_date}}" readonly name="end_date">
+                            <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <div class="input-group-btn">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">搜索条件 <span class="caret"></span></button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#">系统订单号</a></li>
+                                    <li><a href="#">12308订单号</a></li>
+                                    <li><a href="#">源站订单号</a></li>
+                                    <li><a href="#">支付订单号</a></li>
+                                    <li role="separator" class="divider"></li>
+                                    <li><a href="#">联系人手机</a></li>
+                                    <li><a href="#">联系人姓名</a></li>
+                                    <li><a href="#">联系人身份证号</a></li>
+                                    <li role="separator" class="divider"></li>
+                                    <li><a href="#">交易流水号</a></li>
+                                </ul>
+                            </div>
+                            <input type="text" class="form-control" aria-label="...">
+                        </div>
+                    </div>
+                    <div class="col-md-offset-1 col-md-1">
+                        <button type="submit" class="btn btn-primary">查&nbsp;&nbsp;询</button>
+                    </div>
+                    <div class="col-md-1" style="padding-left: 0px;">
+                        <button type="button" class="btn btn-warning">导出CSV</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <table class="table table-hover table-bordered" style="margin-bottom: 0px;table-layout:fixed">
+        <caption>
+            <div class="pull-right">
+                <span>订单总数：<label class="text-danger">1249个</label></span>
+                <span>出票张数：<label class="text-danger">1468 张</label> </span>
+                <span>总金额：<label class="text-danger">112570.5</label></span>
+            </div>
+        </caption>
+        <thead>
+            <tr>
+                <th style="width:230px">系统/12308/源站订单号</th>
+                <th>下单人信息</th>
+                <th>创建/下单/出发时间</th>
+                <th>车次号/行程</th>
+                <th>源站信息</th>
+                <th>订票数</th>
+                <th>金额</th>
+                <th>订单状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in page["items"]%}
+            <tr>
+                <td style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">{{item.order_no}}</br>{{item.out_order_no}}</br>{{item.raw_order_no}}</td>
+                <td>{{item.contact_info["name"]}}<br />{{item.contact_info["telephone"]}}</br>{{item.contact_info["id_number"]}}</td>
+                <td>{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
+                <td>{{item.bus_num}}<br>{{item.starting_name.split(';')[0]}} - {{item.destination_name.split(';')[0]}}</br>{{item.starting_name.split(';')[1]}} - {{item.destination_name.split(';')[1]}}</td>
+                <td>{{source_info[item.crawl_source]["name"]}}<br>{{item.source_account}}</br>{{item.source_account_pass}}</td>
+                <td>{{item.riders|count}}张</td>
+                <td>
+                    <br />
+                    <span class="glyphicon glyphicon-jpy price">{{item.order_price}}</span>
+                </td>
+                <td>
+                    <br />
+                    <span class="{%if item.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[item.status|string]}}</span>
+                </td>
+                <td>
+                    <br />
+                    <a href="order-item.html" target="_blank">详情</a>
+                </td>
+            </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+
+    <nav style="text-align: center">
+        <ul class="pagination">
+            <li>
+                <a href="#" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            <li><a href="#">1</a></li>
+            <li><a href="#">2</a></li>
+            <li><a href="#">...</a></li>
+            <li><a href="#">3</a></li>
+            <li><a href="#">4</a></li>
+            <li><a href="#">5</a></li>
+            <li>
+                <a href="#" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{%endblock%}
+
+
+{% block script_footer %}
+<script type="text/javascript">
+    $(".form_datetime").datetimepicker({
+        format: "yyyy-mm-dd hh:ii",
+        autoclose: true,
+        todayBtn: true,
+        pickerPosition: "bottom-left",
+        language: "zh-CN"
+    });
+
+   $("#id-site").change(function(){
+        var v = $(this).val();
+        var s = "<option value=''>源站账号</option>"
+        if(v=="选择源站"||v==""){
+            $("#id-account").html(s);
+            return;
+        }
+        $.ajax({
+            cache: false,
+            type: "get",
+            url:"/ajax/query?type=account&site="+v,
+            async: false,
+            error: function(request) {
+                alert("Connection error");
+            },
+            success: function(r) {
+                for(i=0;i<r.data.length;i++){
+                    s+="<option value="+r.data[i]+">"+r.data[i]+"</option>";
+                }
+                $("#id-account").html(s);
+            }
+        });
+   });
+
+    function search(page, stus){
+        $("#id-page").val(page);
+        $("#id-status").val(stus);
+        $(".query-form").submit();
+    };
+</script>
+{%endblock%}

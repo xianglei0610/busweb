@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>dashboard</title>
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap.min.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-theme.min.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-datetimepicker.min.css')}}" />
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/jquery-2.2.3.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap-datetimepicker.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/locales/bootstrap-datetimepicker.zh-CN.js')}}"></script>
+		<style type="text/css">
+			.navbar-brand img{
+				height: 48px;
+				margin-top: -12px;
+			}
+			.navbar-text a{
+				color: #D2D2D2;
+			}
+			.container{
+				width: 90%;
+				margin-top: 10px;
+			}
+			.panel{
+				margin-top: 20px;
+			}
+		</style>
+        {%block style%}
+        {% endblock %}
+	</head>
+
+	<body>
+		<nav class="nav navbar-inverse" role="navigation">
+			<div class="container-fluid">
+				<div class="navbar-header">
+					<button class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a href="#" class="navbar-brand">
+                        <img src="{{url_for('static', filename='dashboard/img/logo.png')}}">
+					</a>
+				</div>
+				<div class="collapse navbar-collapse">
+					<ul class="nav navbar-nav">
+						<li class="active"><a href="/orders">我的订单</a></li>
+						<li><a href="#">所有订单</a></li>
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">系统管理<span class="caret"></span></a>
+							<ul class="dropdown-menu">
+								<li><a href="#">系统用户管理</a></li>
+								<li class="divider"></li>
+								<li><a href="#">源站账号管理</a></li>
+							</ul>
+						</li>
+					</ul>
+					<div class="navbar-form navbar-right navbar-text">
+						<div class="form-group">
+							<a href="#"><span class="glyphicon glyphicon-user"></span> luocky</a>
+							<span>|</span>
+							<a href="#">退出</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+       {% block body %}
+       {% endblock %}
+
+       {% block script_footer %}
+       {% endblock %}
+	</body>
+</html>
