@@ -1,154 +1,56 @@
-<!DOCTYPE html>
-<html>
+<ul class="nav nav-tabs">
+    <li role="presentation"><a href="#">待处理<span class="badge">4111</span></a></li>
+    <li role="presentation" class="active"><a href="#">正在出票  <span class="badge">4111</span></a></li>
+</ul>
 
-	<head>
-		<meta charset="UTF-8">
-		<title></title>
-		<link rel="stylesheet" href="static/css/bootstrap.min.css" />
-		<link rel="stylesheet" href="static/css/bootstrap-theme.min.css" />
-		<script type="text/javascript" src="static/js/jquery-2.2.3.min.js"></script>
-		<script type="text/javascript" src="static/js/bootstrap.min.js"></script>
-		<style type="text/css">
-			.query-form .col-md-1,
-			.query-form .col-md-4 {
-				padding-left: 2px;
-				padding-right: 6px;
-			}
-			
-			.navbar-brand img {
-				height: 48px;
-				margin-top: -12px;
-			}
-			
-			.navbar-text a {
-				color: #D2D2D2;
-			}
-			
-			.container {
-				width: 90%;
-				margin-top: 10px;
-			}
-			
-			.panel {
-				margin-top: 20px;
-			}
-			
-			table caption .pull-right span {
-				padding-right: 20px;
-			}
-			
-			.price {
-				color: #f60;
-				font-size: 16px;
-				font-family: Verdana, Geneva, sans-serif;
-			}
-		</style>
-	</head>
+<table class="table table-hover" style="margin-bottom: 0px;">
+    <caption>
+        <div class="pull-right">
+            <button type="button" class="btn btn-primary">开始接单</button>
+        </div>
+    </caption>
+    <thead>
+        <tr>
+            <th>系统/12308/源站订单号</th>
+            <th>创建/下单/出发时间</th>
+            <th>车次号/行程</th>
+            <th>源站信息</th>
+            <th>订票数</th>
+            <th>金额</th>
+            <th>订单状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
 
-	<body>
-		<nav class="nav navbar-inverse" role="navigation">
-			<div class="container-fluid">
-				<div class="navbar-header">
-					<button class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-					</button>
-					<a href="#" class="navbar-brand">
-						<img src="static/img/logo.png">
-					</a>
-				</div>
-				<div class="collapse navbar-collapse">
-					<ul class="nav navbar-nav">
-						<li class="active"><a href="#">我的订单</a></li>
-						<li><a href="#">所有订单</a></li>
-						<li class="dropdown">
-							<a href="#" class="dropdown-toggle" data-toggle="dropdown">系统管理<span class="caret"></span></a>
-							<ul class="dropdown-menu">
-								<li><a href="#">系统用户管理</a></li>
-								<li class="divider"></li>
-								<li><a href="#">源站账号管理</a></li>
-							</ul>
-						</li>
-					</ul>
-					<div class="navbar-form navbar-right navbar-text">
-						<div class="form-group">
-							<a href="#"><span class="glyphicon glyphicon-user"></span> luocky</a>
-							<span>|</span>
-							<a href="#">退出</a>
-						</div>
-					</div>
-				</div>
-			</div>
-		</nav>
-
-		<div class="container">
-			<div class="row">
-				<div class="col-md-12">
-					<ul class="breadcrumb">
-						<li><a href="#">首页</a></li>
-						<li class="active">所有订单</li>
-					</ul>
-				</div>
-			</div>
-
-			<ul class="nav nav-tabs">
-				<li role="presentation"><a href="#">待处理<span class="badge">4111</span></a></li>
-				<li role="presentation" class="active"><a href="#">正在出票  <span class="badge">4111</span></a></li>
-			</ul>
-
-			<table class="table table-hover" style="margin-bottom: 0px;">
-				<caption>
-					<div class="pull-right">
-						<button type="button" class="btn btn-primary">开始接单</button>
-					</div>
-				</caption>
-				<thead>
-					<tr>
-						<th>系统/12308/源站订单号</th>
-						<th>创建/下单/出发时间</th>
-						<th>车次号/行程</th>
-						<th>源站信息</th>
-						<th>订票数</th>
-						<th>金额</th>
-						<th>订单状态</th>
-						<th>操作</th>
-					</tr>
-				</thead>
-
-				<tbody>
-					<tr>
-						<td>
-							2016050673951140<br /> 90160506143755400370 <br /> 1605060000000924490
-						</td>
-						<td>
-							2016-05-06 14:37:55<br /> 2016-05-06 14:38:27<br /> 2016-05-07 11:40:00
-						</td>
-						<td>
-							814<br /> 重庆主城 - 文山<br /> 重庆汽车站 - 文山
-						</td>
-						<td>
-							重庆客运 <br /> 497210009@qq.com <br /> 123456
-						</td>
-						<td>
-							<br /> 1张
-						</td>
-						<td>
-							<br />
-							<span class="glyphicon glyphicon-jpy price">432.0</span>
-						</td>
-						<td>
-							<br />
-							<span class="text-success">出票成功</span>
-						</td>
-						<td>
-							<button type="button" class="btn btn-warning">立即支付</button><br />
-							<a href="#">转移</a>
-						</td>
-					</tr>
-					
-				</tbody>
-			</table>
-		</div>
-	</body>
-</html>
+    <tbody>
+        <tr>
+            <td>
+                2016050673951140<br /> 90160506143755400370 <br /> 1605060000000924490
+            </td>
+            <td>
+                2016-05-06 14:37:55<br /> 2016-05-06 14:38:27<br /> 2016-05-07 11:40:00
+            </td>
+            <td>
+                814<br /> 重庆主城 - 文山<br /> 重庆汽车站 - 文山
+            </td>
+            <td>
+                重庆客运 <br /> 497210009@qq.com <br /> 123456
+            </td>
+            <td>
+                <br /> 1张
+            </td>
+            <td>
+                <br />
+                <span class="glyphicon glyphicon-jpy price">432.0</span>
+            </td>
+            <td>
+                <br />
+                <span class="text-success">出票成功</span>
+            </td>
+            <td>
+                <button type="button" class="btn btn-warning">立即支付</button><br />
+                <a href="#">转移</a>
+            </td>
+        </tr>
+    </tbody>
+</table>

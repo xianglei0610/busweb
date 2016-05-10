@@ -22,10 +22,57 @@ from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.dashboard import dashboard
 from app.utils import get_redis
-from app.models import Order, Line, AdminUser, PushUserList
+from app.models import Order, Line, AdminUser
 from app.flow import get_flow
 from tasks import push_kefu_order, async_lock_ticket, issued_callback
 from app import order_log, db, access_log
+
+
+@dashboard.route('/logout')
+@login_required
+def logout():
+    flask_login.logout_user()
+    return redirect(url_for('dashboard.login'))
+
+
+@dashboard.route('/', methods=['GET'])
+@login_required
+def index():
+    return redirect(url_for('dashboard.order_list'))
+
+
+@dashboard.route('/codeimg')
+def get_code_img():
+    code_img, strs = create_validate_code()
+    buf = cStringIO.StringIO()
+    code_img.save(buf, 'JPEG', quality=70)
+    buf_str = buf.getvalue()
+    response = make_response(buf_str)
+    response.headers['Content-Type'] = 'image/jpeg'
+    session["img_valid_code"] = strs
+    return response
+
+
+class LoginInView(MethodView):
+    def get(self):
+        if not current_user.is_anonymous:
+            return redirect(url_for("dashboard.index"))
+        return render_template('dashboard/login.html')
+
+    def post(self):
+        name = request.form.get("username")
+        pwd = request.form.get("password")
+        session["username"] = name
+        session["password"] = pwd
+        code = request.form.get("validcode")
+        if code != session.get("img_valid_code"):
+            return redirect(url_for('dashboard.login'))
+        try:
+            u = AdminUser.objects.get(username=name, password=md5(pwd))
+            flask_login.login_user(u)
+            return redirect(url_for('dashboard.index'))
+        except AdminUser.DoesNotExist:
+            return redirect(url_for('dashboard.login'))
 
 
 def parse_page_data(qs):
@@ -50,6 +97,7 @@ def parse_page_data(qs):
 
 
 @dashboard.route('/orders', methods=['GET', 'POST'])
+@login_required
 def order_list():
     query = {}
     params = request.values.to_dict()
@@ -187,6 +235,7 @@ def order_list():
 
 
 @dashboard.route('/orders/<order_no>', methods=['GET'])
+@login_required
 def order_detail(order_no):
     order = Order.objects.get_or_404(order_no=order_no)
     return render_template("dashboard/order-item.html",
@@ -198,6 +247,7 @@ def order_detail(order_no):
 
 
 @dashboard.route('/ajax/query', methods=["GET"])
+@login_required
 def ajax_query():
     tp = request.args.get("type", '')
     if tp== "account":
@@ -468,91 +518,6 @@ class SubmitOrder(MethodView):
         return redirect(url_for('admin.order_list'))
 
 
-#=================================new admin===============================
-@dashboard.route('/code')
-def get_code():
-    code_img, strs = create_validate_code()
-    buf = cStringIO.StringIO()
-    code_img.save(buf, 'JPEG', quality=70)
-    buf_str = buf.getvalue()
-    response = make_response(buf_str)
-    response.headers['Content-Type'] = 'image/jpeg'
-    session["img_valid_code"] = strs
-    return response
-
-
-class LoginInView(MethodView):
-    def get(self):
-        if not current_user.is_anonymous:
-            return redirect(url_for("admin.index"))
-        return render_template('admin-new/login.html')
-
-    def post(self):
-        client = request.headers.get("type", 'web')
-        name = request.form.get("username")
-        pwd = request.form.get("password")
-        session["username"] = name
-        session["password"] = pwd
-        if client == 'web':
-            code = request.form.get("validcode")
-            if code != session.get("img_valid_code"):
-                return redirect(url_for('admin.login'))
-            try:
-                u = AdminUser.objects.get(username=name, password=md5(pwd))
-                flask_login.login_user(u)
-                return redirect(url_for('admin.index'))
-            except AdminUser.DoesNotExist:
-                return redirect(url_for('admin.login'))
-        elif client in ['android', 'ios']:
-            try:
-                u = AdminUser.objects.get(username=name, password=md5(pwd))
-                flask_login.login_user(u)
-                clientId = request.form.get("clientId")
-                data = {
-                    'username': name,
-                    "push_id": clientId,
-                    "client": client,
-                    "update_datetime": dte.now()
-                }
-                try:
-                    pushObj = PushUserList.objects.get(username=name)
-                    pushObj.push_id = clientId
-                    pushObj.client = client
-                    pushObj.update_datetime = dte.now()
-                    pushObj.save()
-                except PushUserList.DoesNotExist:
-                    pushObj = PushUserList(**data)
-                    pushObj.save()
-                return jsonify({"status": "0", "msg": "登录成功", 'token':TOKEN})
-            except AdminUser.DoesNotExist:
-                return jsonify({"status": "-1", "msg": "登录失败"})
-
-
-@dashboard.route('/logout')
-@login_required
-def logout():
-    flask_login.logout_user()
-    return redirect(url_for('admin.login'))
-
-
-@dashboard.route('/', methods=['GET'])
-@login_required
-def index():
-    return render_template("admin-new/main.html")
-
-
-@dashboard.route('/top', methods=['GET'])
-@login_required
-def top_page():
-    return render_template("admin-new/top.html")
-
-
-@dashboard.route('/left', methods=['GET'])
-@login_required
-def left_page():
-    return render_template("admin-new/left.html")
-
-
 @dashboard.route('/alluser', methods=['GET','POST'])
 @login_required
 def all_adminuser():
@@ -582,11 +547,74 @@ def all_adminuser():
                            page=parse_page_data(qs))
 
 
-@dashboard.route('/myorder', methods=['GET'])
+@dashboard.route('/orders/my', methods=['GET'])
 @login_required
 def my_order():
     working_kefus = AdminUser.objects.filter(is_kefu=1)
-    return render_template("admin-new/my_order.html", working_kefus=working_kefus)
+    return render_template("dashboard/my-order.html", working_kefus=working_kefus)
+
+
+@dashboard.route('/orders/dealing', methods=['GET'])
+@login_required
+def dealing_order():
+    if current_user.is_kefu:
+        for o in assign.dealing_orders(current_user):
+            if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
+                continue
+            o.complete_by(current_user)
+        if current_user.is_switch and not current_user.is_close:
+            for i in range(10):
+                order_ct = assign.dealing_size(current_user)
+                if order_ct >= KF_ORDER_CT:
+                    break
+                order = assign.dequeue_wating_lock(current_user)
+                if not order:
+                    continue
+                if order.kefu_username:
+                    continue
+                order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
+                assign.add_dealing(order, current_user)
+                if order.status == STATUS_WAITING_LOCK:
+                    async_lock_ticket.delay(order.order_no)
+
+    qs = assign.dealing_orders(current_user).order_by("create_date_time")
+    rds = get_redis("order")
+    is_warn = False
+    locking = {}
+    for o in qs:
+        if rds.get(RK_ORDER_LOCKING % o.order_no):
+            locking[o.order_no] = 1
+        else:
+            locking[o.order_no] = 0
+    if not current_user.is_superuser and not current_user.is_close and qs.count()==KF_ORDER_CT:
+        is_close_tmp = True
+        is_close = False
+        for o in qs:
+            if not o.kefu_assigntime:
+                continue
+            warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
+            if warn_time < 3*60:
+                is_warn = False
+                is_close = False
+                is_close_tmp = False
+                break
+            elif warn_time >= 3*60 and warn_time < 10*60:
+                is_warn = True
+                is_close_tmp = False
+            else:
+                is_close = True
+        if is_close and is_close_tmp:
+            current_user.modify(is_close=is_close, is_switch=0)
+    not_issued = assign.dealed_but_not_issued_orders(current_user)
+    dealed_count = {}
+    return render_template("dashboard/dealing.html",
+                            page=parse_page_data(qs),
+                            status_msg=STATUS_MSG,
+                            source_info=SOURCE_INFO,
+                            locking=locking,
+                            not_issued=not_issued,
+                            dealed_count=dealed_count,
+                            is_warn=is_warn)
 
 
 @dashboard.route('/orders/<order_no>', methods=['GET'])

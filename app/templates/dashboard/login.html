@@ -3,12 +3,12 @@
 
 	<head>
 		<meta charset="UTF-8">
-		<title></title>
-		<link rel="stylesheet" href="static/css/bootstrap.min.css" />
-		<link rel="stylesheet" href="static/css/login.css" />
-		<script type="text/javascript" src="static/js/jquery-2.2.3.min.js"></script>
-		<script type="text/javascript" src="static/js/bootstrap.min.js"></script>
-		<script type="text/javascript" src="static/js/login.js"></script>
+		<title>登陆页面</title>
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap.min.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/login.css')}}" />
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/jquery-2.2.3.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/login.js')}}"></script>
 		<style>
 			.vertical-center {
 				position: absolute;
@@ -34,16 +34,17 @@
 
 							<div class="input-group">
 								<span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
-								<input id="user" type="text" class="form-control" name="user" value="" placeholder="用户名">
+                                <input id="user" type="text" class="form-control" name="username" value="{{session.username}}" placeholder="用户名">
 							</div>
 
 							<div class="input-group">
 								<span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
-								<input id="password" type="password" class="form-control" name="password" placeholder="密码">
+                                <input id="password" type="password" class="form-control" name="password" placeholder="密码" value="{{session.password}}">
 							</div>
 							<div class="input-group">
-								<span class="input-group-addon" style="padding: 2px;"><img src="http://www.96096kp.com/ValidateCode.aspx"/></span>
-								<input id="code" type="text" class="form-control" name="code" placeholder="验证码" style="width: 80px;">
+								<span class="input-group-addon" style="padding: 2px;">
+                                <img onclick="this.setAttribute('src','/code?d='+Math.random());" src="{{url_for('dashboard.get_code_img')}}" width="80"/></span>
+								<input id="code" type="text" class="form-control" name="validcode" placeholder="验证码" style="width: 80px">
 							</div>
 
 							<div class="form-group">

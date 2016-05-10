@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+{% extends 'dashboard/base.html'%}
+
+{% block style %}
+<style type="text/css">
+    .query-form .col-md-1, .query-form .col-md-4, .query-form .col-md-3{
+        padding-left: 2px;
+        padding-right: 6px;
+    }
+    table caption .pull-right span{
+        padding-right: 20px;
+    }
+    .price{
+        color: #f60;
+        font-size:16px;
+        font-family: Verdana,Geneva,sans-serif;
+    }
+    .table{
+        margin-bottom: 0px;
+    }
+</style>
+{%endblock%}
+
+{%block body%}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <ul class="breadcrumb">
+                <li><a href="#">首页</a></li>
+                <li class="active">我的订单</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="content">
+    </div>
+</div>
+{%endblock%}
+
+{% block script_footer %}
+<script type="text/javascript">
+    var idInt = setInterval(function(){
+        $("#content").load("/orders/dealing?dc="+new Date().getTime());
+    },3000);
+</script>
+{% endblock %}

@@ -3,8 +3,12 @@ from app import login_manager
 from app.models import AdminUser
 from app.utils import md5
 from app.constants import TOKEN
+from app import config_name
 
-login_manager.login_view = "admin.login"
+if "dashboard" in config_name:
+    login_manager.login_view = "dashboard.login"
+else:
+    login_manager.login_view = "admin.login"
 
 
 @login_manager.user_loader
