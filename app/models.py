@@ -2661,6 +2661,116 @@ class HebkyWebRebot(Rebot):
         rebot_log.info(">>>> end init hebky web  success %d", valid_cnt)
 
 
+class NmghyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "nmghyweb_rebot",
+    }
+    crawl_source = SOURCE_NMGHY
+    is_for_lock = True
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[nmghy] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[nmghy] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    @property
+    def proxy_ip(self):
+        return ''
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded;",
+            "User-Agent": self.user_agent or ua,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3',
+            "Connection": "keep-alive"
+        }
+
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source=SOURCE_NMGHY,
+                                      lock_datetime__gt=today) \
+                              .aggregate({
+                                  "$group":{
+                                      "_id": {"phone": "$source_account"},
+                                      "count": {"$sum": "$ticket_amount"}}
+                              }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt + int(order.ticket_amount) > 5:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts-droped))
+        return cls.objects.get(telephone=tele)
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        headers = self.http_header(ua)
+        data = {
+                "username": self.telephone,
+                "password": self.password,
+                "ispost": "1"
+            }
+        login_url = "http://www.nmghyjt.com/index.php/login/index"
+        r = requests.post(login_url, data=data, headers=headers)
+        content = r.content
+        if not isinstance(content, unicode):
+            content = content.decode('utf-8')
+        sel = etree.HTML(content)
+        telephone = sel.xpath('//div[@class="login-info"]/span/a[@id="login_user"]/text()')
+        if telephone:
+            if telephone[0] == self.telephone:
+                self.last_login_time = dte.now()
+                self.user_agent = ua
+                self.cookies = json.dumps(dict(r.cookies))
+                self.is_active = True
+                self.save()
+                rebot_log.info("登陆成功 nmghy %s", self.telephone)
+                self.test_login_status()
+                return "OK"
+            else:
+                rebot_log.error("登陆错误 nmghy %s, %s", self.telephone, str(telephone))
+                return "fail"
+        else:
+            rebot_log.error("登陆错误 nmghy %s, %s", self.telephone, str(telephone))
+            return "fail"
+
+    def test_login_status(self):
+        try:
+            url = "http://www.nmghyjt.com/index.php/login/getuserstatus"
+            headers = self.http_header()
+            cookies = json.loads(self.cookies)
+            data = {}
+            res = self.http_post(url, data=data, headers=headers, cookies=cookies)
+            content = res.content
+            if not isinstance(content, unicode):
+                content = content.decode('utf-8')
+            sel = etree.HTML(content)
+            telephone = sel.xpath('//a[@id="login_user"]/text()')
+            if telephone:
+                if telephone[0] == self.telephone:
+                    return 1
+                else:
+                    self.modify(cookies='')
+                    return 0
+            else:
+                return 0
+        except:
+            return 0
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
