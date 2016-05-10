@@ -76,7 +76,7 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
                 "pay_money": line.real_price()*order.ticket_amount,
             }
-            if res:
+            if res.get('raw_order_no',''):
                 expire_time = dte.now()+datetime.timedelta(seconds=28*60)
                 lock_result.update({
                     "result_code": 1,
@@ -87,14 +87,14 @@ class Flow(BaseFlow):
                     "lock_info": res
                 })
             else:
-#                 errmsg = res['values']['result'].replace("\r\n", " ")
-#                 for s in ["剩余座位数不足"]:
-#                     if s in errmsg:
-#                         self.close_line(line, reason=errmsg)
-#                         break
+                errmsg = res.get('msg','')
+                for s in ["该班次已停售"]:
+                    if s in errmsg:
+                        self.close_line(line, reason=errmsg)
+                        break
                 lock_result.update({
                     "result_code": 0,
-                    "result_reason": res,
+                    "result_reason": errmsg,
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": None,
@@ -138,13 +138,13 @@ class Flow(BaseFlow):
 #         'https': 'http://192.168.1.33:8888',
 #         }
 #         r = requests.post(order_url, data=data, headers=headers, cookies=cookies,proxies=proxies,allow_redirects=False)
-        print '1111111111', r.content
         location_url = r.headers.get('location', '')
-        print '33333333333333333', location_url
-        res = {}
+        res = {'msg': ''}
         if location_url:
             raw_order_no = location_url.split('/')[6]
             res = {"raw_order_no": raw_order_no}
+        else:
+            res = {"msg": r.content}
         return res
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
@@ -174,9 +174,7 @@ class Flow(BaseFlow):
     #         content = r.content
     #         sel = etree.HTML(content)
     #         payorderList = sel.xpath('//div[@id="visitorDataTable"]')
-    # #         unpayorderList = sel.xpath('//div[@id="visitorDataTable"]/table/tbody/tr')[1:]
-    #         if payorderList:
-    #             pass
+
             r = rebot.http_post(undone_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
             content = r.content
             sel = etree.HTML(content)
@@ -184,13 +182,17 @@ class Flow(BaseFlow):
             flag = False
             for i in unpayorderList:
                 order_no = i.xpath('td[1]/text()')[0]
-                status = i.xpath('td[10]/text()')[0]
-                print order_no, status
+                status = i.xpath('td[10]/text()')
+                if not status:
+                    status = i.xpath('td[10]/span/text()')
+                status = status[0]
                 if order_no == order.raw_order_no:
                     flag = True
                     break
             if flag and status == '已作废':#未支付
                 res.update({"state": '2'})
+            elif flag and status == '未支付':
+                res.update({"state": '3'})
         return res
 
     def do_refresh_issue(self, order):
