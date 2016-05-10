@@ -3,7 +3,7 @@
 
 {% block style %}
 <style type="text/css">
-    .query-form .col-md-1, .query-form .col-md-4 {
+    .query-form .col-md-1, .query-form .col-md-4, .query-form .col-md-3{
         padding-left: 2px;
         padding-right: 6px;
     }
@@ -109,31 +109,33 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="input-group">
                             <div class="input-group-btn">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">搜索条件 <span class="caret"></span></button>
-                                <ul class="dropdown-menu">
-                                    <li><a href="#">系统订单号</a></li>
-                                    <li><a href="#">12308订单号</a></li>
-                                    <li><a href="#">源站订单号</a></li>
-                                    <li><a href="#">支付订单号</a></li>
+                                <input type="hidden" name="q_key" value="{{condition.q_key}}" id="id-q-key"/>
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span id="id-q-zh">搜索条件</span> <span class="caret"></span></button>
+                                <ul class="dropdown-menu" id="id-q-menu">
+                                    <li><a href="#" name="">搜索条件</a></li>
+                                    <li><a href="#" name="sys_order_no">系统订单号</a></li>
+                                    <li><a href="#" name="out_order_no">12308订单号</a></li>
+                                    <li><a href="#" name="raw_order_no">源站订单号</a></li>
+                                    <li><a href="#" name="pay_order_no">支付订单号</a></li>
                                     <li role="separator" class="divider"></li>
-                                    <li><a href="#">联系人手机</a></li>
-                                    <li><a href="#">联系人姓名</a></li>
-                                    <li><a href="#">联系人身份证号</a></li>
+                                    <li><a href="#" name="contact_phone">联系人手机</a></li>
+                                    <li><a href="#" name="contact_name">联系人姓名</a></li>
+                                    <li><a href="#" name="contact_idcard">联系人身份证号</a></li>
                                     <li role="separator" class="divider"></li>
-                                    <li><a href="#">交易流水号</a></li>
+                                    <li><a href="#" name="trade_no">交易流水号</a></li>
                                 </ul>
                             </div>
-                            <input type="text" class="form-control" aria-label="...">
+                            <input type="text" class="form-control" aria-label="..." name="q_value" value="{{condition.q_value}}"/>
                         </div>
                     </div>
                     <div class="col-md-offset-1 col-md-1">
-                        <button type="submit" class="btn btn-primary">查&nbsp;&nbsp;询</button>
+                        <button type="submit" name="action" value="查询" class="btn btn-primary">查&nbsp;&nbsp;询</button>
                     </div>
-                    <div class="col-md-1" style="padding-left: 0px;">
-                        <button type="button" class="btn btn-warning">导出CSV</button>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-warning" name="action" value="导出CSV">导出CSV</button>
                     </div>
                 </div>
             </form>
@@ -181,7 +183,7 @@
                 </td>
                 <td>
                     <br />
-                    <a href="order-item.html" target="_blank">详情</a>
+                    <a href="/orders/{{item.order_no}}" target="_blank">详情</a>
                 </td>
             </tr>
             {%endfor%}
@@ -219,6 +221,14 @@
 
 {% block script_footer %}
 <script type="text/javascript">
+    $(document).ready(function(){
+        var ename=$("#id-q-key").val();
+        if(ename){
+            var zname=$("#id-q-menu a[name='"+ename+"']").text();
+            $("#id-q-zh").text(zname);
+        }
+    });
+
     $(".form_datetime").datetimepicker({
         format: "yyyy-mm-dd hh:ii",
         autoclose: true,
@@ -250,6 +260,13 @@
             }
         });
    });
+
+    $("#id-q-menu li a").click(function(){
+            var zh_name=$(this).text();
+            var en_name=$(this).attr("name");
+            $("#id-q-key").val(en_name);
+            $("#id-q-zh").text(zh_name);
+    });
 
     function search(page, stus){
         $("#id-page").val(page);

@@ -1,26 +1,25 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="UTF-8">
-		<title></title>
-		<link rel="stylesheet" href="static/css/bootstrap.min.css" />
-		<style type="text/css">
-			.container {
-				width: 90%;
-				margin-top: 10px;
-			}
-			.price{
-				color: #f60;
-				font-size:16px;
-				font-family: Verdana,Geneva,sans-serif;
-			}
-		</style>
-	</head>
-
-	<body>
+{% extends 'dashboard/base.html'%}
+{% block style %}
+<style type="text/css">
+    .price{
+        color: #f60;
+        font-size:16px;
+        font-family: Verdana,Geneva,sans-serif;
+    }
+</style>
+{%endblock%}
+{%block body%}
 		<div class="container">
-			<div class="panel panel-default">
-				<div class="panel-heading">订单信息</div>
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="breadcrumb">
+                        <li><a href="#">首页</a></li>
+                        <li class="active">订单详情</li>
+                    </ul>
+                </div>
+            </div>
+			<div class="panel panel-default" style="padding-top:0px">
+				<div class="panel-heading" style="">订单信息</div>
 				<table class="table table-hover">
 					<thead>
 						<th>订单号</th>
@@ -34,22 +33,24 @@
 					</thead>
 					<tbody>
 						<tr>
-							<td>2016050762898013</td>
-							<td>90160507225005705777</td>
-							<td>2016-05-07 22:52:31</td>
-							<td>2016-05-07 22:52:32</td>
+                            <td>{{order.order_no}}</td>
+                            <td>{{order.out_order_no}}</td>
+                            <td>{{order.create_date_time|format_datetime}}</td>
+                            <td>{{order.lock_datetime|format_datetime}}</td>
 							<td>1</td>
-							<td>1</td>
-							<td><span class="glyphicon glyphicon-jpy price">432.0</span></td>
-							<td class="text-success">出票成功</td>
+                            <td>{{order.ticket_amount}} 张</td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.order_price}}</span></td>
+							<td class="{%if order.status==14%}text-success{%else%}text-danger{%endif%}"class="{%if order.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[order.status]}}</td>
 						</tr>
 						<tr><td colspan="8" style="text-align: center;">
-							您购买了:2016-05-08 15:00,连云港/苏欣快客站-南通/南通车次为:AK1125的汽车票,取票号:0364377,取票密码:272088,座位号:4 
+                            {% for s in order.pick_msg_list %}
+                            {{s}}
+                            <br />
+                            {% endfor %}
 						</td></tr>
 					</tbody>
 				</table>
 			</div>
-			
 			<div class="panel panel-default">
 				<div class="panel-heading">线路信息</div>
 				<table class="table table-hover">
@@ -63,12 +64,12 @@
 					</thead>
 					<tbody>
 						<tr>
-							<td>2016050762898013</td>
-							<td>2016-05-08 15:00:00</td>
-							<td>AK1125</td>
-							<td>连云港(苏欣快客站) - 南通</td>
-							<td><span class="glyphicon glyphicon-jpy price">125.0</span></td>
-							<td><span class="glyphicon glyphicon-jpy price">3.0</span></td>
+                            <td>{%if order.line%}{{order.line.line_id}}{%endif%}</td>
+							<td>{{order.drv_datetime|format_datetime}}</td>
+                            <td>{{order.bus_num}}</td>
+                            <td>{{order.starting_name}} - {{order.destination_name}}</td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.ticket_price}}</span></td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.ticket_fee}}</span></td>
 						</tr>
 					</tbody>
 				</table>
@@ -84,10 +85,10 @@
 					</thead>
 					<tbody>
 						<tr>
-							<td>巴巴快巴</td>
-							<td>ww572u012f210cu20270</td>
-							<td>17095138715</td>
-							<td>@123456</td>
+                            <td>{{source_info[order.crawl_source]["name"]}}({{source_info[order.crawl_source]["website"]}})</td>
+                            <td>{{order.raw_order_no}}</td>
+                            <td>{{order.source_account}}</td>
+                            <td>{{order.source_account_pass}}</td>
 						</tr>
 					</tbody>
 				</table>
@@ -104,22 +105,18 @@
 					<tbody>
 						<tr>
 							<td>联系人</td>
-							<td>曹聪	</td>
-							<td>1555111332</td>
-							<td>320582198702092636</td>
+                            <td>{{order.contact_info["name"]}}</td>
+                            <td>{{order.contact_info["telephone"]}}</td>
+                            <td>{{order.contact_info["id_number"]}}</td>
 						</tr>
+                        {%for r in order.riders%}
 						<tr>
-							<td>乘客1</td>
-							<td>曹聪	</td>
-							<td>1555111332</td>
-							<td>320582198702092636</td>
+                            <td>乘客{{loop.index}}</td>
+                            <td>{{r["name"]}}</td>
+                            <td>{{r["telephone"]}}</td>
+                            <td>{{r["id_number"]}}</td>
 						</tr>
-						<tr>
-							<td>乘客2</td>
-							<td>曹聪	</td>
-							<td>1555111332</td>
-							<td>320582198702092636</td>
-						</tr>
+                        {%endfor%}
 					</tbody>
 				</table>
 			</div>
@@ -139,15 +136,15 @@
 					</thead>
 					<tbody>
 						<tr>
-							<td>支付宝</td>
-							<td>未知</td>
-							<td>2016-05-08 15:00:00</td>
-							<td>cky@alipay.com</td>
-							<td>3923772847832</td>
-							<td>3923772847832783273827</td>
-							<td><span class="glyphicon glyphicon-jpy price">125.0</span></td>
-							<td>3923772847832783273827</td>
-							<td><span class="glyphicon glyphicon-jpy price">3.0</span></td>
+                            <td>{{order.pay_channel}}</td>
+                            <td>{{pay_status_msg[order.pay_status]}}</td>
+							<td>None</td>
+                            <td>{{order.pay_account}}</td>
+                            <td>{{order.pay_order_no}}</td>
+                            <td>{{order.pay_trade_no}}</td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.pay_money}}</span></td>
+                            <td>{{order.refund_trade_no}}</td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.refund_money}}</span></td>
 						</tr>
 					</tbody>
 				</table>
@@ -162,13 +159,12 @@
 					</thead>
 					<tbody>
 						<tr>
-							<td>李白</td>
-							<td>2016-05-08 15:00:00</td>
-							<td>2016-05-08 15:00:00</td>
+                            <td>{{order.kefu_username}}</td>
+                            <td>{{order.kefu_assigntime|format_datetime}}</td>
+                            <td>{{order.kefu_updatetime|format_datetime}}</td>
 						</tr>
 					</tbody>
 				</table>
 			</div>
 		</div>
-	</body>
-</html>
+{%endblock%}

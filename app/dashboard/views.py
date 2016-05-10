@@ -79,6 +79,8 @@ def order_list():
             query.update(contact_info__telephone=q_value)
         elif q_key == "contact_name":
             query.update(contact_info__name=q_value)
+        elif q_key == "contact_idcard":
+            query.update(contact_info__id_number=q_value)
         elif q_key == "sys_order_no":
             query.update(order_no=q_value)
         elif q_key == "out_order_no":
@@ -182,6 +184,17 @@ def order_list():
                                 site_count=site_count,
                                 account_count=account_count,
                                 )
+
+
+@dashboard.route('/orders/<order_no>', methods=['GET'])
+def order_detail(order_no):
+    order = Order.objects.get_or_404(order_no=order_no)
+    return render_template("dashboard/order-item.html",
+                            order=order,
+                            status_msg=STATUS_MSG,
+                            source_info=SOURCE_INFO,
+                            pay_status_msg=PAY_STATUS_MSG,
+                           )
 
 
 @dashboard.route('/ajax/query', methods=["GET"])

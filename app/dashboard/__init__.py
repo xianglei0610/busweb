@@ -19,7 +19,7 @@ def format_datetime(context, value, format="%Y-%m-%d %H:%M:%S"):
 
 @jinja2.contextfilter
 @dashboard.app_template_filter()
-def cut_str(context, value, size=22):
+def cut_str(context, value, size=20):
     if not value:
         return value
     if len(value) < size:
