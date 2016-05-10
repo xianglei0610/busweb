@@ -293,7 +293,7 @@ class Flow(BaseFlow):
         now = dte.now()
         ua = random.choice(MOBILE_USER_AGENG)
         headers = {"User-Agent": ua}
-
+        update_attrs = {}
         line_url = 'http://www.nmghyjt.com/index.php/search/getBuslist'
         data = {
                 "dd_city": line.d_sta_name,
