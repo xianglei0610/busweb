@@ -15,6 +15,9 @@
         font-size:16px;
         font-family: Verdana,Geneva,sans-serif;
     }
+    .table{
+        margin-bottom: 0px;
+    }
 </style>
 {%endblock%}
 
@@ -137,17 +140,17 @@
         </div>
     </div>
 
-    <table class="table table-hover table-bordered" style="margin-bottom: 0px;table-layout:fixed">
+    <table class="table table-hover table-bordered">
         <caption>
             <div class="pull-right">
-                <span>订单总数：<label class="text-danger">1249个</label></span>
-                <span>出票张数：<label class="text-danger">1468 张</label> </span>
-                <span>总金额：<label class="text-danger">112570.5</label></span>
+                <span>订单总数：<label class="text-danger">{{status_count["0"]}}个</label></span>
+                <span>出票张数：<label class="text-danger">{{stat.ticket_total|int}} 张</label> </span>
+                <span>总金额：<label class="text-danger">{{stat.money_total}}</label></span>
             </div>
         </caption>
         <thead>
             <tr>
-                <th style="width:230px">系统/12308/源站订单号</th>
+                <th>系统/12308/源站订单号</th>
                 <th>下单人信息</th>
                 <th>创建/下单/出发时间</th>
                 <th>车次号/行程</th>
@@ -162,7 +165,7 @@
         <tbody>
             {% for item in page["items"]%}
             <tr>
-                <td style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">{{item.order_no}}</br>{{item.out_order_no}}</br>{{item.raw_order_no}}</td>
+                <td>{{item.order_no}}</br>{{item.out_order_no}}</br>{{item.raw_order_no|cut_str}}</td>
                 <td>{{item.contact_info["name"]}}<br />{{item.contact_info["telephone"]}}</br>{{item.contact_info["id_number"]}}</td>
                 <td>{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
                 <td>{{item.bus_num}}<br>{{item.starting_name.split(';')[0]}} - {{item.destination_name.split(';')[0]}}</br>{{item.starting_name.split(';')[1]}} - {{item.destination_name.split(';')[1]}}</td>
@@ -188,18 +191,23 @@
     <nav style="text-align: center">
         <ul class="pagination">
             <li>
-                <a href="#" aria-label="Previous">
+                <a href="javascript:search('{{page.previous}}', '{{condition.status}}')" aria-label="Previous">
                     <span aria-hidden="true">&laquo;</span>
                 </a>
             </li>
-            <li><a href="#">1</a></li>
-            <li><a href="#">2</a></li>
-            <li><a href="#">...</a></li>
-            <li><a href="#">3</a></li>
-            <li><a href="#">4</a></li>
-            <li><a href="#">5</a></li>
+            {%if page.range and page.range[0] > 1%}
+            <li><a href="javascript:search('1', '{{condition.status}}')">1</a></li>
+            <li><a href="javascript:;">...</a></li>
+            {%endif%}
+            {%for i in page.range %}
+            <li class="{%if page.cur_page==i %}active{%endif%}"><a href="javascript:search('{{i}}', '{{condition.status}}')">{{i}}</a></li>
+            {%endfor%}
+            {%if page.range and page.range[-1] < page.page_count %}
+                <li><a href="javascript:;">...</a></li>
+                <li><a href="javascript:search('{{page.page_count}}', '{{condition.status}}')">{{page.page_count}}</a></li>
+            {%endif%}
             <li>
-                <a href="#" aria-label="Next">
+                <a href="javascript:search('{{page.next}}', '{{condition.status}}')" aria-label="Next">
                     <span aria-hidden="true">&raquo;</span>
                 </a>
             </li>

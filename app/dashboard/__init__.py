@@ -17,6 +17,16 @@ def format_datetime(context, value, format="%Y-%m-%d %H:%M:%S"):
     return value.strftime(format)
 
 
+@jinja2.contextfilter
+@dashboard.app_template_filter()
+def cut_str(context, value, size=22):
+    if not value:
+        return value
+    if len(value) < size:
+        return value
+    return value[:size]+"..."
+
+
 @dashboard.before_request
 def log_request():
     pass

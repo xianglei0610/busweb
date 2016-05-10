@@ -30,8 +30,9 @@ from app import order_log, db, access_log
 
 def parse_page_data(qs):
     total = qs.count()
-    page = int(request.args.get("page", default=1))
-    page_size = int(request.args.get("page_size", default=20))
+    params = request.values.to_dict()
+    page = int(params.get("page", 1))
+    page_size = int(params.get("page_size", 20))
     page_num = int(math.ceil(total*1.0/page_size))
     skip = (page-1)*page_size
 
@@ -41,6 +42,8 @@ def parse_page_data(qs):
         "page_size": page_size,         # 每页page_size条记录
         "page_count": page_num,         # 总共有page_num页
         "cur_page": page,               # 当前页
+        "previous": max(0, page-1),
+        "next": min(page+1, page_num),
         "items": qs[skip: skip+page_size],
         "range": cur_range,             # 分页按钮显示的范围
     }
@@ -164,6 +167,7 @@ def order_list():
         stat = {
             "money_total": qs.sum("order_price"),
             "order_total": qs.count(),
+            "ticket_total": qs.sum("ticket_amount")
         }
         return render_template('dashboard/orders.html',
                                 page=parse_page_data(qs),
