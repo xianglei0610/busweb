@@ -120,7 +120,7 @@ class OpenCity(db.Document):
                          })
         old = set(self.dest_list)
         new= set(map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
-        self.update(dest_list=old.union(new))
+        self.modify(dest_list=old.union(new))
 
 
 class Line(db.Document):
