@@ -24,7 +24,7 @@ from app.dashboard import dashboard
 from app.utils import get_redis
 from app.models import Order, Line, AdminUser
 from app.flow import get_flow
-from tasks import push_kefu_order, async_lock_ticket, issued_callback
+from tasks import async_lock_ticket, issued_callback
 from app import order_log, db, access_log
 
 
@@ -550,8 +550,8 @@ def all_adminuser():
 @dashboard.route('/orders/my', methods=['GET'])
 @login_required
 def my_order():
-    working_kefus = AdminUser.objects.filter(is_kefu=1)
-    return render_template("dashboard/my-order.html", working_kefus=working_kefus)
+    return render_template("dashboard/my-order.html",
+                           tab=request.args.get("tab", "dealing"))
 
 
 @dashboard.route('/orders/dealing', methods=['GET'])
@@ -579,42 +579,22 @@ def dealing_order():
 
     qs = assign.dealing_orders(current_user).order_by("create_date_time")
     rds = get_redis("order")
-    is_warn = False
     locking = {}
     for o in qs:
         if rds.get(RK_ORDER_LOCKING % o.order_no):
             locking[o.order_no] = 1
         else:
             locking[o.order_no] = 0
-    if not current_user.is_superuser and not current_user.is_close and qs.count()==KF_ORDER_CT:
-        is_close_tmp = True
-        is_close = False
-        for o in qs:
-            if not o.kefu_assigntime:
-                continue
-            warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
-            if warn_time < 3*60:
-                is_warn = False
-                is_close = False
-                is_close_tmp = False
-                break
-            elif warn_time >= 3*60 and warn_time < 10*60:
-                is_warn = True
-                is_close_tmp = False
-            else:
-                is_close = True
-        if is_close and is_close_tmp:
-            current_user.modify(is_close=is_close, is_switch=0)
     not_issued = assign.dealed_but_not_issued_orders(current_user)
-    dealed_count = {}
     return render_template("dashboard/dealing.html",
+                            tab=request.args.get("tab", "dealing"),
                             page=parse_page_data(qs),
                             status_msg=STATUS_MSG,
                             source_info=SOURCE_INFO,
-                            locking=locking,
-                            not_issued=not_issued,
-                            dealed_count=dealed_count,
-                            is_warn=is_warn)
+                            dealing_count=assign.waiting_lock_size()+qs.count(),
+                            dealed_count=not_issued.count(),
+                            dealed_orders=not_issued,
+                            locking=locking)
 
 
 @dashboard.route('/orders/<order_no>', methods=['GET'])
@@ -627,96 +607,6 @@ def detail_order(order_no):
                             source_info=SOURCE_INFO,
                             pay_status_msg=PAY_STATUS_MSG,
                            )
-
-
-@dashboard.route('/orders/wating_deal', methods=['GET','POST'])
-@login_required
-def wating_deal_order():
-    """
-    等待处理订单列表
-    """
-    client = request.headers.get("type", 'web')
-    if current_user.is_kefu:
-        for o in assign.dealing_orders(current_user):
-            if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
-                continue
-            o.complete_by(current_user)
-        if current_user.is_switch and not current_user.is_close:
-            for i in range(20):
-                order_ct = assign.dealing_size(current_user)
-                if order_ct >= KF_ORDER_CT:
-                    break
-                order = assign.dequeue_wating_lock(current_user)
-                if not order:
-                    continue
-                if order.kefu_username:
-                    continue
-                order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
-                assign.add_dealing(order, current_user)
-                if order.status == STATUS_WAITING_LOCK:
-                    async_lock_ticket.delay(order.order_no)
-                push_kefu_order.apply_async((current_user.username, order.order_no))
-    qs = assign.dealing_orders(current_user).order_by("create_date_time")
-    rds = get_redis("order")
-    is_warn = False
-    if client == 'web':
-        locking = {}
-        for o in qs:
-            if rds.get(RK_ORDER_LOCKING % o.order_no):
-                locking[o.order_no] = 1
-            else:
-                locking[o.order_no] = 0
-        if not current_user.is_superuser and not current_user.is_close and qs.count()==KF_ORDER_CT:
-            is_close_tmp = True
-            is_close = False
-            for o in qs:
-                if not o.kefu_assigntime:
-                    continue
-                warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
-                if warn_time < 3*60:
-                    is_warn = False
-                    is_close = False
-                    is_close_tmp = False
-                    break
-                elif warn_time >= 3*60 and warn_time < 10*60:
-                    is_warn = True
-                    is_close_tmp = False
-                else:
-                    is_close = True
-            if is_close and is_close_tmp:
-                current_user.modify(is_close=is_close, is_switch=0)
-        not_issued = assign.dealed_but_not_issued_orders(current_user)
-        # today = dte.now().strftime("%Y-%m-%d")
-        # dealed_count = Order.objects.filter(kefu_username=current_user.username,
-        #                                     create_date_time__gte=today,
-        #                                     status__in=[STATUS_ISSUE_ING, STATUS_ISSUE_SUCC, STATUS_ISSUE_FAIL]) \
-        #                     .item_frequencies("crawl_source")
-        dealed_count = {}
-        return render_template("admin-new/waiting_deal_order.html",
-                               page=parse_page_data(qs),
-                               status_msg=STATUS_MSG,
-                               source_info=SOURCE_INFO,
-                               locking=locking,
-                               not_issued=not_issued,
-                               dealed_count=dealed_count,
-                               is_warn=is_warn)
-    elif client in ['android', 'ios']:
-        data = []
-        for i in qs:
-            tmp = {}
-            tmp['out_order_no'] = i.out_order_no
-            tmp['order_no'] = i.order_no
-            tmp['create_date_time'] = i.create_date_time.strftime('%Y-%m-%d %H:%M:%S')
-            tmp['ticket_amount'] = i.ticket_amount
-            tmp['starting_name'] = i.starting_name.split(';')[1]
-            tmp['destination_name'] = i.destination_name.split(';')[1]
-            tmp['order_price'] = i.order_price
-            tmp['status'] = i.status
-            tmp['alias_status'] = STATUS_MSG[i.status]
-            tmp['crawl_source'] = SOURCE_INFO[i.crawl_source]["name"]
-            data.append(tmp)
-        return jsonify({"status": 0, "data": data})
-
 
 @dashboard.route('/kefu_complete', methods=['POST'])
 @login_required
@@ -793,121 +683,6 @@ def fangbian_callback():
         order_log.error("%s\n%s", "".join(traceback.format_exc()), locals())
         return "error"
     return "success"
-
-
-@dashboard.route('/api/qpdx', methods=['POST'])
-def qupiao_duanxin():
-    """
-    Request:
-    {
-        "recevie_phone": "150xxxxxxx",          # 接收短信的手机号码
-        "send_phone"; "10086",                  # 发送短信的号码
-        "content": "xxxx",                      # 短信内容
-    }
-
-    Response:
-    {
-        "code": 1                           # 1 成功  0 失败或异常
-        "message": "ok":
-    }
-    """
-    data = request.get_data()
-    access_log.info("[qupiao_duanxin-1] %s", data)
-    post = json.loads(data)
-    r_phone = post["receive_phone"].lstrip("+86")
-    s_phone = post["send_phone"].lstrip("+86")
-    content = post["content"].encode("utf-8")
-    today = dte.now().strftime("%Y-%m-%d")
-    if content.startswith(u"【同程旅游】"):
-        regex = r"【同程旅游】您购买了：(\S{4}-\S{2}-\S{2}\s\S{2}:\S{2})，(\S+) - (\S+)车次为(\S+)的汽车票，取票号：(\d+)，取票密码：(\d+)，座位号：(\d+)"
-        try:
-            sdate, start, dest, bus, pick_no, pick_code, seat = re.findall(regex, content)[0]
-            drv_datetime = dte.strptime(sdate, "%Y-%m-%d %H:%M")
-        except Exception, e:
-            access_log.info("[qupiao_duanxin-2] ignore, incorrect format, %s", e)
-            return jsonify({"code": 0, "message": "incorrect conent format", "data": ""})
-        orders = Order.objects.filter(create_date_time__gt=today,
-                                      crawl_source=SOURCE_TC,
-                                      #source_account__in=[r_phone, s_phone],
-                                      pick_code_list__contains="%s|%s" % (pick_no, pick_code))
-        if orders:
-            access_log.info("[qupiao_duanxin-3] ignore, has matched before")
-            return jsonify({"code": 0, "message": "has mached before", "data": ""})
-        orders = Order.objects.filter(create_date_time__gt=today,
-                                      crawl_source=SOURCE_TC,
-                                      status__in=[STATUS_WAITING_ISSUE, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING],
-                                      drv_datetime=drv_datetime,
-                                      bus_num=bus.strip(),
-                                      #source_account__in=[r_phone, s_phone],
-                                      starting_name=start.strip().replace("/", ";"),
-                                      )
-        orders = filter(lambda o: not o.pick_code_list, orders)
-        if not orders:
-            access_log.error("[qupiao_duanxin-4] not found order!")
-            return jsonify({"code": 0, "message": "not found order", "data": ""})
-        access_log.info("[qupiao_duanxin-5] mached %s order" % len(orders))
-        order = orders[0]
-
-        msg_list = []
-        dx_tmpl = DUAN_XIN_TEMPL["江苏"]
-        code_list = ["%s|%s" % (pick_no, pick_code)]
-        dx_info = {
-            "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-            "start": order.line.s_sta_name,
-            "end": order.line.d_sta_name,
-            "code": pick_code,
-            "no": pick_no,
-            "bus": order.line.bus_num,
-        }
-        msg_list = [dx_tmpl % dx_info]
-        order.modify(pick_code_list=code_list, pick_msg_list=msg_list)
-        issued_callback(order.order_no)
-        order_log.info("order:%s set pick msg %s", order.order_no, msg_list[0])
-
-    elif content.startswith(u"【畅途网】"):
-        regex = r"【畅途网】您预订的(\S{4}-\S{2}-\S{2}\s\S{2}:\S{2})(\S+) (\S+) 到(\S+)，汽车票(\d+)张，订单总金额：(\S+)元。取票时间：(\S+)。凭取票号(\d+)和密码(\d+)取票，取票地点:(\S+)。请预留取票时间"
-        try:
-            sdate, start_city, start_sta, dest, amount, money, pick_time, pick_no, pick_code, pick_site = re.findall(regex, content)[0]
-        except:
-            access_log.info("[qupiao_duanxin] ignore!")
-    return jsonify({"code": 1,
-                    "message": "OK",
-                    "data": ""})
-
-
-@dashboard.route('/orders/<order_no>/pickinfo', methods=['POST'])
-@login_required
-def order_pick_info(order_no):
-    """
-    提交取票信息
-    """
-    order = Order.objects.get(order_no=order_no)
-    if order.crawl_source == SOURCE_TC:
-        if order.status not in [STATUS_WAITING_ISSUE, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING]:
-            return u"订单状态不正确"
-        pick_pass = request.args.get("pick_pass")
-        pick_num = request.args.get("pick_num")
-        raw_order = request.args.get("raw_order_no")
-        msg_list = []
-        dx_tmpl = DUAN_XIN_TEMPL["江苏"]
-        code_list = ["%s|%s" % (pick_num, pick_pass)]
-        if order.pick_code_list and order.pick_code_list != code_list:
-            return "之前已经设置过不同的取票短信"
-        if raw_order and order.raw_order_no and raw_order != order.raw_order_no:
-            return "源站订单号对应不上"
-        dx_info = {
-            "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-            "start": order.line.s_sta_name,
-            "end": order.line.d_sta_name,
-            "code": pick_code,
-            "no": pick_no,
-            "bus": order.line.bus_num,
-        }
-        msg_list = [dx_tmpl % dx_info]
-        order.modify(pick_code_list=code_list, pick_msg_list=msg_list)
-        issued_callback(order.order_no)
-        return msg_list[0]
-    return "type error"
 
 
 dashboard.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))

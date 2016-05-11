@@ -71,7 +71,8 @@ def dequeue_wating_lock(user):
 
 def waiting_lock_size():
     rds = get_redis("order")
-    return rds.llen(RK_WATING_LOCK_ORDERS) + rds.llen(RK_WATING_LOCK_ORDERS2)
+    return rds.llen(RK_ORDER_QUEUE_YH) + rds.llen(RK_ORDER_QUEUE_YH2)+ \
+           rds.llen(RK_ORDER_QUEUE_ZFB) + rds.llen(RK_ORDER_QUEUE_ZFB2)
 
 
 def add_dealing(order, user):

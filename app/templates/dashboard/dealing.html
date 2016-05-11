@@ -1,6 +1,6 @@
 <ul class="nav nav-tabs">
-    <li role="presentation"><a href="#">待处理<span class="badge">4111</span></a></li>
-    <li role="presentation" class="active"><a href="#">正在出票  <span class="badge">4111</span></a></li>
+    <li role="presentation" class="{%if tab=='dealing'%}active{%endif%}"><a href="/orders/my?tab=dealing">待处理 <span class="badge"> {{dealing_count}}</span></a></li>
+    <li role="presentation" class="{%if tab=='dealed'%}active{%endif%}"><a href="/orders/my?tab=dealed">正在出票 <span class="badge"> {{dealed_count}}</span></a></li>
 </ul>
 
 <table class="table table-hover" style="margin-bottom: 0px;">
@@ -23,34 +23,26 @@
     </thead>
 
     <tbody>
+        {%for item in page["items"]%}
         <tr>
+            <td>{{item.order_no}}</br>{{item.out_order_no}}</br>{{item.raw_order_no|cut_str}}</td>
+            <td>{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
+            <td>{{item.bus_num}}<br>{{item.starting_name.split(';')[0]}} - {{item.destination_name.split(';')[0]}}</br>{{item.starting_name.split(';')[1]}} - {{item.destination_name.split(';')[1]}}</td>
+            <td>{{source_info[item.crawl_source]["name"]}}<br>{{item.source_account}}</br>{{item.source_account_pass}}</td>
+            <td>{{item.riders|count}}张</td>
             <td>
-                2016050673951140<br /> 90160506143755400370 <br /> 1605060000000924490
-            </td>
-            <td>
-                2016-05-06 14:37:55<br /> 2016-05-06 14:38:27<br /> 2016-05-07 11:40:00
-            </td>
-            <td>
-                814<br /> 重庆主城 - 文山<br /> 重庆汽车站 - 文山
-            </td>
-            <td>
-                重庆客运 <br /> 497210009@qq.com <br /> 123456
-            </td>
-            <td>
-                <br /> 1张
+                <br />
+                <span class="glyphicon glyphicon-jpy price">{{item.order_price}}</span>
             </td>
             <td>
                 <br />
-                <span class="glyphicon glyphicon-jpy price">432.0</span>
-            </td>
-            <td>
-                <br />
-                <span class="text-success">出票成功</span>
+                <span class="{%if item.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[item.status]}}</span>
             </td>
             <td>
                 <button type="button" class="btn btn-warning">立即支付</button><br />
                 <a href="#">转移</a>
             </td>
+            {%endfor%}
         </tr>
     </tbody>
 </table>
