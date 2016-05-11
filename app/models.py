@@ -579,7 +579,6 @@ class Rebot(db.Document):
         rds = get_redis("default")
         ipstr = self.ip
         key = "proxy:%s" % self.crawl_source
-        print key
         if ipstr and rds.sismember(key, ipstr):
             return ipstr
         ipstr = rds.srandmember(key)
@@ -2481,7 +2480,6 @@ class E8sAppRebot(Rebot):
         url = "http://m.e8s.com.cn/bwfpublicservice/login.action"
         r = self.http_post(url, data=data, headers=headers)
         ret = r.json()
-        print ret["detail"]
         if not ret["detail"]:
             # 登陆失败
             self.is_active = False

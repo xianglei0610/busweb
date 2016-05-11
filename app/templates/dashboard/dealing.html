@@ -39,7 +39,7 @@
                 <span class="{%if item.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[item.status]}}</span>
             </td>
             <td>
-                <button type="button" class="btn btn-warning">立即支付</button><br />
+                <a href="/orders/{{item.order_no}}/pay" class="btn btn-warning" target="_blank">立即支付</a><br />
                 <a href="#">转移</a>
             </td>
             {%endfor%}

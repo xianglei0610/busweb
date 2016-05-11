@@ -331,32 +331,6 @@ def src_code_img(order_no):
         return r.content
 
 
-@dashboard.route('/orders/<order_no>/srccodeinput', methods=['GET'])
-@login_required
-def src_code_input(order_no):
-    order = Order.objects.get(order_no=order_no)
-    token = request.args.get("token", "")
-    username = request.args.get("username", '')
-    return render_template('admin-new/code_input.html',
-                           order=order,
-                           token=token,
-                           username=username
-                           )
-
-
-@dashboard.route('/orders/<order_no>/pay_account_input', methods=['GET'])
-@login_required
-def pay_account_input(order_no):
-    order = Order.objects.get(order_no=order_no)
-    token = request.args.get("token", "")
-    username = request.args.get("username", '')
-    return render_template('admin-new/pay_account_input.html',
-                           order=order,
-                           token=token,
-                           username=username,
-                           pay_accounts=PAY_ACCOUNTS
-                           )
-
 @dashboard.route('/orders/<order_no>/change_kefu', methods=['POST'])
 @login_required
 def change_kefu(order_no):
@@ -381,36 +355,24 @@ def change_kefu(order_no):
     return "成功转给%s" % target.username
 
 
-@dashboard.route('/orders/<order_no>/pay', methods=['GET'])
+@dashboard.route('/orders/<order_no>/pay', methods=['GET', 'POST'])
 @login_required
 def order_pay(order_no):
+    params = request.values.to_dict()
     order = Order.objects.get(order_no=order_no)
-    token = request.args.get("token", "")
-    username = request.args.get("username",'')
-    code = request.args.get("valid_code", "")
-    force = int(request.args.get("force", "0"))
+    code = params.get("valid_code", "")
+    force = int(params.get("force", "0"))
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
         return "订单已成功或失败,不需要支付"
     if order.kefu_username != current_user.username:
         return "请先要%s把单转给你再支付" % order.kefu_username
-#     if not order.pay_account:
-#         if token and token == TOKEN:
-#             return redirect(url_for("admin.pay_account_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
-#         else:
-#             return redirect(url_for("admin.pay_account_input", order_no=order_no))
     rds = get_redis("order")
     key = RK_ORDER_LOCKING % order.order_no
     if rds.get(key):
         return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("admin.order_pay", order_no=order.order_no)
 
-    channel = request.args.get("channel", "alipay")
-    bank = request.args.get("bank", "")  #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行  SPDB 浦发银行
-    if not bank:
-        bank = 'BOCB2C'
-        if current_user.yh_type:
-            bank = current_user.yh_type
     flow = get_flow(order.crawl_source)
-    ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel=channel,bank=bank)
+    ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel="", bank=current_user.yh_type)
     if not ret:
         ret = {}
     flag = ret.get("flag", "")
@@ -423,10 +385,7 @@ def order_pay(order_no):
             return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("admin.order_pay", order_no=order.order_no, force=1)
         return ret["content"]
     elif flag == "input_code":
-        if token and token == TOKEN:
-            return redirect(url_for("admin.src_code_input", order_no=order_no)+"?token=%s&username=%s"%(TOKEN,username))
-        else:
-            return redirect(url_for("admin.src_code_input", order_no=order_no))
+        return render_template('dashboard/src-code-input.html', order=order, source_info=SOURCE_INFO)
     elif flag == "error":
         return "%s  <a href='%s'>点击重试</a>" % (ret["content"], url_for("admin.order_pay", order_no=order.order_no))
     return "异常页面 %s" % str(json.dumps(ret,ensure_ascii = False))
@@ -577,7 +536,11 @@ def dealing_order():
                 if order.status == STATUS_WAITING_LOCK:
                     async_lock_ticket.delay(order.order_no)
 
-    qs = assign.dealing_orders(current_user).order_by("create_date_time")
+    tab = request.args.get("tab", "dealing")
+    qs = assign.dealed_but_not_issued_orders(current_user)
+    dealed_count = qs.count()
+    if tab == "dealing":
+        qs = assign.dealing_orders(current_user).order_by("create_date_time")
     rds = get_redis("order")
     locking = {}
     for o in qs:
@@ -585,15 +548,13 @@ def dealing_order():
             locking[o.order_no] = 1
         else:
             locking[o.order_no] = 0
-    not_issued = assign.dealed_but_not_issued_orders(current_user)
     return render_template("dashboard/dealing.html",
-                            tab=request.args.get("tab", "dealing"),
+                            tab=tab,
                             page=parse_page_data(qs),
                             status_msg=STATUS_MSG,
                             source_info=SOURCE_INFO,
                             dealing_count=assign.waiting_lock_size()+qs.count(),
-                            dealed_count=not_issued.count(),
-                            dealed_orders=not_issued,
+                            dealed_count=dealed_count,
                             locking=locking)
 
 
