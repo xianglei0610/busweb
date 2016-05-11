@@ -351,7 +351,7 @@ class Order(db.Document):
     lock_info = db.DictField()
 
     # 取票信息
-    pick_code_list = db.ListField(db.StringField(max_length=30))     # 取票密码
+    pick_code_list = db.ListField(db.StringField(max_length=100))     # 取票密码
     pick_msg_list = db.ListField(db.StringField(max_length=300))     # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
 
     # 回调地址
