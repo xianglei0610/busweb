@@ -6,7 +6,10 @@
 <table class="table table-hover" style="margin-bottom: 0px;">
     <caption>
         <div class="pull-right">
-            <button type="button" class="btn btn-primary">开始接单</button>
+            <div class="switch switch-mini" data-on="danger" data-off="primary">
+                <label style="padding-right:10px">接单开关</label>
+                <input id="id-switch" type="checkbox" data-size="small"/>
+            </div>
         </div>
     </caption>
     <thead>
@@ -45,4 +48,11 @@
             {%endfor%}
         </tr>
     </tbody>
+    <script type="text/javascript">
+        $("#id-switch").bootstrapSwitch();
+        $('#id-switch').on('switchChange.bootstrapSwitch', function (e, state) {
+            console.log(this);
+            console.log(state);
+        });
+    </script>
 </table>

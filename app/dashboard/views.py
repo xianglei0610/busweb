@@ -580,7 +580,7 @@ def kefu_complete():
     return jsonify({"status": 0, "msg": "处理完成"})
 
 
-@dashboard.route('/kefu_on_off', methods=['POST'])
+@dashboard.route('/users/kefu_on_off', methods=['POST'])
 @login_required
 def kefu_on_off():
     is_switch = int(request.form.get('is_switch', 0))

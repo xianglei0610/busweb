@@ -39,9 +39,9 @@
 
 {% block script_footer %}
 <script type="text/javascript">
-    var idInt = setInterval(function(){
-        $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
-    },3000);
+    //var idInt = setInterval(function(){
+    //    $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
+    //},3000);
     $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
 </script>
 {% endblock %}
