@@ -378,6 +378,8 @@ class Order(db.Document):
             "status",
             "crawl_source",
             "-create_date_time",
+            "source_account",
+            "kefu_username",
         ],
     }
 
