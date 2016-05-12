@@ -209,9 +209,11 @@ class Flow(object):
             return True
         now = dte.now()
         last_refresh = (now-line.refresh_datetime).total_seconds()
-        if last_refresh < 20:    # 20s之前刷新过了，不刷新
+        if line.left_tickets<=0:    # 余票为0， 不刷新
             return False
-        elif line.left_tickets<=0:    # 余票为0， 不刷新
+        elif line.left_tickets<10 and last_refresh < 60:    # 20s之前刷新过了，不刷新
+            return False
+        elif last_refresh < 5*60:
             return False
         return True
 

@@ -283,7 +283,7 @@ class Flow(BaseFlow):
                 web_order_list.append(i['web_order_id'])
             order.modify(raw_order_no=','.join(web_order_list))
         status = tickets[0]["order_status"]
-        if status == "sell_succeeded":
+        if status in ("sell_succeeded", "succeed"):
             code_list, msg_list = [], []
             for ticket in tickets:
                 code = ticket["code"]
