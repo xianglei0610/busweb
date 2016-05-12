@@ -283,7 +283,7 @@ class Flow(BaseFlow):
                 web_order_list.append(i['web_order_id'])
             order.modify(raw_order_no=','.join(web_order_list))
         status = tickets[0]["order_status"]
-        if status == "sell_succeeded":
+        if status in ("sell_succeeded", "succeed"):
             code_list, msg_list = [], []
             for ticket in tickets:
                 code = ticket["code"]
@@ -412,7 +412,7 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", bank='',**kwargs):
-        rebot = ScqcpWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
         headers = rebot.http_header()
         # 验证码处理
         is_login = rebot.test_login_status()
@@ -438,16 +438,16 @@ class Flow(BaseFlow):
                 im = Image.open(tmpIm)
                 valid_code = pytesseract.image_to_string(im)
 
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-            if session.get(key, ''):
-                info = json.loads(session[key])
-                headers = info["headers"]
-                cookies = info["cookies"]
-                token = info["token"]
-                msg = rebot.login(valid_code=valid_code, token=token, headers=headers, cookies=cookies)
-                if msg == "OK":
-                    is_login = True
-                    rebot.modify(cookies=json.dumps(cookies))
+#             key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+#             if session.get(key, ''):
+#                 info = json.loads(session[key])
+#                 headers = info["headers"]
+#                 cookies = info["cookies"]
+#                 token = info["token"]
+            msg = rebot.login(valid_code=valid_code, token=token, headers=headers, cookies=cookies)
+            if msg == "OK":
+                is_login = True
+                rebot.modify(cookies=json.dumps(cookies))
         if is_login:
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)

@@ -110,6 +110,9 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
         r = rebot.http_post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
         ret = r.content
+        if ret == '404':
+            r = rebot.http_post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+            ret = r.content
         return {'flag': True, 'msg': ret}
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):

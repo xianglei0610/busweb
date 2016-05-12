@@ -80,6 +80,8 @@ class Flow(BaseFlow):
                     u"班次状态为保班",
                     u"无可售席位",
                     u"中心转发30003请求TKLock_3失败"
+                    u"班次状态为作废",
+                    u"不允许锁位"
                 ]
                 for s in lst:
                     if s in msg:

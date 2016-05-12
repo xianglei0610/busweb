@@ -8,35 +8,64 @@ from app.models import Order
 from datetime import datetime as dte
 
 
-def enqueue_wating_lock(order, score=0, is_first=True):
+def enqueue_wating_lock(order):
     """
     等待下单队列
     """
     now = dte.now()
     line = order.line
     rds = get_redis("order")
+    val = "%s_%s" % (order.order_no, int(time.time()*1000))
 
-    if is_first:
-        if (line.drv_datetime-now).total_seconds() <= 3*60*60+20:       # 3个小时内的车优先处理
-            rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, 0)
+    if (line.drv_datetime-now).total_seconds() <= 3*60*60+20:       # 3个小时内的车优先处理
+        if order.crawl_source in [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S, SOURCE_SCQCP]: # 银行支付
+            rds.lpush(RK_ORDER_QUEUE_YH2, val)
         else:
-            rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, int(time.time()))
+            rds.lpush(RK_ORDER_QUEUE_ZFB2, val)
     else:
-        rds.zadd(RK_WATING_LOCK_ORDERS, order.order_no, min(int(time.time()), score+1))
+        if order.crawl_source in [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S, SOURCE_SCQCP]: # 银行支付
+            rds.lpush(RK_ORDER_QUEUE_YH, val)
+        else:
+            rds.lpush(RK_ORDER_QUEUE_ZFB, val)
 
 
 def dequeue_wating_lock(user):
     rds = get_redis("order")
-    lst = rds.zrange(RK_WATING_LOCK_ORDERS, 0, 0, withscores=True)
-    if not lst:
-        return None
-    no, score = lst[0]
-    rds.zrem(RK_WATING_LOCK_ORDERS, no)
-    order = Order.objects.get(order_no=no)
-    for ptype in user.source_include:
-        if order.crawl_source in PAY_TYPE_SOURCE[ptype]:
-            return order
-    enqueue_wating_lock(order, is_first=False, score=score)
+
+    def _cmp_rpop(k1, k2):
+        v1, v2 = rds.lindex(k1, -1), rds.lindex(k2, -1)
+        if v1 and v2:
+            v1, t1 = v1.split("_")
+            v2, t2 = v2.split("_")
+            if t1 > t2:
+                return rds.rpop(k2)
+            return rds.rpop(k1)
+        elif v1:
+            v1, t1 = v1.split("_")
+            return rds.rpop(k1)
+        elif v2:
+            v2, t2 = v2.split("_")
+            return rds.rpop(k2)
+        return ""
+
+
+    val = ""
+    if "yhzf" in user.source_include and "zfb" in user.source_include:
+        val = _cmp_rpop(RK_ORDER_QUEUE_YH2, RK_ORDER_QUEUE_ZFB2)
+        if not val:
+            val = _cmp_rpop(RK_ORDER_QUEUE_YH, RK_ORDER_QUEUE_ZFB)
+    elif "yhzf" in user.source_include:
+        val = rds.rpop(RK_ORDER_QUEUE_YH2)
+        if not val:
+            val = rds.rpop(RK_ORDER_QUEUE_YH)
+    elif "zfb" in user.source_include:
+        val = rds.rpop(RK_ORDER_QUEUE_ZFB2)
+        if not val:
+            val = rds.rpop(RK_ORDER_QUEUE_ZFB)
+
+    if val:
+        no, t = val.split("_")
+        return Order.objects.get(order_no=no)
     return None
 
 

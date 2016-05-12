@@ -31,9 +31,11 @@
 					},
 					success : function(data){
 						if(data.status==0){
-              set_switch(data["is_switch"]);
-              load_orders();
-					    }
+			              set_switch(data["is_switch"]);
+			              load_orders();
+					    }else{
+                 			alert(data.msg)
+                        }
 				    }
 				});
 			  });
@@ -53,7 +55,7 @@
                              success : function(data){
                                      if(data.status==0){
                                              parent.location.reload();
-                                 }
+                             		}
                          }
                      });
                  }
