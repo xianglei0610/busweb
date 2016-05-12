@@ -120,7 +120,7 @@ class OpenCity(db.Document):
                          })
         old = set(self.dest_list)
         new= set(map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
-        self.update(dest_list=old.union(new))
+        self.modify(dest_list=old.union(new))
 
 
 class Line(db.Document):
@@ -351,7 +351,7 @@ class Order(db.Document):
     lock_info = db.DictField()
 
     # 取票信息
-    pick_code_list = db.ListField(db.StringField(max_length=30))     # 取票密码
+    pick_code_list = db.ListField(db.StringField(max_length=100))     # 取票密码
     pick_msg_list = db.ListField(db.StringField(max_length=300))     # 取票说明, len(pick_code_list)必须等于len(pick_msg_list)
 
     # 回调地址
@@ -579,7 +579,6 @@ class Rebot(db.Document):
         rds = get_redis("default")
         ipstr = self.ip
         key = "proxy:%s" % self.crawl_source
-        print key
         if ipstr and rds.sismember(key, ipstr):
             return ipstr
         ipstr = rds.srandmember(key)
@@ -2481,7 +2480,6 @@ class E8sAppRebot(Rebot):
         url = "http://m.e8s.com.cn/bwfpublicservice/login.action"
         r = self.http_post(url, data=data, headers=headers)
         ret = r.json()
-        print ret["detail"]
         if not ret["detail"]:
             # 登陆失败
             self.is_active = False
