@@ -31,6 +31,11 @@
             </ul>
         </div>
     </div>
+    <div class="pull-right">
+        <div class="switch switch-small" id="id-switch">
+            <input type="checkbox" {%if current_user.is_switch%}checked{%endif%} name="switch">
+        </div>
+    </div>
 
     <div id="content">
     </div>
@@ -39,9 +44,13 @@
 
 {% block script_footer %}
 <script type="text/javascript">
-    //var idInt = setInterval(function(){
-    //    $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
-    //},3000);
+    var idInt = setInterval(function(){
+        $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
+    },3000);
     $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
+
+    $('#id-switch').on('switch-change', function (e, data) {
+        console.log(data.state);
+    });
 </script>
 {% endblock %}

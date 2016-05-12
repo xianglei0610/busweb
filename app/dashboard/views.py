@@ -580,9 +580,9 @@ def kefu_complete():
     return jsonify({"status": 0, "msg": "处理完成"})
 
 
-@dashboard.route('/users/kefu_on_off', methods=['POST'])
+@dashboard.route('/users/switch', methods=['POST'])
 @login_required
-def kefu_on_off():
+def user_switch():
     is_switch = int(request.form.get('is_switch', 0))
     if current_user.is_close:
         return jsonify({"status": "1", "msg": "账号已经关闭,请联系技术支持"})
