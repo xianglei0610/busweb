@@ -26,6 +26,7 @@ SOURCE_TZKY = "tzky"
 SOURCE_E8S = "e8s"
 SOURCE_HEBKY = 'hebky'
 SOURCE_NMGHY = 'nmghy'
+SOURCE_BUS365 = 'bus365'
 
 PAY_TYPE_SOURCE = {
     "zfb": [SOURCE_BUS100,
@@ -1967,6 +1968,21 @@ SOURCE_INFO = {
             "15391070540": ("123456", ""),
             "15596578955": ("123456", ""),
             "13957439789": ("123456", ""),
+        }
+    },
+    SOURCE_BUS365: {
+        "name": "Bus365",
+        "website": "http://www.bus365.com/",
+        "accounts": {
+            # telephone: {password, auth)
+            "13267109876": ("123456", ''),
+
+        },
+        "pwd_encode": {
+            "123456": "1a360e0a1fef7fb0e6c20de6fe61692b4ed26d32b89c95479ad5f7a6aa6ce61a656f75476dfd8c1c0965be942b73475ff255c022e2c453cf859576059bfedc9013a607a9548a9c7ff5d7a76b19328c6635b8d44bdfed1771a4c64cc91d06faf6b80821abbadcd25369288fa722c5646c5a2ce1e839b6f4f465b691150473ada9",
+        },
+        "pwd_encode_web": {
+            "123456": "2579f69068fc076895e364a56c9775bb18f3bb4bda9d6595bd34210c58f32ff179bc22f78e10bf624ef688ea5642c597b1145c2fd8597f4c0c7d1ea89095c0178f51c247cfd24afb4d5a9cb9b8053fac913b3ea94c4808454c8d1ab6ffeb9b865d257716f378949ad502881e7828d2e41eefe71a7d398e3bea71923de8a666e9",
         }
     },
 }
