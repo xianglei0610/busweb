@@ -370,6 +370,7 @@ class Flow(BaseFlow):
         return data
 
     def valid_line(self, line):
+        now = dte.now()
         if (line.drv_datetime-now).total_seconds() <= 150*60:
             return False
         return True
