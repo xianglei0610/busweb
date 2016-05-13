@@ -261,7 +261,11 @@ class Flow(BaseFlow):
             "startCityName": line.s_city_name,
             "startDate": line.drv_date
                 }
-        r = requests.post(line_url, data=payload, headers=headers)
+        try:
+            r = requests.post(line_url, data=payload, headers=headers, timeout=10)
+        except:
+            result_info.update(result_msg="timeout default 20", update_attrs={"left_tickets": 20, "refresh_datetime": now})
+            return result_info
         content = r.content
         if not isinstance(content, unicode):
             content = content.decode('utf-8')
