@@ -218,6 +218,7 @@ class Flow(object):
         return True
 
     def valid_line(self, line):
+        now = dte.now()
         if (line.drv_datetime-now).total_seconds() <= 30*60:
             return False
         return True
