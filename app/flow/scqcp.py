@@ -369,6 +369,11 @@ class Flow(BaseFlow):
                 break
         return data
 
+    def valid_line(self, line):
+        if (line.drv_datetime-now).total_seconds() <= 150*60:
+            return False
+        return True
+
     def do_refresh_line(self, line):
         result_info = {
             "result_msg": "",

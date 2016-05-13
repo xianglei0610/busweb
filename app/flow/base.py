@@ -217,19 +217,26 @@ class Flow(object):
             return False
         return True
 
+    def valid_line(self, line):
+        if (line.drv_datetime-now).total_seconds() <= 30*60:
+            return False
+        return True
+
     def refresh_line(self, line, force=False):
         """
         线路信息刷新主流程, 不用子类重写
         """
+        if not self.valid_line(line):
+            line.modify(left_tickets=0, refresh_datetime=dte.now())
+            line_log.info("[refresh-result] line:%s %s, invalid line", line.crawl_source, line.line_id)
+            return
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-        if line.crawl_source == 'bus100':
-            force = True
         if not self.need_refresh_line(line, force=force):
             line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
             return
-        now = dte.now()
         ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
+        now = dte.now()
         if update:
             if "refresh_datetime" not in update:
                 update["refresh_datetime"] = now
