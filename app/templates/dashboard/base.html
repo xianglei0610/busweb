@@ -5,13 +5,16 @@
 		<title>dashboard</title>
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap.min.css')}}" />
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-theme.min.css')}}" />
-        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-datetimepicker.min.css')}}" />
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrapSwitch.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-datetimepicker.min.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/scojs.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/sco.message.css')}}" />
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/jquery-2.2.3.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap-datetimepicker.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrapSwitch.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/locales/bootstrap-datetimepicker.zh-CN.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/sco.message.js')}}"></script>
 		<style type="text/css">
 			.navbar-brand img{
 				height: 48px;
@@ -33,6 +36,8 @@
 	</head>
 
 	<body>
+        <div id="flash-message">
+        </div>
 		<nav class="nav navbar-inverse" role="navigation">
 			<div class="container-fluid">
 				<div class="navbar-header">

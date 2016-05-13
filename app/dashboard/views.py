@@ -583,13 +583,13 @@ def kefu_complete():
 @dashboard.route('/users/switch', methods=['POST'])
 @login_required
 def user_switch():
-    is_switch = int(request.form.get('is_switch', 0))
-    if current_user.is_close:
-        return jsonify({"status": "1", "msg": "账号已经关闭,请联系技术支持"})
-    current_user.modify(is_switch=is_switch)
-    trans = {0: u"关闭", 1: u"开启"}
-    access_log.info("[kefu_on_off] %s %s接单", current_user.username, trans[is_switch])
-    return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
+    switch = request.form.get('switch', "off")
+    is_switch = 0
+    if switch == "on":
+        is_switch = 1
+    if is_switch != current_user.is_switch:
+        current_user.modify(is_switch=is_switch)
+    return redirect(url_for("dashboard.my_order"))
 
 
 @dashboard.route('/orders/set_pay_account', methods=['POST'])

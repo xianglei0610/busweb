@@ -247,5 +247,5 @@
 }(jQuery);
 
 $(function () {
-  $('.switch')['bootstrapSwitch']();
+//  $('.switch')['bootstrapSwitch']();
 });

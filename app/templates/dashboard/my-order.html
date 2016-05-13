@@ -32,9 +32,11 @@
         </div>
     </div>
     <div class="pull-right">
-        <div class="switch switch-small" id="id-switch">
-            <input type="checkbox" {%if current_user.is_switch%}checked{%endif%} name="switch">
-        </div>
+        <form id="id-form-switch" action="/users/switch" method="POST">
+            <div class="switch switch-small" id="id-switch">
+                <input type="checkbox" {%if current_user.is_switch%}checked{%endif%} name="switch" id="id-input-switch">
+            </div>
+        <form>
     </div>
 
     <div id="content">
@@ -44,13 +46,18 @@
 
 {% block script_footer %}
 <script type="text/javascript">
+    $('.switch')['bootstrapSwitch']();
     var idInt = setInterval(function(){
-        $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
+        if($("#id-switch").bootstrapSwitch('status')||$("#content tr").length>1){
+            $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
+        }
     },3000);
     $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
-
     $('#id-switch').on('switch-change', function (e, data) {
-        console.log(data.state);
+        $("#id-form-switch").submit();
     });
+    $("#flash-message").css("height", "50px")
+    $.scojs_message('This is an info message', $.scojs_message.TYPE_OK, {id: "flash-message",delay:10000});
+    $("#flash-message").css("height", "0px")
 </script>
 {% endblock %}
