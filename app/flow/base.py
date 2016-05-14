@@ -7,7 +7,7 @@ import time
 
 from app.constants import *
 from app import order_log, line_log
-from datetime import datetime as dte
+from datetime import timedelta, datetime as dte
 from tasks import issued_callback
 from bs4 import BeautifulSoup
 from app.utils import get_redis
@@ -217,19 +217,43 @@ class Flow(object):
             return False
         return True
 
+    def valid_line(self, line):
+        now = dte.now()
+        # 预售提前时间
+        adv_info = {
+            "四川": 120+20,
+            "重庆": 60+10,
+        }
+        adv_minus = adv_info.get(line.s_province, 30)
+        if (line.drv_datetime-now).total_seconds() <= adv_minus*60:
+            return False
+
+        # 不能买第二天太早的票
+        h = now.hour
+        limit_datetime = None
+        if h==23:
+            limit_datetime = dte.strptime((now+timedelta(days=1)).strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
+        elif 0<=h<7:
+            limit_datetime = dte.strptime(now.strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
+        if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=adv_minus):
+            return False
+        return True
+
     def refresh_line(self, line, force=False):
         """
         线路信息刷新主流程, 不用子类重写
         """
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-        if line.crawl_source == 'bus100':
-            force = True
+        if not self.valid_line(line):
+            line.modify(left_tickets=0, refresh_datetime=dte.now())
+            line_log.info("[refresh-result] line:%s %s, invalid line", line.crawl_source, line.line_id)
+            return
         if not self.need_refresh_line(line, force=force):
             line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
             return
-        now = dte.now()
         ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
+        now = dte.now()
         if update:
             if "refresh_datetime" not in update:
                 update["refresh_datetime"] = now

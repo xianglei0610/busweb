@@ -170,11 +170,12 @@ class Line(db.Document):
             "d_city_name",
             "d_city_code",
             "d_sta_name",
-            "crawl_source",
+             "crawl_source",
             "bus_num",
             "drv_date",
             "drv_time",
             "drv_datetime",
+            ("s_city_name", "d_city_name","drv_date", "crawl_source"),
             {
                 'fields': ['crawl_datetime'],
                 'expireAfterSeconds': 3600*24*20,       # 20天
@@ -378,6 +379,7 @@ class Order(db.Document):
             "status",
             "crawl_source",
             "-create_date_time",
+            "create_date_time",
             "source_account",
             "kefu_username",
         ],
