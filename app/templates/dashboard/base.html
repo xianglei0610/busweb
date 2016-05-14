@@ -9,12 +9,14 @@
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-datetimepicker.min.css')}}" />
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/scojs.css')}}" />
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/sco.message.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-editable.css')}}" />
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/jquery-2.2.3.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap-datetimepicker.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrapSwitch.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/locales/bootstrap-datetimepicker.zh-CN.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/sco.message.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap-editable.min.js')}}"></script>
 		<style type="text/css">
 			.navbar-brand img{
 				height: 48px;
@@ -79,5 +81,18 @@
 
        {% block script_footer %}
        {% endblock %}
+       <script type="text/javascript">
+           {% with msgs = get_flashed_messages(with_categories=true) %}
+           {% if msgs %}
+               {%for category, msg in msgs%}
+               {% if category=="error" %}
+               $.scojs_message('{{msg}}', $.scojs_message.TYPE_ERROR);
+               {%else%}
+               $.scojs_message('{{msg}}', $.scojs_message.TYPE_OK);
+               {%endif%}
+               {%endfor%}
+           {% endif %}
+           {% endwith %}
+       </script>
 	</body>
 </html>

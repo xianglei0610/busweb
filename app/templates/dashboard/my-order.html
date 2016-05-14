@@ -46,8 +46,13 @@
 
 {% block script_footer %}
 <script type="text/javascript">
+    var auto_reload = true;
     $('.switch')['bootstrapSwitch']();
     var idInt = setInterval(function(){
+        if(!auto_reload){
+            console.log("auto reload is off!");
+            return;
+        }
         if($("#id-switch").bootstrapSwitch('status')||$("#content tr").length>1){
             $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
         }
@@ -56,8 +61,24 @@
     $('#id-switch').on('switch-change', function (e, data) {
         $("#id-form-switch").submit();
     });
-    $("#flash-message").css("height", "50px")
-    $.scojs_message('This is an info message', $.scojs_message.TYPE_OK, {id: "flash-message",delay:10000});
-    $("#flash-message").css("height", "0px")
+
+    $('.sel-change').on('shown', function(e, editable) {
+        auto_reload=false;
+    });
+    $('.sel-change').on('hidden', function(e, reason) {
+        auto_reload=true;
+        if(reason === 'save' || reason === 'cancel') {
+        }
+    });
+    $('.sel-change').on('save', function(e, params) {
+        msg = params.response.msg
+        if(params.response.code==1){
+            $.scojs_message(msg, $.scojs_message.TYPE_OK);
+        }
+        else{
+            $.scojs_message(msg, $.scojs_message.TYPE_ERROR);
+        }
+    });
+
 </script>
 {% endblock %}

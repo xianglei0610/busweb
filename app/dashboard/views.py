@@ -12,12 +12,11 @@ import assign
 import traceback
 import csv
 import StringIO
-import re
 
 from datetime import datetime as dte
 from app.utils import md5, create_validate_code
 from app.constants import *
-from flask import render_template, request, redirect, url_for, jsonify, session, make_response
+from flask import render_template, request, redirect, url_for, jsonify, session, make_response, flash
 from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.dashboard import dashboard
@@ -32,6 +31,7 @@ from app import order_log, db, access_log
 @login_required
 def logout():
     flask_login.logout_user()
+    flash("退出登录")
     return redirect(url_for('dashboard.login'))
 
 
@@ -66,12 +66,14 @@ class LoginInView(MethodView):
         session["password"] = pwd
         code = request.form.get("validcode")
         if code != session.get("img_valid_code"):
+            flash("验证码错误", "error")
             return redirect(url_for('dashboard.login'))
         try:
             u = AdminUser.objects.get(username=name, password=md5(pwd))
             flask_login.login_user(u)
             return redirect(url_for('dashboard.index'))
         except AdminUser.DoesNotExist:
+            flash("用户名或密码错误", "error")
             return redirect(url_for('dashboard.login'))
 
 
@@ -331,28 +333,33 @@ def src_code_img(order_no):
         return r.content
 
 
-@dashboard.route('/orders/<order_no>/change_kefu', methods=['POST'])
+@dashboard.route('/orders/changekefu', methods=['POST'])
 @login_required
-def change_kefu(order_no):
+def change_kefu():
+    # {'pk': u'1', 'name': u'username', 'value': u'xiangleilei'}
+    params = request.values.to_dict()
+    order_no, kefu_name = params["pk"], params["value"]
     order = Order.objects.get(order_no=order_no)
     if order.status in [12, 13, 14]:
-        return "已支付,不许转!"
-    kefu_name = request.form.get("kefuname", "")
+        return jsonify({"code": 0, "msg": "已支付,不许转!"})
     if not kefu_name:
-        return "请选择目标账号!"
+        return jsonify({"code": 0, "msg": "请选择目标账号!"})
     if order.kefu_username != current_user.username:
-        return "这个单不是你的!"
+        return jsonify({"code": 0, "msg": "这个单不是你的!"})
     try:
         target = AdminUser.objects.get(username=kefu_name)
     except:
-        return "不存在%s这个账号" % kefu_name
+        msg = "不存在%s这个账号" % kefu_name
+        return jsonify({"code": 0, "msg": msg})
     if not target.is_switch and target.username not in ["luojunping", "xiangleilei"]:
-        return "%s没在接单，禁止转单给他。" % target.username
+        msg = "%s没在接单，禁止转单给他。" % target.username
+        return jsonify({"code": 0, "msg": msg})
     access_log.info("%s 将%s转给 %s", current_user.username, order_no, kefu_name)
     order.update(kefu_username=target.username, kefu_assigntime=dte.now())
     assign.add_dealing(order, target)
     assign.remove_dealing(order, current_user)
-    return "成功转给%s" % target.username
+    msg = "成功转给%s" % target.username
+    return jsonify({"code": 1, "msg": msg})
 
 
 @dashboard.route('/orders/<order_no>/pay', methods=['GET', 'POST'])
@@ -555,6 +562,9 @@ def dealing_order():
                             source_info=SOURCE_INFO,
                             dealing_count=assign.waiting_lock_size()+qs.count(),
                             dealed_count=dealed_count,
+                            online_users=AdminUser.objects.filter(db.Q(is_switch=True)| \
+                                                                  db.Q(username__in=["luojunping", "xiangleilei"])) \
+                                                          .filter(username__ne=current_user.username),
                             locking=locking)
 
 
@@ -587,8 +597,10 @@ def user_switch():
     is_switch = 0
     if switch == "on":
         is_switch = 1
+    msgs = {0: "关闭", 1: "开启"}
     if is_switch != current_user.is_switch:
         current_user.modify(is_switch=is_switch)
+    flash("%s接单" % msgs[is_switch])
     return redirect(url_for("dashboard.my_order"))
 
 
