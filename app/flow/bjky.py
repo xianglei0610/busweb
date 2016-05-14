@@ -347,7 +347,11 @@ class Flow(BaseFlow):
             url = "http://e2go.com.cn/Home/Login"
             r = rebot.http_post(url, data=data, headers=headers, cookies=cookies)
             new_cookies = r.cookies
-            r = r.json()
+            try:
+                r = r.json()
+            except:
+                rebot.modify(ip='')
+                return {"flag": "error", "content": ''}
             if r['ErrorCode'] == 0:
                 cookies.update(dict(new_cookies))
                 rebot.modify(cookies=json.dumps(cookies), is_active=True, last_login_time=dte.now(), user_agent=headers.get("User-Agent", ""))
