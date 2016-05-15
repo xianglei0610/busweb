@@ -10,6 +10,8 @@ if "dashboard" in config_name:
 else:
     login_manager.login_view = "admin.login"
 
+login_manager.login_message = "您没权限打开此页面"
+
 
 @login_manager.user_loader
 def load_admin(username):

@@ -1,8 +1,6 @@
 # -*- coding:utf-8 -*-
 import time
 import math
-import copy
-import urllib2
 import urllib
 import requests
 import json
@@ -21,6 +19,7 @@ from flask.views import MethodView
 from flask.ext.login import login_required, current_user
 from app.dashboard import dashboard
 from app.utils import get_redis
+from app.decorators import superuser_required
 from app.models import Order, Line, AdminUser
 from app.flow import get_flow
 from tasks import async_lock_ticket, issued_callback
@@ -336,7 +335,6 @@ def src_code_img(order_no):
 @dashboard.route('/orders/changekefu', methods=['POST'])
 @login_required
 def change_kefu():
-    # {'pk': u'1', 'name': u'username', 'value': u'xiangleilei'}
     params = request.values.to_dict()
     order_no, kefu_name = params["pk"], params["value"]
     order = Order.objects.get(order_no=order_no)
@@ -398,100 +396,16 @@ def order_pay(order_no):
     return "异常页面 %s" % str(json.dumps(ret,ensure_ascii = False))
 
 
-@dashboard.route('/orders/<order_no>/refresh', methods=['GET'])
-@login_required
-def order_refresh(order_no):
-    order = Order.objects.get(order_no=order_no)
-    flow = get_flow(order.crawl_source)
-    flow.refresh_issue(order)
-    return redirect(url_for('admin.order_list'))
-
-
-class SubmitOrder(MethodView):
-    @login_required
-    def get(self):
-        #contact = {
-        #    "name": " 张淑瑶",
-        #    "phone": "15575101324",
-        #    "idcard": "513401199007114628",
-        #}
-        #rider1 = {
-        #    "name": "张淑瑶",
-        #    "phone": "15575101324",
-        #    "idcard": "513401199007114628",
-        #}
-        contact = {
-            "name": "范月芹",
-            "phone": "15575101324",
-            "idcard": "510106199909235149",
-        }
-        rider1 = {
-            "name": "范月芹",
-            "phone": "15575101324",
-            "idcard": "510106199909235149",
-        }
-
-        kwargs = dict(
-            item=None,
-            contact=contact,
-            rider1=rider1,
-            api_url="http://localhost:8000",
-            line_id="",
-            order_price=0,
-        )
-        return render_template('admin/submit_order.html', **kwargs)
-
-    @login_required
-    def post(self):
-        fd = request.form
-        data = {
-            "line_id": fd.get("line_id"),
-            "out_order_no": str(int(time.time()*1000)),
-            "order_price": float(fd.get("order_price")),
-            "contact_info": {
-                "name": fd.get("contact_name"),
-                "telephone": fd.get("contact_phone"),
-                "id_type": 1,
-                "id_number": fd.get("contact_idcard"),
-                "age_level": 1,                                         # 大人 or 小孩
-            },
-            "rider_info": [
-                {                                                       # 乘客信息
-                    "name": fd.get("rider1_name"),                      # 名字
-                    "telephone": fd.get("rider1_phone"),                # 手机
-                    "id_type": 1,                                       # 证件类型
-                    "id_number": fd.get("rider1_idcard"),               # 证件号
-                    "age_level": 1,                                     # 大人 or 小孩
-                },
-                {                                                       # 乘客信息
-                    "name": fd.get("rider2_name"),                      # 名字
-                    "telephone": fd.get("rider2_phone"),                # 手机
-                    "id_type": 1,                                       # 证件类型
-                    "id_number": fd.get("rider2_idcard"),               # 证件号
-                    "age_level": 1,                                     # 大人 or 小孩
-                },
-            ],
-            "locked_return_url": fd.get("lock_url"),
-            "issued_return_url": fd.get("issue_url"),
-        }
-
-        for d in copy.copy(data["rider_info"]):
-            if not d["name"]:
-                data["rider_info"].remove(d)
-
-        api_url = urllib2.urlparse.urljoin(fd.get("api_url"), "/orders/submit")
-        r = requests.post(api_url, data=json.dumps(data))
-        return redirect(url_for('admin.order_list'))
-
-
-@dashboard.route('/users', methods=['GET'])
-@login_required
+@dashboard.route('/users', methods=['GET', 'POST'])
+@superuser_required
 def user_list():
     params = request.values.to_dict()
     tabtype = params.get("tabtype", "all")
     query = {}
     if tabtype == "online":
         query["is_switch"] = 1
+    params["tabtype"] = tabtype
+
     qs = AdminUser.objects.filter(**query)
     yh_dict = {
         "BOCB2C": "中国银行",
@@ -579,16 +493,6 @@ def detail_order(order_no):
                             pay_status_msg=PAY_STATUS_MSG,
                            )
 
-@dashboard.route('/kefu_complete', methods=['POST'])
-@login_required
-def kefu_complete():
-    order_no = request.form.get("order_no", '')
-    if not (order_no):
-        return jsonify({"status": -1, "msg": "参数错误"})
-    orderObj = Order.objects.get(order_no=order_no)
-    orderObj.complete_by(current_user)
-    return jsonify({"status": 0, "msg": "处理完成"})
-
 
 @dashboard.route('/users/switch', methods=['POST'])
 @login_required
@@ -602,24 +506,6 @@ def user_switch():
         current_user.modify(is_switch=is_switch)
     flash("%s接单" % msgs[is_switch])
     return redirect(url_for("dashboard.my_order"))
-
-
-@dashboard.route('/orders/set_pay_account', methods=['POST'])
-@login_required
-def set_pay_account():
-    today = dte.now().strftime("%Y-%m-%d")
-    order_no = request.form.get("order_no", '')
-    pay_account = request.form.get("pay_account", '')
-    if not (order_no and pay_account):
-        return jsonify({"status": -1, "msg": "参数错误"})
-    orderObj = Order.objects.get(order_no=order_no)
-    orderObj.modify(pay_account=pay_account)
-    areadyOrderCt = Order.objects.filter(status=14, pay_account=pay_account,\
-                                         crawl_source=orderObj.crawl_source, create_date_time__gte=today).count()
-    limit_payct = SOURCE_INFO.get(orderObj.crawl_source).get('limit_payct', DEFALUT_LIMIT_PAYCT)
-    crawl_source_name = SOURCE_INFO.get(orderObj.crawl_source).get('name', '')
-    return jsonify({"status": 0, 'areadyOrderCt': areadyOrderCt, "limit_payct":limit_payct,
-                    'crawl_source_name': crawl_source_name})
 
 
 @dashboard.route('/fangbian/callback', methods=['POST'])
@@ -658,63 +544,32 @@ def fangbian_callback():
     return "success"
 
 
-dashboard.add_url_rule("/submit_order", view_func=SubmitOrder.as_view('submit_order'))
 dashboard.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 
 
-@dashboard.route('/set_yh_type', methods=["GET"])
-@login_required
-def set_yh_type():
-    username = request.args.get("username", '')
-    yinhang = request.args.get("yinhang", '') #BOCB2C:中国银行 CMB:招商银行 CCB :建设银行  SPABANK:平安银行  SPDB 浦发银行
-    if not (username and yinhang):
-        return jsonify({"status": "error", "msg": "参数错误"})
-    yh_dict = {
-               u"中行":"BOCB2C",
-               u"招行":"CMB",
-               u"建行":"CCB",
-               u"平安":"SPABANK",
-               u"浦发":"SPDB",
-               }
-    yh_type = yh_dict.get(yinhang,'')
-    if yh_type not in ("BOCB2C", "CMB", "CCB", "SPABANK", "SPDB"):
-        return jsonify({"status": "error", "msg": "银行类型错误 请选择(中行, 招行, 建行,平安,浦发)"})
-    orderObj = AdminUser.objects.get(username=username)
-    orderObj.modify(yh_type=yh_type)
-    return jsonify({"status": "success"})
-
-
-@dashboard.route('/users/config', methods=["GET", "POST"])
-@login_required
+@dashboard.route('/users/config', methods=["POST"])
+@superuser_required
 def user_config():
-    action = request.args.get("action", '')
-    if action == "set_yhtype":
-        yh_dict = {
-            u"中行":"BOCB2C",
-            u"招行":"CMB",
-            u"建行":"CCB",
-            u"平安":"SPABANK",
-            u"浦发":"SPDB",
-        }
-        user = AdminUser.objects.get(username=request.args["username"])
-        user.modify(yh_type=yh_dict[request.args["yhtype"]])
-        return "success"
-    elif action == "set_source":
-        lst = request.args.getlist("sourcetype")
-        user = AdminUser.objects.get(username=request.args["username"])
+    params = request.values.to_dict()
+    action = params.get("action", '') or params.get("name")
+    if action == "yh_type":
+        user = AdminUser.objects.get(username=params["pk"])
+        user.modify(yh_type=params["value"])
+        return jsonify({"code": 1, "msg": "设置网银类型成功" })
+    elif action == "jd_type":
+        lst = request.form.getlist("value[]")
+        user = AdminUser.objects.get(username=params["pk"])
         user.modify(source_include=lst)
-        return "success"
-    return "fail"
-
-
-@dashboard.route('/open_account', methods=['POST'])
-@login_required
-def open_account():
-    username = request.form.get('username', 0)
-    userObj = AdminUser.objects.get(username=username)
-    if not userObj.is_close:
-        return jsonify({"status": "0", "msg": "账号已经开启"})
-    userObj.modify(is_close=False)
-    access_log.info("[open_account] %s 开启账号: %s ", current_user.username, username)
-    return jsonify({"status": "0", "msg": "开启成功"})
-
+        return jsonify({"code": 1, "msg": "设置接单类型成功" })
+    elif action == "set_open":
+        user = AdminUser.objects.get(username=params["username"])
+        flag = params["flag"]
+        if flag == "true":
+            user.modify(is_close=False)
+            access_log.info("[open_account] %s 关闭账号: %s ", current_user.username, user.username)
+            return jsonify({"code": 1, "msg": "账号%s开启成功" % user.username})
+        else:
+            user.modify(is_close=True)
+            access_log.info("[open_account] %s 开启账号: %s ", current_user.username, user.username)
+            return jsonify({"code": 1, "msg": "账号%s关闭成功" % user.username})
+    return jsonify({"code": 0, "msg": "执行失败"})

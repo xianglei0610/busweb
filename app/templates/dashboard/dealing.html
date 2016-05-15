@@ -55,7 +55,6 @@
 
     $(document).ready(function() {
         $('.sel-change').editable({
-            value: 2,
             source: [
             {% for u in online_users %}
                 {value: '{{u.username}}', text: '{{u.username}}'},
