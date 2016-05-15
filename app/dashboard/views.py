@@ -38,7 +38,7 @@ def logout():
 @dashboard.route('/', methods=['GET'])
 @login_required
 def index():
-    return redirect(url_for('dashboard.order_list'))
+    return redirect(url_for('dashboard.my_order'))
 
 
 @dashboard.route('/codeimg')
@@ -484,9 +484,9 @@ class SubmitOrder(MethodView):
         return redirect(url_for('admin.order_list'))
 
 
-@dashboard.route('/alluser', methods=['GET','POST'])
+@dashboard.route('/users', methods=['GET'])
 @login_required
-def all_adminuser():
+def user_list():
     params = request.values.to_dict()
     tabtype = params.get("tabtype", "all")
     query = {}
@@ -504,7 +504,7 @@ def all_adminuser():
         u"yhzf": "银行支付",
         u"zfb": "支付宝",
     }
-    return render_template('admin-new/alluser.html',
+    return render_template('dashboard/users.html',
                            condition=params,
                            yh_names=yh_dict,
                            stat={"total_user": qs.count()},
