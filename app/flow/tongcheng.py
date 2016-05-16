@@ -555,7 +555,7 @@ class Flow(BaseFlow):
             "queryType": 1,
             "subCategory": 0,
             "page": 1,
-            "pageSize": 25,
+            "pageSize": 1025,
             "hasCategory": 1,
             "dptStation": "",
             "arrStation": "",
