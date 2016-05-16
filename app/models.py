@@ -2773,6 +2773,225 @@ class NmghyWebRebot(Rebot):
             return 0
 
 
+class Bus365AppRebot(Rebot):
+    user_agent = db.StringField(default="Apache-HttpClient/UNAVAILABLE (java 1.4)")
+    user_id = db.StringField(default="")
+    client_token = db.StringField(default="")
+    deviceid = db.StringField(default="")
+    clientinfo = db.StringField(default="")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "bus365app_rebot",
+    }
+    crawl_source = SOURCE_BUS365
+    is_for_lock = True
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[bus365] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[bus365] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    @property
+    def proxy_ip(self):
+        return ''
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded;",
+            "User-Agent": self.user_agent or ua,
+            'Accept-Language': 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3',
+            "Connection": "keep-alive",
+            "accept": "application/json,",
+        }
+
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source=SOURCE_BUS365,
+                                      lock_datetime__gt=today) \
+                              .aggregate({
+                                  "$group":{
+                                      "_id": {"phone": "$source_account"},
+                                      "count": {"$sum": "$ticket_amount"}}
+                              }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt + int(order.ticket_amount) > 5:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts-droped))
+        return cls.objects.get(telephone=tele)
+
+    def get_random_deviceid(self):
+        maclist = []
+        for i in range(1, 7):
+            RANDSTR = "".join(random.sample("0123456789abcdef",2))
+            maclist.append(RANDSTR)
+        mac = ":".join(maclist)
+        return mac
+
+    def login(self):
+        headers = self.http_header()
+        pwd_info = SOURCE_INFO[SOURCE_BUS365]["pwd_encode"]
+        clientinfo = {"browsername": "", "browserversion":"","clienttype":"1","computerinfo":"","osinfo":"android 4.4.2"}
+        deviceid = self.deviceid or self.get_random_deviceid()
+        data = {
+            "user.username": self.telephone,
+            "clientinfo": json.dumps(clientinfo),
+            "user.password": pwd_info[self.password],
+            "token": '{"clienttoken":"","clienttype":"android"}',
+            "clienttype": "android",
+            "usertoken": '',
+            "deviceid": deviceid,
+        }
+        login_url = "http://www.bus365.com/user/login"
+        r = self.http_post(login_url, data=data, headers=headers)
+        ret = r.json()
+        if ret:
+            if ret['username'] == self.telephone:
+                self.last_login_time = dte.now()
+                self.is_active = True
+                self.user_id = ret['id']
+                self.clientinfo = json.dumps(clientinfo)
+                self.deviceid = deviceid
+                self.client_token = ret['clienttoken']
+                self.save()
+                rebot_log.info("登陆成功 bus365 %s", self.telephone)
+                return "OK"
+            else:
+                rebot_log.error("登陆错误 bus365 %s, %s", self.telephone, str(ret))
+                return "fail"
+        else:
+            rebot_log.error("登陆错误 bus365 %s, %s", self.telephone, str(ret))
+            return "fail"
+
+    def recrawl_shiftid(self, line):
+        """
+        重新获取线路ID
+        """
+        init_params = {
+            "token": '{"clienttoken":"","clienttype":"android"}',
+            "clienttype": "android",
+            "usertoken": ''
+            }
+        params = {
+            "departdate": line.drv_date,
+            "departcityid": line.extra_info['start_info']['id'],
+            "reachstationname": line.d_city_name
+        }
+        params.update(init_params)
+        url = "http://%s/schedule/searchscheduler2/0" % line.extra_info['start_info']['netname']
+        line_url = "%s?%s" % (url, urllib.urlencode(params))
+        request = urllib2.Request(line_url)
+        request.add_header('User-Agent', "Apache-HttpClient/UNAVAILABLE (java 1.4)")
+        request.add_header('Content-type', "application/x-www-form-urlencoded")
+        request.add_header('accept', "application/json,")
+        request.add_header('clienttype', "android")
+        request.add_header('clienttoken', "")
+
+        response = urllib2.urlopen(request, timeout=30)
+        res = json.loads(response.read())
+        for d in res['schedules']:
+            if int(d['iscansell']) == 1:
+                item = {}
+                drv_datetime = dte.strptime("%s %s" % (line.drv_date, d['departtime'][0:-3]), "%Y-%m-%d %H:%M")
+                line_id_args = {
+                    "s_city_name": line.s_city_name,
+                    "d_city_name": line.d_city_name,
+                    "s_sta_name": d["busshortname"],
+                    "d_sta_name": d["stationname"],
+                    "bus_num": d["schedulecode"],
+                    "crawl_source": line.crawl_source,
+                    "drv_datetime": drv_datetime,
+                }
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+                item['line_id'] = line_id
+                item['shift_id'] = d['id']
+                item["refresh_datetime"] = dte.now()
+                item["full_price"] = float(d["fullprice"])
+                item["left_tickets"] = int(d["residualnumber"])
+                try:
+                    line_obj = Line.objects.get(line_id=line_id)
+                    line_obj.modify(**item)
+                except Line.DoesNotExist:
+                    continue
+
+
+class Bus365WebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "bus365web_rebot",
+    }
+    crawl_source = SOURCE_BUS365
+
+    @property
+    def proxy_ip(self):
+        return ''
+
+    def test_login_status(self):
+        try:
+            user_url = "http://www.bus365.com/userinfo0"
+            headers = {
+                       "User-Agent": self.user_agent,
+                       "Content-Type": "application/x-www-form-urlencoded"
+            }
+            cookies = json.loads(self.cookies)
+            res = self.http_get(user_url, headers=headers, cookies=cookies)
+            content = res.content
+            if not isinstance(content, unicode):
+                content = content.decode('utf-8')
+            sel = etree.HTML(content)
+            telephone = sel.xpath('//form[@name="user.username"]/text()')
+            if telephone:
+                if telephone[0] == self.telephone:
+                    return 1
+                else:
+                    self.modify(cookies='')
+                    return 0
+            else:
+                return 0
+        except:
+            return 0
+
+    @classmethod
+    def login_all(cls):
+        """预设账号"""
+        rebot_log.info(">>>> start to init bus365 web:")
+        valid_cnt = 0
+        has_checked = {}
+        accounts = SOURCE_INFO[SOURCE_BUS365]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd = accounts[bot.telephone][0]
+            bot.modify(password=pwd)
+
+        for tele, (pwd, _) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      user_agent=random.choice(BROWSER_USER_AGENT),
+                      password=pwd,)
+            bot.save()
+            valid_cnt += 1
+        rebot_log.info(">>>> end init bus365 web  success %d", valid_cnt)
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
