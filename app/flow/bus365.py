@@ -173,7 +173,6 @@ class Flow(BaseFlow):
             tele_list = []
             for i in order.riders:
                 tele_list.append(i["telephone"][-4:])
-            print 'tele_list',tele_list
             dx_info = {
                 "start": "%s(%s)" % (order.line.s_city_name, order.line.s_sta_name),
                 "end": order.line.d_sta_name,
