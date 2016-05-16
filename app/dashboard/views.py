@@ -454,6 +454,10 @@ def dealing_order():
                     continue
                 order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
                 assign.add_dealing(order, current_user)
+
+                info = {"username": current_user.username}
+                desc = "订单分派给 %s" %  info["username"]
+                order.add_trace("system", OT_ASSIGN, desc, info)
                 if order.status == STATUS_WAITING_LOCK:
                     async_lock_ticket.delay(order.order_no)
 

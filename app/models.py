@@ -370,6 +370,9 @@ class Order(db.Document):
     kefu_updatetime = db.DateTimeField()
     kefu_assigntime = db.DateTimeField()
 
+    # 跟踪纪录
+    trace_list = db.ListField(db.ReferenceField("OrderTrace"))
+
 
     meta = {
         "indexes": [
@@ -448,7 +451,8 @@ class Order(db.Document):
     def on_create(self, reason=""):
         if self.status != STATUS_WAITING_LOCK:
             return
-        order_status_log.info("[on_create] out_order_no: %s", self.out_order_no)
+        desc = "订单创建成功 %s" % self.out_order_no
+        self.add_trace("system", OT_CREATED, desc)
 
     def on_lock_fail(self, reason=""):
         if self.status != STATUS_LOCK_FAIL:
@@ -554,6 +558,33 @@ class Order(db.Document):
         from app.flow import get_flow
         flow = get_flow(self.crawl_source)
         return flow.refresh_issue(self, force=force)
+
+    def add_trace(self, actor, ttype, desc, extra_info={}):
+        ot = OrderTrace(actor=actor,
+                        order_no=self.order_no,
+                        trace_type=ttype,
+                        desc=desc,
+                        extra_info=extra_info)
+        self.update(push__trace_list=ot)
+
+
+class OrderTrace(db.Document):
+    """
+    订单追踪
+    """
+    order_no = db.StringField(required=True)
+    actor = db.StringField(default="system")    # 主要人物
+    trace_type = db.IntField()          # 追踪类型
+    desc = db.StringField()             # 描述文本
+    extra_info = db.DictField()         # 额外信息
+    create_datetime = db.DateTimeField(default=dte.now)
+
+    meta = {
+        "indexes": [
+            "trace_type",
+            "order_no",
+        ],
+    }
 
 
 class Rebot(db.Document):

@@ -2192,3 +2192,9 @@ ALIPAY_WY = {
     u"平安": "SPABANK",
     u"浦发": "SPDB",
 }
+
+# 订单追踪类型
+OT_CREATED = 1      # 订单创建
+OT_ASSIGN = 2       # 订单分派
+OT_LOCK_SUCC = 3    # 下单成功
+OT_LOCK_FAIL = 4    # 下单失败
