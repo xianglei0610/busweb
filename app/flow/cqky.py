@@ -445,8 +445,8 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            r = rebot.http_get(base_url, headers=headers)
-            # r = requests.get(base_url, headers=headers)
+            # r = rebot.http_get(base_url, headers=headers)
+            r = requests.get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             headers.update({"Referer": "http://www.96096kp.com/GoodsDetail.aspx"})
