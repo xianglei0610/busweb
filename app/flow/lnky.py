@@ -12,7 +12,7 @@ from lxml import etree
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import LnkyWapRebot, Line
+from app.models import LnkyWapRebot, Line, Order
 from datetime import datetime as dte
 from app import order_log, line_log
 from app.utils import md5
@@ -51,26 +51,17 @@ class Flow(BaseFlow):
                     "travelDate": line.drv_date,
                     "travelTime": line.drv_time,
                     }
-            order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
-            try:
-                res = self.send_lock_request(order, rebot, data=data)
-            except Exception, e:
-                order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-                rebot.login()
-                rebot.reload()
-                res = self.send_lock_request(order, rebot, data=data)
-            order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
-
-            lock_result = {
+            res = self.send_lock_request(order, rebot, data=data)
+            lock_result.update({
                 "lock_info": res,
                 "source_account": rebot.telephone,
                 "pay_money": line.real_price()*order.ticket_amount,
-            }
+            })
             today = datetime.date.today()
             check_str = str(today).replace('-', '')
             if check_str in res['msg']:
                 order_no = res['msg'][1:-1]
-                expire_time = dte.now()+datetime.timedelta(seconds=60*24)
+                expire_time = dte.now()+datetime.timedelta(seconds=60*40)
                 lock_result.update({
                     "result_code": 1,
                     "result_reason": "",
@@ -81,12 +72,19 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = res['msg']
+                if "404" in errmsg:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": str(rebot.telephone) + ':' + res["msg"],
+                    })
+                    return lock_result
                 if "E008" in errmsg:
                     rebot = order.change_lock_rebot()
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
+                        "result_reason": str(rebot.telephone) + res["msg"],
                     })
                     return lock_result
                 for s in ["E015", "E001"]: #余票不足
@@ -108,11 +106,25 @@ class Flow(BaseFlow):
         """
         order_url = "http://www.jt306.cn/wap/ticketSales/ajaxMakeOrder.do"
         headers = rebot.http_header()
-        r = rebot.http_post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+        line = order.line
+        r = rebot.http_post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies),timeout=40)
         ret = r.content
         if ret == '404':
-            r = rebot.http_post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
-            ret = r.content
+            unpay_all_order = "http://www.jt306.cn/wap/userCenter/ajaxGetOrders.do"
+            data = {
+                    "status": "1",
+                    "timeStatus": "1"
+                    }
+            r = rebot.http_post(unpay_all_order, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+            res = r.json()
+            if res['resultCode'] == '0000':
+                for i in res['pageData']:
+                    if i['status']=='0' and i['startTime']==line.drv_time and i['startDate'] == line.drv_date \
+                         and i['price']==str(line.full_price) and i['startStationName']==line.s_sta_name and i['endStationName']==line.d_sta_name:
+                        count = Order.objects.filter(raw_order_no=i['orderNo']).count()
+                        if count == 0:
+                            ret = i['orderNo']
+                            break
         return {'flag': True, 'msg': ret}
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
