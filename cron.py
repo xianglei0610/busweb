@@ -368,7 +368,7 @@ def main():
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=15)
     sched.add_interval_job(crawl_proxy_66ip, minutes=12)
-    sched.add_interval_job(crawl_proxy_xici, minutes=12)
+    sched.add_interval_job(crawl_proxy_xici, minutes=20)
     sched.add_interval_job(crawl_proxy_zdaye, minutes=6)
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_proxy_cqky, minutes=1)

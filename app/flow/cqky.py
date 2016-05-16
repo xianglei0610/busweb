@@ -16,6 +16,7 @@ from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
 from app import order_log, line_log
 from app.models import Order
+from app.proxy import cqky_proxy
 
 
 class Flow(BaseFlow):
@@ -50,16 +51,18 @@ class Flow(BaseFlow):
             amount = ilst and int(ilst[0]) or 0
             msg = res.get("msg", "")
             if (amount and amount != order.ticket_amount) or u"单笔订单一次只允许购买3张车票" in msg or u"单笔订单只能购买一个车站的票" in msg:
-                order_log.info("[locking] order: %s, 购物车数量不对: %s,", order.order_no, res["msg"])
                 res = self.request_get_shoptcart(rebot)
+                del_success = False
                 for ids in res["data"][u"ShopTable"].keys():
                     d = self.request_del_shoptcart(rebot, ids)
-                    order_log.info("[locking] order: %s, %s", order.order_no, d)
-                rebot.modify(cookies="{}")
-                rebot = order.change_lock_rebot()
+                    if d.get("success", False):
+                        del_success = True
+                if not del_success:
+                    rebot.modify(cookies="{}")
+                    rebot = order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
-                    "result_reason": u"购物车数量不对:%s" % msg,
+                    "result_reason": u"购物车数量不对:%s, %s" % (msg, del_success),
                     "source_account": rebot.telephone,
                 })
                 return lock_result
@@ -115,6 +118,7 @@ class Flow(BaseFlow):
                 else:
                     if u"同一IP一天最多可订" in res["msg"]:
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
+                        cqky_proxy.remove_proxy(rebot.proxy_ip)
                         rebot.modify(ip="")
                     elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
                         rebot.modify(cookies="{}")
@@ -441,7 +445,7 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            #r = rebot.http_get(base_url, headers=headers)
+            # r = rebot.http_get(base_url, headers=headers)
             r = requests.get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
