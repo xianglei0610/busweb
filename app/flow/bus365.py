@@ -156,15 +156,11 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
-        if not self.need_refresh_issue(order):
-            result_info.update(result_msg="状态未变化")
-            return result_info
         rebot = Bus365AppRebot.objects.get(telephone=order.source_account)
         ret = self.send_orderDetail_request(rebot, order=order)
 
         state = ret["state"]
         order_status_mapping = {
-                2: "等待付款",
                 1: "购票成功",
                 3: "取消购票",
                 4: "取消购票",
@@ -174,12 +170,17 @@ class Flow(BaseFlow):
             code_list = []
             msg_list = []
             dx_templ = DUAN_XIN_TEMPL[SOURCE_BUS365]
+            tele_list = []
+            for i in order.riders:
+                tele_list.append(i["telephone"][-4:])
+            print 'tele_list',tele_list
             dx_info = {
                 "start": "%s(%s)" % (order.line.s_city_name, order.line.s_sta_name),
                 "end": order.line.d_sta_name,
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "order_no": order.raw_order_no,
-                "ticket_amount": order.ticket_amount,
+                "amount": order.ticket_amount,
+                "tele_list": ",".join(tele_list)
             }
             code_list.append('无需取票密码')
             msg_list.append(dx_templ % dx_info)
@@ -203,52 +204,53 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = Bus365WebRebot.objects.get(telephone=order.source_account)
         if order.source_account:
             rebot = Bus365WebRebot.objects.get(telephone=order.source_account)
         else:
             rebot = Bus365WebRebot.get_one()
         
-        headers = {
-           "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
-           "Content-Type": "application/x-www-form-urlencoded",
-           "Charset": "UTF-8",
-           }
-        cookies = {}
-        if order.status == STATUS_LOCK_RETRY:
-            self.lock_ticket(order)
-
-        if order.status == STATUS_WAITING_ISSUE:
-            param = {
-                     "ordertoken": order.lock_info['order']['ordertoken'],
-                     "orderno": order.lock_info['order']['orderno'],
-                     "userid": str(order.lock_info['order']['userid'])
-                     }
-            url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
-            unpay_url = url + '?'+urllib.urlencode(param)
-            r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
-            gatewayid = 65
-            content = r.content
-            if not isinstance(content, unicode):
-                content = content.decode('utf-8')
-            if order.raw_order_no in content:
-                param.update({"gatewayid": gatewayid})
-                middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
-                pay_url = middle_url + '?'+urllib.urlencode(param)
-                r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
-                content = r.content
-                if not isinstance(content, unicode):
-                    content = content.decode('utf-8')
-                params = {}
-                sel = etree.HTML(content)
-                for s in sel.xpath("//form[@name='form_payment0']//input"):
-                    k, v = s.xpath("@name"), s.xpath("@value")
-                    if k:
-                        k, v = k[0], v[0] if v else ""
-                        params[k] = v
-                url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
-                r = rebot.http_post(url, headers=headers, cookies=cookies, data=params)
-                return {"flag": "html", "content": r.content.decode('gbk')}    
+#         headers = {
+#            "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
+#            "Content-Type": "application/x-www-form-urlencoded",
+#            "Charset": "UTF-8",
+#            }
+#         cookies = {}
+#         if order.status == STATUS_LOCK_RETRY:
+#             self.lock_ticket(order)
+# 
+#         if order.status == STATUS_WAITING_ISSUE:
+#             param = {
+#                      "ordertoken": order.lock_info['order']['ordertoken'],
+#                      "orderno": order.lock_info['order']['orderno'],
+#                      "userid": str(order.lock_info['order']['userid'])
+#                      }
+#             url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
+#             unpay_url = url + '?'+urllib.urlencode(param)
+#             r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
+#             gatewayid = 65
+#             content = r.content
+#             if not isinstance(content, unicode):
+#                 content = content.decode('utf-8')
+#             if order.raw_order_no in content:
+#                 param.update({"gatewayid": gatewayid})
+#                 middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
+#                 pay_url = middle_url + '?'+urllib.urlencode(param)
+#                 r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+#                 content = r.content
+#                 if not isinstance(content, unicode):
+#                     content = content.decode('utf-8')
+#                 params = {}
+#                 sel = etree.HTML(content)
+#                 for s in sel.xpath("//form[@name='form_payment0']//input"):
+#                     k, v = s.xpath("@name"), s.xpath("@value")
+#                     if k:
+#                         k, v = k[0], v[0] if v else ""
+#                         params[k] = v
+#                 url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
+#                 r = rebot.http_post(url, headers=headers, cookies=cookies, data=params)
+#                 if not order.pay_order_no:
+#                     order.modify(pay_order_no=raw_order_no)
+#                 return {"flag": "html", "content": r.content.decode('gbk')}    
 
         is_login = rebot.test_login_status()
         if not is_login:
@@ -287,7 +289,7 @@ class Flow(BaseFlow):
                     cookies.update(dict(new_cookies))
                     rebot.modify(cookies=json.dumps(cookies), is_active=True, last_login_time=dte.now(), user_agent=headers.get("User-Agent", ""))
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
                 self.lock_ticket(order)
 
             if order.status == STATUS_WAITING_ISSUE:
@@ -320,6 +322,8 @@ class Flow(BaseFlow):
                             params[k] = v
                     url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
                     r = rebot.http_post(url, headers=headers, cookies=cookies, data=params)
+                    if not order.pay_order_no:
+                        order.modify(pay_order_no=order.raw_order_no)
                     return {"flag": "html", "content": r.content.decode('gbk')}
             else:
                 return {"flag": "false", "content": order.lock_info.get('result_reason','')}
@@ -412,11 +416,13 @@ class Flow(BaseFlow):
                 line_id_args = {
                     "s_city_name": line.s_city_name,
                     "d_city_name": line.d_city_name,
+                    "s_sta_name": d["busshortname"],
+                    "d_sta_name": d["stationname"],
                     "bus_num": d["schedulecode"],
                     "crawl_source": line.crawl_source,
                     "drv_datetime": drv_datetime,
                 }
-                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
                 try:
                     obj = Line.objects.get(line_id=line_id)
                 except Line.DoesNotExist:

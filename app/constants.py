@@ -2164,7 +2164,9 @@ DUAN_XIN_TEMPL = {
     # 按省来分
     "江苏": "您购买了：%(time)s，%(start)s-%(end)s车次为%(bus)s的汽车票，取票号：%(no)s，取票密码：%(code)s",
     SOURCE_HEBKY: "您已成功购买%(time)s%(start)s-%(end)s的车票,本次购票取票号：%(no)s，取票密码：%(code)s。",
-    SOURCE_NMGHY: "车站订单号：%(order_no)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭取票号%(no)s或取票密码%(code)s取票,如需改签、退票请前往发车站的客运站按规定办理。"
+    SOURCE_NMGHY: "车站订单号：%(order_no)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭取票号%(no)s或取票密码%(code)s取票,如需改签、退票请前往发车站的客运站按规定办理。",
+    SOURCE_BUS365: "您已成功购买%(time)s从%(start)s到%(end)s的票%(amount)s张,请提前凭订单号%(order_no)s和手机(尾号%(tele_list)s)或身份证到窗口取票",
+    
 }
 
 CITY_NAME_TRANS = {
