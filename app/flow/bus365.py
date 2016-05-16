@@ -86,7 +86,6 @@ class Flow(BaseFlow):
                 pas_list.append(tmp)
             data['order.passengers'] = json.dumps(pas_list)
             res = self.send_lock_request(order, rebot, data=data)
-            print res
             if res.has_key('getwaylist'):
                 del res['getwaylist']
             lock_result = {
@@ -125,8 +124,6 @@ class Flow(BaseFlow):
         """
         order_url = "http://%s/order/createorder" % order.line.extra_info['start_info']['netname']
         headers = rebot.http_header()
-        print order_url
-        print data
         r = rebot.http_post(order_url, data=data, headers=headers)
         ret = r.json()
         return ret
@@ -144,7 +141,6 @@ class Flow(BaseFlow):
         order_detail_url = url + '?'+urllib.urlencode(param)
         r = rebot.http_get(order_detail_url, headers=headers)
         ret = r.json()
-        print ret
         return {
             "state": ret['status'],
         }
