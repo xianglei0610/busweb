@@ -65,6 +65,8 @@ class Flow(BaseFlow):
                 return lock_result
 
             def _check_fail(msg):
+                if u"当前系统维护中" in msg:
+                    return False
                 lst = [
                     u"可售票数量不足",
                     u"锁票超时超过10次",
@@ -81,7 +83,8 @@ class Flow(BaseFlow):
                     u"无可售席位",
                     u"中心转发30003请求TKLock_3失败",
                     u"班次状态为作废",
-                    u"不允许锁位"
+                    u"不允许锁位",
+                    u"锁位失败"
                 ]
                 for s in lst:
                     if s in msg:
