@@ -220,11 +220,11 @@ class Flow(object):
     def valid_line(self, line):
         now = dte.now()
         # 预售提前时间
-        if line.s_province == "四川":
-            adv_minus = 140
-        else:
-            adv_minus = 30
-
+        adv_info = {
+            "四川": 120+20,
+            "重庆": 60+10,
+        }
+        adv_minus = adv_info.get(line.s_province, 30)
         if (line.drv_datetime-now).total_seconds() <= adv_minus*60:
             return False
 
@@ -285,7 +285,7 @@ class Flow(object):
         """
         关闭线路
         """
-        if not line:
+        if not hasattr(line, "line_id"):
             return
         line_log.info("[close] line:%s %s, reason:%s", line.crawl_source, line.line_id, reason)
         now = dte.now()
