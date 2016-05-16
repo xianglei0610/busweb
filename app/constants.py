@@ -1971,7 +1971,7 @@ SOURCE_INFO = {
         }
     },
     SOURCE_BUS365: {
-        "name": "Bus365",
+        "name": "巴士365",
         "website": "http://www.bus365.com/",
         "accounts": {
             # telephone: {password, auth)

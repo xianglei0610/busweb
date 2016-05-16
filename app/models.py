@@ -2871,6 +2871,55 @@ class Bus365AppRebot(Rebot):
             rebot_log.error("登陆错误 bus365 %s, %s", self.telephone, str(ret))
             return "fail"
 
+    def recrawl_shiftid(self, line):
+        """
+        重新获取线路ID
+        """
+        init_params = {
+            "token": '{"clienttoken":"","clienttype":"android"}',
+            "clienttype": "android",
+            "usertoken": ''
+            }
+        params = {
+            "departdate": line.drv_date,
+            "departcityid": line.extra_info['start_info']['id'],
+            "reachstationname": line.d_city_name
+        }
+        params.update(init_params)
+        url = "http://%s/schedule/searchscheduler2/0" % line.extra_info['start_info']['netname']
+        line_url = "%s?%s" % (url, urllib.urlencode(params))
+        request = urllib2.Request(line_url)
+        request.add_header('User-Agent', "Apache-HttpClient/UNAVAILABLE (java 1.4)")
+        request.add_header('Content-type', "application/x-www-form-urlencoded")
+        request.add_header('accept', "application/json,")
+        request.add_header('clienttype', "android")
+        request.add_header('clienttoken', "")
+
+        response = urllib2.urlopen(request, timeout=30)
+        res = json.loads(response.read())
+        for d in res['schedules']:
+            if int(d['iscansell']) == 1:
+                item = {}
+                drv_datetime = dte.strptime("%s %s" % (line.drv_date, d['departtime'][0:-3]), "%Y-%m-%d %H:%M")
+                line_id_args = {
+                    "s_city_name": line.s_city_name,
+                    "d_city_name": line.d_city_name,
+                    "bus_num": d["schedulecode"],
+                    "crawl_source": line.crawl_source,
+                    "drv_datetime": drv_datetime,
+                }
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                item['line_id'] = line_id
+                item['shift_id'] = d['id']
+                item["refresh_datetime"] = dte.now()
+                item["full_price"] = float(d["fullprice"])
+                item["left_tickets"] = int(d["residualnumber"])
+                try:
+                    line_obj = Line.objects.get(line_id=line_id)
+                    line_obj.modify(**item)
+                except Line.DoesNotExist:
+                    continue
+
 
 class Bus365WebRebot(Rebot):
     user_agent = db.StringField()

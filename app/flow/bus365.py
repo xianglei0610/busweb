@@ -23,11 +23,36 @@ class Flow(BaseFlow):
     name = "bus365"
 
     def do_lock_ticket(self, order):
+        lock_result = {
+            "lock_info": {},
+            "source_account": '',
+            "result_code": -1,
+            "result_reason": "",
+            "pay_url": "",
+            "raw_order_no": "",
+            "expire_datetime": "",
+            "pay_money": 0,
+        }
         with Bus365AppRebot.get_and_lock(order) as rebot:
 #             if not rebot.test_login_status():
 #                 rebot.login()
 #                 rebot.reload()
             line = order.line
+            try:
+                rebot.recrawl_shiftid(line)
+            except:
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="源站刷新线路错误，锁票重试")
+                return lock_result
+            line = Line.objects.get(line_id=order.line.line_id)
+            order.line = line
+            order.save()
+
+            lock_result.update(source_account=rebot.telephone)
+            if order.line.left_tickets == 0:
+                lock_result.update(result_reason="该条线路余票不足", result_code=0)
+                return lock_result
             data = {
                 "order.scheduleid": line.shift_id,
                 "getinsure": "1",
