@@ -331,10 +331,10 @@ def main():
     sched.add_cron_job(bus_crawl, hour=4, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "抚顺市,清原县,新宾县"}})
     sched.add_cron_job(bus_crawl, hour=5, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "本溪市"}})
     sched.add_cron_job(bus_crawl, hour=5, minute=20, args=['lnky'], kwargs={"crawl_kwargs":{"city": "丹东市,凤城市,东港市"}})
-    sched.add_cron_job(bus_crawl, hour=5, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "阜新市,彰武县"}})
-    sched.add_cron_job(bus_crawl, hour=6, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "葫芦岛市,建昌县,绥中县,兴城市"}})
-    sched.add_cron_job(bus_crawl, hour=6, minute=40, args=['lnky'], kwargs={"crawl_kwargs":{"city": "朝阳市,北票市,凌源市,建平县,喀左县"}})
-    sched.add_cron_job(bus_crawl, hour=7, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "盘锦市,大洼县"}})
+    sched.add_cron_job(bus_crawl, hour=5, minute=30, args=['lnky'], kwargs={"crawl_kwargs":{"city": "阜新市,彰武县"}})
+    sched.add_cron_job(bus_crawl, hour=5, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "葫芦岛市,建昌县,绥中县,兴城市"}})
+    sched.add_cron_job(bus_crawl, hour=3, minute=20, args=['lnky'], kwargs={"crawl_kwargs":{"city": "朝阳市,北票市,凌源市,建平县,喀左县"}})
+    sched.add_cron_job(bus_crawl, hour=4, minute=10, args=['lnky'], kwargs={"crawl_kwargs":{"city": "盘锦市,大洼县"}})
 
     #张家港市民网页 & 无线苏州
     sched.add_cron_job(bus_crawl, hour=23, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "张家港"}})

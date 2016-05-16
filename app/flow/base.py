@@ -285,7 +285,7 @@ class Flow(object):
         """
         关闭线路
         """
-        if not line:
+        if not hasattr(line, "line_id"):
             return
         line_log.info("[close] line:%s %s, reason:%s", line.crawl_source, line.line_id, reason)
         now = dte.now()
