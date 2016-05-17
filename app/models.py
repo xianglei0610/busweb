@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str
-from app import rebot_log, order_status_log, line_log
+from app import rebot_log, line_log
 
 
 class AdminUser(db.Document):
@@ -457,12 +457,14 @@ class Order(db.Document):
     def on_lock_fail(self, reason=""):
         if self.status != STATUS_LOCK_FAIL:
             return
-        order_status_log.info("[on_lock_fail] order: %s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
+        desc = "锁票失败 %s" % reason
+        self.add_trace(self.kefu_username, OT_LOCK_FAIL, desc)
 
     def on_lock_success(self, reason=""):
         if self.status != STATUS_WAITING_ISSUE:
             return
-        order_status_log.info("[on_lock_success] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
+        desc = "锁票成功 %s" % reason
+        self.add_trace(self.kefu_username, OT_LOCK_FAIL, desc)
 
         from tasks import async_refresh_order
         async_refresh_order.apply_async((self.order_no,), countdown=10)
@@ -470,12 +472,10 @@ class Order(db.Document):
     def on_lock_retry(self, reason=""):
         if self.status != STATUS_LOCK_RETRY:
             return
-        order_status_log.info("[on_lock_retry] order:%s", self.order_no)
 
     def on_give_back(self, reason=""):
         if self.status != STATUS_GIVE_BACK:
             return
-        order_status_log.info("[on_give_back] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
@@ -484,7 +484,6 @@ class Order(db.Document):
     def on_issue_fail(self, reason=""):
         if self.status != STATUS_ISSUE_FAIL:
             return
-        order_status_log.info("[on_issue_fail] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
 
         from tasks import issue_fail_send_email
         r = getRedisObj()
@@ -497,7 +496,6 @@ class Order(db.Document):
     def on_issueing(self, reason=""):
         if self.status != STATUS_ISSUE_ING:
             return
-        order_status_log.info("[on_issueing] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
 
         r = getRedisObj()
         key = RK_ISSUEING_COUNT
@@ -506,7 +504,6 @@ class Order(db.Document):
     def on_issue_success(self, reason=""):
         if self.status != STATUS_ISSUE_SUCC:
             return
-        order_status_log.info("[on_issue_sucess] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
 
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source

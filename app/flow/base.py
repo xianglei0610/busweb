@@ -45,11 +45,10 @@ class Flow(object):
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
         }
-        call_from = traceback.format_stack()[-2]
-        order_log.info("[lock-start] order: %s call from: %s", order.order_no, call_from.replace(os.linesep, " "))
+        order_log.info("[lock-start] order: %s", order.order_no)
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 防止重复下单
-            order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
+            order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
             return
 
         ret = self.do_lock_ticket(order, **kwargs)
@@ -77,10 +76,10 @@ class Flow(object):
                 "total_price": order.order_price,
             })
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-            order_log.info("[lock-result] succ. order: %s source_account:%s", order.order_no, order.source_account)
+            order_log.info("[lock-result] succ. order: %s rebot:%s", order.order_no, order.source_account)
         elif ret["result_code"] == 2:   # 锁票失败,进入锁票重试
             order.modify(source_account=ret["source_account"], lock_info=ret["lock_info"])
-            self.lock_ticket_retry(order)
+            self.lock_ticket_retry(order, reason=ret["result_msg"])
             order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
             return
         elif ret["result_code"] == 0:   # 锁票失败
@@ -88,7 +87,7 @@ class Flow(object):
                          lock_info=ret["lock_info"],
                          lock_datetime=dte.now(),
                          source_account=ret["source_account"])
-            order.on_lock_fail()
+            order.on_lock_fail(reason=ret["result_msg"])
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["result_reason"], "data": data})
             order_log.info("[lock-result] fail. order: %s, reason: %s", order.order_no, ret["result_reason"])
         elif ret["result_code"] == 3:   # 锁票输验证码
@@ -182,7 +181,7 @@ class Flow(object):
         elif code == 5:         # 超时过期, 进入锁票重试
             order_log.info("[issue-refresh-result] order: %s expire. msg:%s", order.order_no, ret["result_msg"])
             order.modify(pay_order_no="", raw_order_no="", lock_info={})
-            self.lock_ticket_retry(order)
+            self.lock_ticket_retry(order, reason=ret["result_msg"])
         else:
             order_log.error("[issue-refresh-result] order: %s error, 未处理状态 status:%s", order.order_no, code)
 
@@ -291,9 +290,9 @@ class Flow(object):
         now = dte.now()
         line.modify(left_tickets=0, update_datetime=now, refresh_datetime=now)
 
-    def lock_ticket_retry(self, order):
+    def lock_ticket_retry(self, order, reason=""):
         order.modify(status=STATUS_LOCK_RETRY)
-        order.on_lock_retry()
+        order.on_lock_retry(reason=reason)
 
     def extract_alipay(self, content):
         """
