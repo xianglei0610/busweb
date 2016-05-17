@@ -150,72 +150,63 @@ class Flow(BaseFlow):
             "Origin": "http://www.96096kp.com",
         }
         cookies = json.loads(rebot.cookies)
-        if sta_mode == 1:
-            base_url = "http://www.96096kp.com/CommitGoods.aspx"
-            r = rebot.http_get(base_url, headers=headers, cookies=cookies)
-            soup = BeautifulSoup(r.content, "lxml")
-            headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
-            if "@" in rebot.telephone:
-                mail = rebot.telephone
+        for i in range(2):  # 重试2遍
+            if sta_mode == 1:
+                base_url = "http://www.96096kp.com/CommitGoods.aspx"
+                r = rebot.http_get(base_url, headers=headers, cookies=cookies)
+                soup = BeautifulSoup(r.content, "lxml")
+                headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+                if "@" in rebot.telephone:
+                    mail = rebot.telephone
+                else:
+                    mail = "%s@qq.com" % rebot.telephone
+                params ={
+                    "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
+                    "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
+                    "ctl00$FartherMain$NavigationControl1$CustRBList": "",
+                    "ctl00$FartherMain$NavigationControl1$o_CustomerName": order.contact_info["name"],
+                    "ctl00$FartherMain$NavigationControl1$o_Mobele": order.contact_info["telephone"],
+                    "ctl00$FartherMain$NavigationControl1$o_IdType": 1,
+                    "ctl00$FartherMain$NavigationControl1$o_IdCard": order.contact_info["id_number"],
+                    "ctl00$FartherMain$NavigationControl1$o_IdCardConfirm": order.contact_info["id_number"],
+                    "ctl00$FartherMain$NavigationControl1$radioListPayType": "OnlineAliPay,支付宝在线支付",
+                    "ctl00$FartherMain$NavigationControl1$o_Email": mail,
+                    "ctl00$FartherMain$NavigationControl1$ContactAddress": "",
+                    "ctl00$FartherMain$NavigationControl1$o_Memo": "",
+                    "ctl00$FartherMain$NavigationControl1$hideIsSubmit": "true",
+                }
             else:
-                mail = "%s@qq.com" % rebot.telephone
-            params ={
-                "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
-                "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
-                "ctl00$FartherMain$NavigationControl1$CustRBList": "",
-                "ctl00$FartherMain$NavigationControl1$o_CustomerName": order.contact_info["name"],
-                "ctl00$FartherMain$NavigationControl1$o_Mobele": order.contact_info["telephone"],
-                "ctl00$FartherMain$NavigationControl1$o_IdType": 1,
-                "ctl00$FartherMain$NavigationControl1$o_IdCard": order.contact_info["id_number"],
-                "ctl00$FartherMain$NavigationControl1$o_IdCardConfirm": order.contact_info["id_number"],
-                "ctl00$FartherMain$NavigationControl1$radioListPayType": "OnlineAliPay,支付宝在线支付",
-                "ctl00$FartherMain$NavigationControl1$o_Email": mail,
-                "ctl00$FartherMain$NavigationControl1$ContactAddress": "",
-                "ctl00$FartherMain$NavigationControl1$o_Memo": "",
-                "ctl00$FartherMain$NavigationControl1$hideIsSubmit": "true",
-            }
-        else:
-            base_url = "http://www.96096kp.com/OrderConfirm.aspx"
-            r = rebot.http_get(base_url, headers=headers, cookies=cookies)
-            soup = BeautifulSoup(r.content, "lxml")
-            headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
-            params ={
-                "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
-                "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
-                "ctl00$FartherMain$radioListPayType": "OnlineAliPay,支付宝在线支付",
-                "ctl00$FartherMain$hideIsSubmit": "true",
-            }
-        try:
+                base_url = "http://www.96096kp.com/OrderConfirm.aspx"
+                r = rebot.http_get(base_url, headers=headers, cookies=cookies)
+                soup = BeautifulSoup(r.content, "lxml")
+                headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+                params ={
+                    "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
+                    "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
+                    "ctl00$FartherMain$radioListPayType": "OnlineAliPay,支付宝在线支付",
+                    "ctl00$FartherMain$hideIsSubmit": "true",
+                }
             r = rebot.http_post(base_url,
                         data=urllib.urlencode(params),
                         headers=headers,
                         cookies=cookies,
                         timeout=90)
-        except requests.exceptions.Timeout, e:
-            rebot.modify(ip="")
-            lock_info = order.lock_info
-            if "lock_timeout_cnt" not in lock_info:
-                lock_info["lock_timeout_cnt"] = 0
-            lock_info["lock_timeout_cnt"] += 1
-            order.modify(lock_info=lock_info)
-            if order.lock_info["lock_timeout_cnt"] > 10:
-                return {
-                    "success": False,
-                    "msg": u"锁票超时超过10次",
-                }
-        soup = BeautifulSoup(r.content, "lxml")
-        msg_lst = re.findall(r'<script>alert\("(.+)"\);</script>', r.content)
-        msg = ""
-        if msg_lst:
-            msg = msg_lst[0]
-        try:
-            order_no = soup.find("input", attrs={"name": "out_trade_no"}).get("value")
-            pay_money = float(soup.find("input", attrs={"name": "total_fee"}).get("value"))
-            flag = True
-        except:
-            order_no = ""
-            pay_money = ""
-            flag = False
+            soup = BeautifulSoup(r.content, "lxml")
+            msg_lst = re.findall(r'<script>alert\("(.+)"\);</script>', r.content)
+            msg = ""
+            if msg_lst:
+                msg = msg_lst[0]
+            try:
+                order_no = soup.find("input", attrs={"name": "out_trade_no"}).get("value")
+                pay_money = float(soup.find("input", attrs={"name": "total_fee"}).get("value"))
+                flag = True
+            except:
+                order_no = ""
+                pay_money = ""
+                flag = False
+            if msg:
+                break
+
         return {
             "success": flag,
             "msg": msg,
