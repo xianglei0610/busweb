@@ -215,9 +215,8 @@ class Flow(BaseFlow):
 
         is_login = is_login or rebot.test_login_status()
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
-                if valid_code:
-                    self.lock_ticket(order, valid_code=valid_code, login_checked=is_login)
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+                self.lock_ticket(order, valid_code=valid_code, login_checked=is_login)
             if order.status == STATUS_WAITING_ISSUE:
                 # step 1
                 params = {
