@@ -663,6 +663,7 @@ def wating_deal_order():
             else:
                 locking[o.order_no] = 0
         if not current_user.is_superuser and not current_user.is_close:
+            is_close = False
             for o in qs:
                 if not o.kefu_assigntime:
                     continue
