@@ -654,6 +654,7 @@ def wating_deal_order():
     qs = assign.dealing_orders(current_user).order_by("create_date_time")
     rds = get_redis("order")
     is_warn = False
+    is_close = False
     if client == 'web':
         locking = {}
         for o in qs:
