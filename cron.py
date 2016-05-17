@@ -311,10 +311,10 @@ def main():
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "兴化,江阴"}})
     sched.add_cron_job(bus_crawl, hour=0, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "连云港,扬州"}})
     # sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "南京"}})
-    # sched.add_cron_job(bus_crawl, hour=2, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
-    # sched.add_cron_job(bus_crawl, hour=3, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "常州"}})
-    # sched.add_cron_job(bus_crawl, hour=2, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "昆山,太仓"}})
-    # sched.add_cron_job(bus_crawl, hour=3, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "常熟,吴江"}})
+    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
+    sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "常州"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "昆山,太仓"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "常熟,吴江"}})
     # sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "盐城"}})
 
     # 快巴
@@ -367,7 +367,7 @@ def main():
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=15)
-    sched.add_interval_job(crawl_proxy_66ip, minutes=12)
+    sched.add_interval_job(crawl_proxy_66ip, minutes=20)
     sched.add_interval_job(crawl_proxy_xici, minutes=20)
     sched.add_interval_job(crawl_proxy_zdaye, minutes=6)
     sched.add_interval_job(check_proxy, minutes=1)
