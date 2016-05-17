@@ -133,6 +133,7 @@ def query_line():
         }
     """
     now = dte.now()
+    access_log.info("[query_line] %s" % request.get_data())
     try:
         post = json.loads(request.get_data())
         starting_name = post.get("starting_name")
