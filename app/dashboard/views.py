@@ -443,7 +443,7 @@ def dealing_order():
                 continue
             o.complete_by(current_user)
         if current_user.is_switch and not current_user.is_close:
-            for i in range(10):
+            for i in range(2):
                 order_ct = assign.dealing_size(current_user)
                 if order_ct >= KF_ORDER_CT:
                     break
@@ -456,7 +456,7 @@ def dealing_order():
                 assign.add_dealing(order, current_user)
 
                 info = {"username": current_user.username}
-                desc = "订单分派给 %s" %  info["username"]
+                desc = "订单分派给操作人员 %s" %  info["username"]
                 order.add_trace("system", OT_ASSIGN, desc, info)
                 if order.status == STATUS_WAITING_LOCK:
                     async_lock_ticket.delay(order.order_no)
@@ -484,18 +484,6 @@ def dealing_order():
                                                                   db.Q(username__in=["luojunping", "xiangleilei"])) \
                                                           .filter(username__ne=current_user.username),
                             locking=locking)
-
-
-@dashboard.route('/orders/<order_no>', methods=['GET'])
-@login_required
-def detail_order(order_no):
-    order = Order.objects.get_or_404(order_no=order_no)
-    return render_template("admin-new/detail_order.html",
-                            order=order,
-                            status_msg=STATUS_MSG,
-                            source_info=SOURCE_INFO,
-                            pay_status_msg=PAY_STATUS_MSG,
-                           )
 
 
 @dashboard.route('/users/switch', methods=['POST'])

@@ -53,9 +53,7 @@
             console.log("auto reload is off!");
             return;
         }
-        if($("#id-switch").bootstrapSwitch('status')||$("#content tr").length>1){
-            $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
-        }
+        $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
     },3000);
     $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
     $('#id-switch').on('switch-change', function (e, data) {
