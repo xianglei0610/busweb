@@ -16,7 +16,7 @@ from lxml import etree
 from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
 from app import rebot_log, order_status_log, line_log
 
 
@@ -1071,6 +1071,7 @@ class ScqcpAppRebot(Rebot):
         return qs[rd]
 
     def login(self):
+        return
         ua = random.choice(MOBILE_USER_AGENG)
         device = "android" if "android" in ua else "ios"
 
@@ -1190,6 +1191,21 @@ class ScqcpWebRebot(Rebot):
         return cls.objects.get(telephone=tele)
 
     def login(self, valid_code="", token='', headers={}, cookies={}):
+        vcode_flag = False
+        if not valid_code:
+            login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
+            headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+            r = self.http_get(login_form_url, headers=headers, cookies=cookies)
+            sel = etree.HTML(r.content)
+            cookies.update(dict(r.cookies))
+            code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+            code_url = code_url.split('?')[0]+"?d=0.%s" % random.randint(1, 10000)
+            token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+            r = self.http_get(code_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            valid_code = vcode_scqcp(r.content)
+            vcode_flag = True
+
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
@@ -1207,10 +1223,11 @@ class ScqcpWebRebot(Rebot):
             if res["success"]:     # 登陆成功
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
+                rebot_log.info("[scqcp]登陆成功, %s vcode_flag:%s", self.telephone, vcode_flag)
                 return "OK"
             else:
                 msg = res["msg"]
-                rebot_log.info("[scqcp]%s %s", self.telephone, msg)
+                rebot_log.info("[scqcp]%s %s vcode_flag:%s", self.telephone, msg, vcode_flag)
                 if u"验证码不正确" in msg:
                     return "invalid_code"
                 return msg

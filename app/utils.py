@@ -35,6 +35,17 @@ def vcode_cqky(img_content):
     return code
 
 
+def vcode_scqcp(img_content):
+    ims = cStringIO.StringIO(img_content)
+    im = Image.open(ims)
+
+    im = im.convert('L')
+    im = im.point(lambda x: 255 if x > 160 else 0)
+    im = ecp(im)
+    code = image_to_string(im, lang='scqcp', config='-psm 8')
+    return code
+
+
 def trans_js_str(s):
     """
     {aa:'bb'} ==> {"aa":"bb"}
