@@ -36,6 +36,13 @@ class Flow(BaseFlow):
         }
         with CqkyWebRebot.get_and_lock(order) as rebot:
             line = order.line
+            is_login = rebot.test_login_status()
+            if not is_login:
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        break
+                    rebot = order.change_lock_rebot()
+
 
             res = self.request_station_status(line, rebot)
             if res["success"]:
