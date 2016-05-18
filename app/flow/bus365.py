@@ -160,6 +160,7 @@ class Flow(BaseFlow):
         order_status_mapping = {
                 0: "正在出票",
                 1: "购票成功",
+                2: "出票失败",
                 3: "取消购票",
                 4: "取消购票",
                 5: "取消购票",
@@ -193,7 +194,7 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
             })
-        elif state in (3, 4, 5):#取消购票,购票失败,退票成功
+        elif state in (2, 3, 4, 5):#取消购票,购票失败,退票成功
             result_info.update({
                 "result_code": 2,
                 "result_msg": order_status_mapping[state],
