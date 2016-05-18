@@ -218,14 +218,21 @@ class Flow(BaseFlow):
                     "pay_money": float(ret["body"]["TotalFee"]),
                 })
             else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": desc,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                    "source_account": rebot.telephone,
-                })
+                if u"此线路暂不可预订,请选择其他出发站或线路" in desc:
+                    lock_result.update({
+                        "result_code": 2,
+                        "result_reason": desc,
+                        "source_account": rebot.telephone,
+                    })
+                else:
+                    lock_result.update({
+                        "result_code": 0,
+                        "result_reason": desc,
+                        "pay_url": "",
+                        "raw_order_no": "",
+                        "expire_datetime": None,
+                        "source_account": rebot.telephone,
+                    })
             return lock_result
 
     def send_lock_request(self, order, rebot, data):
