@@ -364,6 +364,14 @@ def main():
     #内蒙古呼运
     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['nmghy'])
 
+    #巴士365
+    sched.add_cron_job(bus_crawl, hour=1, minute=20, args=['bus365'], kwargs={"crawl_kwargs":{"city": "哈尔滨市,齐齐哈尔,鸡西市,鹤岗市,双鸭山市,大庆市,伊春市,佳木斯市,七台河市,牡丹江市,黑河市"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=40, args=['bus365'], kwargs={"crawl_kwargs":{"city": "长春市,吉林市,四平市,辽源市,通化市,白山市,松原市,白城市,图们市,敦化市"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['bus365'], kwargs={"crawl_kwargs":{"city": "兰州市,嘉峪关市,金昌市,白银市,天水市,武威市,张掖市,平凉市,酒泉市,庆阳市,定西市,陇南市"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['bus365'], kwargs={"crawl_kwargs":{"city": "西宁市,乐都县,海北州,祁连县"}})
+    sched.add_cron_job(bus_crawl, hour=2, minute=10, args=['bus365'], kwargs={"crawl_kwargs":{"city": "赤峰市,巴林左旗,巴林右旗,通辽市,海拉尔,正蓝旗,集宁区"}})
+
+
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=15)
