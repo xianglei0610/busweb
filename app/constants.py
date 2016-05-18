@@ -2198,3 +2198,6 @@ OT_CREATED = 1      # 订单创建
 OT_ASSIGN = 2       # 订单分派
 OT_LOCK_SUCC = 3    # 下单成功
 OT_LOCK_FAIL = 4    # 下单失败
+OT_LOCK_RETRY = 5   # 下单重试
+OT_ISSUE_FAIL = 6   # 出票失败
+OT_ISSUE_ING = 7    # 正在出票

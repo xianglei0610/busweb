@@ -452,19 +452,19 @@ class Order(db.Document):
         if self.status != STATUS_WAITING_LOCK:
             return
         desc = "订单创建成功 %s" % self.out_order_no
-        self.add_trace("system", OT_CREATED, desc)
+        self.add_trace(OT_CREATED, desc)
 
     def on_lock_fail(self, reason=""):
         if self.status != STATUS_LOCK_FAIL:
             return
         desc = "锁票失败 %s" % reason
-        self.add_trace(self.kefu_username, OT_LOCK_FAIL, desc)
+        self.add_trace(OT_LOCK_FAIL, desc)
 
     def on_lock_success(self, reason=""):
         if self.status != STATUS_WAITING_ISSUE:
             return
-        desc = "锁票成功 %s" % reason
-        self.add_trace(self.kefu_username, OT_LOCK_FAIL, desc)
+        desc = "锁票成功 源站订单号:%s" % self.rawl_order_no
+        self.add_trace(OT_LOCK_SUCC, desc)
 
         from tasks import async_refresh_order
         async_refresh_order.apply_async((self.order_no,), countdown=10)
@@ -472,10 +472,13 @@ class Order(db.Document):
     def on_lock_retry(self, reason=""):
         if self.status != STATUS_LOCK_RETRY:
             return
+        desc = "锁票重试 %s" % reason
+        self.add_trace(OT_LOCK_RETRY, desc)
 
     def on_give_back(self, reason=""):
         if self.status != STATUS_GIVE_BACK:
             return
+        self.add_trace(OT_ISSUE_FAIL, "出票失败")
 
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
@@ -556,9 +559,8 @@ class Order(db.Document):
         flow = get_flow(self.crawl_source)
         return flow.refresh_issue(self, force=force)
 
-    def add_trace(self, actor, ttype, desc, extra_info={}):
-        ot = OrderTrace(actor=actor,
-                        order_no=self.order_no,
+    def add_trace(self, ttype, desc, extra_info={}):
+        ot = OrderTrace(order_no=self.order_no,
                         trace_type=ttype,
                         desc=desc,
                         extra_info=extra_info)
@@ -570,7 +572,6 @@ class OrderTrace(db.Document):
     订单追踪
     """
     order_no = db.StringField(required=True)
-    actor = db.StringField(default="system")    # 主要人物
     trace_type = db.IntField()          # 追踪类型
     desc = db.StringField()             # 描述文本
     extra_info = db.DictField()         # 额外信息
