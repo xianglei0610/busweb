@@ -226,7 +226,7 @@ class Flow(BaseFlow):
                     })
                 else:
                     lock_result.update({
-                        "result_code": 0,
+                        "result_code": 2,
                         "result_reason": desc,
                         "pay_url": "",
                         "raw_order_no": "",
