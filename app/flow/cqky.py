@@ -133,7 +133,7 @@ class Flow(BaseFlow):
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
+                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
                     })
             elif "您未登录或登录已过期" in res["msg"]:
                 rebot.modify(ip="")

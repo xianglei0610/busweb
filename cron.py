@@ -305,6 +305,7 @@ def main():
 
     # 同程旅行
     sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "南通"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "天津"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "无锡"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "镇江,宜兴"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "徐州"}})
