@@ -158,7 +158,6 @@ class Flow(BaseFlow):
 
         state = ret["state"]
         order_status_mapping = {
-                0: "正在出票",
                 1: "购票成功",
                 2: "出票失败",
                 3: "取消购票",
