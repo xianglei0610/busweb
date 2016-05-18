@@ -88,11 +88,9 @@ class Flow(BaseFlow):
             res = self.send_lock_request(order, rebot, data=data)
             if res.has_key('getwaylist'):
                 del res['getwaylist']
-            lock_result = {
-                "lock_info": res,
+            lock_result.update({
                 "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
-            }
+            })
             if res.get('order', ''):
                 expire_time = dte.now()+datetime.timedelta(seconds=20*60)
                 lock_result.update({
@@ -101,7 +99,8 @@ class Flow(BaseFlow):
                     "pay_url": "",
                     "raw_order_no": res['order']['orderno'],
                     "expire_datetime": expire_time,
-                    "lock_info": res
+                    "lock_info": res,
+                    "pay_money": float(res['order']['totalprice']),
                 })
             else:
 #                 errmsg = res['values']['result'].replace("\r\n", " ")
