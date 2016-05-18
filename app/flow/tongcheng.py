@@ -71,20 +71,20 @@ class Flow(BaseFlow):
                     "ticketPrice": line.full_price,
                     "ticketFee": 0,
                     "ticketLeft": str(line.left_tickets),
-                    "canBooking": "true",
+                    "canBooking": True,
                     "bookingType": 1,
-                    "timePeriodType": 1,
+                    "timePeriodType": line.extra_info.get("timePeriodType", 1),
                     "dptStationCode": line.s_sta_id,
                     "exData2": "",
-                    "runTime": ".2",
+                    "runTime": line.extra_info.get("runTime", ""),
                     "distance": "",
                     "runThrough": "",
-                    "AgentType": 7,
+                    "AgentType": line.extra_info.get("AgentType", 7),
                     "ExtraSchFlag": 0,
                     "serviceChargeID": 0,
                     "serviceChargePrice":0,
                     "isHomeDelivery":0,
-                    "$$hashKey": "09X",
+                    # "$$hashKey": "09X",
                     "$$hashKey": "017",
                     "optionType": 1
                 }],
@@ -490,70 +490,70 @@ class Flow(BaseFlow):
     def do_refresh_line(self, line):
         return self.do_refresh_line_by_app(line)
 
-        result_info = {
-            "result_msg": "",
-            "update_attrs": {},
-        }
-        line_url = "http://m.ly.com/bus/BusJson/BusSchedule"
-        params = dict(
-            Departure=line.s_city_name,
-            Destination=line.d_city_name,
-            DepartureDate=line.drv_date,
-            DepartureStation="",
-            DptTimeSpan=0,
-            HasCategory="true",
-            Category="0",
-            SubCategory="",
-            ExParms="",
-            Page="1",
-            PageSize="1025",
-            BookingType="0"
-        )
-        headers = {
-            "User-Agent": random.choice(BROWSER_USER_AGENT),
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
-        r = requests.post(line_url, data=urllib.urlencode(params), headers=headers)
-        res = r.json()
-        res = res["response"]
-        now = dte.now()
-        if res["header"]["rspCode"] != "0000":
-            result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-            return result_info
+        # result_info = {
+        #     "result_msg": "",
+        #     "update_attrs": {},
+        # }
+        # line_url = "http://m.ly.com/bus/BusJson/BusSchedule"
+        # params = dict(
+        #     Departure=line.s_city_name,
+        #     Destination=line.d_city_name,
+        #     DepartureDate=line.drv_date,
+        #     DepartureStation="",
+        #     DptTimeSpan=0,
+        #     HasCategory="true",
+        #     Category="0",
+        #     SubCategory="",
+        #     ExParms="",
+        #     Page="1",
+        #     PageSize="1025",
+        #     BookingType="0"
+        # )
+        # headers = {
+        #     "User-Agent": random.choice(BROWSER_USER_AGENT),
+        #     "Content-Type": "application/x-www-form-urlencoded",
+        # }
+        # r = requests.post(line_url, data=urllib.urlencode(params), headers=headers)
+        # res = r.json()
+        # res = res["response"]
+        # now = dte.now()
+        # if res["header"]["rspCode"] != "0000":
+        #     result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        #     return result_info
 
-        update_attrs = {}
-        for d in res["body"]["schedule"]:
-            drv_datetime = dte.strptime("%s %s" % (d["dptDate"], d["dptTime"]), "%Y-%m-%d %H:%M")
-            line_id_args = {
-                "s_city_name": line.s_city_name,
-                "d_city_name": line.d_city_name,
-                #"bus_num": d["coachNo"],
-                "s_sta_name": d["dptStation"],
-                "d_sta_name": d["arrStation"],
-                "crawl_source": line.crawl_source,
-                "drv_datetime": drv_datetime,
-            }
-            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
-            try:
-                obj = Line.objects.get(line_id=line_id)
-            except Line.DoesNotExist:
-                continue
-            info = {
-                "full_price": float(d["ticketPrice"]),
-                "fee": 0,
-                "left_tickets": int(d["ticketLeft"]),
-                "refresh_datetime": now,
-                "extra_info": {},
-            }
-            if line_id == line.line_id:
-                update_attrs = info
-            else:
-                obj.update(**info)
-        if not update_attrs:
-            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-        else:
-            result_info.update(result_msg="ok", update_attrs=update_attrs)
-        return result_info
+        # update_attrs = {}
+        # for d in res["body"]["schedule"]:
+        #     drv_datetime = dte.strptime("%s %s" % (d["dptDate"], d["dptTime"]), "%Y-%m-%d %H:%M")
+        #     line_id_args = {
+        #         "s_city_name": line.s_city_name,
+        #         "d_city_name": line.d_city_name,
+        #         #"bus_num": d["coachNo"],
+        #         "s_sta_name": d["dptStation"],
+        #         "d_sta_name": d["arrStation"],
+        #         "crawl_source": line.crawl_source,
+        #         "drv_datetime": drv_datetime,
+        #     }
+        #     line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+        #     try:
+        #         obj = Line.objects.get(line_id=line_id)
+        #     except Line.DoesNotExist:
+        #         continue
+        #     info = {
+        #         "full_price": float(d["ticketPrice"]),
+        #         "fee": 0,
+        #         "left_tickets": int(d["ticketLeft"]),
+        #         "refresh_datetime": now,
+        #         "extra_info": {},
+        #     }
+        #     if line_id == line.line_id:
+        #         update_attrs = info
+        #     else:
+        #         obj.update(**info)
+        # if not update_attrs:
+        #     result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        # else:
+        #     result_info.update(result_msg="ok", update_attrs=update_attrs)
+        # return result_info
 
     def do_refresh_line_by_app(self, line):
         result_info = {
@@ -594,7 +594,6 @@ class Flow(BaseFlow):
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
-                #"bus_num": d["coachNo"],
                 "s_sta_name": d["dptStation"],
                 "d_sta_name": d["arrStation"],
                 "crawl_source": line.crawl_source,
@@ -610,7 +609,7 @@ class Flow(BaseFlow):
                 "fee": 0,
                 "left_tickets": int(d["ticketLeft"]),
                 "refresh_datetime": now,
-                "extra_info": {},
+                "extra_info": {"AgentType":d["AgentType"], "timePeriodType":d[u'timePeriodType'], "runTime": d["runTime"]},
             }
             if line_id == line.line_id:
                 update_attrs = info
