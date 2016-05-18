@@ -105,11 +105,11 @@ class Flow(BaseFlow):
                     "pay_money": float(res['order']['totalprice']),
                 })
             else:
-#                 errmsg = res['values']['result'].replace("\r\n", " ")
-#                 for s in ["剩余座位数不足"]:
-#                     if s in errmsg:
-#                         self.close_line(line, reason=errmsg)
-#                         break
+                errmsg = res.get('message', '')
+                for s in ['班次已停售']:
+                    if s in errmsg:
+                        self.close_line(line, reason=errmsg)
+                        break
                 lock_result.update({
                     "result_code": 0,
                     "result_reason": res,
@@ -307,7 +307,8 @@ class Flow(BaseFlow):
                     middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
                     pay_url = middle_url + '?'+urllib.urlencode(param)
                     r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
-                    content = r.content
+                    content = r.content + '<script>window.onload=function(){document.form_payment0.submit();}</script>'
+                    return {"flag": "html", "content": content}
                     if not isinstance(content, unicode):
                         content = content.decode('utf-8')
                     params = {}
