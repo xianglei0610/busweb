@@ -16,7 +16,7 @@ from lxml import etree
 from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky
 from app import rebot_log, order_status_log, line_log
 
 
@@ -1750,6 +1750,17 @@ class CqkyWebRebot(Rebot):
         self.modify(is_locked=False)
 
     def login(self, valid_code="", headers={}, cookies={}):
+        vcode_flag = False
+        if not valid_code:
+            login_form = "http://www.96096kp.com/CusLogin.aspx"
+            valid_url = "http://www.96096kp.com/ValidateCode.aspx"
+            headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+            r = self.http_get(login_form, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            valid_code = vcode_cqky(r.content)
+            vcode_flag = True
+
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
@@ -1775,10 +1786,11 @@ class CqkyWebRebot(Rebot):
                     return "fail"
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
+                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s", self.telephone, vcode_flag)
                 return "OK"
             else:
                 msg = res["msg"]
-                rebot_log.info("[cqky]%s %s", self.telephone, msg)
+                rebot_log.info("[cqky]%s %s vcode_flag:%s", self.telephone, msg, vcode_flag)
                 if u"用户名或密码错误" in msg:
                     return "invalid_pwd"
                 elif u"请正确输入验证码" in msg or u"验证码已过期" in msg:
