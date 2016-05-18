@@ -86,6 +86,8 @@ class Flow(BaseFlow):
                 pas_list.append(tmp)
             data['order.passengers'] = json.dumps(pas_list)
             res = self.send_lock_request(order, rebot, data=data)
+            if isinstance(res, list):
+                res = res[0]
             if res.has_key('getwaylist'):
                 del res['getwaylist']
             lock_result.update({
@@ -156,6 +158,7 @@ class Flow(BaseFlow):
 
         state = ret["state"]
         order_status_mapping = {
+                0: "正在出票",
                 1: "购票成功",
                 3: "取消购票",
                 4: "取消购票",
@@ -185,7 +188,7 @@ class Flow(BaseFlow):
                 "pick_msg_list": msg_list,
             })
 
-        elif state == "001007": #"出票中":
+        elif state == 0: #"出票中":
             result_info.update({
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
