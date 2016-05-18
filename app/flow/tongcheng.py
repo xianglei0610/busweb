@@ -584,12 +584,16 @@ class Flow(BaseFlow):
         res = r.json()
         res = res["response"]
         now = dte.now()
-        if res["header"]["rspCode"] != "0000":
+        if res["header"]["rspCode"] != "0000" or not res["body"]:
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
         update_attrs = {}
         for d in res["body"]["schedule"]:
+            if d["canBooking"]:
+                left = int(d["ticketLeft"]) or 15
+            else:
+                left = 0
             drv_datetime = dte.strptime("%s %s" % (d["dptDate"], d["dptTime"]), "%Y-%m-%d %H:%M")
             line_id_args = {
                 "s_city_name": line.s_city_name,
