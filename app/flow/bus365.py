@@ -109,7 +109,7 @@ class Flow(BaseFlow):
             else:
                 errmsg = res.get('message', '')
                 flag = False
-                for i in [u"锁定接口异常",u"获取座位信息失败",u"当前班次异常", u"锁定接口异常"]:
+                for i in [u"锁定接口异常",u"获取座位信息失败",u"当前班次异常", u"锁定接口异常",u"接口失败"]:
                     if i in errmsg:
                         flag = True
                         break
