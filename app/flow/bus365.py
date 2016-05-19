@@ -86,12 +86,15 @@ class Flow(BaseFlow):
                 pas_list.append(tmp)
             data['order.passengers'] = json.dumps(pas_list)
             res = self.send_lock_request(order, rebot, data=data)
+  
             if isinstance(res, list):
                 res = res[0]
             if res.has_key('getwaylist'):
                 del res['getwaylist']
+
             lock_result.update({
                 "source_account": rebot.telephone,
+                "lock_info": res,
             })
             if res.get('order', ''):
                 expire_time = dte.now()+datetime.timedelta(seconds=20*60)
@@ -101,12 +104,24 @@ class Flow(BaseFlow):
                     "pay_url": "",
                     "raw_order_no": res['order']['orderno'],
                     "expire_datetime": expire_time,
-                    "lock_info": res,
                     "pay_money": float(res['order']['totalprice']),
                 })
             else:
                 errmsg = res.get('message', '')
-                for s in ['班次已停售']:
+                flag = False
+                for i in [u"锁定接口异常",u"获取座位信息失败",u"当前班次异常", u"锁定接口异常"]:
+                    if i in errmsg:
+                        flag = True
+                        break
+                if flag:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["message"],
+                    })
+                    return lock_result
+
+                for s in ['班次已停售',"该班次不可售"]:
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break
