@@ -611,7 +611,7 @@ class Flow(BaseFlow):
             info = {
                 "full_price": float(d["ticketPrice"]),
                 "fee": 0,
-                "left_tickets": int(d["ticketLeft"]),
+                "left_tickets": left,
                 "refresh_datetime": now,
                 "extra_info": {"AgentType":d["AgentType"], "timePeriodType":d[u'timePeriodType'], "runTime": d["runTime"]},
             }
