@@ -30,7 +30,7 @@ class Flow(object):
         if rds.get(key):
             return
         rds.set(key, time.time())
-        rds.expire(key, 120)
+        rds.expire(key, 60*5)
         try:
             ret = self.lock_ticket2(order, **kwargs)
             return ret
