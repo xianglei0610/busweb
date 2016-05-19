@@ -1422,6 +1422,7 @@ class JsdlkyWebRebot(Rebot):
 
     def login(self, headers=None, cookies={}, valid_code=""):
         index_url = "http://www.jslw.gov.cn/"
+        valid_code = valid_code or "1234"
         if not headers:
             ua = random.choice(BROWSER_USER_AGENT)
             headers = {"User-Agent": ua}
@@ -1439,8 +1440,7 @@ class JsdlkyWebRebot(Rebot):
             "password": self.password,
             "rememberMe": "yes",
         }
-        if valid_code:
-            params.update(checkcode=valid_code)
+        params.update(checkcode=valid_code)
 
         login_url = "http://www.jslw.gov.cn/login.do"
         headers["Content-Type"] = "application/x-www-form-urlencoded"
