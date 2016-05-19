@@ -221,8 +221,8 @@ class Flow(object):
         now = dte.now()
         # 预售提前时间
         adv_info = {
-            "四川": 120+20,
-            "重庆": 60+10,
+            u"四川": 120+20,
+            u"重庆": 60+10,
         }
         adv_minus = adv_info.get(line.s_province, 30)
         if (line.drv_datetime-now).total_seconds() <= adv_minus*60:
