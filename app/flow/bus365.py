@@ -157,9 +157,9 @@ class Flow(BaseFlow):
         order_detail_url = url + '?'+urllib.urlencode(param)
         r = rebot.http_get(order_detail_url, headers=headers)
         ret = r.json()
-        return {
-            "state": ret['status'],
-        }
+        if ret['paystatus'] == 1 and ret['status'] == 0:
+            return {"state": 6}
+        return {"state": ret['status']}
 
     def do_refresh_issue(self, order):
         result_info = {
@@ -178,6 +178,7 @@ class Flow(BaseFlow):
                 3: "取消购票",
                 4: "取消购票",
                 5: "取消购票",
+                6: "正在出票",
                 }
         if state == 1: #"出票成功":
             code_list = []
@@ -203,7 +204,7 @@ class Flow(BaseFlow):
                 "pick_msg_list": msg_list,
             })
 
-        elif state == 0: #"出票中":
+        elif state == 6: #"出票中":
             result_info.update({
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
