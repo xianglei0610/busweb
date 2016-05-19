@@ -253,7 +253,7 @@ class Flow(BaseFlow):
                 script = "<script>document.form_payment0.submit();</script>"
                 content = content + script
                 return {"flag": "html", "content": content}
-            
+        return {"flag": "error", "content": "锁票失败"}    
 #         is_login = rebot.test_login_status()
 #         if not is_login:
 #             if valid_code:#  登陆
