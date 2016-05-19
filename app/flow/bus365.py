@@ -206,48 +206,52 @@ class Flow(BaseFlow):
         else:
             rebot = Bus365WebRebot.get_one()
         
-#         headers = {
-#            "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
-#            "Content-Type": "application/x-www-form-urlencoded",
-#            "Charset": "UTF-8",
-#            }
-#         cookies = {}
-#         if order.status == STATUS_LOCK_RETRY:
-#             self.lock_ticket(order)
-# 
-#         if order.status == STATUS_WAITING_ISSUE:
-#             param = {
-#                      "ordertoken": order.lock_info['order']['ordertoken'],
-#                      "orderno": order.lock_info['order']['orderno'],
-#                      "userid": str(order.lock_info['order']['userid'])
-#                      }
-#             url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
-#             unpay_url = url + '?'+urllib.urlencode(param)
-#             r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
-#             gatewayid = 65
-#             content = r.content
-#             if not isinstance(content, unicode):
-#                 content = content.decode('utf-8')
-#             if order.raw_order_no in content:
-#                 param.update({"gatewayid": gatewayid})
-#                 middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
-#                 pay_url = middle_url + '?'+urllib.urlencode(param)
-#                 r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
-#                 content = r.content
-#                 if not isinstance(content, unicode):
-#                     content = content.decode('utf-8')
-#                 params = {}
-#                 sel = etree.HTML(content)
-#                 for s in sel.xpath("//form[@name='form_payment0']//input"):
-#                     k, v = s.xpath("@name"), s.xpath("@value")
-#                     if k:
-#                         k, v = k[0], v[0] if v else ""
-#                         params[k] = v
-#                 url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
-#                 r = rebot.http_post(url, headers=headers, cookies=cookies, data=params)
-#                 if not order.pay_order_no:
-#                     order.modify(pay_order_no=raw_order_no)
-#                 return {"flag": "html", "content": r.content.decode('gbk')}    
+        headers = {
+           "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
+           "Content-Type": "application/x-www-form-urlencoded",
+           "Charset": "UTF-8",
+           }
+        cookies = {}
+        if order.status == STATUS_LOCK_RETRY:
+            self.lock_ticket(order)
+ 
+        if order.status == STATUS_WAITING_ISSUE:
+            param = {
+                     "ordertoken": order.lock_info['order']['ordertoken'],
+                     "orderno": order.lock_info['order']['orderno'],
+                     "userid": str(order.lock_info['order']['userid'])
+                     }
+            url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
+            unpay_url = url + '?'+urllib.urlencode(param)
+            r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
+            gatewayid = 65
+            content = r.content
+            if not isinstance(content, unicode):
+                content = content.decode('utf-8')
+            if order.raw_order_no in content:
+                param.update({"gatewayid": gatewayid})
+                middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
+                pay_url = middle_url + '?'+urllib.urlencode(param)
+                r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+                content = r.content
+                content = content.replace("target='_blank'",'')
+                script = "<script>document.form_payment0.submit();</script>"
+                content = content + script
+                return {"flag": "html", "content": content}
+                if not isinstance(content, unicode):
+                    content = content.decode('utf-8')
+                params = {}
+                sel = etree.HTML(content)
+                for s in sel.xpath("//form[@name='form_payment0']//input"):
+                    k, v = s.xpath("@name"), s.xpath("@value")
+                    if k:
+                        k, v = k[0], v[0] if v else ""
+                        params[k] = v
+                url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
+                r = rebot.http_post(url, headers=headers, cookies=cookies, data=params)
+                if not order.pay_order_no:
+                    order.modify(pay_order_no=raw_order_no)
+                return {"flag": "html", "content": r.content.decode('gbk')}    
 
         is_login = rebot.test_login_status()
         if not is_login:
@@ -307,7 +311,20 @@ class Flow(BaseFlow):
                     middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
                     pay_url = middle_url + '?'+urllib.urlencode(param)
                     r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
-                    content = r.content + '<script>window.onload=function(){document.form_payment0.submit();}</script>'
+                    content = r.content 
+                    script ="""
+                        <script type="text/javascript" language="javascript">
+                            function submitform()
+                            {
+                                document.form_payment0.submit();
+                            }
+                            window.onload = submitform;
+                        </script>
+                        """
+                    
+                     
+                    script = "<script>window.history.forward(-1);document.forms['form_payment0'].submit();</script>"
+                    content = content + script
                     return {"flag": "html", "content": content}
                     if not isinstance(content, unicode):
                         content = content.decode('utf-8')
