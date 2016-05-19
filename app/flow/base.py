@@ -101,7 +101,9 @@ class Flow(object):
         if notify_url:
             order_log.info("[lock-callback] order:%s, %s %s", order.order_no, notify_url, json_str)
             response = urllib2.urlopen(notify_url, json_str, timeout=20)
-            order_log.info("[lock-callback-response] order:%s, %s", order.order_no, response.read())
+            result = response.read()
+            order.add_trace(OT_LOCK_CB, "锁票回调成功 收到回应：%s" % result)
+            order_log.info("[lock-callback-response] order:%s, %s", order.order_no, result)
 
     def do_lock_ticket(self, order, **kwargs):
         """

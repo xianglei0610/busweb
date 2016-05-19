@@ -1,6 +1,6 @@
 <div id="wating-deal-table1">
 {%if current_user.is_close %}
-	<center><span style="color: red; font-size:30px;">账号长时间未处理订单，账号已经关闭，请联系技术支持</span></center>
+	<center><span style="color: red; font-size:30px;">存在长时间未处理的订单，账号被关闭，请联系技术支持</span></center>
 {%elif is_warn %}
 	<center><span style="color: red; font-size:30px;">长时间不处理订单,账号将关闭</span></center>	
 {% endif %}	

@@ -26,6 +26,7 @@ SOURCE_TZKY = "tzky"
 SOURCE_E8S = "e8s"
 SOURCE_HEBKY = 'hebky'
 SOURCE_NMGHY = 'nmghy'
+SOURCE_BUS365 = 'bus365'
 
 PAY_TYPE_SOURCE = {
     "zfb": [SOURCE_BUS100,
@@ -1969,6 +1970,41 @@ SOURCE_INFO = {
             "13957439789": ("123456", ""),
         }
     },
+    SOURCE_BUS365: {
+        "name": "巴士365",
+        "website": "http://www.bus365.com/",
+        "accounts": {
+            # telephone: {password, auth)
+            "13267109876": ("123456", ''),
+            "hbccgb@163.com": ("123456", ''),
+            "b123uhb@163.com": ("123456", ''),
+            "yhb456ui@163.com": ("123456", ''),
+            "yhbk346hu@163.com": ("123456", ''),
+            "ghhhf467@163.com": ("123456", ''),
+            "uhhfy578@163.com": ("123456", ''),
+            "tyurfg456@163.com": ("123456", ''),
+            "fyygg345@163.com": ("123456", ''),
+            "yggjief346@163.com": ("123456", ''),
+            "poutg345@163.com": ("123456", ''),
+            "ygggh699@163.com": ("123456", ''),
+            "tytf46797@163.com": ("123456", ''),
+            "yugduj577@163.com": ("123456", ''),
+            "piitrr677@163.com": ("123456", ''),
+            "yughj676@163.com": ("123456", ''),
+            "tyhfgii4674@163.com": ("123456", ''),
+            "ggtyh352@163.com": ("123456", ''),
+            "ughf122@163.com": ("123456", ''),
+            "tyt34332@163.com": ("123456", ''),
+            "tyy23t@163.com": ("123456", ''),
+
+        },
+        "pwd_encode": {
+            "123456": "1a360e0a1fef7fb0e6c20de6fe61692b4ed26d32b89c95479ad5f7a6aa6ce61a656f75476dfd8c1c0965be942b73475ff255c022e2c453cf859576059bfedc9013a607a9548a9c7ff5d7a76b19328c6635b8d44bdfed1771a4c64cc91d06faf6b80821abbadcd25369288fa722c5646c5a2ce1e839b6f4f465b691150473ada9",
+        },
+        "pwd_encode_web": {
+            "123456": "2579f69068fc076895e364a56c9775bb18f3bb4bda9d6595bd34210c58f32ff179bc22f78e10bf624ef688ea5642c597b1145c2fd8597f4c0c7d1ea89095c0178f51c247cfd24afb4d5a9cb9b8053fac913b3ea94c4808454c8d1ab6ffeb9b865d257716f378949ad502881e7828d2e41eefe71a7d398e3bea71923de8a666e9",
+        }
+    },
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
@@ -2149,7 +2185,9 @@ DUAN_XIN_TEMPL = {
     # 按省来分
     "江苏": "您购买了：%(time)s，%(start)s-%(end)s车次为%(bus)s的汽车票，取票号：%(no)s，取票密码：%(code)s",
     SOURCE_HEBKY: "您已成功购买%(time)s%(start)s-%(end)s的车票,本次购票取票号：%(no)s，取票密码：%(code)s。",
-    SOURCE_NMGHY: "车站订单号：%(order_no)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭取票号%(no)s或取票密码%(code)s取票,如需改签、退票请前往发车站的客运站按规定办理。"
+    SOURCE_NMGHY: "车站订单号：%(order_no)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭取票号%(no)s或取票密码%(code)s取票,如需改签、退票请前往发车站的客运站按规定办理。",
+    SOURCE_BUS365: "您已成功购买%(time)s从%(start)s到%(end)s的票%(amount)s张,请提前凭订单号%(order_no)s和手机(尾号%(tele_list)s)或身份证到窗口取票",
+
 }
 
 CITY_NAME_TRANS = {
@@ -2201,3 +2239,7 @@ OT_LOCK_FAIL = 4    # 下单失败
 OT_LOCK_RETRY = 5   # 下单重试
 OT_ISSUE_FAIL = 6   # 出票失败
 OT_ISSUE_ING = 7    # 正在出票
+OT_ISSUE_SUCC = 8   # 出票成功
+OT_TRANSFER = 9     # 订单转移
+OT_LOCK_CB = 10     # 锁票回调
+OT_ISSUE_CB = 11    # 出票回调

@@ -184,6 +184,7 @@
                 <td>
                     <br />
                     <a href="/orders/{{item.order_no}}" target="_blank">详情</a>
+                    <a href="#" name="remark" class="remark" data-type="textarea" data-pk="{{item.order_no}}">备注</a>
                 </td>
             </tr>
             {%endfor%}
@@ -235,6 +236,12 @@
         todayBtn: true,
         pickerPosition: "bottom-left",
         language: "zh-CN"
+    });
+
+    $('.remark').editable({
+        url: '/post',
+        title: '增加备注内容',
+        rows: 10
     });
 
    $("#id-site").change(function(){

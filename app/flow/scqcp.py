@@ -17,8 +17,6 @@ from app.models import ScqcpAppRebot, ScqcpWebRebot
 from datetime import datetime as dte
 from PIL import Image
 from lxml import etree
-from tasks import issued_callback
-from app import order_log
 
 
 class Flow(BaseFlow):
@@ -84,10 +82,18 @@ class Flow(BaseFlow):
         with ScqcpWebRebot.get_and_lock(order) as rebot:
             is_login = rebot.test_login_status()
             if not is_login:
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        is_login = True
+                        break
+                    rebot = order.change_lock_rebot()
+
+            if not is_login:
                 lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="账号未登陆")
+                                    source_account=rebot.telephone,
+                                    result_reason="账号未登陆")
                 return lock_result
+
             try:
                 token = self.request_query_token_by_web(rebot, order)
             except:

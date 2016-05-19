@@ -36,6 +36,13 @@ class Flow(BaseFlow):
         }
         with CqkyWebRebot.get_and_lock(order) as rebot:
             line = order.line
+            is_login = rebot.test_login_status()
+            if not is_login:
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        break
+                    rebot = order.change_lock_rebot()
+
 
             res = self.request_station_status(line, rebot)
             if res["success"]:
@@ -126,7 +133,7 @@ class Flow(BaseFlow):
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
+                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
                     })
             elif "您未登录或登录已过期" in res["msg"]:
                 rebot.modify(ip="")
@@ -185,24 +192,11 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$radioListPayType": "OnlineAliPay,支付宝在线支付",
                 "ctl00$FartherMain$hideIsSubmit": "true",
             }
-        try:
-            r = rebot.http_post(base_url,
-                        data=urllib.urlencode(params),
-                        headers=headers,
-                        cookies=cookies,
-                        timeout=90)
-        except requests.exceptions.Timeout, e:
-            rebot.modify(ip="")
-            lock_info = order.lock_info
-            if "lock_timeout_cnt" not in lock_info:
-                lock_info["lock_timeout_cnt"] = 0
-            lock_info["lock_timeout_cnt"] += 1
-            order.modify(lock_info=lock_info)
-            if order.lock_info["lock_timeout_cnt"] > 10:
-                return {
-                    "success": False,
-                    "msg": u"锁票超时超过10次",
-                }
+        r = rebot.http_post(base_url,
+                    data=urllib.urlencode(params),
+                    headers=headers,
+                    cookies=cookies,
+                    timeout=90)
         soup = BeautifulSoup(r.content, "lxml")
         msg_lst = re.findall(r'<script>alert\("(.+)"\);</script>', r.content)
         msg = ""
@@ -216,6 +210,7 @@ class Flow(BaseFlow):
             order_no = ""
             pay_money = ""
             flag = False
+
         return {
             "success": flag,
             "msg": msg,

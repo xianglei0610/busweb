@@ -356,6 +356,7 @@ def change_kefu():
     order.update(kefu_username=target.username, kefu_assigntime=dte.now())
     assign.add_dealing(order, target)
     assign.remove_dealing(order, current_user)
+    order.add_trace(OT_TRANSFER, "%s 将订单转给 %s" % (current_user.username, target.username))
     msg = "成功转给%s" % target.username
     return jsonify({"code": 1, "msg": msg})
 

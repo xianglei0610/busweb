@@ -123,7 +123,7 @@ def src_code_img(order_no):
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
-    elif order.crawl_source in ["bjky", "cqky", 'scqcp', "changtu"]:
+    elif order.crawl_source in ["bjky", "cqky", 'scqcp', "changtu",'bus365']:
         rebot = order.get_lock_rebot()
         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
         data = json.loads(session[key])
@@ -654,6 +654,7 @@ def wating_deal_order():
     qs = assign.dealing_orders(current_user).order_by("create_date_time")
     rds = get_redis("order")
     is_warn = False
+    is_close = False
     if client == 'web':
         locking = {}
         for o in qs:
@@ -661,24 +662,18 @@ def wating_deal_order():
                 locking[o.order_no] = 1
             else:
                 locking[o.order_no] = 0
-        if not current_user.is_superuser and not current_user.is_close and qs.count()==KF_ORDER_CT:
-            is_close_tmp = True
+        if not current_user.is_superuser and not current_user.is_close:
             is_close = False
             for o in qs:
                 if not o.kefu_assigntime:
                     continue
                 warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
-                if warn_time < 3*60:
-                    is_warn = False
-                    is_close = False
-                    is_close_tmp = False
-                    break
-                elif warn_time >= 3*60 and warn_time < 10*60:
-                    is_warn = True
-                    is_close_tmp = False
-                else:
+                if warn_time > 15*60:
                     is_close = True
-            if is_close and is_close_tmp:
+                    break
+                elif warn_time >= 3*60 and warn_time < 15*60:
+                    is_warn = True
+            if is_close:
                 current_user.modify(is_close=is_close, is_switch=0)
         not_issued = assign.dealed_but_not_issued_orders(current_user)
         # today = dte.now().strftime("%Y-%m-%d")
@@ -730,9 +725,10 @@ def kefu_on_off():
     is_switch = int(request.form.get('is_switch', 0))
     if current_user.is_close:
         return jsonify({"status": "1", "msg": "账号已经关闭,请联系技术支持"})
-    current_user.modify(is_switch=is_switch)
-    trans = {0: u"关闭", 1: u"开启"}
-    access_log.info("[kefu_on_off] %s %s接单", current_user.username, trans[is_switch])
+    if current_user.is_switch != is_switch:
+        current_user.modify(is_switch=is_switch)
+        trans = {0: u"关闭", 1: u"开启"}
+        access_log.info("[kefu_on_off] %s %s接单", current_user.username, trans[is_switch])
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
 
 

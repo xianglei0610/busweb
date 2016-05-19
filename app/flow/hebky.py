@@ -61,7 +61,6 @@ class Flow(BaseFlow):
                 }
   
                 data.update(tmp)
-            print '1111111111111',data
             order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
             try:
                 res = self.send_lock_request(order, rebot, data=data)

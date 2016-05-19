@@ -255,7 +255,7 @@ class Flow(BaseFlow):
         if not is_login:
             rebot.login()
             rebot.reload()
-        if order.status == STATUS_LOCK_RETRY:
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         return _get_page(rebot)
 
