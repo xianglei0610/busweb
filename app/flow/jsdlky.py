@@ -32,8 +32,11 @@ class Flow(BaseFlow):
         }
         with JsdlkyWebRebot.get_and_lock(order) as rebot:
             line = order.line
-            # 未登录
-            if not rebot.test_login_status():
+            is_login = rebot.test_login_status()
+            if not is_login:
+                if rebot.login() == "OK":
+                    is_login = True
+            if not is_login:
                 lock_result.update({
                     "result_code": 2,
                     "source_account": rebot.telephone,
