@@ -18,12 +18,12 @@ def enqueue_wating_lock(order):
     val = "%s_%s" % (order.order_no, int(time.time()*1000))
 
     if (line.drv_datetime-now).total_seconds() <= 3*60*60+20:       # 3个小时内的车优先处理
-        if order.crawl_source in [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S, SOURCE_SCQCP]: # 银行支付
+        if order.crawl_source in [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S, SOURCE_SCQCP,SOURCE_BUS365]: # 银行支付
             rds.lpush(RK_ORDER_QUEUE_YH2, val)
         else:
             rds.lpush(RK_ORDER_QUEUE_ZFB2, val)
     else:
-        if order.crawl_source in [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S, SOURCE_SCQCP]: # 银行支付
+        if order.crawl_source in [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S, SOURCE_SCQCP,SOURCE_BUS365]: # 银行支付
             rds.lpush(RK_ORDER_QUEUE_YH, val)
         else:
             rds.lpush(RK_ORDER_QUEUE_ZFB, val)
