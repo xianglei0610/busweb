@@ -35,7 +35,7 @@ class ProxyProducer(object):
     def crawl_from_haodaili(self):
         add_cnt = 0
         for i in range(1, 15):
-            url = "http://http://www.haoip.cc/guonei/%s" % i
+            url = "http://www.haoip.cc/guonei/%s" % i
             try:
                 r = requests.get(url, timeout=10)
             except:
