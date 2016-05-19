@@ -510,8 +510,10 @@ def all_order():
         query.update(pay_account=pay_account)
 
     qs = Order.objects.filter(Q_query, **query).order_by("-create_date_time")
-    kefu_count = {str(k): v for k,v in qs.item_frequencies('kefu_username', normalize=False).items()}
-    site_count = {str(k): v for k,v in qs.item_frequencies('crawl_source', normalize=False).items()}
+    # kefu_count = {str(k): v for k,v in qs.item_frequencies('kefu_username', normalize=False).items()}
+    # site_count = {str(k): v for k,v in qs.item_frequencies('crawl_source', normalize=False).items()}
+    site_count = {}
+    kefu_count = {}
     status_count = {}
     for st in STATUS_MSG.keys():
         status_count[st] = qs.filter(status=st).count()
@@ -579,7 +581,7 @@ def all_order():
                                 source_info=SOURCE_INFO,
                                 condition=request.values.to_dict(),
                                 stat=stat,
-                                today = today,
+                                today=today,
                                 pay_account_list=pay_accounts,
                                 )
     elif client in ['android', 'ios']:

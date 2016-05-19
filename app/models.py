@@ -729,12 +729,12 @@ class Rebot(db.Document):
         raise Exception("Not Implemented")
 
     def http_get(self, url, **kwargs):
-        retry = 3
-        for i in range(retry):  # 重试三次
+        retry = 1
+        for i in range(retry):  # 重试retry次
             if self.proxy_ip:
                 kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
             if "timeout" not in kwargs:
-                kwargs["timeout"] = 8
+                kwargs["timeout"] = 30
             try:
                 r = requests.get(url, **kwargs)
             except Exception, e:
@@ -746,12 +746,12 @@ class Rebot(db.Document):
             return r
 
     def http_post(self, url, **kwargs):
-        retry = 3
-        for i in range(retry):  # 重试三次
+        retry = 1
+        for i in range(retry):  # 重试retry次
             if self.proxy_ip:
                 kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
             if "timeout" not in kwargs:
-                kwargs["timeout"] = 15
+                kwargs["timeout"] = 30
             try:
                 r = requests.post(url, **kwargs)
             except Exception, e:
