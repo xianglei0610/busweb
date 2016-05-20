@@ -130,36 +130,36 @@ class Line(db.Document):
     compatible_lines = db.DictField()               # 兼容的路线
 
     # starting
-    s_province = db.StringField(required=True)
-    s_city_id = db.StringField()
-    s_city_name = db.StringField(required=True)
-    s_sta_name = db.StringField(required=True)
-    s_sta_id = db.StringField()
-    s_city_code = db.StringField(required=True)
+    s_province = db.StringField(required=True)      # 出发省(必须有值)
+    s_city_id = db.StringField()                    # 出发城市id（可为空）
+    s_city_name = db.StringField(required=True)     # 出发城市名字(必须有值
+    s_sta_name = db.StringField(required=True)      # 出发站名字（必须有值)
+    s_sta_id = db.StringField()                     # 出发站id(可为空)
+    s_city_code = db.StringField(required=True)     # 出发城市拼音缩写(必须有值)
 
     # destination
-    d_city_name = db.StringField(required=True)
-    d_city_id = db.StringField()
-    d_city_code = db.StringField(required=True)
-    d_sta_name = db.StringField(required=True)
-    d_sta_id = db.StringField()
+    d_city_name = db.StringField(required=True)     # 目的地城市名字(必须有值)
+    d_city_id = db.StringField()                    # 目的地城市id(可为空)
+    d_city_code = db.StringField(required=True)     # 目的地城市拼音缩写(必须有值)
+    d_sta_name = db.StringField(required=True)      # 目的地站名字(必须有值)
+    d_sta_id = db.StringField()                     # 目的地站id(可为空)
 
-    drv_date = db.StringField(required=True)  # 开车日期 yyyy-MM-dd
-    drv_time = db.StringField(required=True)  # 开车时间 hh:mm
-    drv_datetime = db.DateTimeField()         # DateTime类型的开车时间
-    distance = db.StringField()
-    vehicle_type = db.StringField()  # 车型
-    seat_type = db.StringField()     # 座位类型
-    bus_num = db.StringField(required=True)       # 班次
-    full_price = db.FloatField()
-    half_price = db.FloatField()
-    fee = db.FloatField()                 # 手续费
-    crawl_datetime = db.DateTimeField()   # 爬取的时间
-    extra_info = db.DictField()           # 额外信息字段
-    left_tickets = db.IntField()          # 剩余票数
-    update_datetime = db.DateTimeField()  # 更新时间
-    refresh_datetime = db.DateTimeField()   # 线路刷新时间
-    shift_id = db.StringField()       # 车次
+    drv_date = db.StringField(required=True)        # 开车日期 yyyy-MM-dd (必须有值)
+    drv_time = db.StringField(required=True)        # 开车时间 hh:mm (必须有值)
+    drv_datetime = db.DateTimeField()               # DateTime类型的开车时间 (必须有值)
+    distance = db.StringField()                     # 行程距离(可为空)
+    vehicle_type = db.StringField()                 # 车型(可为空), eg:大型大巴
+    seat_type = db.StringField()                    # 座位类型(不重要)
+    bus_num = db.StringField(required=True)         # 车次(必须有值)
+    full_price = db.FloatField()                    # 票价(必须有值)
+    half_price = db.FloatField()                    # 儿童价(不重要)
+    fee = db.FloatField()                           # 手续费
+    crawl_datetime = db.DateTimeField()             # 爬取的时间
+    extra_info = db.DictField()                     # 额外信息字段
+    left_tickets = db.IntField()                    # 剩余票数
+    update_datetime = db.DateTimeField()            # 更新时间
+    refresh_datetime = db.DateTimeField()           # 余票刷新时间
+    shift_id = db.StringField()                     # 车次(不重要)
 
     meta = {
         "indexes": [
