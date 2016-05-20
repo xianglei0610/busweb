@@ -235,7 +235,7 @@ class Flow(object):
             limit_datetime = dte.strptime((now+timedelta(days=1)).strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
         elif 0<=h<7:
             limit_datetime = dte.strptime(now.strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
-        if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=adv_minus):
+        if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=min(60, adv_minus)):
             return False
         return True
 
