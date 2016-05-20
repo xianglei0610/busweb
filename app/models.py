@@ -1978,7 +1978,7 @@ class TCWebRebot(Rebot):
                 "User-Agent": random.choice(BROWSER_USER_AGENT),
             }
         headers.update({"Content-Type": "application/x-www-form-urlencoded"})
-        r = self.proxy_post(login_url,
+        r = self.http_post(login_url,
                             data=urllib.urlencode(data),
                             headers=headers,
                             cookies=cookies,
@@ -2010,13 +2010,14 @@ class TCWebRebot(Rebot):
 
     def test_login_status(self):
         user_url = "http://member.ly.com/Member/MemberInfomation.aspx"
-        headers = {"User-Agent": self.user_agent}
+        headers = {"User-Agent": self.user_agent or random.choice(BROWSER_USER_AGENT)}
         cookies = json.loads(self.cookies)
-        resp = self.proxy_get(user_url, headers=headers, cookies=cookies, verify=False)
+        resp = self.http_get(user_url, headers=headers, cookies=cookies, verify=False)
         return self.check_login_by_resp(resp)
 
     @property
     def proxy_ip(self):
+        return ""
         rds = get_redis("default")
         ipstr = self.ip
         if ipstr and rds.sismember(RK_PROXY_IP_TC, ipstr):
@@ -2024,28 +2025,6 @@ class TCWebRebot(Rebot):
         ipstr = rds.srandmember(RK_PROXY_IP_TC)
         self.modify(ip=ipstr)
         return ipstr
-
-    def proxy_get(self, url, **kwargs):
-        try:
-            r = requests.get(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
-
-    def proxy_post(self, url, **kwargs):
-        try:
-            r = requests.post(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
 
 
 class GzqcpWebRebot(Rebot):

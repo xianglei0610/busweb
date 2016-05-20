@@ -252,7 +252,7 @@ class Flow(BaseFlow):
             "Content-Type": "application/json",
         }
         cookies = json.loads(rebot.cookies)
-        resp = rebot.proxy_post(submit_url,
+        resp = rebot.http_post(submit_url,
                              data=json.dumps(data),
                              headers=headers,
                              cookies=cookies,
@@ -267,7 +267,7 @@ class Flow(BaseFlow):
     #     url = "http://member.ly.com/ajaxhandler/OrderListHandler.ashx?OrderFilter=1&ProjectTag=0&DateType=2&PageIndex=1"
     #     headers = {"User-Agent": rebot.user_agent}
     #     cookies = json.loads(rebot.cookies)
-    #     r = rebot.proxy_get(url, headers=headers, cookies=cookies)
+    #     r = rebot.http_get(url, headers=headers, cookies=cookies)
     #     res = r.json()
     #     line = order.line
     #     for info in res["ReturnValue"]["OrderDetailList"]:
@@ -297,7 +297,7 @@ class Flow(BaseFlow):
     #         "User-Agent": rebot.user_agent,
     #     }
     #     cookies = json.loads(rebot.cookies)
-    #     r = rebot.proxy_get(detail_url, headers=headers, cookies=cookies)
+    #     r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
     #     soup = BeautifulSoup(r.content, "lxml")
     #     state = soup.select(".paystate")[0].get_text().strip()
     #     sdate = soup.select(".list01_info table")[0].findAll("tr")[2].get_text().strip()
@@ -432,7 +432,7 @@ class Flow(BaseFlow):
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
                 form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.order_price)
-                r = rebot.proxy_post("http://member.ly.com/bus/Pay/MobileGateway",
+                r = rebot.http_post("http://member.ly.com/bus/Pay/MobileGateway",
                                      data=form_str,
                                      headers=headers,
                                      cookies=json.loads(rebot.cookies))
@@ -445,7 +445,7 @@ class Flow(BaseFlow):
                     pay_url = res["body"]["PayUrl"]
                     # return {"flag": "url", "content": pay_url}
 
-                    r = rebot.proxy_get(pay_url, headers=headers, verify=False)
+                    r = rebot.http_get(pay_url, headers=headers, verify=False)
                     soup = BeautifulSoup(r.content, "lxml")
                     sign = soup.select("#aliPay")[0].get("data-sign")
                     partner = soup.find("input", attrs={"name": "partner"}).get("value")
@@ -459,7 +459,7 @@ class Flow(BaseFlow):
                     }
                     alipay_url = "https://pay.ly.com/pc/payment/GatewayPay"
                     form_str = urllib.urlencode(params)
-                    r = rebot.proxy_post(alipay_url, headers=headers, data=form_str, verify=False)
+                    r = rebot.http_post(alipay_url, headers=headers, data=form_str, verify=False)
                     res = r.json()
 
                     web_url = res["web_url"]
@@ -478,7 +478,7 @@ class Flow(BaseFlow):
             login_form = "https://passport.ly.com"
             valid_url = "https://passport.ly.com/AjaxHandler/ValidCode.ashx?action=getcheckcode&name=%s" % rebot.telephone
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-            r = rebot.proxy_get(login_form, headers=headers, verify=False)
+            r = rebot.http_get(login_form, headers=headers, verify=False)
             data = {
                 "cookies": dict(r.cookies),
                 "headers": headers,
