@@ -16,7 +16,7 @@ from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
 from app import order_log, line_log
 from app.models import Order
-from app.proxy import cqky_proxy
+from app.proxy import get_proxy
 
 
 class Flow(BaseFlow):
@@ -125,7 +125,7 @@ class Flow(BaseFlow):
                 else:
                     if u"同一IP一天最多可订" in res["msg"]:
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
-                        cqky_proxy.remove_proxy(rebot.proxy_ip)
+                        get_proxy("cqky").remove_proxy(rebot.proxy_ip)
                         rebot.modify(ip="")
                     elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
                         rebot.modify(cookies="{}")
