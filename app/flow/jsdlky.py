@@ -296,8 +296,13 @@ class Flow(BaseFlow):
         }
         rebot = JsdlkyWebRebot.get_one()
         url = "%s?%s" % (line_url, urllib.urlencode(req_data))
-        r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)})
-        res = r.json()
+        try:
+            r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)})
+            res = r.json()
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+            return result_info
         now = dte.now()
         if res["rtn_code"] != "00":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
