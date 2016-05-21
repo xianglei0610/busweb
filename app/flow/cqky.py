@@ -515,14 +515,14 @@ class Flow(BaseFlow):
             r = rebot.http_post(line_url,
                         data=urllib.urlencode(params),
                         headers=headers)
+            content = r.content
+            for k in set(re.findall("([A-Za-z]+):", content)):
+                content = re.sub(r"\b%s\b" % k, '"%s"' % k, content)
+            res = json.loads(content)
         except:
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
-        content = r.content
-        for k in set(re.findall("([A-Za-z]+):", content)):
-            content = re.sub(r"\b%s\b" % k, '"%s"' % k, content)
-        res = json.loads(content)
         if res["success"] != "true":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
