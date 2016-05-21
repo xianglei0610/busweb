@@ -4,6 +4,7 @@ import hashlib
 import redis
 import random
 import re
+import cStringIO
 
 try:
     import Image
@@ -18,9 +19,31 @@ except ImportError:
 from datetime import datetime as dte
 from app import BASE_DIR
 from flask import current_app
+from pytesseract import image_to_string
 
 
 _redis_pool_list = {}
+
+
+def vcode_cqky(img_content):
+    ims = cStringIO.StringIO(img_content)
+    im = Image.open(ims)
+    im = im.convert('L')
+    im = im.point(lambda x: 255 if x > 140 else 0)
+    im = ecp(im)
+    code = image_to_string(im, lang='kp', config='-psm 8')
+    return code
+
+
+def vcode_scqcp(img_content):
+    ims = cStringIO.StringIO(img_content)
+    im = Image.open(ims)
+
+    im = im.convert('L')
+    im = im.point(lambda x: 255 if x > 160 else 0)
+    im = ecp(im)
+    code = image_to_string(im, lang='scqcp', config='-psm 8')
+    return code
 
 
 def trans_js_str(s):
@@ -160,3 +183,55 @@ def create_validate_code(size=(90, 30),
     img = img.transform(size, Image.PERSPECTIVE, params)    # 创建扭曲
     img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)         # 滤镜，边界加强（阈值更大）
     return img, strs
+
+
+def ecp(im):
+    frame = im.load()
+    (w, h) = im.size
+    for i in xrange(w):
+        for j in xrange(h):
+            if frame[i, j] != 255:
+                count = 0
+                try:
+                    if frame[i, j - 1] == 255:
+                        count += 1
+                except IndexError:
+                    pass
+                try:
+                    if frame[i, j + 1] == 255:
+                        count += 1
+                except IndexError:
+                    pass
+                try:
+                    if frame[i - 1, j - 1] == 255:
+                        count += 1
+                except IndexError:
+                    pass
+                try:
+                    if frame[i - 1, j] == 255:
+                        count += 1
+                except IndexError:
+                    pass
+                try:
+                    if frame[i - 1, j + 1] == 255:
+                        count += 1
+                except IndexError:
+                    pass
+                try:
+                    if frame[i + 1, j - 1] == 255:
+                        count += 1
+                except IndexError:
+                    pass
+                try:
+                    if frame[i + 1, j] == 255:
+                        count += 1
+                except IndexError:
+                    pass
+                try:
+                    if frame[i + 1, j + 1] == 255:
+                        count += 1
+                except IndexError:
+                    pass
+                if count >= 6:
+                    frame[i, j] = 255
+    return im

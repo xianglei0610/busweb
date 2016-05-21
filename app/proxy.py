@@ -12,7 +12,6 @@ import requests
 import json
 import random
 import urllib
-import urllib2
 import re
 
 from app.constants import *
@@ -34,8 +33,8 @@ class ProxyProducer(object):
 
     def crawl_from_haodaili(self):
         add_cnt = 0
-        for i in range(1, 10):
-            url = "http://www.haodailiip.com/guonei/%s" % i
+        for i in range(1, 15):
+            url = "http://www.haoip.cc/guonei/%s" % i
             try:
                 r = requests.get(url, timeout=10)
             except:
@@ -122,9 +121,11 @@ class ProxyProducer(object):
         """
         rds = get_redis("default")
         add_cnt = rds.sadd(RK_PROXY_IP_ALL, ipstr)
+        from tasks import check_add_proxy_ip
         if add_cnt:     # 新增的
             for c in self.consumer_list:
-                c.on_producer_add(ipstr)
+                # c.on_producer_add(ipstr)
+                check_add_proxy_ip.delay(c.name, ipstr)
         return add_cnt
 
     def get_proxy(self):
@@ -166,6 +167,7 @@ class ProxyProducer(object):
 
 
 class ProxyConsumer(object):
+
     def valid_proxy(self, ipstr):
         return True
 
@@ -197,6 +199,7 @@ class ProxyConsumer(object):
 
 class CqkyProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_CQKY
+    name = "cqky"
 
     @property
     def current_proxy(self):
@@ -259,6 +262,7 @@ class CqkyProxyConsumer(ProxyConsumer):
 
 class ScqcpProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_SCQCP
+    name = "scqcp"
 
     def valid_proxy(self, ipstr):
         url = "http://scqcp.com/login/index.html"
@@ -279,6 +283,7 @@ class ScqcpProxyConsumer(ProxyConsumer):
 
 class TongChengProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_TC
+    name = "tongcheng"
 
     def valid_proxy(self, ipstr):
         url = "http://www.ly.com/"
@@ -297,6 +302,7 @@ class TongChengProxyConsumer(ProxyConsumer):
 
 class CBDProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_CBD
+    name = "cbd"
 
     def valid_proxy(self, ipstr):
         url = "http://m.chebada.com/"
@@ -317,6 +323,7 @@ class CBDProxyConsumer(ProxyConsumer):
 
 class BjkyProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_BJKY
+    name = "bjky"
 
     def valid_proxy(self, ipstr):
         url = "http://e2go.com.cn"
@@ -337,6 +344,7 @@ class BjkyProxyConsumer(ProxyConsumer):
 
 class LnkyProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_LNKY
+    name = "lnky"
 
     def valid_proxy(self, ipstr):
         url = "http://www.jt306.cn/wap/login/home.do"
@@ -357,6 +365,7 @@ class LnkyProxyConsumer(ProxyConsumer):
 
 class E8sProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_E8S
+    name = "e8s"
 
     def valid_proxy(self, ipstr):
         url = "http://m.e8s.com.cn/bwfpublicservice/notice.action"
@@ -382,6 +391,7 @@ class E8sProxyConsumer(ProxyConsumer):
 
 class ChangtuProxyConsumer(ProxyConsumer):
     PROXY_KEY = "proxy:changtu"
+    name = "changtu"
 
     def valid_proxy(self, ipstr):
         url = "http://www.changtu.com"
@@ -400,20 +410,21 @@ class ChangtuProxyConsumer(ProxyConsumer):
 
 proxy_producer = ProxyProducer()
 
-cqky_proxy = CqkyProxyConsumer()
-tc_proxy = TongChengProxyConsumer()
-cbd_proxy = CBDProxyConsumer()
-scqcp_proxy = ScqcpProxyConsumer()
-bjky_proxy = BjkyProxyConsumer()
-lnky_proxy = LnkyProxyConsumer()
-e8s_proxy = E8sProxyConsumer()
-changtu_proxy = ChangtuProxyConsumer()
+if "proxy_list" not in globals():
+    proxy_list = {}
 
-proxy_producer.registe_consumer(cqky_proxy)
-proxy_producer.registe_consumer(tc_proxy)
-proxy_producer.registe_consumer(cbd_proxy)
-proxy_producer.registe_consumer(scqcp_proxy)
-proxy_producer.registe_consumer(bjky_proxy)
-proxy_producer.registe_consumer(lnky_proxy)
-proxy_producer.registe_consumer(e8s_proxy)
-proxy_producer.registe_consumer(changtu_proxy)
+    proxy_list[CqkyProxyConsumer.name] = CqkyProxyConsumer()
+    proxy_list[TongChengProxyConsumer.name] = TongChengProxyConsumer()
+    proxy_list[CBDProxyConsumer.name] = CBDProxyConsumer()
+    proxy_list[ScqcpProxyConsumer.name] = ScqcpProxyConsumer()
+    proxy_list[BjkyProxyConsumer.name] = BjkyProxyConsumer()
+    proxy_list[LnkyProxyConsumer.name] = LnkyProxyConsumer()
+    proxy_list[E8sProxyConsumer.name] = E8sProxyConsumer()
+    proxy_list[ChangtuProxyConsumer.name] = ChangtuProxyConsumer()
+
+    for name, obj in proxy_list.items():
+        proxy_producer.registe_consumer(obj)
+
+
+def get_proxy(name):
+    return proxy_list[name]

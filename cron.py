@@ -162,76 +162,13 @@ def check_proxy():
 
 
 @check(run_in_local=True)
-def check_proxy_cqky():
-    from app.proxy import cqky_proxy
-    for ipstr in cqky_proxy.all_proxy():
-        if not cqky_proxy.valid_proxy(ipstr):
-            cqky_proxy.remove_proxy(ipstr)
-    return cqky_proxy.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_tc():
-    from app.proxy import tc_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_scqcp():
-    from app.proxy import scqcp_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_cbd():
-    from app.proxy import cbd_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_bjky():
-    from app.proxy import bjky_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_lnky():
-    from app.proxy import lnky_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_e8s():
-    from app.proxy import e8s_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_changtu():
-    from app.proxy import changtu_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
+def check_consumer_proxy(name):
+    from tasks import check_remove_proxy_ip
+    from app.proxy import get_proxy
+    consumer = get_proxy(name)
+    for ipstr in consumer.all_proxy():
+        check_remove_proxy_ip.delay(name, ipstr)
+    return consumer.proxy_size()
 
 def main():
     sched = Scheduler(daemonic=False)
@@ -305,6 +242,7 @@ def main():
 
     # 同程旅行
     sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "南通"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "天津"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "无锡"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "镇江,宜兴"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "徐州"}})
@@ -364,21 +302,30 @@ def main():
     #内蒙古呼运
     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['nmghy'])
 
+    #巴士365
+    sched.add_cron_job(bus_crawl, hour=1, minute=20, args=['bus365'], kwargs={"crawl_kwargs":{"city": "哈尔滨市,齐齐哈尔,鸡西市,鹤岗市,双鸭山市,大庆市,伊春市,佳木斯市,七台河市,牡丹江市,黑河市"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=40, args=['bus365'], kwargs={"crawl_kwargs":{"city": "长春市,吉林市,四平市,辽源市,通化市,白山市,松原市,白城市,图们市,敦化市"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['bus365'], kwargs={"crawl_kwargs":{"city": "兰州市,嘉峪关市,金昌市,白银市,天水市,武威市,张掖市,平凉市,酒泉市,庆阳市,定西市,陇南市"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['bus365'], kwargs={"crawl_kwargs":{"city": "西宁市,乐都县,海北州,祁连县"}})
+    sched.add_cron_job(bus_crawl, hour=2, minute=10, args=['bus365'], kwargs={"crawl_kwargs":{"city": "赤峰市,巴林左旗,巴林右旗,通辽市,海拉尔,正蓝旗,集宁区"}})
+
+
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
-    sched.add_interval_job(crawl_proxy_samair, minutes=15)
-    sched.add_interval_job(crawl_proxy_66ip, minutes=20)
-    sched.add_interval_job(crawl_proxy_xici, minutes=20)
-    sched.add_interval_job(crawl_proxy_zdaye, minutes=6)
+    sched.add_interval_job(crawl_proxy_samair, minutes=10)
+    sched.add_interval_job(crawl_proxy_66ip, minutes=10)
+    sched.add_interval_job(crawl_proxy_xici, minutes=10)
+    sched.add_interval_job(crawl_proxy_zdaye, minutes=10)
+
     sched.add_interval_job(check_proxy, minutes=1)
-    sched.add_interval_job(check_proxy_cqky, minutes=1)
-    sched.add_interval_job(check_proxy_tc, minutes=1)
-    sched.add_interval_job(check_proxy_cbd, minutes=1)
-    sched.add_interval_job(check_proxy_scqcp, minutes=1)
-    sched.add_interval_job(check_proxy_bjky, minutes=1)
-    sched.add_interval_job(check_proxy_lnky, minutes=1)
-    sched.add_interval_job(check_proxy_e8s, minutes=1)
-    sched.add_interval_job(check_proxy_changtu, minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["tongcheng"], minutes=1)
+    # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["lnky"], minutes=1)
+    # sched.add_interval_job(check_consumer_proxy, args=["e8s"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=1)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

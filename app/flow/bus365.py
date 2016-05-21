@@ -86,13 +86,16 @@ class Flow(BaseFlow):
                 pas_list.append(tmp)
             data['order.passengers'] = json.dumps(pas_list)
             res = self.send_lock_request(order, rebot, data=data)
+  
+            if isinstance(res, list):
+                res = res[0]
             if res.has_key('getwaylist'):
                 del res['getwaylist']
-            lock_result = {
-                "lock_info": res,
+
+            lock_result.update({
                 "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
-            }
+                "lock_info": res,
+            })
             if res.get('order', ''):
                 expire_time = dte.now()+datetime.timedelta(seconds=20*60)
                 lock_result.update({
@@ -101,14 +104,27 @@ class Flow(BaseFlow):
                     "pay_url": "",
                     "raw_order_no": res['order']['orderno'],
                     "expire_datetime": expire_time,
-                    "lock_info": res
+                    "pay_money": float(res['order']['totalprice']),
                 })
             else:
-#                 errmsg = res['values']['result'].replace("\r\n", " ")
-#                 for s in ["剩余座位数不足"]:
-#                     if s in errmsg:
-#                         self.close_line(line, reason=errmsg)
-#                         break
+                errmsg = res.get('message', '')
+                flag = False
+                for i in [u"锁定接口异常",u"获取座位信息失败",u"当前班次异常", u"锁定接口异常",u"接口失败"]:
+                    if i in errmsg:
+                        flag = True
+                        break
+                if flag:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["message"],
+                    })
+                    return lock_result
+
+                for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码"]:
+                    if s in errmsg:
+                        self.close_line(line, reason=errmsg)
+                        break
                 lock_result.update({
                     "result_code": 0,
                     "result_reason": res,
@@ -141,9 +157,9 @@ class Flow(BaseFlow):
         order_detail_url = url + '?'+urllib.urlencode(param)
         r = rebot.http_get(order_detail_url, headers=headers)
         ret = r.json()
-        return {
-            "state": ret['status'],
-        }
+        if ret['paystatus'] == 1 and ret['status'] == 0:
+            return {"state": 6}
+        return {"state": ret['status']}
 
     def do_refresh_issue(self, order):
         result_info = {
@@ -158,9 +174,11 @@ class Flow(BaseFlow):
         state = ret["state"]
         order_status_mapping = {
                 1: "购票成功",
+                2: "出票失败",
                 3: "取消购票",
                 4: "取消购票",
                 5: "取消购票",
+                6: "正在出票",
                 }
         if state == 1: #"出票成功":
             code_list = []
@@ -186,12 +204,12 @@ class Flow(BaseFlow):
                 "pick_msg_list": msg_list,
             })
 
-        elif state == "001007": #"出票中":
+        elif state == 6: #"出票中":
             result_info.update({
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
             })
-        elif state in (3, 4, 5):#取消购票,购票失败,退票成功
+        elif state in (2, 3, 4, 5):#取消购票,购票失败,退票成功
             result_info.update({
                 "result_code": 2,
                 "result_msg": order_status_mapping[state],
@@ -204,156 +222,150 @@ class Flow(BaseFlow):
         else:
             rebot = Bus365WebRebot.get_one()
         
-#         headers = {
-#            "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
-#            "Content-Type": "application/x-www-form-urlencoded",
-#            "Charset": "UTF-8",
-#            }
-#         cookies = {}
-#         if order.status == STATUS_LOCK_RETRY:
-#             self.lock_ticket(order)
-# 
-#         if order.status == STATUS_WAITING_ISSUE:
-#             param = {
-#                      "ordertoken": order.lock_info['order']['ordertoken'],
-#                      "orderno": order.lock_info['order']['orderno'],
-#                      "userid": str(order.lock_info['order']['userid'])
-#                      }
-#             url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
-#             unpay_url = url + '?'+urllib.urlencode(param)
-#             r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
-#             gatewayid = 65
-#             content = r.content
-#             if not isinstance(content, unicode):
-#                 content = content.decode('utf-8')
-#             if order.raw_order_no in content:
-#                 param.update({"gatewayid": gatewayid})
-#                 middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
-#                 pay_url = middle_url + '?'+urllib.urlencode(param)
-#                 r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+        headers = {
+           "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
+           "Content-Type": "application/x-www-form-urlencoded",
+           "Charset": "UTF-8",
+           }
+        cookies = {}
+        if order.status == STATUS_LOCK_RETRY:
+            self.lock_ticket(order)
+ 
+        if order.status == STATUS_WAITING_ISSUE:
+            param = {
+                     "ordertoken": order.lock_info['order']['ordertoken'],
+                     "orderno": order.lock_info['order']['orderno'],
+                     "userid": str(order.lock_info['order']['userid'])
+                     }
+            url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
+            unpay_url = url + '?'+urllib.urlencode(param)
+            r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
+            gatewayid = 142
+            content = r.content
+            if not isinstance(content, unicode):
+                content = content.decode('utf-8')
+            if order.raw_order_no in content:
+                param.update({"gatewayid": gatewayid})
+                middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
+                pay_url = middle_url + '?'+urllib.urlencode(param)
+                r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+                content = r.content
+                content = content.replace("target='_blank'",'')
+                script = "<script>document.form_payment0.submit();</script>"
+                content = content + script
+                return {"flag": "html", "content": content}
+        return {"flag": "error", "content": "锁票失败"}    
+#         is_login = rebot.test_login_status()
+#         if not is_login:
+#             if valid_code:#  登陆
+#                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+#                 pwd_info = SOURCE_INFO[SOURCE_BUS365]["pwd_encode_web"]
+#                 data = json.loads(session[key])
+#                 code_url = data["valid_url"]
+#                 headers = data["headers"]
+#                 cookies = data["cookies"]
+#                 module = data["module"]
+#                 empoent = data["empoent"]
+#                 authenticityToken = data["authenticityToken"]
+#                 ismock = data["ismock"]
+#                 data = {
+#                     "module": module,
+#                     "empoent": empoent,
+#                     "authenticityToken": authenticityToken,
+#                     "ismock": ismock,
+#                     "user.username": rebot.telephone,
+#                     "user.verifycode": valid_code,
+#                     "user.password": pwd_info[rebot.password]
+#                 }
+#                 url = "http://www.bus365.com/user/login"
+#                 r = rebot.http_post(url, data=data, headers=headers, cookies=cookies)
+#                 new_cookies = r.cookies
 #                 content = r.content
 #                 if not isinstance(content, unicode):
 #                     content = content.decode('utf-8')
-#                 params = {}
 #                 sel = etree.HTML(content)
-#                 for s in sel.xpath("//form[@name='form_payment0']//input"):
-#                     k, v = s.xpath("@name"), s.xpath("@value")
-#                     if k:
-#                         k, v = k[0], v[0] if v else ""
-#                         params[k] = v
-#                 url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
-#                 r = rebot.http_post(url, headers=headers, cookies=cookies, data=params)
-#                 if not order.pay_order_no:
-#                     order.modify(pay_order_no=raw_order_no)
-#                 return {"flag": "html", "content": r.content.decode('gbk')}    
-
-        is_login = rebot.test_login_status()
-        if not is_login:
-            if valid_code:#  登陆
-                key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-                pwd_info = SOURCE_INFO[SOURCE_BUS365]["pwd_encode_web"]
-                data = json.loads(session[key])
-                code_url = data["valid_url"]
-                headers = data["headers"]
-                cookies = data["cookies"]
-                module = data["module"]
-                empoent = data["empoent"]
-                authenticityToken = data["authenticityToken"]
-                ismock = data["ismock"]
-                data = {
-                    "module": module,
-                    "empoent": empoent,
-                    "authenticityToken": authenticityToken,
-                    "ismock": ismock,
-                    "user.username": rebot.telephone,
-                    "user.verifycode": valid_code,
-                    "user.password": pwd_info[rebot.password]
-                }
-                url = "http://www.bus365.com/user/login"
-                r = rebot.http_post(url, data=data, headers=headers, cookies=cookies)
-                new_cookies = r.cookies
-                content = r.content
-                if not isinstance(content, unicode):
-                    content = content.decode('utf-8')
-                sel = etree.HTML(content)
-                ErrorCode = sel.xpath('//*[@id="error_username"]/text()')
-                if ErrorCode:
-                    ErrorCode = ErrorCode[0].replace('\n', '').replace('\t', '').replace(' ', '')
-                if not ErrorCode:
-                    is_login = True
-                    cookies.update(dict(new_cookies))
-                    rebot.modify(cookies=json.dumps(cookies), is_active=True, last_login_time=dte.now(), user_agent=headers.get("User-Agent", ""))
-        if is_login:
-            if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
-                self.lock_ticket(order)
-
-            if order.status == STATUS_WAITING_ISSUE:
-                param = {
-                         "ordertoken": order.lock_info['order']['ordertoken'],
-                         "orderno": order.lock_info['order']['orderno'],
-                         "userid": str(order.lock_info['order']['userid'])
-                         }
-                url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
-                unpay_url = url + '?'+urllib.urlencode(param)
-                r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
-                gatewayid = 65
-                content = r.content
-                if not isinstance(content, unicode):
-                    content = content.decode('utf-8')
-                if order.raw_order_no in content:
-                    param.update({"gatewayid": gatewayid})
-                    middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
-                    pay_url = middle_url + '?'+urllib.urlencode(param)
-                    r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
-                    content = r.content
-                    if not isinstance(content, unicode):
-                        content = content.decode('utf-8')
-                    params = {}
-                    sel = etree.HTML(content)
-                    for s in sel.xpath("//form[@name='form_payment0']//input"):
-                        k, v = s.xpath("@name"), s.xpath("@value")
-                        if k:
-                            k, v = k[0], v[0] if v else ""
-                            params[k] = v
-                    url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
-                    r = rebot.http_post(url, headers=headers, cookies=cookies, data=params)
-                    if not order.pay_order_no:
-                        order.modify(pay_order_no=order.raw_order_no)
-                    return {"flag": "html", "content": r.content.decode('gbk')}
-            else:
-                return {"flag": "false", "content": order.lock_info.get('result_reason','')}
-#         elif ErrorCode == '验证码不正确':
-        else:
-            login_form_url = "http://www.bus365.com/login0"
-            headers = {
-                       "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
-                       "Content-Type": "application/x-www-form-urlencoded",
-                       "Charset": "UTF-8",
-                       }
-            r = rebot.http_get(login_form_url, headers=headers)
-            sel = etree.HTML(r.content)
-            module = sel.xpath('//form[@id="loginForm"]/div[@id="userLogin"]/input[@id="module"]/@value')[0]
-            empoent = sel.xpath('//form[@id="loginForm"]/div[@id="userLogin"]/input[@id="empoent"]/@value')[0]
-            authenticityToken = sel.xpath('//form[@id="loginForm"]/div[@id="userLogin"]/input[@name="authenticityToken"]/@value')[0]
-            ismock = sel.xpath('//form[@id="loginForm"]/div[@id="userLogin"]/input[@name="ismock"]/@value')[0]
-            cookies = dict(r.cookies)
-            code_url = sel.xpath("//img[@id='mobileImgVa0']/@src")[0]
-            #code_url = "http://www.bus365.com/"code_url.split('?')[0]+"?d=0.%s"% random.randint(1, 10000)
-            code_url = "http://www.bus365.com"+code_url
-            r = rebot.http_get(code_url, headers=headers, cookies=cookies)
-            cookies.update(dict(r.cookies))
-            data = {
-                "cookies": cookies,
-                "headers": headers,
-                "valid_url": code_url,
-                "module": module,
-                "empoent": empoent,
-                "authenticityToken": authenticityToken,
-                "ismock": ismock,
-            }
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-            session[key] = json.dumps(data)
-            return {"flag": "input_code", "content": ""}
+#                 ErrorCode = sel.xpath('//*[@id="error_username"]/text()')
+#                 if ErrorCode:
+#                     ErrorCode = ErrorCode[0].replace('\n', '').replace('\t', '').replace(' ', '')
+#                 if not ErrorCode:
+#                     is_login = True
+#                     cookies.update(dict(new_cookies))
+#                     rebot.modify(cookies=json.dumps(cookies), is_active=True, last_login_time=dte.now(), user_agent=headers.get("User-Agent", ""))
+#         if is_login:
+#             if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
+#                 self.lock_ticket(order)
+# 
+#             if order.status == STATUS_WAITING_ISSUE:
+#                 param = {
+#                          "ordertoken": order.lock_info['order']['ordertoken'],
+#                          "orderno": order.lock_info['order']['orderno'],
+#                          "userid": str(order.lock_info['order']['userid'])
+#                          }
+#                 url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
+#                 unpay_url = url + '?'+urllib.urlencode(param)
+#                 r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
+#                 gatewayid = 65
+#                 content = r.content
+#                 if not isinstance(content, unicode):
+#                     content = content.decode('utf-8')
+#                 if order.raw_order_no in content:
+#                     param.update({"gatewayid": gatewayid})
+#                     middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
+#                     pay_url = middle_url + '?'+urllib.urlencode(param)
+#                     r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+#                     content = r.content 
+#                     content = content.replace("target='_blank'",'')
+#                     script = "<script>document.form_payment0.submit();</script>"
+#                     content = content + script
+#                     return {"flag": "html", "content": content}
+# #                     if not isinstance(content, unicode):
+# #                         content = content.decode('utf-8')
+# #                     params = {}
+# #                     sel = etree.HTML(content)
+# #                     for s in sel.xpath("//form[@name='form_payment0']//input"):
+# #                         k, v = s.xpath("@name"), s.xpath("@value")
+# #                         if k:
+# #                             k, v = k[0], v[0] if v else ""
+# #                             params[k] = v
+# #                     url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
+# #                     r = rebot.http_post(url, headers=headers, cookies=cookies, data=params)
+# #                     if not order.pay_order_no:
+# #                         order.modify(pay_order_no=order.raw_order_no)
+#                     return {"flag": "html", "content": r.content.decode('gbk')}
+#             else:
+#                 return {"flag": "false", "content": order.lock_info.get('result_reason','')}
+# #         elif ErrorCode == '验证码不正确':
+#         else:
+#             login_form_url = "http://www.bus365.com/login0"
+#             headers = {
+#                        "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
+#                        "Content-Type": "application/x-www-form-urlencoded",
+#                        "Charset": "UTF-8",
+#                        }
+#             r = rebot.http_get(login_form_url, headers=headers)
+#             sel = etree.HTML(r.content)
+#             module = sel.xpath('//form[@id="loginForm"]/div[@id="userLogin"]/input[@id="module"]/@value')[0]
+#             empoent = sel.xpath('//form[@id="loginForm"]/div[@id="userLogin"]/input[@id="empoent"]/@value')[0]
+#             authenticityToken = sel.xpath('//form[@id="loginForm"]/div[@id="userLogin"]/input[@name="authenticityToken"]/@value')[0]
+#             ismock = sel.xpath('//form[@id="loginForm"]/div[@id="userLogin"]/input[@name="ismock"]/@value')[0]
+#             cookies = dict(r.cookies)
+#             code_url = sel.xpath("//img[@id='mobileImgVa0']/@src")[0]
+#             #code_url = "http://www.bus365.com/"code_url.split('?')[0]+"?d=0.%s"% random.randint(1, 10000)
+#             code_url = "http://www.bus365.com"+code_url
+#             r = rebot.http_get(code_url, headers=headers, cookies=cookies)
+#             cookies.update(dict(r.cookies))
+#             data = {
+#                 "cookies": cookies,
+#                 "headers": headers,
+#                 "valid_url": code_url,
+#                 "module": module,
+#                 "empoent": empoent,
+#                 "authenticityToken": authenticityToken,
+#                 "ismock": ismock,
+#             }
+#             key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+#             session[key] = json.dumps(data)
+#             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
         import urllib2

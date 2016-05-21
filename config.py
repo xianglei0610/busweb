@@ -96,8 +96,8 @@ class ApiDevConfig(Config):
 
 
 class ApiProdConfig(Config):
-    SENTRY_DSN = "http://1916f5873331434aa12af8cfef67bad5:647b983117a54618bdd2fb92ea91e486@120.27.150.94:9000/5"
-    CELERY_SENTRY_DSN = "http://38d90342880f41aaa8f4b8eed11c79ca:25101a5e37a04df882e2ff9c10d64b08@120.27.150.94:9000/4"
+    SENTRY_DSN = "http://da8f146ff18546018b40c126ad92912b:f99a13a0d2724219a81b83c1827d3541@120.27.150.94:9000/8"
+    CELERY_SENTRY_DSN = "http://1eabb3c3d1f44c569f074540570335ce:8245e10562804a168bc3150f012a5f1c@120.27.150.94:9000/9"
 
     CELERY_BROKER_URL = 'redis://10.51.9.34:6379/10'
     CELERY_RESULT_BACKEND = 'redis://10.51.9.34:6379/11'
@@ -148,7 +148,7 @@ class AdminDevConfig(ApiDevConfig):
 
 
 class AdminProdConfig(ApiProdConfig):
-    SENTRY_DSN = "http://eb323c77f19a4ffda4532bf8a4d5000f:ecdb186f84d5425a86844b3073796938@120.27.150.94:9000/6"
+    SENTRY_DSN = "http://2d063c00755448e0810523c66e3c2ced:3ac419321eb3481d895da8b69ef882af@120.27.150.94:9000/7"
 
 
 class AdminLocalConfig(ApiLocalConfig):

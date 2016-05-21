@@ -16,7 +16,7 @@ from lxml import etree
 from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
 from app import rebot_log, order_status_log, line_log
 
 
@@ -729,12 +729,12 @@ class Rebot(db.Document):
         raise Exception("Not Implemented")
 
     def http_get(self, url, **kwargs):
-        retry = 3
-        for i in range(retry):  # 重试三次
+        retry = 1
+        for i in range(retry):  # 重试retry次
             if self.proxy_ip:
                 kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
             if "timeout" not in kwargs:
-                kwargs["timeout"] = 8
+                kwargs["timeout"] = 30
             try:
                 r = requests.get(url, **kwargs)
             except Exception, e:
@@ -746,12 +746,12 @@ class Rebot(db.Document):
             return r
 
     def http_post(self, url, **kwargs):
-        retry = 3
-        for i in range(retry):  # 重试三次
+        retry = 1
+        for i in range(retry):  # 重试retry次
             if self.proxy_ip:
                 kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
             if "timeout" not in kwargs:
-                kwargs["timeout"] = 15
+                kwargs["timeout"] = 30
             try:
                 r = requests.post(url, **kwargs)
             except Exception, e:
@@ -1042,13 +1042,14 @@ class ScqcpAppRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ""
+        # rds = get_redis("default")
+        # ipstr = self.ip
+        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+        #     return ipstr
+        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        # self.modify(ip=ipstr)
+        # return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -1071,6 +1072,7 @@ class ScqcpAppRebot(Rebot):
         return qs[rd]
 
     def login(self):
+        return
         ua = random.choice(MOBILE_USER_AGENG)
         device = "android" if "android" in ua else "ios"
 
@@ -1161,13 +1163,14 @@ class ScqcpWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ""
+        # rds = get_redis("default")
+        # ipstr = self.ip
+        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+        #     return ipstr
+        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        # self.modify(ip=ipstr)
+        # return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -1184,12 +1187,27 @@ class ScqcpWebRebot(Rebot):
                               }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt >= 20:
+            if cnt >= 10:
                 droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)
 
     def login(self, valid_code="", token='', headers={}, cookies={}):
+        vcode_flag = False
+        if not valid_code:
+            login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
+            headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+            r = self.http_get(login_form_url, headers=headers, cookies=cookies)
+            sel = etree.HTML(r.content)
+            cookies.update(dict(r.cookies))
+            code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+            code_url = code_url.split('?')[0]+"?d=0.%s" % random.randint(1, 10000)
+            token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+            r = self.http_get(code_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            valid_code = vcode_scqcp(r.content)
+            vcode_flag = True
+
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
@@ -1207,10 +1225,11 @@ class ScqcpWebRebot(Rebot):
             if res["success"]:     # 登陆成功
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
+                rebot_log.info("[scqcp]登陆成功, %s vcode_flag:%s", self.telephone, vcode_flag)
                 return "OK"
             else:
                 msg = res["msg"]
-                rebot_log.info("[scqcp]%s %s", self.telephone, msg)
+                rebot_log.info("[scqcp]%s %s vcode_flag:%s", self.telephone, msg, vcode_flag)
                 if u"验证码不正确" in msg:
                     return "invalid_code"
                 return msg
@@ -1405,6 +1424,7 @@ class JsdlkyWebRebot(Rebot):
 
     def login(self, headers=None, cookies={}, valid_code=""):
         index_url = "http://www.jslw.gov.cn/"
+        valid_code = valid_code or "1234"
         if not headers:
             ua = random.choice(BROWSER_USER_AGENT)
             headers = {"User-Agent": ua}
@@ -1422,8 +1442,7 @@ class JsdlkyWebRebot(Rebot):
             "password": self.password,
             "rememberMe": "yes",
         }
-        if valid_code:
-            params.update(checkcode=valid_code)
+        params.update(checkcode=valid_code)
 
         login_url = "http://www.jslw.gov.cn/login.do"
         headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -1750,6 +1769,17 @@ class CqkyWebRebot(Rebot):
         self.modify(is_locked=False)
 
     def login(self, valid_code="", headers={}, cookies={}):
+        vcode_flag = False
+        if not valid_code:
+            login_form = "http://www.96096kp.com/CusLogin.aspx"
+            valid_url = "http://www.96096kp.com/ValidateCode.aspx"
+            headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+            r = self.http_get(login_form, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            valid_code = vcode_cqky(r.content)
+            vcode_flag = True
+
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
@@ -1775,10 +1805,11 @@ class CqkyWebRebot(Rebot):
                     return "fail"
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
+                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s", self.telephone, vcode_flag)
                 return "OK"
             else:
                 msg = res["msg"]
-                rebot_log.info("[cqky]%s %s", self.telephone, msg)
+                rebot_log.info("[cqky]%s %s vcode_flag:%s", self.telephone, msg, vcode_flag)
                 if u"用户名或密码错误" in msg:
                     return "invalid_pwd"
                 elif u"请正确输入验证码" in msg or u"验证码已过期" in msg:
@@ -1947,7 +1978,7 @@ class TCWebRebot(Rebot):
                 "User-Agent": random.choice(BROWSER_USER_AGENT),
             }
         headers.update({"Content-Type": "application/x-www-form-urlencoded"})
-        r = self.proxy_post(login_url,
+        r = self.http_post(login_url,
                             data=urllib.urlencode(data),
                             headers=headers,
                             cookies=cookies,
@@ -1979,13 +2010,14 @@ class TCWebRebot(Rebot):
 
     def test_login_status(self):
         user_url = "http://member.ly.com/Member/MemberInfomation.aspx"
-        headers = {"User-Agent": self.user_agent}
+        headers = {"User-Agent": self.user_agent or random.choice(BROWSER_USER_AGENT)}
         cookies = json.loads(self.cookies)
-        resp = self.proxy_get(user_url, headers=headers, cookies=cookies, verify=False)
+        resp = self.http_get(user_url, headers=headers, cookies=cookies, verify=False)
         return self.check_login_by_resp(resp)
 
     @property
     def proxy_ip(self):
+        return ""
         rds = get_redis("default")
         ipstr = self.ip
         if ipstr and rds.sismember(RK_PROXY_IP_TC, ipstr):
@@ -1993,28 +2025,6 @@ class TCWebRebot(Rebot):
         ipstr = rds.srandmember(RK_PROXY_IP_TC)
         self.modify(ip=ipstr)
         return ipstr
-
-    def proxy_get(self, url, **kwargs):
-        try:
-            r = requests.get(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
-
-    def proxy_post(self, url, **kwargs):
-        try:
-            r = requests.post(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
 
 
 class GzqcpWebRebot(Rebot):
@@ -2825,7 +2835,7 @@ class Bus365AppRebot(Rebot):
                               }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt + int(order.ticket_amount) > 5:
+            if cnt + int(order.ticket_amount) > 15:
                 droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)

@@ -16,7 +16,7 @@ from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
 from app import order_log, line_log
 from app.models import Order
-from app.proxy import cqky_proxy
+from app.proxy import get_proxy
 
 
 class Flow(BaseFlow):
@@ -36,6 +36,13 @@ class Flow(BaseFlow):
         }
         with CqkyWebRebot.get_and_lock(order) as rebot:
             line = order.line
+            is_login = rebot.test_login_status()
+            if not is_login:
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        break
+                    rebot = order.change_lock_rebot()
+
 
             res = self.request_station_status(line, rebot)
             if res["success"]:
@@ -118,7 +125,7 @@ class Flow(BaseFlow):
                 else:
                     if u"同一IP一天最多可订" in res["msg"]:
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
-                        cqky_proxy.remove_proxy(rebot.proxy_ip)
+                        get_proxy("cqky").remove_proxy(rebot.proxy_ip)
                         rebot.modify(ip="")
                     elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
                         rebot.modify(cookies="{}")
@@ -126,7 +133,7 @@ class Flow(BaseFlow):
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
+                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
                     })
             elif "您未登录或登录已过期" in res["msg"]:
                 rebot.modify(ip="")

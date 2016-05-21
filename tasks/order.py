@@ -109,7 +109,7 @@ def async_lock_ticket(self, order_no, retry_seq=1):
         flow.lock_ticket(order)
     except Exception, e:
         order_log.exception("async_lock_ticket")
-        self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=20, max_retries=3)
+        # self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=20, max_retries=3)
 
 
 @celery.task(bind=True, ignore_result=True)

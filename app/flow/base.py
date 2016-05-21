@@ -221,8 +221,8 @@ class Flow(object):
         now = dte.now()
         # 预售提前时间
         adv_info = {
-            "四川": 120+20,
-            "重庆": 60+10,
+            u"四川": 120+20,
+            u"重庆": 60+10,
         }
         adv_minus = adv_info.get(line.s_province, 30)
         if (line.drv_datetime-now).total_seconds() <= adv_minus*60:
@@ -235,7 +235,7 @@ class Flow(object):
             limit_datetime = dte.strptime((now+timedelta(days=1)).strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
         elif 0<=h<7:
             limit_datetime = dte.strptime(now.strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
-        if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=adv_minus):
+        if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=min(60, adv_minus)):
             return False
         return True
 
