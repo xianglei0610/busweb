@@ -208,17 +208,17 @@ def order_list():
         return output
     else:
         pay_accounts = qs.distinct("pay_account")
-        kefu_count = {str(k): v for k,v in qs.item_frequencies('kefu_username', normalize=False).items()}
-        site_count = {str(k): v for k,v in qs.item_frequencies('crawl_source', normalize=False).items()}
-        status_count = {str(k): v for k,v in qs.item_frequencies('status', normalize=False).items()}
+        kefu_count = {d["_id"]["kefu_username"]: d["total"] for d in qs.aggregate({"$group": {"_id": {"kefu_username": "$kefu_username"}, "total":{"$sum": 1}}})}
+        site_count = {d["_id"]["crawl_source"]: d["total"] for d in qs.aggregate({"$group": {"_id": {"crawl_source": "$crawl_source"}, "total":{"$sum": 1}}})}
+        status_count = {str(d["_id"]["status"]): d["total"] for d in qs.aggregate({"$group": {"_id": {"status": "$status"}, "total":{"$sum": 1}}})}
         status_count["0"] = qs.count()
         account_count = {}
         if source:
             account_count = {str(k): v for k,v in qs.filter(crawl_source=source).item_frequencies('source_account', normalize=False).items()}
         stat = {
-            "money_total": qs.sum("order_price"),
+            "money_total": qs.aggregate_sum("order_price"),
             "order_total": qs.count(),
-            "ticket_total": qs.sum("ticket_amount")
+            "ticket_total": qs.aggregate_sum("ticket_amount")
         }
         return render_template('dashboard/orders.html',
                                 page=parse_page_data(qs),
