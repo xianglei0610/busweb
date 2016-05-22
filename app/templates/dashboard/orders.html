@@ -48,7 +48,7 @@
                         <label for="sourceSite" class="sr-only">源站</label>
                         <select class="form-control" name="source" id="id-site">
                             <option value="">选择源站</option>
-                            {% for k,v in source_info.items() %}
+                            {%for k,v in site_count.items()%}
                             <option value="{{k}}" {%if condition.source==k %}selected{% endif %}>{{source_info[k]["name"]}}{%if site_count[k]%}({{site_count[k]}}){%endif%}</option>
                             {%endfor%}
                         </select>
@@ -167,12 +167,12 @@
         <tbody>
             {% for item in page["items"]%}
             <tr>
-                <td>{{item.order_no}}</br>{{item.out_order_no}}</br>{{item.raw_order_no|cut_str}}</td>
+                <td><a href="/orders/{{item.order_no}}" target="_blank">{{item.order_no}}</a></br>{{item.out_order_no}}</br>{{item.raw_order_no|cut_str}}</td>
                 <td>{{item.contact_info["name"]}}<br />{{item.contact_info["telephone"]}}</br>{{item.contact_info["id_number"]}}</td>
-                <td>{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
+                <td style="white-space: nowrap;">{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
                 <td>{{item.bus_num}}<br>{{item.starting_name.split(';')[0]}} - {{item.destination_name.split(';')[0]}}</br>{{item.starting_name.split(';')[1]}} - {{item.destination_name.split(';')[1]}}</td>
                 <td>{{source_info[item.crawl_source]["name"]}}<br>{{item.source_account}}</br>{{item.source_account_pass}}</td>
-                <td>{{item.riders|count}}张</td>
+                <td><br/>{{item.riders|count}}张</td>
                 <td>
                     <br />
                     <span class="glyphicon glyphicon-jpy price">{{item.order_price}}</span>
@@ -182,9 +182,9 @@
                     <span class="{%if item.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[item.status|string]}}</span>
                 </td>
                 <td>
-                    <br />
-                    <a href="/orders/{{item.order_no}}" target="_blank">详情</a>
-                    <a href="#" name="remark" class="remark" data-type="textarea" data-pk="{{item.order_no}}">备注</a>
+                    <a href="/orders/{{item.order_no}}" target="_blank">详情</a><br/>
+                    <a href="#" name="remark" class="remark" data-type="textarea" data-pk="{{item.order_no}}" data-value="">备注</a><br/>
+                    <a data-trigger="modal" href="/orders/{{item.order_no}}/traces" data-title="订单追踪列表" class="btn" style="padding:0px;">订单追踪</a>
                 </td>
             </tr>
             {%endfor%}
@@ -239,7 +239,7 @@
     });
 
     $('.remark').editable({
-        url: '/post',
+        url: '/orders/set',
         title: '增加备注内容',
         rows: 10
     });

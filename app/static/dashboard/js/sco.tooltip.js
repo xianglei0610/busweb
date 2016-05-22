@@ -2,7 +2,7 @@
  * sco.tooltip.js
  * http://github.com/terebentina/sco.js
  * ==========================================================
- * Copyright 2013 Dan Caragea.
+ * Copyright 2014 Dan Caragea.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@
 			this.options.content = $(this.options.contentElem).html();
 		} else if (this.options.contentAttr !== undefined && this.options.contentAttr !== null) {
 			this.options.content = this.$trigger.attr(this.options.contentAttr);
+		} else if (this.$trigger && this.$trigger.attr('title')) {
+			this.options.content = this.$trigger.attr('title');
 		}
 		if (this.$trigger && this.$trigger.attr('title')) {
 			this.$trigger.data('originalTitle', this.$trigger.attr('title'));

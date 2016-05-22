@@ -2243,3 +2243,19 @@ OT_ISSUE_SUCC = 8   # 出票成功
 OT_TRANSFER = 9     # 订单转移
 OT_LOCK_CB = 10     # 锁票回调
 OT_ISSUE_CB = 11    # 出票回调
+OT_NOTE = 12        # 增加备注内容
+
+OT_MSG = {
+    OT_CREATED: "创建订单",
+    OT_ASSIGN: "订单分派",
+    OT_LOCK_SUCC: "锁票成功",
+    OT_LOCK_FAIL: "锁票失败",
+    OT_LOCK_RETRY: "锁票重试",
+    OT_ISSUE_FAIL: "出票失败",
+    OT_ISSUE_ING: "正在出票",
+    OT_ISSUE_SUCC: "出票成功",
+    OT_TRANSFER: "订单转移",
+    OT_LOCK_CB: "锁票回调",
+    OT_ISSUE_CB: "出票回调",
+    OT_NOTE: "增加备注",
+}

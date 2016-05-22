@@ -587,6 +587,10 @@ class OrderTrace(db.Document):
         ],
     }
 
+    @property
+    def trace_type_msg():
+        return OT_MSG.get(self.trace_type, "其他")
+
 
 class Rebot(db.Document):
     """

@@ -246,6 +246,12 @@ def order_detail(order_no):
                             pay_status_msg=PAY_STATUS_MSG,
                            )
 
+@dashboard.route('/orders/<order_no>/traces', methods=['GET'])
+@login_required
+def order_traces(order_no):
+    order = Order.objects.get_or_404(order_no=order_no)
+    return render_template("dashboard/order-trace.html", order=order)
+
 
 @dashboard.route('/ajax/query', methods=["GET"])
 @login_required
@@ -545,6 +551,35 @@ dashboard.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 def user_config():
     params = request.values.to_dict()
     action = params.get("action", '') or params.get("name")
+    if action == "yh_type":
+        user = AdminUser.objects.get(username=params["pk"])
+        user.modify(yh_type=params["value"])
+        return jsonify({"code": 1, "msg": "设置网银类型成功" })
+    elif action == "jd_type":
+        lst = request.form.getlist("value[]")
+        user = AdminUser.objects.get(username=params["pk"])
+        user.modify(source_include=lst)
+        return jsonify({"code": 1, "msg": "设置接单类型成功" })
+    elif action == "set_open":
+        user = AdminUser.objects.get(username=params["username"])
+        flag = params["flag"]
+        if flag == "true":
+            user.modify(is_close=False)
+            access_log.info("[open_account] %s 关闭账号: %s ", current_user.username, user.username)
+            return jsonify({"code": 1, "msg": "账号%s开启成功" % user.username})
+        else:
+            user.modify(is_close=True)
+            access_log.info("[open_account] %s 开启账号: %s ", current_user.username, user.username)
+            return jsonify({"code": 1, "msg": "账号%s关闭成功" % user.username})
+    return jsonify({"code": 0, "msg": "执行失败"})
+
+
+@dashboard.route('/orders/set', methods=["POST"])
+@superuser_required
+def order_modify():
+    params = request.values.to_dict()
+    print params
+    action = params.get("name")
     if action == "yh_type":
         user = AdminUser.objects.get(username=params["pk"])
         user.modify(yh_type=params["value"])

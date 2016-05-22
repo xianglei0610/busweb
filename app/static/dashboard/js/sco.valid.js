@@ -2,7 +2,7 @@
  * sco.valid.js
  * http://github.com/terebentina/sco.js
  * ==========================================================
- * Copyright 2013 Dan Caragea.
+ * Copyright 2014 Dan Caragea.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,9 +46,9 @@
 			// remove any possible displayed errors from previous runs
 			$.each(this.errors, function(field_name, error) {
 				var $input = self.$form.find('[name="' + field_name + '"]');
-				$input.siblings('span.message').html('');
+				$input.siblings('span.help-block').html('');
 				if (self.options.wrapper !== null) {
-					$input.closest(self.options.wrapper).removeClass('error');
+					$input.closest(self.options.wrapper).removeClass('has-error');
 				}
 			});
 			this.errors = {};
@@ -117,12 +117,12 @@
 			var self = this;
 			$.each(errors, function(k, v) {
 				var $input = self.$form.find('[name="' + k + '"]'),
-					$span = $input.siblings('.message');
+					$span = $input.siblings('.help-block');
 				if (self.options.wrapper !== null) {
-					$input.closest(self.options.wrapper).addClass('error');
+					$input.closest(self.options.wrapper).addClass('has-error');
 				}
 				if ($span.length === 0) {
-					$span = $('<span/>', {'class': 'message'});
+					$span = $('<span/>', {'class': 'help-block'});
 					$input.after($span);
 				}
 				$span.html(v);
@@ -146,6 +146,14 @@
 
 			max_length: function(field, value, max_len) {
 				return $.trim(value).length <= max_len;
+			},
+
+			min_value: function(field, value, minVal) {
+				return parseFloat(value) >= minVal;
+			},
+
+			max_value: function(field, value, maxVal) {
+				return parseFloat(value) <= maxVal;
 			},
 
 			regex: function(field, value, regexp) {
@@ -249,6 +257,8 @@
 			not_empty: 'This field is required.'
 			,min_length: 'Please enter at least :value characters.'
 			,max_length: 'Please enter no more than :value characters.'
+			,min_value: 'Please enter a number higher than :value.'
+			,max_value: 'Please enter a number smaller than :value.'
 			,regex: ''
 			,email: 'Please enter a valid email address.'
 			,url: 'Please enter a valid URL.'

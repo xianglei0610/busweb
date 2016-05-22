@@ -2,7 +2,7 @@
  * sco.modal.js
  * http://github.com/terebentina/sco.js
  * ==========================================================
- * Copyright 2013 Dan Caragea.
+ * Copyright 2014 Dan Caragea.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,11 @@
 		this.options = $.extend({}, $.fn[pluginName].defaults, options);
 		this.$modal = $(this.options.target).attr('class', 'modal fade').hide();
 		var self = this;
-
 		function init() {
 			if (self.options.title === '') {
 				self.options.title = '&nbsp;';
 			}
-		};
+		}
 
 		init();
 	}
@@ -45,40 +44,46 @@
 			var self = this
 				,$backdrop;
 
-			if (!this.options.nobackdrop) {
+			if (!this.options.noBackdrop) {
 				$backdrop = $('.modal-backdrop');
 			}
 			if (!this.$modal.length) {
-				this.$modal = $('<div class="modal fade" id="' + this.options.target.substr(1) + '"><div class="modal-header"><a class="close" href="#" data-dismiss="modal">×</a><h3>&nbsp;</h3></div><div class="inner"/></div>').appendTo(this.options.appendTo).hide();
+				this.$modal = $('<div class="modal fade" id="' + this.options.target.substr(1) + '" tabindex="-1" role="dialog" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title">&nbsp;</h4></div><div class="inner"/></div></div></div>').appendTo(this.options.appendTo).hide();
 			}
 
-			this.$modal.find('.modal-header h3').html(this.options.title);
+			this.$modal.find('.modal-header h4').html(this.options.title);
 
-			if (this.options.cssclass !== undefined) {
-				this.$modal.attr('class', 'modal fade ' + this.options.cssclass);
-			}
-
-			if (this.options.width !== undefined) {
-				this.$modal.width(this.options.width);
-			}
-
-			if (this.options.left !== undefined) {
-				this.$modal.css({'left': this.options.left});
-			}
-
-			if (this.options.height !== undefined) {
-				this.$modal.height(this.options.height);
-			}
-
-			if (this.options.top !== undefined) {
-				this.$modal.css({'top': this.options.top});
+			if (this.options.cssClass !== undefined) {
+				this.$modal.attr('class', 'modal fade ' + this.options.cssClass);
 			}
 
 			if (this.options.keyboard) {
 				this.escape();
 			}
 
-			if (!this.options.nobackdrop) {
+			// a certain dimension has been asked for. Check if it's larger than the screen and adjust accordingly
+			if (this.options.width && this.options.height) {
+				var windowDims = [$(window).width(), $(window).height()]
+					,dims = [this.options.width, this.options.height]
+					,tmp
+					;
+				if (dims[0] > windowDims[0]) {
+					tmp = dims[0];
+					dims[0] = windowDims[0];
+					dims[1] = dims[1] * (dims[0] / tmp);
+				}
+				if (dims[1] > windowDims[1] - 100) {
+					tmp = dims[1];
+					dims[1] = windowDims[1] - 100;
+					dims[0] = dims[0] * (dims[1] / tmp);
+				}
+
+				this.$modal.find('.modal-dialog').css({width: dims[0], height: dims[1]});
+			} else {
+				this.$modal.find('.modal-dialog').css({width: '', height: ''});
+			}
+
+			if (!this.options.noBackdrop) {
 				if (!$backdrop.length) {
 					$backdrop = $('<div class="modal-backdrop fade" />').appendTo(this.options.appendTo);
 				}
@@ -89,6 +94,10 @@
 			this.$modal.off('close.' + pluginName).on('close.' + pluginName, function() {
 				self.close.call(self);
 			});
+			if (this.options.isImage && this.options.remote !== undefined) {
+				this.options.content = '<img class="remote" src="' + this.options.remote + '">';
+				delete this.options.remote;
+			}
 			if (this.options.remote !== undefined && this.options.remote != '' && this.options.remote !== '#') {
 				var spinner;
 				if (typeof Spinner == 'function') {
@@ -107,6 +116,7 @@
 				this.$modal.find('.inner').html(this.options.content);
 			}
 
+			$('body').addClass('modal-open');
 			this.$modal.show().addClass('in');
 			return this;
 		}
@@ -118,6 +128,7 @@
 			}
 			$(document).off('keyup.' + pluginName);
 			$('.modal-backdrop').remove();
+			$('body').removeClass('modal-open');
 			if (typeof this.options.onClose === 'function') {
 				this.options.onClose.call(this, this.options);
 			}
@@ -174,15 +185,14 @@
 		,appendTo: 'body'	// where should the modal be appended to (default to document.body). Added for unit tests, not really needed in real life.
 		,cache: false		// should we cache the output of the ajax calls so that next time they're shown from cache?
 		,keyboard: false
-		,nobackdrop: false
+		,noBackdrop: false
+		,isImage: false		// if this is true then the remote url points to an image so we should wrap the url in an <img src="remote"> tag
 	};
 
 
 	$(document).on('click.' + pluginName, '[data-trigger="modal"]', function() {
 		$(this)[pluginName]();
-		if ($(this).is('a')) {
-			return false;
-		}
+		return !$(this).is('a');
 	}).on('click.' + pluginName, '[data-dismiss="modal"]', function(e) {
 		e.preventDefault();
 		$(this).closest('.modal').trigger('close');

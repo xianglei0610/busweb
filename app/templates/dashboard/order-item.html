@@ -166,5 +166,15 @@
 					</tbody>
 				</table>
 			</div>
+
+			<div class="panel panel-default">
+				<div class="panel-heading">订单追踪</div>
+				<div style="padding: 10px;">
+                   {%for trace in order.trace_list%}
+                    <p>{{trace.create_datetime|format_datetime}} 【{{trace.trace_type_msg}}】 {{trace.desc}}</p>
+                   {%endfor%}
+				</div>
+			</div>
+
 		</div>
 {%endblock%}
