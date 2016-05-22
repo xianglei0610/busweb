@@ -115,6 +115,23 @@ class Flow(BaseFlow):
                         "pay_money": res["pay_money"],
                         "lock_info": {"mode": mode},
                     })
+                elif u"同一IP一天最多可订" in res["msg"]:
+                    res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
+                    get_proxy("cqky").remove_proxy(rebot.proxy_ip)
+                    rebot.modify(ip="")
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
+                    })
+                elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
+                    rebot.modify(cookies="{}")
+                    rebot = order.change_lock_rebot()
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
+                    })
                 elif _check_fail(res["msg"]):
                     self.close_line(line, reason=res["msg"])
                     lock_result.update({
@@ -123,13 +140,6 @@ class Flow(BaseFlow):
                         "result_reason": res["msg"],
                     })
                 else:
-                    if u"同一IP一天最多可订" in res["msg"]:
-                        res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
-                        get_proxy("cqky").remove_proxy(rebot.proxy_ip)
-                        rebot.modify(ip="")
-                    elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
-                        rebot.modify(cookies="{}")
-                        rebot = order.change_lock_rebot()
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
@@ -149,6 +159,7 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                 })
             return lock_result
+
 
     def request_lock(self, order, rebot, sta_mode=1):
         headers = {
