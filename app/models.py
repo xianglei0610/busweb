@@ -387,7 +387,7 @@ class Order(db.Document):
 
     @property
     def need_send_msg(self):
-        if order.crawl_source in [SOURCE_BUS365, SOURCE_TC]:
+        if self.crawl_source in [SOURCE_BUS365, SOURCE_TC]:
             return 0
         return 1
 
