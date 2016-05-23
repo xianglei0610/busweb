@@ -162,76 +162,13 @@ def check_proxy():
 
 
 @check(run_in_local=True)
-def check_proxy_cqky():
-    from app.proxy import cqky_proxy
-    for ipstr in cqky_proxy.all_proxy():
-        if not cqky_proxy.valid_proxy(ipstr):
-            cqky_proxy.remove_proxy(ipstr)
-    return cqky_proxy.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_tc():
-    from app.proxy import tc_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_scqcp():
-    from app.proxy import scqcp_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_cbd():
-    from app.proxy import cbd_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_bjky():
-    from app.proxy import bjky_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_lnky():
-    from app.proxy import lnky_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_e8s():
-    from app.proxy import e8s_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
-
-@check(run_in_local=True)
-def check_proxy_changtu():
-    from app.proxy import changtu_proxy as con
-    for ipstr in con.all_proxy():
-        if not con.valid_proxy(ipstr):
-            con.remove_proxy(ipstr)
-    return con.proxy_size()
-
+def check_consumer_proxy(name):
+    from tasks import check_remove_proxy_ip
+    from app.proxy import get_proxy
+    consumer = get_proxy(name)
+    for ipstr in consumer.all_proxy():
+        check_remove_proxy_ip.delay(name, ipstr)
+    return consumer.proxy_size()
 
 def main():
     sched = Scheduler(daemonic=False)
@@ -375,19 +312,20 @@ def main():
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
-    sched.add_interval_job(crawl_proxy_samair, minutes=15)
-    sched.add_interval_job(crawl_proxy_66ip, minutes=20)
-    sched.add_interval_job(crawl_proxy_xici, minutes=20)
-    sched.add_interval_job(crawl_proxy_zdaye, minutes=6)
+    sched.add_interval_job(crawl_proxy_samair, minutes=10)
+    sched.add_interval_job(crawl_proxy_66ip, minutes=10)
+    sched.add_interval_job(crawl_proxy_xici, minutes=10)
+    sched.add_interval_job(crawl_proxy_zdaye, minutes=10)
+
     sched.add_interval_job(check_proxy, minutes=1)
-    sched.add_interval_job(check_proxy_cqky, minutes=1)
-    sched.add_interval_job(check_proxy_tc, minutes=1)
-    sched.add_interval_job(check_proxy_cbd, minutes=1)
-    sched.add_interval_job(check_proxy_scqcp, minutes=1)
-    sched.add_interval_job(check_proxy_bjky, minutes=1)
-    sched.add_interval_job(check_proxy_lnky, minutes=1)
-    sched.add_interval_job(check_proxy_e8s, minutes=1)
-    sched.add_interval_job(check_proxy_changtu, minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["tongcheng"], minutes=1)
+    # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["lnky"], minutes=1)
+    # sched.add_interval_job(check_consumer_proxy, args=["e8s"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=1)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

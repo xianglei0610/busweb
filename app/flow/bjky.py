@@ -491,32 +491,33 @@ class Flow(BaseFlow):
                 r = requests.get(url, headers={"User-Agent": ua})
                 ret = r.json()
                 now = dte.now()
-                if ret["code"] == 1:
-                    info = ret["return"]
-                    if info:
-                        ticket_info = info["showTicketInfo"]
-                        left_tickets = 0
-                        if ticket_info == "有票":
-                            left_tickets = 45
-                        elif ticket_info.endswith("张"):
-                            left_tickets = int(ticket_info[:-1])
-                        elif ticket_info in ["预约购票", "无票"]:
+                if ret:
+                    if ret["code"] == 1:
+                        info = ret["return"]
+                        if info:
+                            ticket_info = info["showTicketInfo"]
                             left_tickets = 0
-                        else:
-                            pass
-                        service_info = info["servicePackage"]
-                        fee = 0
-                        for d in service_info:
-                            if d["type"] == "service":
-                                fee = d["amount"]
-                                break
-                        info = {
-                            "full_price": info["fullPrice"],
-                            "fee": fee,
-                            "left_tickets": left_tickets,
-                            "refresh_datetime": now,
-                        }
-                        update_attrs = info
+                            if ticket_info == "有票":
+                                left_tickets = 45
+                            elif ticket_info.endswith("张"):
+                                left_tickets = int(ticket_info[:-1])
+                            elif ticket_info in ["预约购票", "无票"]:
+                                left_tickets = 0
+                            else:
+                                pass
+                            service_info = info["servicePackage"]
+                            fee = 0
+                            for d in service_info:
+                                if d["type"] == "service":
+                                    fee = d["amount"]
+                                    break
+                            info = {
+                                "full_price": info["fullPrice"],
+                                "fee": fee,
+                                "left_tickets": left_tickets,
+                                "refresh_datetime": now,
+                            }
+                            update_attrs = info
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:

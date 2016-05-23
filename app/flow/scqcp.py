@@ -207,7 +207,7 @@ class Flow(BaseFlow):
     def send_lock_request_by_web(self, rebot, data):
         headers = rebot.http_header()
         url = 'http://scqcp.com/ticketOrder/lockTicket.html'
-        r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers, cookies=json.loads(rebot.cookies),allow_redirects=False)
+        r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers, cookies=json.loads(rebot.cookies),timeout=60,allow_redirects=False)
         location_url = r.headers.get('location', '')
         res = {}
         if location_url:

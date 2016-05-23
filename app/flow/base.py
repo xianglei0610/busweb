@@ -30,7 +30,7 @@ class Flow(object):
         if rds.get(key):
             return
         rds.set(key, time.time())
-        rds.expire(key, 60*4)
+        rds.expire(key, 60*5)
         try:
             ret = self.lock_ticket2(order, **kwargs)
             return ret
@@ -51,7 +51,19 @@ class Flow(object):
             order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
             return
 
-        ret = self.do_lock_ticket(order, **kwargs)
+        if (order.line.drv_datetime-dte.now()).total_seconds() <= 40*60:
+            ret = {
+                "lock_info": {},
+                "source_account": order.source_account,
+                "result_code": 0,
+                "result_reason": "[系统检查]距离开车时间太近",
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": "",
+                "pay_money": 0,
+            }
+        else:
+            ret = self.do_lock_ticket(order, **kwargs)
         order.reload()
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 再次检查, 防止重复支付
@@ -223,10 +235,10 @@ class Flow(object):
         now = dte.now()
         # 预售提前时间
         adv_info = {
-            "四川": 120+20,
-            "重庆": 60+10,
+            u"四川": 120+20,
+            u"重庆": 60+10,
         }
-        adv_minus = adv_info.get(line.s_province, 30)
+        adv_minus = adv_info.get(line.s_province, 60)
         if (line.drv_datetime-now).total_seconds() <= adv_minus*60:
             return False
 
@@ -237,7 +249,7 @@ class Flow(object):
             limit_datetime = dte.strptime((now+timedelta(days=1)).strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
         elif 0<=h<7:
             limit_datetime = dte.strptime(now.strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
-        if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=adv_minus):
+        if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=min(60, adv_minus)):
             return False
         return True
 

@@ -8,7 +8,7 @@ from assign import enqueue_wating_lock
 from app.api import api
 from app.models import Line, Order, OpenCity
 from app.flow import get_compatible_flow, get_flow
-from app import order_log, access_log
+from app import order_log, access_log, line_log
 from tasks import async_lock_ticket
 from app import db
 
@@ -177,7 +177,9 @@ def query_line_detail():
         }
 
     """
-    post = json.loads(request.get_data())
+    req_data = request.get_data()
+    line_log.info("[query_line_detail] %s" % req_data)
+    post = json.loads(req_data)
     try:
         line = Line.objects.get(line_id=post["line_id"])
     except Line.DoesNotExist:
@@ -391,6 +393,7 @@ def query_order_detail():
             "status": order.status,
             "contacter_info": order.get_contact_info(),
             "rider_info": order.get_rider_info(),
+            "need_send_msg": order.need_send_msg,
             "ticket_info": {
                 "start_city": starting_name_list[0],
                 "start_station": starting_name_list[1],
@@ -412,7 +415,8 @@ def query_order_detail():
             "contacter_info": {},
             "rider_info": [],
             "ticket_info": {},
-            "pick_info": pick_info
+            "pick_info": pick_info,
+            "need_send_msg": order.need_send_msg,
         }
         ret = {"code": RET_OK, "message": "OK", "data": data}
     access_log.info("[query_order_detail] order:%s out_order_no:%s %s", order.order_no, order.out_order_no, ret)

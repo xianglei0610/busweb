@@ -388,6 +388,12 @@ class Order(db.Document):
         ],
     }
 
+    @property
+    def need_send_msg(self):
+        if self.crawl_source in [SOURCE_BUS365, SOURCE_TC]:
+            return 0
+        return 1
+
     def __str__(self):
         return "[Order object %s]" % self.order_no
 
@@ -1079,13 +1085,14 @@ class ScqcpAppRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ""
+        # rds = get_redis("default")
+        # ipstr = self.ip
+        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+        #     return ipstr
+        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        # self.modify(ip=ipstr)
+        # return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -1199,13 +1206,14 @@ class ScqcpWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ""
+        # rds = get_redis("default")
+        # ipstr = self.ip
+        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+        #     return ipstr
+        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        # self.modify(ip=ipstr)
+        # return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -1222,7 +1230,7 @@ class ScqcpWebRebot(Rebot):
                               }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt >= 20:
+            if cnt >= 10:
                 droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)
@@ -1459,6 +1467,7 @@ class JsdlkyWebRebot(Rebot):
 
     def login(self, headers=None, cookies={}, valid_code=""):
         index_url = "http://www.jslw.gov.cn/"
+        valid_code = valid_code or "1234"
         if not headers:
             ua = random.choice(BROWSER_USER_AGENT)
             headers = {"User-Agent": ua}
@@ -1476,8 +1485,7 @@ class JsdlkyWebRebot(Rebot):
             "password": self.password,
             "rememberMe": "yes",
         }
-        if valid_code:
-            params.update(checkcode=valid_code)
+        params.update(checkcode=valid_code)
 
         login_url = "http://www.jslw.gov.cn/login.do"
         headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -2013,7 +2021,7 @@ class TCWebRebot(Rebot):
                 "User-Agent": random.choice(BROWSER_USER_AGENT),
             }
         headers.update({"Content-Type": "application/x-www-form-urlencoded"})
-        r = self.proxy_post(login_url,
+        r = self.http_post(login_url,
                             data=urllib.urlencode(data),
                             headers=headers,
                             cookies=cookies,
@@ -2045,13 +2053,14 @@ class TCWebRebot(Rebot):
 
     def test_login_status(self):
         user_url = "http://member.ly.com/Member/MemberInfomation.aspx"
-        headers = {"User-Agent": self.user_agent}
+        headers = {"User-Agent": self.user_agent or random.choice(BROWSER_USER_AGENT)}
         cookies = json.loads(self.cookies)
-        resp = self.proxy_get(user_url, headers=headers, cookies=cookies, verify=False)
+        resp = self.http_get(user_url, headers=headers, cookies=cookies, verify=False)
         return self.check_login_by_resp(resp)
 
     @property
     def proxy_ip(self):
+        return ""
         rds = get_redis("default")
         ipstr = self.ip
         if ipstr and rds.sismember(RK_PROXY_IP_TC, ipstr):
@@ -2059,28 +2068,6 @@ class TCWebRebot(Rebot):
         ipstr = rds.srandmember(RK_PROXY_IP_TC)
         self.modify(ip=ipstr)
         return ipstr
-
-    def proxy_get(self, url, **kwargs):
-        try:
-            r = requests.get(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
-
-    def proxy_post(self, url, **kwargs):
-        try:
-            r = requests.post(url,
-                            proxies={"http": "http://%s" % self.proxy_ip},
-                            timeout=10,
-                            **kwargs)
-        except Exception, e:
-            self.modify(ip="")
-            raise e
-        return r
 
 
 class GzqcpWebRebot(Rebot):
