@@ -22,7 +22,7 @@
         <div style="padding: 10px;">
             <table class="table table-condensed">
                <tbody>
-                   {%for trace in order.trace_list%}
+                   {%for trace in order.trace_list|reverse%}
                    <tr><td>{{trace.create_datetime|format_datetime}}</td><td>【{{trace.trace_type_msg}}】 {{trace.desc}}</td></tr>
                    {%endfor%}
                </tbody>

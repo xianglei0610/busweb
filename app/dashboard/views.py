@@ -574,30 +574,13 @@ def user_config():
     return jsonify({"code": 0, "msg": "执行失败"})
 
 
-@dashboard.route('/orders/set', methods=["POST"])
+@dashboard.route('/orders/<order_no>/addremark', methods=['POST'])
 @superuser_required
-def order_modify():
-    params = request.values.to_dict()
-    print params
-    action = params.get("name")
-    if action == "yh_type":
-        user = AdminUser.objects.get(username=params["pk"])
-        user.modify(yh_type=params["value"])
-        return jsonify({"code": 1, "msg": "设置网银类型成功" })
-    elif action == "jd_type":
-        lst = request.form.getlist("value[]")
-        user = AdminUser.objects.get(username=params["pk"])
-        user.modify(source_include=lst)
-        return jsonify({"code": 1, "msg": "设置接单类型成功" })
-    elif action == "set_open":
-        user = AdminUser.objects.get(username=params["username"])
-        flag = params["flag"]
-        if flag == "true":
-            user.modify(is_close=False)
-            access_log.info("[open_account] %s 关闭账号: %s ", current_user.username, user.username)
-            return jsonify({"code": 1, "msg": "账号%s开启成功" % user.username})
-        else:
-            user.modify(is_close=True)
-            access_log.info("[open_account] %s 开启账号: %s ", current_user.username, user.username)
-            return jsonify({"code": 1, "msg": "账号%s关闭成功" % user.username})
-    return jsonify({"code": 0, "msg": "执行失败"})
+def add_order_remark(order_no):
+    "增加备注内容"
+    order = Order.objects.get_or_404(order_no=order_no)
+    content = request.form["content"]
+    if not content:
+        return jsonify({"code": 0, "msg":"内容不能为空"})
+    order.add_trace(OT_REMARK, "%s：%s" % (current_user.username, content))
+    return jsonify({"code": 1, "msg": "备注成功加入到追踪列表"})

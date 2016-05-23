@@ -2243,7 +2243,7 @@ OT_ISSUE_SUCC = 8   # 出票成功
 OT_TRANSFER = 9     # 订单转移
 OT_LOCK_CB = 10     # 锁票回调
 OT_ISSUE_CB = 11    # 出票回调
-OT_NOTE = 12        # 增加备注内容
+OT_REMARK = 12        # 增加备注内容
 
 OT_MSG = {
     OT_CREATED: "创建订单",
@@ -2257,5 +2257,5 @@ OT_MSG = {
     OT_TRANSFER: "订单转移",
     OT_LOCK_CB: "锁票回调",
     OT_ISSUE_CB: "出票回调",
-    OT_NOTE: "增加备注",
+    OT_REMARK: "增加备注",
 }

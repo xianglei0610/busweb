@@ -183,7 +183,7 @@
                 </td>
                 <td>
                     <a href="/orders/{{item.order_no}}" target="_blank">详情</a><br/>
-                    <a href="#" name="remark" class="remark" data-type="textarea" data-pk="{{item.order_no}}" data-value="">备注</a><br/>
+                    <a href="javascript:;" class="add-remark" pk="{{item.order_no}}">增加备注</a><br/>
                     <a data-trigger="modal" href="/orders/{{item.order_no}}/traces" data-title="订单追踪列表" class="btn" style="padding:0px;">订单追踪</a>
                 </td>
             </tr>
@@ -238,12 +238,6 @@
         language: "zh-CN"
     });
 
-    $('.remark').editable({
-        url: '/orders/set',
-        title: '增加备注内容',
-        rows: 10
-    });
-
    $("#id-site").change(function(){
         var v = $(this).val();
         var s = "<option value=''>源站账号</option>"
@@ -280,5 +274,27 @@
         $("#id-status").val(stus);
         $(".query-form").submit();
     };
+
+    $(".add-remark").click(function(){
+        var orderno = $(this).attr("pk");
+        layer.prompt({
+            title: '输入备注内容',
+            formType: 2
+        }, function(text) {
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "/orders/"+orderno+"/addremark",
+                data:"content="+text,
+                async: false,
+                error: function(request) {
+                    layer.msg("网络错误!");
+                },
+                success: function(data) {
+                    layer.msg(data.msg);
+                }
+            });
+        });
+    });
 </script>
 {%endblock%}

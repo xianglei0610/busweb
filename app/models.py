@@ -567,6 +567,7 @@ class Order(db.Document):
                         trace_type=ttype,
                         desc=desc,
                         extra_info=extra_info)
+        ot.save()
         self.update(push__trace_list=ot)
 
 
@@ -588,7 +589,7 @@ class OrderTrace(db.Document):
     }
 
     @property
-    def trace_type_msg():
+    def trace_type_msg(self):
         return OT_MSG.get(self.trace_type, "其他")
 
 
