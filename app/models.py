@@ -390,6 +390,8 @@ class Order(db.Document):
 
     @property
     def need_send_msg(self):
+        if self.status in [STATUS_GIVE_BACK, STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL]:
+            return 1
         if self.crawl_source in [SOURCE_BUS365, SOURCE_TC]:
             return 0
         return 1
