@@ -157,7 +157,7 @@ def issued_callback(self, order_no, retry_seq=1):
                 "out_order_no": order.out_order_no,
                 "raw_order_no": order.raw_order_no,
                 "pick_info": pick_info,
-                #"need_send_msg": order.need_send_msg,
+                "need_send_msg": order.need_send_msg,
             }
         }
     elif order.status in [STATUS_GIVE_BACK, STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL]:
@@ -168,7 +168,7 @@ def issued_callback(self, order_no, retry_seq=1):
                 "sys_order_no": order.order_no,
                 "out_order_no": order.out_order_no,
                 "raw_order_no": order.raw_order_no,
-                #"need_send_msg": order.need_send_msg,
+                "need_send_msg": order.need_send_msg,
             }
         }
     else:
