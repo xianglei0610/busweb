@@ -471,7 +471,7 @@ class Order(db.Document):
     def on_lock_success(self, reason=""):
         if self.status != STATUS_WAITING_ISSUE:
             return
-        desc = "锁票成功 源站订单号:%s" % self.rawl_order_no
+        desc = "锁票成功 源站订单号:%s" % self.raw_order_no
         self.add_trace(OT_LOCK_SUCC, desc)
 
         from tasks import async_refresh_order
