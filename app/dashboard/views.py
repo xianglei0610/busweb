@@ -267,8 +267,8 @@ def ajax_query():
     return "fail"
 
 
-@dashboard.route('/lines', methods=['GET'])
-@login_required
+@dashboard.route('/lines', methods=['POST', 'GET'])
+@superuser_required
 def line_list():
     lineid = request.args.get("line_id", "").strip()
     starting_name = request.args.get("starting", "").strip()
@@ -288,7 +288,7 @@ def line_list():
         query.update(drv_date=drv_date)
     queryset = Line.objects(**query).order_by("full_price")
 
-    return render_template('dashboard/line_list.html',
+    return render_template('dashboard/lines.html',
                            page=parse_page_data(queryset),
                            starting=starting_name,
                            destination=dest_name,

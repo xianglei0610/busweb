@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+{% extends 'dashboard/base.html'%}
+{% block style %}
+<style type="text/css">
+    .query-form .col-md-1, .query-form .col-md-4, .query-form .col-md-3{
+        padding-left: 2px;
+        padding-right: 6px;
+    }
+    table caption .pull-right span{
+        padding-right: 20px;
+    }
+    .price{
+        color: #f60;
+        font-size:16px;
+        font-family: Verdana,Geneva,sans-serif;
+    }
+    .table{
+        margin-bottom: 0px;
+    }
+</style>
+{%endblock%}
+
+{%block body%}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="breadcrumb">
+                    <li><a href="/">首页</a></li>
+                    <li class="active">所有线路</li>
+                </ul>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs">
+            <li role="presentation"><a href="#">有效线路<span class="badge">4111</span></a></li>
+            <li role="presentation" class="active"><a href="#">过期线路<span class="badge">4111</span></a></li>
+        </ul>
+
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <form class="query-form" class="form-horizontal">
+                    <div class="row">
+                        <div class="form-group col-md-2">
+                            <label for="sourceSite" class="sr-only">线路ID</label>
+                            <input type="text" class="form-control" id="" placeholder="线路ID">
+                        </div>
+                        <div class="form-group col-md-1">
+                            <label for="sourceSite" class="sr-only">源站</label>
+                            <select class="form-control">
+                                <option>选择源站</option>
+                                <option>同程网</option>
+                                <option>四川汽车票</option>
+                                <option>张家港市民网页</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-2">
+                            <label for="sourceSite" class="sr-only">出发城市</label>
+                            <input type="text" class="form-control" id="" placeholder="出发城市">
+                        </div>
+                        <div class="form-group col-md-2">
+                            <label for="sourceSite" class="sr-only">到达城市</label>
+                            <input type="text" class="form-control" id="" placeholder="到达城市">
+                        </div>
+                        <div class="form-group  col-md-2" style="padding-left: 0px; padding-right: 5px;">
+                            <label for="sourceSite" class="sr-only">起始日期</label>
+                            <div class="input-group date form_datetime" data-date="" data-date-format="" data-link-field="dtp_input2" data-link-format="yyyy-mm-dd">
+                                <input class="form-control" size="16" type="text" value="" readonly>
+                                <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-offset-1 col-md-1">
+                            <button type="button" class="btn btn-primary">查&nbsp;&nbsp;询</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <table class="table table-hover table-bordered" style="margin-bottom: 0px;">
+            <caption>
+                <div class="pull-right">
+                    <span>记录数：<label class="text-danger">1249条</label></span>
+                </div>
+            </caption>
+            <thead>
+                <tr>
+                    <th>线路id</th>
+                    <th>出发省/城市/站</th>
+                    <th>目的城市/站</th>
+                    <th>开车日期/时间</th>
+                    <th>车次号/车型</th>
+                    <th>票价/服务费</th>
+                    <th>来源/余票</th>
+                    <th>爬取时间/刷新时间</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>
+                        57360a9005ffe2133eb2d22e<br /> tongcheng57360a9005ffe2133eb2d22e <br /> changtu57360a9005ffe2133eb2d22e
+                    </td>
+                    <td>
+                        江苏 <br /> 南京
+                        <br /> 南京西站
+                    </td>
+                    <td>
+                        苏州<br /> <br />苏州北站
+                    </td>
+                    <td>
+                        2016-05-23<br /> <br />12:00
+                    </td>
+                    <td>
+                        12 <br /><br /> 大型高一
+                    </td>
+                    <td>
+                        <span class="glyphicon glyphicon-jpy price">432.0</span><br /><br />
+                        <span class="glyphicon glyphicon-jpy price">3.0</span>
+                    </td>
+                    <td>
+                        四川汽车票务网<br /><br /> 3张
+                    </td>
+                    <td>
+                        2016-05-21 12:22<br /><br /> 2016-05-21 12:22
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <nav style="text-align: center">
+            <ul class="pagination">
+                <li>
+                    <a href="#" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                <li><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">...</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li>
+                    <a href="#" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+<script type="text/javascript">
+    $(".form_datetime").datetimepicker({
+        format: "yyyy-mm-dd",
+        autoclose: true,
+        todayBtn: true,
+        pickerPosition: "bottom-left",
+        language: "zh-CN",
+        minView: 2,
+    });
+</script>
+{%endblock%}
