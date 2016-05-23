@@ -92,7 +92,7 @@ class Flow(object):
                            order.order_no, order.source_account, order.rawl_order_no, order.pay_order_no, order.lock_info)
         elif ret["result_code"] == 2:   # 锁票失败,进入锁票重试
             order.modify(source_account=ret["source_account"], lock_info=ret["lock_info"])
-            self.lock_ticket_retry(order, reason=ret["result_msg"])
+            self.lock_ticket_retry(order, reason=ret["result_reason"])
             order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
             return
         elif ret["result_code"] == 0:   # 锁票失败
@@ -100,7 +100,7 @@ class Flow(object):
                          lock_info=ret["lock_info"],
                          lock_datetime=dte.now(),
                          source_account=ret["source_account"])
-            order.on_lock_fail(reason=ret["result_msg"])
+            order.on_lock_fail(reason=ret["result_reason"])
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["result_reason"], "data": data})
             order_log.info("[lock-result] fail. order: %s, reason: %s", order.order_no, ret["result_reason"])
         elif ret["result_code"] == 3:   # 锁票输验证码
