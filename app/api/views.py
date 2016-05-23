@@ -393,7 +393,7 @@ def query_order_detail():
             "status": order.status,
             "contacter_info": order.get_contact_info(),
             "rider_info": order.get_rider_info(),
-            "need_send_msg": 1,
+            "need_send_msg": order.need_send_msg,
             "ticket_info": {
                 "start_city": starting_name_list[0],
                 "start_station": starting_name_list[1],
@@ -416,7 +416,7 @@ def query_order_detail():
             "rider_info": [],
             "ticket_info": {},
             "pick_info": pick_info,
-            "need_send_msg": 1,
+            "need_send_msg": order.need_send_msg,
         }
         ret = {"code": RET_OK, "message": "OK", "data": data}
     access_log.info("[query_order_detail] order:%s out_order_no:%s %s", order.order_no, order.out_order_no, ret)

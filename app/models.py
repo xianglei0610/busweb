@@ -385,6 +385,12 @@ class Order(db.Document):
         ],
     }
 
+    @property
+    def need_send_msg(self):
+        if order.crawl_source in [SOURCE_BUS365, SOURCE_TC]:
+            return 0
+        return 1
+
     def __str__(self):
         return "[Order object %s]" % self.order_no
 
