@@ -16,6 +16,7 @@ from app.utils import md5, trans_js_str
 from bs4 import BeautifulSoup
 from app import order_log, line_log
 from app.models import Order
+from app.proxy import cqky_proxy
 
 
 class Flow(BaseFlow):
@@ -35,6 +36,13 @@ class Flow(BaseFlow):
         }
         with CqkyWebRebot.get_and_lock(order) as rebot:
             line = order.line
+            is_login = rebot.test_login_status()
+            if not is_login:
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        break
+                    rebot = order.change_lock_rebot()
+
 
             res = self.request_station_status(line, rebot)
             if res["success"]:
@@ -50,21 +58,25 @@ class Flow(BaseFlow):
             amount = ilst and int(ilst[0]) or 0
             msg = res.get("msg", "")
             if (amount and amount != order.ticket_amount) or u"单笔订单一次只允许购买3张车票" in msg or u"单笔订单只能购买一个车站的票" in msg:
-                order_log.info("[locking] order: %s, 购物车数量不对: %s,", order.order_no, res["msg"])
                 res = self.request_get_shoptcart(rebot)
+                del_success = False
                 for ids in res["data"][u"ShopTable"].keys():
                     d = self.request_del_shoptcart(rebot, ids)
-                    order_log.info("[locking] order: %s, %s", order.order_no, d)
-                rebot.modify(cookies="{}")
-                rebot = order.change_lock_rebot()
+                    if d.get("success", False):
+                        del_success = True
+                if not del_success:
+                    rebot.modify(cookies="{}")
+                    rebot = order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
-                    "result_reason": u"购物车数量不对:%s" % msg,
+                    "result_reason": u"购物车数量不对:%s, %s" % (msg, del_success),
                     "source_account": rebot.telephone,
                 })
                 return lock_result
 
             def _check_fail(msg):
+                if u"当前系统维护中" in msg:
+                    return False
                 lst = [
                     u"可售票数量不足",
                     u"锁票超时超过10次",
@@ -77,6 +89,12 @@ class Flow(BaseFlow):
                     u"班次状态为停班",
                     u"无可售席位资源",
                     u"可售数不足",
+                    u"班次状态为保班",
+                    u"无可售席位",
+                    u"中心转发30003请求TKLock_3失败",
+                    u"班次状态为作废",
+                    u"不允许锁位",
+                    u"锁位失败"
                 ]
                 for s in lst:
                     if s in msg:
@@ -107,6 +125,7 @@ class Flow(BaseFlow):
                 else:
                     if u"同一IP一天最多可订" in res["msg"]:
                         res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
+                        cqky_proxy.remove_proxy(rebot.proxy_ip)
                         rebot.modify(ip="")
                     elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
                         rebot.modify(cookies="{}")
@@ -114,7 +133,7 @@ class Flow(BaseFlow):
                     lock_result.update({
                         "result_code": 2,
                         "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
+                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
                     })
             elif "您未登录或登录已过期" in res["msg"]:
                 rebot.modify(ip="")
@@ -173,24 +192,11 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$radioListPayType": "OnlineAliPay,支付宝在线支付",
                 "ctl00$FartherMain$hideIsSubmit": "true",
             }
-        try:
-            r = rebot.http_post(base_url,
-                        data=urllib.urlencode(params),
-                        headers=headers,
-                        cookies=cookies,
-                        timeout=90)
-        except requests.exceptions.Timeout, e:
-            rebot.modify(ip="")
-            lock_info = order.lock_info
-            if "lock_timeout_cnt" not in lock_info:
-                lock_info["lock_timeout_cnt"] = 0
-            lock_info["lock_timeout_cnt"] += 1
-            order.modify(lock_info=lock_info)
-            if order.lock_info["lock_timeout_cnt"] > 10:
-                return {
-                    "success": False,
-                    "msg": u"锁票超时超过10次",
-                }
+        r = rebot.http_post(base_url,
+                    data=urllib.urlencode(params),
+                    headers=headers,
+                    cookies=cookies,
+                    timeout=90)
         soup = BeautifulSoup(r.content, "lxml")
         msg_lst = re.findall(r'<script>alert\("(.+)"\);</script>', r.content)
         msg = ""
@@ -204,6 +210,7 @@ class Flow(BaseFlow):
             order_no = ""
             pay_money = ""
             flag = False
+
         return {
             "success": flag,
             "msg": msg,
@@ -433,7 +440,7 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            #r = rebot.http_get(base_url, headers=headers)
+            # r = rebot.http_get(base_url, headers=headers)
             r = requests.get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})

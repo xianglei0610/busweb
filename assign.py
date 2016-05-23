@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
+import time
 
 from app.constants import *
 from app.utils import get_redis
@@ -12,36 +13,66 @@ def enqueue_wating_lock(order):
     等待下单队列
     """
     now = dte.now()
-    priority_flag = False   # 是否优先处理
     line = order.line
-    if (line.drv_datetime-now).total_seconds() <= 2*60*60+20:       # 2个小时内的车优先处理
-        priority_flag = True
-
     rds = get_redis("order")
-    if priority_flag:
-        rds.lpush(RK_WATING_LOCK_ORDERS2, order.order_no)
+    val = "%s_%s" % (order.order_no, int(time.time()*1000))
+
+    if (line.drv_datetime-now).total_seconds() <= 3*60*60+20:       # 3个小时内的车优先处理
+        if order.crawl_source in [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S, SOURCE_SCQCP]: # 银行支付
+            rds.lpush(RK_ORDER_QUEUE_YH2, val)
+        else:
+            rds.lpush(RK_ORDER_QUEUE_ZFB2, val)
     else:
-        rds.lpush(RK_WATING_LOCK_ORDERS, order.order_no)
+        if order.crawl_source in [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S, SOURCE_SCQCP]: # 银行支付
+            rds.lpush(RK_ORDER_QUEUE_YH, val)
+        else:
+            rds.lpush(RK_ORDER_QUEUE_ZFB, val)
 
 
 def dequeue_wating_lock(user):
     rds = get_redis("order")
-    no = rds.rpop(RK_WATING_LOCK_ORDERS2)
-    if not no:
-        no = rds.rpop(RK_WATING_LOCK_ORDERS)
-        if not no:
-            return None
-    order = Order.objects.get(order_no=no)
-    for ptype in user.source_include:
-        if order.crawl_source in PAY_TYPE_SOURCE[ptype]:
-            return order
-    enqueue_wating_lock(order)
+
+    def _cmp_rpop(k1, k2):
+        v1, v2 = rds.lindex(k1, -1), rds.lindex(k2, -1)
+        if v1 and v2:
+            v1, t1 = v1.split("_")
+            v2, t2 = v2.split("_")
+            if t1 > t2:
+                return rds.rpop(k2)
+            return rds.rpop(k1)
+        elif v1:
+            v1, t1 = v1.split("_")
+            return rds.rpop(k1)
+        elif v2:
+            v2, t2 = v2.split("_")
+            return rds.rpop(k2)
+        return ""
+
+
+    val = ""
+    if "yhzf" in user.source_include and "zfb" in user.source_include:
+        val = _cmp_rpop(RK_ORDER_QUEUE_YH2, RK_ORDER_QUEUE_ZFB2)
+        if not val:
+            val = _cmp_rpop(RK_ORDER_QUEUE_YH, RK_ORDER_QUEUE_ZFB)
+    elif "yhzf" in user.source_include:
+        val = rds.rpop(RK_ORDER_QUEUE_YH2)
+        if not val:
+            val = rds.rpop(RK_ORDER_QUEUE_YH)
+    elif "zfb" in user.source_include:
+        val = rds.rpop(RK_ORDER_QUEUE_ZFB2)
+        if not val:
+            val = rds.rpop(RK_ORDER_QUEUE_ZFB)
+
+    if val:
+        no, t = val.split("_")
+        return Order.objects.get(order_no=no)
     return None
 
 
 def waiting_lock_size():
     rds = get_redis("order")
-    return rds.llen(RK_WATING_LOCK_ORDERS) + rds.llen(RK_WATING_LOCK_ORDERS2)
+    return rds.llen(RK_ORDER_QUEUE_YH) + rds.llen(RK_ORDER_QUEUE_YH2)+ \
+           rds.llen(RK_ORDER_QUEUE_ZFB) + rds.llen(RK_ORDER_QUEUE_ZFB2)
 
 
 def add_dealing(order, user):

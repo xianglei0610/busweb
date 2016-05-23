@@ -79,6 +79,13 @@ class Flow(BaseFlow):
                     "lock_info": {"order_id": ret["data"]["ord_id"]},
                     "source_account": rebot.telephone,
                 })
+            elif u"账户异常" in msg:
+                rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": msg,
+                })
             else:
                 if u"所购车次已无余票" in msg:
                     self.close_line(line, reason=msg)

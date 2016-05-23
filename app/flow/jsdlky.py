@@ -107,7 +107,7 @@ class Flow(BaseFlow):
                 })
             else:
                 msg = ret["msg"]
-                if "该站限售人数不够" in msg or "班次余票数不够" in msg:
+                if "该站限售人数不够" in msg or "班次余票数不够" in msg or "申请座位失败" in msg:
                     self.close_line(line, reason=msg)
                     lock_result.update({
                         "result_code": 0,
@@ -117,7 +117,7 @@ class Flow(BaseFlow):
                     return lock_result
                 elif u"今天的订票次数(未支付)已满3次" in msg:
                     rebot.modify(is_active=False)
-                    order.change_lock_rebot()
+                    rebot = order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": msg,
@@ -242,7 +242,7 @@ class Flow(BaseFlow):
                 is_login = 1
 
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
                 detail = self.send_order_request(order)
@@ -296,8 +296,13 @@ class Flow(BaseFlow):
         }
         rebot = JsdlkyWebRebot.get_one()
         url = "%s?%s" % (line_url, urllib.urlencode(req_data))
-        r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)})
-        res = r.json()
+        try:
+            r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)})
+            res = r.json()
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+            return result_info
         now = dte.now()
         if res["rtn_code"] != "00":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})

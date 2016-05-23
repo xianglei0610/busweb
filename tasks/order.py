@@ -112,8 +112,8 @@ def async_lock_ticket(self, order_no, retry_seq=1):
         self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=20, max_retries=3)
 
 
-@celery.task(ignore_result=True)
-def issued_callback(order_no, retry_seq=1):
+@celery.task(bind=True, ignore_result=True)
+def issued_callback(self, order_no, retry_seq=1):
     """
     出票回调
 
@@ -178,4 +178,6 @@ def issued_callback(order_no, retry_seq=1):
         order_log.exception("issued_callback")
         self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=30, max_retries=120)
     else:
-        order_log.info("[issue-callback-response]%s %s", order_no, response.read())
+        result = response.read()
+        order.add_trace(OT_ISSUE_CB, "出票回调成功 收到回应：%s" % result)
+        order_log.info("[issue-callback-response]%s %s", order_no, result)

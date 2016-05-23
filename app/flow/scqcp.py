@@ -17,8 +17,6 @@ from app.models import ScqcpAppRebot, ScqcpWebRebot
 from datetime import datetime as dte
 from PIL import Image
 from lxml import etree
-from tasks import issued_callback
-from app import order_log
 
 
 class Flow(BaseFlow):
@@ -84,11 +82,27 @@ class Flow(BaseFlow):
         with ScqcpWebRebot.get_and_lock(order) as rebot:
             is_login = rebot.test_login_status()
             if not is_login:
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        is_login = True
+                        break
+                    rebot = order.change_lock_rebot()
+
+            if not is_login:
+                lock_result.update(result_code=2,
+                                    source_account=rebot.telephone,
+                                    result_reason="账号未登陆")
+                return lock_result
+
+            try:
+                token = self.request_query_token_by_web(rebot, order)
+            except:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
                 lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
-                                   result_reason="账号未登陆")
+                                   result_reason="获取token失败")
                 return lock_result
-            token = self.request_query_token_by_web(rebot, order)
             data = {
               "sdfgfgfg": "on",
               "contact_name": order.contact_info['name'],
@@ -143,7 +157,7 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = ret['msg']
-                for s in ["余票不足","只能预售2小时之后的票","余位不够"]:
+                for s in ["余票不足","只能预售2小时之后的票","余位不够","车票已售完"]:
                     if s in errmsg:
                         self.close_line(order.line, reason=errmsg)
                         break
@@ -160,6 +174,9 @@ class Flow(BaseFlow):
     def request_query_token_by_web(self, rebot, order):
         url = "http://scqcp.com/userCommon/createTicketOrder.html"
         headers = rebot.http_header()
+        new_headers = headers
+        if new_headers.has_key('Content-Type'):
+            del new_headers['Content-Type']
         params = {
                 "carry_sta_id": order.line.s_sta_id,
                 "str_date": "%s %s" % (order.line.drv_date, order.line.drv_time),
@@ -167,7 +184,7 @@ class Flow(BaseFlow):
                 "stop_name": order.line.d_city_name,
                 }
         url = "%s?%s" % (url, urllib.urlencode(params))
-        r = rebot.http_get(url, headers=headers)
+        r = rebot.http_get(url, headers=new_headers)
         sel = etree.HTML(r.content)
         token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')
         return token[0]
@@ -218,9 +235,9 @@ class Flow(BaseFlow):
 
         rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
         tickets = self.send_order_request(order, rebot)
-        if not tickets:
-            result_info.update(result_code=2, result_msg="已过期")
-            return result_info
+#         if not tickets:
+#             result_info.update(result_code=2, result_msg="已过期")
+#             return result_info
 
         status = tickets.values()[0]["order_status"]
         if status == "sell_succeeded":
@@ -266,16 +283,16 @@ class Flow(BaseFlow):
         }
         rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
         tickets = self.send_order_request(order, rebot)
-        if not tickets:
-            result_info.update(result_code=2, result_msg="已过期")
-            return result_info
+#         if not tickets:
+#             result_info.update(result_code=2, result_msg="已过期")
+#             return result_info
         if not order.raw_order_no:
             web_order_list = []
             for i in tickets:
                 web_order_list.append(i['web_order_id'])
             order.modify(raw_order_no=','.join(web_order_list))
         status = tickets[0]["order_status"]
-        if status == "sell_succeeded":
+        if status in ("sell_succeeded", "succeed"):
             code_list, msg_list = [], []
             for ticket in tickets:
                 code = ticket["code"]
@@ -350,7 +367,12 @@ class Flow(BaseFlow):
             "Content-Type": "application/json; charset=UTF-8",
         }
         r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
-        ret = r.json()
+        try:
+            ret = r.json()
+        except:
+            rebot.modify(ip='')
+            r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
+            ret = r.json()
         pay_order_id = order.lock_info["pay_order_id"]
         amount = order.ticket_amount
         data = []
@@ -385,7 +407,12 @@ class Flow(BaseFlow):
             "Content-Type": "application/json; charset=UTF-8",
         }
         r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers)
-        ret = r.json()
+        try:
+            ret = r.json()
+        except:
+            rebot.modify(ip='')
+            r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers)
+            ret = r.json()
 
         if ret["status"] == 1:
             if ret["plan_info"]:
@@ -404,8 +431,11 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", bank='',**kwargs):
-        rebot = ScqcpWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
         headers = rebot.http_header()
+        new_headers = headers
+        if new_headers.has_key('Content-Type'):
+            del new_headers['Content-Type']
         # 验证码处理
         is_login = rebot.test_login_status()
         if not is_login:
@@ -417,42 +447,45 @@ class Flow(BaseFlow):
                 cookies = data["cookies"]
                 token = data["token"]
             else:
-                login_form_url = "http://scqcp.com/login/index.html"
-                r = rebot.http_get(login_form_url, headers=headers)
+                login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
+                if new_headers.has_key('Content-Type'):
+                    del new_headers['Content-Type']
+                r = rebot.http_get(login_form_url, headers=new_headers)
                 sel = etree.HTML(r.content)
                 cookies = dict(r.cookies)
                 code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
                 code_url = code_url.split('?')[0]+"?d=0.%s" % random.randint(1, 10000)
                 token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
-                r = rebot.http_get(code_url, headers=headers, cookies=cookies)
+                r = rebot.http_get(code_url, headers=new_headers, cookies=cookies)
                 cookies.update(dict(r.cookies))
                 tmpIm = cStringIO.StringIO(r.content)
                 im = Image.open(tmpIm)
                 valid_code = pytesseract.image_to_string(im)
 
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-            if session.get(key, ''):
-                info = json.loads(session[key])
-                headers = info["headers"]
-                cookies = info["cookies"]
-                token = info["token"]
-                msg = rebot.login(valid_code=valid_code, token=token, headers=headers, cookies=cookies)
-                if msg == "OK":
-                    is_login = True
-                    rebot.modify(cookies=json.dumps(cookies))
+#             key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+#             if session.get(key, ''):
+#                 info = json.loads(session[key])
+#                 headers = info["headers"]
+#                 cookies = info["cookies"]
+#                 token = info["token"]
+            msg = rebot.login(valid_code=valid_code, token=token, headers=headers, cookies=cookies)
+            if msg == "OK":
+                is_login = True
+                rebot.modify(cookies=json.dumps(cookies))
         if is_login:
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
             order.reload()
             if order.status == STATUS_WAITING_ISSUE:
-                r = rebot.http_get(order.pay_url, headers=headers, cookies=json.loads(rebot.cookies),timeout=30)
+                r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
                 r_url = urllib2.urlparse.urlparse(r.url)
                 if r_url.path in ["/error.html", "/error.htm"]:
-                    order.modify(status=STATUS_ISSUE_FAIL)
-                    order.on_issue_fail(reason="get error page when pay")
-                    order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
-                    issued_callback.delay(order.order_no)
-                    return {"flag": "html", "content": r.content}
+                    self.lock_ticket_retry(order)
+#                     order.modify(status=STATUS_ISSUE_FAIL)
+#                     order.on_issue_fail(reason="get error page when pay")
+#                     order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
+#                     issued_callback.delay(order.order_no)
+                    return {"flag": "error", "content": ''}
                 sel = etree.HTML(r.content)
                 plateform = pay_channel
                 data = dict(
@@ -475,14 +508,14 @@ class Flow(BaseFlow):
                 return {"flag": "html", "content": r.content}
         else:
             cookies = json.loads(rebot.cookies)
-            login_form_url = "http://scqcp.com/login/index.html"
-            r = rebot.http_get(login_form_url, headers=headers)
+            login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
+            r = rebot.http_get(login_form_url, headers=new_headers)
             sel = etree.HTML(r.content)
             cookies = dict(r.cookies)
             code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
             code_url = code_url.split('?')[0]+"?d=0.%s"% random.randint(1, 10000)
             token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
-            r = rebot.http_get(code_url, headers=headers, cookies=cookies)
+            r = rebot.http_get(code_url, headers=new_headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             data = {
                 "cookies": cookies,

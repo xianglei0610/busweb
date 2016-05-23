@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>dashboard</title>
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap.min.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-theme.min.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrapSwitch.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-datetimepicker.min.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/scojs.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/sco.message.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-editable.css')}}" />
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/jquery-2.2.3.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap-datetimepicker.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrapSwitch.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/locales/bootstrap-datetimepicker.zh-CN.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/sco.message.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/sco.modal.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap-editable.min.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/layer.js')}}"></script>
+		<style type="text/css">
+			.navbar-brand img{
+				height: 48px;
+				margin-top: -12px;
+			}
+			.navbar-text a{
+				color: #D2D2D2;
+			}
+			.container{
+				width: 90%;
+				margin-top: 10px;
+			}
+			.panel{
+				margin-top: 20px;
+			}
+            .price{
+                color: #f60;
+                font-size:16px;
+                font-family: Verdana,Geneva,sans-serif;
+            }
+		</style>
+        {%block style%}
+        {% endblock %}
+	</head>
+
+	<body>
+        <div id="flash-message">
+        </div>
+		<nav class="nav navbar-inverse" role="navigation">
+			<div class="container-fluid">
+				<div class="navbar-header">
+					<button class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a href="/" class="navbar-brand">
+                        <img src="{{url_for('static', filename='dashboard/img/logo.png')}}">
+					</a>
+				</div>
+				<div class="collapse navbar-collapse">
+					<ul class="nav navbar-nav">
+                        <li class="{%if request.path=="/orders/my"%}active{%endif%}"><a href="/orders/my">我的订单</a></li>
+                        <li class="{%if request.path=="/orders"%}active{%endif%}"><a href="/orders">所有订单</a></li>
+                        {%if current_user.is_superuser%}
+                        <li class="{%if request.path=="/lines"%}active{%endif%}"><a href="/lines">所有线路</a></li>
+                        {%endif%}
+                        <li class="{%if request.path=="/users"%}active{%endif%}"><a href="/users">系统用户</a></li>
+                        <!--
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">系统管理<span class="caret"></span></a>
+							<ul class="dropdown-menu">
+								<li><a href="/users">系统用户</a></li>
+								<li class="divider"></li>
+								<li><a href="#">系统设置</a></li>
+							</ul>
+						</li>
+                        -->
+					</ul>
+					<div class="navbar-form navbar-right navbar-text">
+						<div class="form-group">
+                            <a href="#"><span class="glyphicon glyphicon-user"></span> {{current_user.username}}</a>
+							<span>|</span>
+							<a href="/logout">退出</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+       {% block body %}
+       {% endblock %}
+
+       {% block script_footer %}
+       {% endblock %}
+       <script type="text/javascript">
+           {% with msgs = get_flashed_messages(with_categories=true) %}
+           {% if msgs %}
+               {%for category, msg in msgs%}
+               {% if category=="error" %}
+               $.scojs_message('{{msg}}', $.scojs_message.TYPE_ERROR);
+               {%else%}
+               $.scojs_message('{{msg}}', $.scojs_message.TYPE_OK);
+               {%endif%}
+               {%endfor%}
+           {% endif %}
+           {% endwith %}
+       </script>
+	</body>
+</html>

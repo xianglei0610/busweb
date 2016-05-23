@@ -123,7 +123,7 @@ def src_code_img(order_no):
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
-    elif order.crawl_source in ["bjky", "cqky", 'scqcp', "changtu"]:
+    elif order.crawl_source in ["bjky", "cqky", 'scqcp', "changtu",'bus365']:
         rebot = order.get_lock_rebot()
         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
         data = json.loads(session[key])
@@ -193,8 +193,10 @@ def change_kefu(order_no):
         target = AdminUser.objects.get(username=kefu_name)
     except:
         return "不存在%s这个账号" % kefu_name
+    if not target.is_switch and target.username not in ["luojunping", "xiangleilei"]:
+        return "%s没在接单，禁止转单给他。" % target.username
     access_log.info("%s 将%s转给 %s", current_user.username, order_no, kefu_name)
-    order.update(kefu_username=target.username)
+    order.update(kefu_username=target.username, kefu_assigntime=dte.now())
     assign.add_dealing(order, target)
     assign.remove_dealing(order, current_user)
     return "成功转给%s" % target.username
@@ -439,9 +441,8 @@ def all_adminuser():
         "SPDB": "浦发银行",
     }
     pay_types = {
-        u"yl": "银联在线",
+        u"yhzf": "银行支付",
         u"zfb": "支付宝",
-        u"zfb_wy": "支付宝网银",
     }
     return render_template('admin-new/alluser.html',
                            condition=params,
@@ -635,23 +636,25 @@ def wating_deal_order():
             if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
                 continue
             o.complete_by(current_user)
-
-        if current_user.is_switch:
-            order_ct = assign.dealing_size(current_user)
-            for i in range(max(0, KF_ORDER_CT-order_ct)):
+        if current_user.is_switch and not current_user.is_close:
+            for i in range(20):
+                order_ct = assign.dealing_size(current_user)
+                if order_ct >= KF_ORDER_CT:
+                    break
                 order = assign.dequeue_wating_lock(current_user)
                 if not order:
                     continue
                 if order.kefu_username:
                     continue
-                order.update(kefu_username=current_user.username)
+                order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
                 assign.add_dealing(order, current_user)
-                if order.status == STATUS_WAITING_LOCK and order.crawl_source not in [SOURCE_WXSZ]:
+                if order.status == STATUS_WAITING_LOCK:
                     async_lock_ticket.delay(order.order_no)
                 push_kefu_order.apply_async((current_user.username, order.order_no))
     qs = assign.dealing_orders(current_user).order_by("create_date_time")
-
     rds = get_redis("order")
+    is_warn = False
+    is_close = False
     if client == 'web':
         locking = {}
         for o in qs:
@@ -659,6 +662,19 @@ def wating_deal_order():
                 locking[o.order_no] = 1
             else:
                 locking[o.order_no] = 0
+        if not current_user.is_superuser and not current_user.is_close:
+            is_close = False
+            for o in qs:
+                if not o.kefu_assigntime:
+                    continue
+                warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
+                if warn_time > 15*60:
+                    is_close = True
+                    break
+                elif warn_time >= 3*60 and warn_time < 15*60:
+                    is_warn = True
+            if is_close:
+                current_user.modify(is_close=is_close, is_switch=0)
         not_issued = assign.dealed_but_not_issued_orders(current_user)
         # today = dte.now().strftime("%Y-%m-%d")
         # dealed_count = Order.objects.filter(kefu_username=current_user.username,
@@ -672,7 +688,8 @@ def wating_deal_order():
                                source_info=SOURCE_INFO,
                                locking=locking,
                                not_issued=not_issued,
-                               dealed_count=dealed_count)
+                               dealed_count=dealed_count,
+                               is_warn=is_warn)
     elif client in ['android', 'ios']:
         data = []
         for i in qs:
@@ -706,7 +723,12 @@ def kefu_complete():
 @login_required
 def kefu_on_off():
     is_switch = int(request.form.get('is_switch', 0))
-    current_user.modify(is_switch=is_switch)
+    if current_user.is_close:
+        return jsonify({"status": "1", "msg": "账号已经关闭,请联系技术支持"})
+    if current_user.is_switch != is_switch:
+        current_user.modify(is_switch=is_switch)
+        trans = {0: u"关闭", 1: u"开启"}
+        access_log.info("[kefu_on_off] %s %s接单", current_user.username, trans[is_switch])
     return jsonify({"status": "0", "is_switch": is_switch,"msg": "设置成功"})
 
 
@@ -926,3 +948,16 @@ def user_config():
         user.modify(source_include=lst)
         return "success"
     return "fail"
+
+
+@admin.route('/open_account', methods=['POST'])
+@login_required
+def open_account():
+    username = request.form.get('username', 0)
+    userObj = AdminUser.objects.get(username=username)
+    if not userObj.is_close:
+        return jsonify({"status": "0", "msg": "账号已经开启"})
+    userObj.modify(is_close=False)
+    access_log.info("[open_account] %s 开启账号: %s ", current_user.username, username)
+    return jsonify({"status": "0", "msg": "开启成功"})
+

@@ -11,8 +11,9 @@ import traceback
 
 from app.constants import *
 from app import line_log
+from app.utils import md5
 from app.flow.base import Flow as BaseFlow
-from app.models import ChangtuWebRebot
+from app.models import ChangtuWebRebot, Line
 from datetime import datetime as dte
 from bs4 import BeautifulSoup
 
@@ -25,8 +26,8 @@ class Flow(BaseFlow):
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
-            "result_code": 0,
-            "result_reason": "",
+            "result_code": 2,
+            "result_reason": "null msg",
             "pay_url": "",
             "raw_order_no": "",
             "expire_datetime": "",
@@ -64,8 +65,9 @@ class Flow(BaseFlow):
             try:
                 token = soup.select("#token")[0].get("value")
             except:
-                rebot.modify(ip="")
-                return
+                if r.status_code == 200 and "畅途网" in r.content:
+                    lock_result.update({"result_code": 0, "result_reason": "没拿到到token"})
+                return lock_result
             passenger_info = {}
             for i, r in enumerate(order.riders):
                 passenger_info.update({
@@ -371,6 +373,11 @@ class Flow(BaseFlow):
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line_new(self, line):
+        result_info = {
+            "result_msg": "",
+            "update_attrs": {},
+        }
+        now = dte.now()
         line_url = "http://www.changtu.com/chepiao/querySchList.htm"
         sta_city_id, s_pinyin = line.s_city_id.split("|")
         d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
@@ -386,7 +393,9 @@ class Flow(BaseFlow):
         )
         url = "%s?%s" % (line_url, urllib.urlencode(params))
         headers={"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        rebot = ChangtuWebRebot.get_one()
         try:
+            rebot = ChangtuWebRebot.get_one()
             r = rebot.http_get(url, headers=headers)
             res = r.json()
         except:
@@ -394,6 +403,7 @@ class Flow(BaseFlow):
             line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
 
+        update_attrs = {}
         for d in res["schList"]:
             if int(d["bookFlag"]) != 2:
                 continue

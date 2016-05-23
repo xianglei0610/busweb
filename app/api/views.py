@@ -91,10 +91,13 @@ def query_destination():
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
                         "data": ""})
-    crawl_source = open_city.crawl_source
-    qs = Line.objects.filter(crawl_source=crawl_source,
-                             s_city_name__startswith=starting_name).aggregate({"$group": {"_id": {"city_name": "$d_city_name", "city_code": "$d_city_code"}}})
-    data = map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs)
+
+    data = open_city.dest_list
+    if not data:
+        crawl_source = open_city.crawl_source
+        qs = Line.objects.filter(crawl_source=crawl_source,
+                                 s_city_name__startswith=starting_name).aggregate({"$group": {"_id": {"city_name": "$d_city_name", "city_code": "$d_city_code"}}})
+        data = map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs)
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
@@ -130,6 +133,7 @@ def query_line():
         }
     """
     now = dte.now()
+    access_log.info("[query_line] %s" % request.get_data())
     try:
         post = json.loads(request.get_data())
         starting_name = post.get("starting_name")

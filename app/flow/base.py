@@ -7,7 +7,7 @@ import time
 
 from app.constants import *
 from app import order_log, line_log
-from datetime import datetime as dte
+from datetime import timedelta, datetime as dte
 from tasks import issued_callback
 from bs4 import BeautifulSoup
 from app.utils import get_redis
@@ -30,7 +30,7 @@ class Flow(object):
         if rds.get(key):
             return
         rds.set(key, time.time())
-        rds.expire(key, 120)
+        rds.expire(key, 60*4)
         try:
             ret = self.lock_ticket2(order, **kwargs)
             return ret
@@ -45,11 +45,10 @@ class Flow(object):
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
         }
-        call_from = traceback.format_stack()[-2]
-        order_log.info("[lock-start] order: %s call from: %s", order.order_no, call_from.replace(os.linesep, " "))
+        order_log.info("[lock-start] order: %s", order.order_no)
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 防止重复下单
-            order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
+            order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
             return
 
         ret = self.do_lock_ticket(order, **kwargs)
@@ -77,10 +76,11 @@ class Flow(object):
                 "total_price": order.order_price,
             })
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-            order_log.info("[lock-result] succ. order: %s source_account:%s", order.order_no, order.source_account)
+            order_log.info("[lock-result] succ. order: %s rebot:%s raw_order_no:%s pay_order_no:%s lock_info:%s", \
+                           order.order_no, order.source_account, order.rawl_order_no, order.pay_order_no, order.lock_info)
         elif ret["result_code"] == 2:   # 锁票失败,进入锁票重试
             order.modify(source_account=ret["source_account"], lock_info=ret["lock_info"])
-            self.lock_ticket_retry(order)
+            self.lock_ticket_retry(order, reason=ret["result_msg"])
             order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
             return
         elif ret["result_code"] == 0:   # 锁票失败
@@ -88,7 +88,7 @@ class Flow(object):
                          lock_info=ret["lock_info"],
                          lock_datetime=dte.now(),
                          source_account=ret["source_account"])
-            order.on_lock_fail()
+            order.on_lock_fail(reason=ret["result_msg"])
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["result_reason"], "data": data})
             order_log.info("[lock-result] fail. order: %s, reason: %s", order.order_no, ret["result_reason"])
         elif ret["result_code"] == 3:   # 锁票输验证码
@@ -101,7 +101,9 @@ class Flow(object):
         if notify_url:
             order_log.info("[lock-callback] order:%s, %s %s", order.order_no, notify_url, json_str)
             response = urllib2.urlopen(notify_url, json_str, timeout=20)
-            order_log.info("[lock-callback-response] order:%s, %s", order.order_no, response.read())
+            result = response.read()
+            order.add_trace(OT_LOCK_CB, "锁票回调成功 收到回应：%s" % result)
+            order_log.info("[lock-callback-response] order:%s, %s", order.order_no, result)
 
     def do_lock_ticket(self, order, **kwargs):
         """
@@ -182,7 +184,7 @@ class Flow(object):
         elif code == 5:         # 超时过期, 进入锁票重试
             order_log.info("[issue-refresh-result] order: %s expire. msg:%s", order.order_no, ret["result_msg"])
             order.modify(pay_order_no="", raw_order_no="", lock_info={})
-            self.lock_ticket_retry(order)
+            self.lock_ticket_retry(order, reason=ret["result_msg"])
         else:
             order_log.error("[issue-refresh-result] order: %s error, 未处理状态 status:%s", order.order_no, code)
 
@@ -209,9 +211,33 @@ class Flow(object):
             return True
         now = dte.now()
         last_refresh = (now-line.refresh_datetime).total_seconds()
-        if last_refresh < 60:    # 60s之前刷新过了，不刷新
+        if line.left_tickets<=0:    # 余票为0， 不刷新
             return False
-        elif line.left_tickets<=0:    # 余票为0， 不刷新
+        elif line.left_tickets<10 and last_refresh < 60:    # 20s之前刷新过了，不刷新
+            return False
+        elif last_refresh < 5*60:
+            return False
+        return True
+
+    def valid_line(self, line):
+        now = dte.now()
+        # 预售提前时间
+        adv_info = {
+            "四川": 120+20,
+            "重庆": 60+10,
+        }
+        adv_minus = adv_info.get(line.s_province, 30)
+        if (line.drv_datetime-now).total_seconds() <= adv_minus*60:
+            return False
+
+        # 不能买第二天太早的票
+        h = now.hour
+        limit_datetime = None
+        if h==23:
+            limit_datetime = dte.strptime((now+timedelta(days=1)).strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
+        elif 0<=h<7:
+            limit_datetime = dte.strptime(now.strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
+        if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=adv_minus):
             return False
         return True
 
@@ -220,14 +246,16 @@ class Flow(object):
         线路信息刷新主流程, 不用子类重写
         """
         line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
-        if line.crawl_source == 'bus100':
-            force = True
+        if not self.valid_line(line):
+            line.modify(left_tickets=0, refresh_datetime=dte.now())
+            line_log.info("[refresh-result] line:%s %s, invalid line", line.crawl_source, line.line_id)
+            return
         if not self.need_refresh_line(line, force=force):
             line_log.info("[refresh-result] line:%s %s, not need refresh", line.crawl_source, line.line_id)
             return
-        now = dte.now()
         ret = self.do_refresh_line(line)
         update = ret["update_attrs"]
+        now = dte.now()
         if update:
             if "refresh_datetime" not in update:
                 update["refresh_datetime"] = now
@@ -259,15 +287,15 @@ class Flow(object):
         """
         关闭线路
         """
-        if not line:
+        if not hasattr(line, "line_id"):
             return
         line_log.info("[close] line:%s %s, reason:%s", line.crawl_source, line.line_id, reason)
         now = dte.now()
         line.modify(left_tickets=0, update_datetime=now, refresh_datetime=now)
 
-    def lock_ticket_retry(self, order):
+    def lock_ticket_retry(self, order, reason=""):
         order.modify(status=STATUS_LOCK_RETRY)
-        order.on_lock_retry()
+        order.on_lock_retry(reason=reason)
 
     def extract_alipay(self, content):
         """

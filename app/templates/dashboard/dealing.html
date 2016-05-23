@@ -1,0 +1,83 @@
+<ul class="nav nav-tabs">
+    <li role="presentation" class="{%if tab=='dealing'%}active{%endif%}"><a href="/orders/my?tab=dealing">待处理 <span class="badge" style="background-color:red"> {{dealing_count}}</span></a></li>
+    <li role="presentation" class="{%if tab=='dealed'%}active{%endif%}"><a href="/orders/my?tab=dealed">正在出票 <span class="badge" style="background-color:red"> {{dealed_count}}</span></a></li>
+</ul>
+
+<table class="table table-hover" style="margin-bottom: 0px;">
+    <thead>
+        <tr>
+            <th>系统/12308/源站订单号</th>
+            <th>创建/下单/出发时间</th>
+            <th>车次号/行程</th>
+            <th>源站信息</th>
+            <th>订票数</th>
+            <th>金额</th>
+            <th>订单状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {%for item in page["items"]%}
+        <tr>
+            <td>{{item.order_no}}</br>{{item.out_order_no}}</br>{{item.raw_order_no|cut_str}}</td>
+            <td>{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
+            <td>{{item.bus_num}}<br>{{item.starting_name.split(';')[0]}} - {{item.destination_name.split(';')[0]}}</br>{{item.starting_name.split(';')[1]}} - {{item.destination_name.split(';')[1]}}</td>
+            <td>{{source_info[item.crawl_source]["name"]}}<br>{{item.source_account}}</br>{{item.source_account_pass}}</td>
+            <td>{{item.riders|count}}张</td>
+            <td>
+                <br />
+                <span class="glyphicon glyphicon-jpy price">{{item.order_price}}</span>
+            </td>
+            <td>
+                <br />
+                <span class="{%if item.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[item.status]}}</span>
+            </td>
+            <td>
+                {% if locking[item.order_no]%}
+                <a href="/orders/{{item.order_no}}/pay" class="btn btn-default" target="_blank" disabled>正在锁票...</a><br /> 
+                {%else%}
+                <a href="/orders/{{item.order_no}}/pay" class="btn btn-warning" target="_blank">立即支付</a><br /> 
+                {%endif%}
+                <a href="#" class="sel-change" id="kefuname" data-type="select" data-pk="{{item.order_no}}" data-url="/orders/changekefu" data-title="选择目标账号">转移</a>
+            </td>
+            {%endfor%}
+        </tr>
+    </tbody>
+</table>
+
+<script type="text/javascript">
+    $('.btn').on('click', function () {
+        var $btn = $(this).button('loading')
+        $(this).removeClass("btn-warning").addClass("btn-default")
+        //$btn.button('reset')
+    })
+
+    $(document).ready(function() {
+        $('.sel-change').editable({
+            source: [
+            {% for u in online_users %}
+                {value: '{{u.username}}', text: '{{u.username}}'},
+            {% endfor %}
+            ]
+        });
+
+        $('.sel-change').on('shown', function(e, editable) {
+            auto_reload=false;
+        });
+        $('.sel-change').on('hidden', function(e, reason) {
+            auto_reload=true;
+            if(reason === 'save' || reason === 'cancel') {
+            }
+        });
+        $('.sel-change').on('save', function(e, params) {
+            msg = params.response.msg
+            if(params.response.code==1){
+                $.scojs_message(msg, $.scojs_message.TYPE_OK);
+            }
+            else{
+                $.scojs_message(msg, $.scojs_message.TYPE_ERROR);
+            }
+        });
+    });
+</script>
