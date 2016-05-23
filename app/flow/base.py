@@ -52,7 +52,19 @@ class Flow(object):
             order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
             return
 
-        ret = self.do_lock_ticket(order, **kwargs)
+        if (order.line.drv_datetime-dte.now()).total_seconds() <= 40*60:
+            ret = {
+                "lock_info": {},
+                "source_account": order.source_account,
+                "result_code": 0,
+                "result_reason": "[系统检查]距离开车时间太近",
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": "",
+                "pay_money": 0,
+            }
+        else:
+            ret = self.do_lock_ticket(order, **kwargs)
         order.reload()
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 再次检查, 防止重复支付
@@ -224,7 +236,7 @@ class Flow(object):
             u"四川": 120+20,
             u"重庆": 60+10,
         }
-        adv_minus = adv_info.get(line.s_province, 30)
+        adv_minus = adv_info.get(line.s_province, 60)
         if (line.drv_datetime-now).total_seconds() <= adv_minus*60:
             return False
 
