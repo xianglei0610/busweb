@@ -109,7 +109,7 @@ class Flow(BaseFlow):
             else:
                 errmsg = res.get('message', '')
                 flag = False
-                for i in [u"锁定接口异常",u"获取座位信息失败",u"当前班次异常", u"锁定接口异常",u"接口失败"]:
+                for i in [u"锁定接口异常",u"获取座位信息失败",u"当前班次异常", u"锁定接口异常",u"接口失败",u"授权请求不合法"]:
                     if i in errmsg:
                         flag = True
                         break
@@ -121,7 +121,7 @@ class Flow(BaseFlow):
                     })
                     return lock_result
 
-                for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码"]:
+                for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码",u"班次不是售票状态"]:
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break

@@ -307,11 +307,11 @@ class Flow(BaseFlow):
                     "fee": 0,
                     "left_tickets": int(d['seatLast']),
                     "refresh_datetime": now,
-                    "s_sta_name": d['fromStation'],
                 }
                 if line_id == line.line_id:
                     update_attrs = info
                 else:
+                    info.update({"s_sta_name": d['fromStation']})
                     obj.update(**info)
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
