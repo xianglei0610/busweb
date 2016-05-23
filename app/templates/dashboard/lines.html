@@ -32,45 +32,45 @@
         </div>
 
         <ul class="nav nav-tabs">
-            <li role="presentation"><a href="#">有效线路<span class="badge">4111</span></a></li>
-            <li role="presentation" class="active"><a href="#">过期线路<span class="badge">4111</span></a></li>
+            <li role="presentation" class="active"><a href="#">所有线路</a></li>
         </ul>
 
         <div class="panel panel-default">
             <div class="panel-body">
-                <form class="query-form" class="form-horizontal">
+                <form class="query-form" class="form-horizontal" action="/lines" method="POST">
+                    <input type="hidden" name="page" id="id-page" value="1"/>
                     <div class="row">
                         <div class="form-group col-md-2">
                             <label for="sourceSite" class="sr-only">线路ID</label>
-                            <input type="text" class="form-control" id="" placeholder="线路ID">
+                            <input type="text" class="form-control" id="" placeholder="线路ID" name="line_id" value="{{condition.line_id}}">
                         </div>
                         <div class="form-group col-md-1">
                             <label for="sourceSite" class="sr-only">源站</label>
-                            <select class="form-control">
-                                <option>选择源站</option>
-                                <option>同程网</option>
-                                <option>四川汽车票</option>
-                                <option>张家港市民网页</option>
+                            <select class="form-control" name="crawl_source">
+                                <option value="">选择源站</option>
+                                {%for s in sites%}
+                                <option value="{{s}}" {%if s==condition.crawl_source%}selected{%endif%}>{{source_info[s]["name"]}}</option>
+                                {%endfor%}
                             </select>
                         </div>
                         <div class="form-group col-md-2">
                             <label for="sourceSite" class="sr-only">出发城市</label>
-                            <input type="text" class="form-control" id="" placeholder="出发城市">
+                            <input type="text" class="form-control" id="" placeholder="出发城市" name="starting" value="{{condition.starting}}">
                         </div>
                         <div class="form-group col-md-2">
                             <label for="sourceSite" class="sr-only">到达城市</label>
-                            <input type="text" class="form-control" id="" placeholder="到达城市">
+                            <input type="text" class="form-control" id="" placeholder="到达城市" name="destination" value="{{condition.destination}}">
                         </div>
                         <div class="form-group  col-md-2" style="padding-left: 0px; padding-right: 5px;">
                             <label for="sourceSite" class="sr-only">起始日期</label>
                             <div class="input-group date form_datetime" data-date="" data-date-format="" data-link-field="dtp_input2" data-link-format="yyyy-mm-dd">
-                                <input class="form-control" size="16" type="text" value="" readonly>
+                                <input class="form-control" size="16" type="text" value="{{condition.drv_date}}" readonly name="drv_date">
                                 <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
                             </div>
                         </div>
 
                         <div class="col-md-offset-1 col-md-1">
-                            <button type="button" class="btn btn-primary">查&nbsp;&nbsp;询</button>
+                            <button type="submit" class="btn btn-primary">查&nbsp;&nbsp;询</button>
                         </div>
                     </div>
                 </form>
@@ -80,7 +80,7 @@
         <table class="table table-hover table-bordered" style="margin-bottom: 0px;">
             <caption>
                 <div class="pull-right">
-                    <span>记录数：<label class="text-danger">1249条</label></span>
+                    <span>记录数：<label class="text-danger">{{page["total"]}}条</label></span>
                 </div>
             </caption>
             <thead>
@@ -97,52 +97,59 @@
             </thead>
 
             <tbody>
+                {%for item in page["items"]%}
                 <tr>
                     <td>
-                        57360a9005ffe2133eb2d22e<br /> tongcheng57360a9005ffe2133eb2d22e <br /> changtu57360a9005ffe2133eb2d22e
+                        <br/>
+                        {{item.line_id}}<br /> 
                     </td>
                     <td>
-                        江苏 <br /> 南京
-                        <br /> 南京西站
+                        {{item.s_province}}<br /> {{item.s_city_name}}<br /> {{item.s_sta_name}}
                     </td>
                     <td>
-                        苏州<br /> <br />苏州北站
+                        {{item.d_city_name}}<br /> <br />{{item.d_sta_name}}
                     </td>
                     <td>
-                        2016-05-23<br /> <br />12:00
+                        {{item.drv_date}}<br /> <br />{{item.drv_time}}
                     </td>
                     <td>
-                        12 <br /><br /> 大型高一
+                        {{item.bus_num}} <br /><br /> {{item.vehicle_type}}
                     </td>
                     <td>
-                        <span class="glyphicon glyphicon-jpy price">432.0</span><br /><br />
-                        <span class="glyphicon glyphicon-jpy price">3.0</span>
+                        <span class="glyphicon glyphicon-jpy price">{{item.full_price}}</span><br /><br />
+                        <span class="glyphicon glyphicon-jpy price">{{item.fee}}</span>
                     </td>
                     <td>
-                        四川汽车票务网<br /><br /> 3张
+                        {{source_info[item.crawl_source]["name"]}}<br /><br /> 余{{item.left_tickets}}
                     </td>
                     <td>
-                        2016-05-21 12:22<br /><br /> 2016-05-21 12:22
+                        {{item.crawl_datetime|format_datetime}}<br /><br /> {{item.refresh_datetime|format_datetime}}
                     </td>
                 </tr>
+                {%endfor%}
             </tbody>
         </table>
 
         <nav style="text-align: center">
             <ul class="pagination">
                 <li>
-                    <a href="#" aria-label="Previous">
+                    <a href="javascript:search('{{page.previous}}')" aria-label="Previous">
                         <span aria-hidden="true">&laquo;</span>
                     </a>
                 </li>
-                <li><a href="#">1</a></li>
-                <li><a href="#">2</a></li>
-                <li><a href="#">...</a></li>
-                <li><a href="#">3</a></li>
-                <li><a href="#">4</a></li>
-                <li><a href="#">5</a></li>
+                {%if page.range and page.range[0] > 1%}
+                <li><a href="javascript:search('1')">1</a></li>
+                <li><a href="javascript:;">...</a></li>
+                {%endif%}
+                {%for i in page.range %}
+                <li class="{%if page.cur_page==i %}active{%endif%}"><a href="javascript:search('{{i}}')">{{i}}</a></li>
+                {%endfor%}
+                {%if page.range and page.range[-1] < page.page_count %}
+                    <li><a href="javascript:;">...</a></li>
+                    <li><a href="javascript:search('{{page.page_count}}')">{{page.page_count}}</a></li>
+                {%endif%}
                 <li>
-                    <a href="#" aria-label="Next">
+                    <a href="javascript:search('{{page.next}}')" aria-label="Next">
                         <span aria-hidden="true">&raquo;</span>
                     </a>
                 </li>
@@ -158,5 +165,9 @@
         language: "zh-CN",
         minView: 2,
     });
+    function search(page){
+        $("#id-page").val(page);
+        $(".query-form").submit();
+    };
 </script>
 {%endblock%}

@@ -270,12 +270,13 @@ def ajax_query():
 @dashboard.route('/lines', methods=['POST', 'GET'])
 @superuser_required
 def line_list():
-    lineid = request.args.get("line_id", "").strip()
-    starting_name = request.args.get("starting", "").strip()
-    dest_name = request.args.get("destination", "").strip()
-    crawl_source = request.args.get("crawl_source", "").strip()
-    drv_date = request.args.get("drv_date", "").strip()
-    query = {"drv_datetime__gt": dte.now()}
+    params = request.values.to_dict()
+    lineid = params.get("line_id", "")
+    starting_name = params.get("starting", "")
+    dest_name = params.get("destination", "")
+    crawl_source = params.get("crawl_source", "")
+    drv_date = params.get("drv_date", "")
+    query = {}
     if lineid:
         query.update(line_id=lineid)
     if starting_name:
@@ -286,15 +287,18 @@ def line_list():
         query.update(crawl_source=crawl_source)
     if drv_date:
         query.update(drv_date=drv_date)
-    queryset = Line.objects(**query).order_by("full_price")
+    queryset = Line.objects(**query)
 
     return render_template('dashboard/lines.html',
+                           source_info=SOURCE_INFO,
+                           sites=queryset.distinct("crawl_source"),
                            page=parse_page_data(queryset),
                            starting=starting_name,
                            destination=dest_name,
                            line_id=lineid,
                            crawl_source=crawl_source,
                            drv_date=drv_date,
+                           condition=params,
                            )
 
 
