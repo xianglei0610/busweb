@@ -28,17 +28,16 @@ class AdminUser(db.Document):
     password = db.StringField(max_length=50)
     create_datetime = db.DateTimeField(default=dte.now)
     is_switch = db.IntField()
-    is_kefu = db.IntField()
-    is_admin = db.IntField(default=0)
     yh_type = db.StringField(default="BOCB2C")
     source_include = db.ListField(default=["yhzf", "zfb"])        # 该用户处理的源站
     is_close = db.BooleanField(default=False)
+    is_removed = db.IntField(default=0)
 
     meta = {
         "indexes": [
             "username",
-            "is_kefu",
             "is_switch",
+            "is_removed",
         ],
     }
 

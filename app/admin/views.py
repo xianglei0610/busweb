@@ -608,7 +608,7 @@ def all_order():
 @admin.route('/myorder', methods=['GET'])
 @login_required
 def my_order():
-    working_kefus = AdminUser.objects.filter(is_kefu=1)
+    working_kefus = AdminUser.objects.all()
     return render_template("admin-new/my_order.html", working_kefus=working_kefus)
 
 
@@ -631,26 +631,25 @@ def wating_deal_order():
     等待处理订单列表
     """
     client = request.headers.get("type", 'web')
-    if current_user.is_kefu:
-        for o in assign.dealing_orders(current_user):
-            if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
+    for o in assign.dealing_orders(current_user):
+        if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
+            continue
+        o.complete_by(current_user)
+    if current_user.is_switch and not current_user.is_close:
+        for i in range(20):
+            order_ct = assign.dealing_size(current_user)
+            if order_ct >= KF_ORDER_CT:
+                break
+            order = assign.dequeue_wating_lock(current_user)
+            if not order:
                 continue
-            o.complete_by(current_user)
-        if current_user.is_switch and not current_user.is_close:
-            for i in range(20):
-                order_ct = assign.dealing_size(current_user)
-                if order_ct >= KF_ORDER_CT:
-                    break
-                order = assign.dequeue_wating_lock(current_user)
-                if not order:
-                    continue
-                if order.kefu_username:
-                    continue
-                order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
-                assign.add_dealing(order, current_user)
-                if order.status == STATUS_WAITING_LOCK:
-                    async_lock_ticket.delay(order.order_no)
-                push_kefu_order.apply_async((current_user.username, order.order_no))
+            if order.kefu_username:
+                continue
+            order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
+            assign.add_dealing(order, current_user)
+            if order.status == STATUS_WAITING_LOCK:
+                async_lock_ticket.delay(order.order_no)
+            push_kefu_order.apply_async((current_user.username, order.order_no))
     qs = assign.dealing_orders(current_user).order_by("create_date_time")
     rds = get_redis("order")
     is_warn = False

@@ -90,13 +90,9 @@ def create_user(type):
         return
     u = AdminUser(username=username, password=md5(pwd1))
     if type == "kefu":
-        u.is_kefu = 1
         u.is_switch = 0
-        u.is_admin = 0
     elif type == "admin":
-        u.is_kefu = 0
         u.is_switch = 0
-        u.is_admin = 1
 
     u.save()
     print "创建用户成功"

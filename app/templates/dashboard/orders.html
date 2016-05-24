@@ -182,9 +182,8 @@
                     <span class="{%if item.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[item.status|string]}}</span>
                 </td>
                 <td>
-                    <a href="/orders/{{item.order_no}}" target="_blank">详情</a><br/>
-                    <a href="javascript:;" class="add-remark" pk="{{item.order_no}}">增加备注</a><br/>
-                    <a data-trigger="modal" href="/orders/{{item.order_no}}/traces" data-title="订单追踪列表" class="btn" style="padding:0px;">订单追踪</a>
+                    <a href="javascript:;" class="add-remark" pk="{{item.order_no}}">备注</a><br/>
+                    <a data-trigger="modal" href="/orders/{{item.order_no}}/traces" data-title="订单追踪列表" class="btn" style="padding:0px;">追踪</a>
                 </td>
             </tr>
             {%endfor%}
