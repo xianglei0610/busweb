@@ -68,7 +68,7 @@ class LoginInView(MethodView):
             flash("验证码错误", "error")
             return redirect(url_for('dashboard.login'))
         try:
-            u = AdminUser.objects.get(username=name, password=md5(pwd))
+            u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
             flask_login.login_user(u)
             return redirect(url_for('dashboard.index'))
         except AdminUser.DoesNotExist:
@@ -417,7 +417,7 @@ def user_list():
         query["is_switch"] = 1
     params["tabtype"] = tabtype
 
-    qs = AdminUser.objects.filter(**query)
+    qs = AdminUser.objects.filter(is_removed=0, **query)
     yh_dict = {
         "BOCB2C": "中国银行",
         "CMB": "招商银行",
@@ -448,29 +448,28 @@ def my_order():
 @dashboard.route('/orders/dealing', methods=['GET'])
 @login_required
 def dealing_order():
-    if current_user.is_kefu:
-        for o in assign.dealing_orders(current_user):
-            if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
+    for o in assign.dealing_orders(current_user):
+        if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
+            continue
+        o.complete_by(current_user)
+    if current_user.is_switch and not current_user.is_close:
+        for i in range(2):
+            order_ct = assign.dealing_size(current_user)
+            if order_ct >= KF_ORDER_CT:
+                break
+            order = assign.dequeue_wating_lock(current_user)
+            if not order:
                 continue
-            o.complete_by(current_user)
-        if current_user.is_switch and not current_user.is_close:
-            for i in range(2):
-                order_ct = assign.dealing_size(current_user)
-                if order_ct >= KF_ORDER_CT:
-                    break
-                order = assign.dequeue_wating_lock(current_user)
-                if not order:
-                    continue
-                if order.kefu_username:
-                    continue
-                order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
-                assign.add_dealing(order, current_user)
+            if order.kefu_username:
+                continue
+            order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
+            assign.add_dealing(order, current_user)
 
-                info = {"username": current_user.username}
-                desc = "订单分派给操作人员 %s" %  info["username"]
-                order.add_trace(OT_ASSIGN, desc, info)
-                if order.status == STATUS_WAITING_LOCK:
-                    async_lock_ticket.delay(order.order_no)
+            info = {"username": current_user.username}
+            desc = "订单分派给操作人员 %s" %  info["username"]
+            order.add_trace(OT_ASSIGN, desc, info)
+            if order.status == STATUS_WAITING_LOCK:
+                async_lock_ticket.delay(order.order_no)
 
     tab = request.args.get("tab", "dealing")
     qs = assign.dealed_but_not_issued_orders(current_user)
