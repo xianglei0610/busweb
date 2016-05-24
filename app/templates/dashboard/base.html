@@ -62,7 +62,7 @@
 				<div class="collapse navbar-collapse">
 					<ul class="nav navbar-nav">
                         <li class="{%if request.path=="/orders/my"%}active{%endif%}"><a href="/orders/my">我的订单</a></li>
-                        <li class="{%if request.path=="/orders"%}active{%endif%}"><a href="/orders">所有订单</a></li>
+                        <li class="{%if request.path=="/orders"%}active{%endif%}"><a href="{{url_for("dashboard.order_list")}}">所有订单</a></li>
                         {%if current_user.is_superuser%}
                         <li class="{%if request.path=="/lines"%}active{%endif%}"><a href="/lines">所有线路</a></li>
                         {%endif%}
