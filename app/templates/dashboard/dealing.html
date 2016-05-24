@@ -40,6 +40,7 @@
                 <a href="/orders/{{item.order_no}}/pay" class="btn btn-warning" target="_blank">立即支付</a><br /> 
                 {%endif%}
                 <a href="#" class="sel-change" id="kefuname" data-type="select" data-pk="{{item.order_no}}" data-url="/orders/changekefu" data-title="选择目标账号">转移</a>
+                <a data-trigger="modal" href="/orders/{{item.order_no}}/yichang" data-title="异常订单" class="btn">设为异常</a>
             </td>
             {%endfor%}
         </tr>

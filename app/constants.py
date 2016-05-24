@@ -2411,7 +2411,8 @@ OT_ISSUE_SUCC = 8   # 出票成功
 OT_TRANSFER = 9     # 订单转移
 OT_LOCK_CB = 10     # 锁票回调
 OT_ISSUE_CB = 11    # 出票回调
-OT_REMARK = 12        # 增加备注内容
+OT_REMARK = 12      # 增加备注内容
+OT_YICHANG = 13     # 设为异常
 
 OT_MSG = {
     OT_CREATED: "创建订单",
@@ -2426,4 +2427,11 @@ OT_MSG = {
     OT_LOCK_CB: "锁票回调",
     OT_ISSUE_CB: "出票回调",
     OT_REMARK: "增加备注",
+    OT_YICHANG: "设为异常",
 }
+
+
+# 异常状态
+YC_STATUS_NONE = 0  # 没异常
+YC_STATUS_ING = 1   # 异常， 待处理
+YC_STATUS_DONE = 2  # 异常， 处理完成

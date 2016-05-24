@@ -76,6 +76,32 @@ class LoginInView(MethodView):
             return redirect(url_for('dashboard.login'))
 
 
+class YiChangeOP(MethodView):
+    @login_required
+    def get(self, order_no):
+        order = Order.objects.get_or_404(order_no=order_no)
+        users  = AdminUser.objects.filter(is_removed=0)
+        return render_template('dashboard/order-yichang.html', order=order, users=users)
+
+    @login_required
+    def post(self, order_no):
+        name = request.form.get("username")
+        pwd = request.form.get("password")
+        session["username"] = name
+        session["password"] = pwd
+        code = request.form.get("validcode")
+        if code != session.get("img_valid_code"):
+            flash("验证码错误", "error")
+            return redirect(url_for('dashboard.login'))
+        try:
+            u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
+            flask_login.login_user(u)
+            return redirect(url_for('dashboard.index'))
+        except AdminUser.DoesNotExist:
+            flash("用户名或密码错误", "error")
+            return redirect(url_for('dashboard.login'))
+
+
 def parse_page_data(qs):
     total = qs.count()
     params = request.values.to_dict()
@@ -547,6 +573,7 @@ def fangbian_callback():
 
 
 dashboard.add_url_rule("/login", view_func=LoginInView.as_view('login'))
+dashboard.add_url_rule("/orders/<order_no>/yichang", view_func=YiChangeOP.as_view('yichang'))
 
 
 @dashboard.route('/users/config', methods=["POST"])
