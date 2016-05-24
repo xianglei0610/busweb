@@ -85,21 +85,14 @@ class YiChangeOP(MethodView):
 
     @login_required
     def post(self, order_no):
-        name = request.form.get("username")
-        pwd = request.form.get("password")
-        session["username"] = name
-        session["password"] = pwd
-        code = request.form.get("validcode")
-        if code != session.get("img_valid_code"):
-            flash("验证码错误", "error")
-            return redirect(url_for('dashboard.login'))
-        try:
-            u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
-            flask_login.login_user(u)
-            return redirect(url_for('dashboard.index'))
-        except AdminUser.DoesNotExist:
-            flash("用户名或密码错误", "error")
-            return redirect(url_for('dashboard.login'))
+        order = Order.objects.get_or_404(order_no=order_no)
+        kefu = request.form.get("username")
+        desc = request.form.get("desc")
+        if order.yc_status != YC_STATUS_NONE:
+            return jsonify({"code":0, "msg": "执行失败，已经是异常单了"})
+        order.modify(yc_status=YC_STATUS_ING, kefu_username=kefu)
+        order.add_trace(OT_YICHANG, "%s将单设为异常单, 当前处理人:%s 异常描述:%s" % (current_user.username, kefu, desc))
+        return jsonify({"code":1, "msg": "执行成功"})
 
 
 def parse_page_data(qs):

@@ -12,11 +12,11 @@
 
 		<body>
 			<div class="container">
-                <form class="form-horizontal" action="/orders/{{order.order_no}}/yichang" method="POST">
+                <form class="form-horizontal" action="/orders/{{order.order_no}}/yichang" method="POST" id="id-yc-form">
 					<div class="form-group">
 						<label for="id-yc-text" class="col-sm-2 control-label">描述</label>
 						<div class="col-sm-10">
-							<textarea class="form-control" rows="3" id="id-yc-text" placeholder="异常描述" name="content"></textarea>
+							<textarea class="form-control" rows="3" id="id-yc-text" placeholder="异常描述" name="desc"></textarea>
 						</div>
 					</div>
 					<div class="form-group">
@@ -31,10 +31,27 @@
 					</div>
 					<div class="form-group">
 						<div class="col-sm-offset-2 col-sm-10">
-							<button type="submit" class="btn btn-default">确定</button>
+							<button type="button" class="btn btn-default" onclick="submit()">确定</button>
 						</div>
 					</div>
 				</form>
 			</div>
 		</body>
+<script languge="javascript">
+    function submit(){
+        $.ajax({
+            cache: true,
+            type: "POST",
+            url:$("#id-yc-form").attr("action"),
+            data:$('#id-yc-form').serialize(),// 你的formid
+            async: false,
+            error: function(request) {
+                alert("Connection error");
+            },
+            success: function(data) {
+                alert(data);
+            }
+        });
+    }
+</script>
 </html>
