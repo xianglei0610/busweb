@@ -388,7 +388,7 @@ def order_pay(order_no):
         return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("admin.order_pay", order_no=order.order_no)
 
     flow = get_flow(order.crawl_source)
-    ret = flow.get_pay_page(order, valid_code=code, session=session, pay_channel="", bank=current_user.yh_type)
+    ret = flow.get_pay_page(order, valid_code=code, session=session, bank=current_user.yh_type)
     if not ret:
         ret = {}
     flag = ret.get("flag", "")
