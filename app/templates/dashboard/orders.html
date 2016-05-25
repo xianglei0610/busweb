@@ -83,6 +83,15 @@
                     </select>
                     </div>
                     <div class="form-group col-md-1">
+                        <label for="sourceSite" class="sr-only">异常状态</label>
+                        <select class="form-control" name="yc_status">
+                            <option value="">异常状态</option>
+                            {% for k,v in yc_status_msg.items() %}
+                            <option value="{{k}}" {%if condition.yc_status==k|string%} selected {%endif%}>{{v}}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-1">
                         <label for="sourceSite" class="sr-only">支付账号</label>
                         <select class="form-control" name="pay_account">
                         <option value="">支付账号</option>
@@ -157,8 +166,8 @@
                 <th>创建/下单/出发时间</th>
                 <th>车次号/行程</th>
                 <th>源站信息</th>
-                <th>订票数</th>
-                <th>金额</th>
+                <th>处理人</th>
+                <th>订票数/金额</th>
                 <th>订单状态</th>
                 <th>操作</th>
             </tr>
@@ -172,9 +181,10 @@
                 <td style="white-space: nowrap;">{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
                 <td>{{item.bus_num}}<br>{{item.starting_name.split(';')[0]}} - {{item.destination_name.split(';')[0]}}</br>{{item.starting_name.split(';')[1]}} - {{item.destination_name.split(';')[1]}}</td>
                 <td>{{source_info[item.crawl_source]["name"]}}<br>{{item.source_account}}</br>{{item.source_account_pass}}</td>
-                <td><br/>{{item.riders|count}}张</td>
+                <td>{{item.kefu_username}}</td>
                 <td>
-                    <br />
+                    {{item.riders|count}}张
+                    <br /><br/>
                     <span class="glyphicon glyphicon-jpy price">{{item.order_price}}</span>
                 </td>
                 <td>
@@ -183,8 +193,12 @@
                 </td>
                 <td>
                     <a href="javascript:;" class="add-remark" pk="{{item.order_no}}">备注</a><br/>
-                    <a data-trigger="modal" href="/orders/{{item.order_no}}/traces" data-title="订单追踪列表" class="btn" style="padding:0px;">追踪</a>
-                </td>
+                    <a data-trigger="modal" href="/orders/{{item.order_no}}/traces" data-title="订单追踪列表" class="btn" style="padding:0px;">追踪</a><br/>
+                    {%if item.yc_status != 1%}
+                    <a data-trigger="modal" href="/orders/{{item.order_no}}/yichang?action=set" data-title="设置异常">设为异常</a>
+                    {%else%}
+                    <a data-trigger="modal" href="/orders/{{item.order_no}}/yichang?action=del" data-title="解除异常">解除异常</a>
+                    {%endif%}
             </tr>
             {%endfor%}
         </tbody>

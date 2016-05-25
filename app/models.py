@@ -371,6 +371,7 @@ class Order(db.Document):
 
     # 跟踪纪录
     trace_list = db.ListField(db.ReferenceField("OrderTrace"))
+    yc_status = db.IntField(default=0)
 
 
     meta = {
@@ -380,10 +381,10 @@ class Order(db.Document):
             "raw_order_no",
             "status",
             "crawl_source",
-            "-create_date_time",
             "create_date_time",
             "source_account",
             "kefu_username",
+            "yc_status",
         ],
     }
 

@@ -1,6 +1,7 @@
 <ul class="nav nav-tabs">
     <li role="presentation" class="{%if tab=='dealing'%}active{%endif%}"><a href="/orders/my?tab=dealing">待处理 <span class="badge" style="background-color:red"> {{dealing_count}}</span></a></li>
     <li role="presentation" class="{%if tab=='dealed'%}active{%endif%}"><a href="/orders/my?tab=dealed">正在出票 <span class="badge" style="background-color:red"> {{dealed_count}}</span></a></li>
+    <li role="presentation" class="{%if tab=='yichang'%}active{%endif%}"><a href="/orders/my?tab=yichang">异常订单<span class="badge" style="background-color:red"> {{yichang_count}}</span></a></li>
 </ul>
 
 <table class="table table-hover" style="margin-bottom: 0px;">
@@ -35,11 +36,21 @@
             </td>
             <td>
                 {% if locking[item.order_no]%}
-                <a href="/orders/{{item.order_no}}/pay" class="btn btn-default" target="_blank" disabled>正在锁票...</a><br /> 
+                <a href="javascript:return false;" class="btn btn-default" target="_blank" disabled style="width:120px">正在锁票...</a><br />
                 {%else%}
-                <a href="/orders/{{item.order_no}}/pay" class="btn btn-warning" target="_blank">立即支付</a><br /> 
+                    {%if item.status in [3, 4, 7]%}
+                        <a href="/orders/{{item.order_no}}/pay" class="btn btn-warning" target="_blank" style="width:120px">立即支付</a><br />
+                    {%else%}
+                        <a href="javascript:return false;" class="btn btn-warning" target="_blank" disabled style="width:120px">立即支付</a><br />
+                    {%endif%}
                 {%endif%}
                 <a href="#" class="sel-change" id="kefuname" data-type="select" data-pk="{{item.order_no}}" data-url="/orders/changekefu" data-title="选择目标账号">转移</a>
+                {%if item.yc_status != 1%}
+                <a data-trigger="modal" href="/orders/{{item.order_no}}/yichang?action=set" data-title="异常订单">设为异常</a>
+                {%else%}
+                <a data-trigger="modal" href="/orders/{{item.order_no}}/yichang?action=del" data-title="异常订单">解除异常</a>
+                {%endif%}
+                <a data-trigger="modal" href="/orders/{{item.order_no}}/traces" data-title="订单追踪列表" style="padding:0px;">追踪</a><br/>
             </td>
             {%endfor%}
         </tr>

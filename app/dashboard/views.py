@@ -76,6 +76,45 @@ class LoginInView(MethodView):
             return redirect(url_for('dashboard.login'))
 
 
+class YiChangeOP(MethodView):
+    @login_required
+    def get(self, order_no):
+        order = Order.objects.get_or_404(order_no=order_no)
+        users  = AdminUser.objects.filter(is_removed=0)
+        action = request.args.get("action", "set")
+        return render_template('dashboard/order-yichang.html', order=order, users=users, action=action)
+
+    @login_required
+    def post(self, order_no):
+        order = Order.objects.get_or_404(order_no=order_no)
+        kefu = request.form.get("username")
+        desc = request.form.get("desc")
+        action = request.form.get("action", "set")
+        if action == "del":
+            if order.yc_status != YC_STATUS_ING:
+                return jsonify({"code":0, "msg": "执行失败, 状态不对"})
+            old_kefu = AdminUser.objects.get(username=order.kefu_username)
+            order.modify(yc_status=YC_STATUS_DONE, kefu_username=kefu)
+            msg = "%s解除异常状态, 处理人:%s=>%s 描述:%s" % (current_user.username, old_kefu.username, kefu, desc)
+            order.add_trace(OT_YICHANG2, msg)
+            if order.status in [STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY]:
+                assign.add_dealing(order, AdminUser.objects.get(username=kefu))
+            elif order.status == STATUS_ISSUE_ING:
+                assign.add_dealed_but_not_issued(order, AdminUser.objects.get(username=kefu))
+            access_log.info("[yichangop] %s", msg)
+            return jsonify({"code":1, "msg": "解除异常执行成功"})
+        else:
+            if order.yc_status != YC_STATUS_NONE:
+                return jsonify({"code":0, "msg": "执行失败，已经是异常单了"})
+            old_kefu = AdminUser.objects.get(username=order.kefu_username)
+            order.modify(yc_status=YC_STATUS_ING, kefu_username=kefu)
+            msg = "%s将单设为异常单, 处理人:%s=>%s 描述:%s" % (current_user.username, old_kefu.username, kefu, desc)
+            order.add_trace(OT_YICHANG, msg)
+            assign.remove_dealing(order, old_kefu)
+            access_log.info("[yichangop] %s", msg)
+            return jsonify({"code":1, "msg": "设置异常执行成功"})
+
+
 def parse_page_data(qs):
     total = qs.count()
     params = request.values.to_dict()
@@ -119,6 +158,9 @@ def order_list():
     pay_status = params.get("pay_status", "")
     if pay_status:
         query.update(pay_status=int(pay_status))
+    yc_status = params.get("yc_status", "")
+    if yc_status:
+        query.update(yc_status=int(yc_status))
     q_key = params.get("q_key", "")
     q_value = params.get("q_value", "").strip()
 
@@ -224,6 +266,7 @@ def order_list():
                                 page=parse_page_data(qs),
                                 status_msg={str(k): v for k,v in STATUS_MSG.items()},
                                 pay_status_msg = PAY_STATUS_MSG,
+                                yc_status_msg = YC_STAUTS_MSG,
                                 source_info=SOURCE_INFO,
                                 condition=params,
                                 stat=stat,
@@ -474,8 +517,11 @@ def dealing_order():
     tab = request.args.get("tab", "dealing")
     qs = assign.dealed_but_not_issued_orders(current_user)
     dealed_count = qs.count()
+    yichang_count = Order.objects.filter(kefu_username=current_user.username, yc_status=YC_STATUS_ING).count()
     if tab == "dealing":
         qs = assign.dealing_orders(current_user).order_by("create_date_time")
+    elif tab == "yichang":
+        qs = Order.objects.filter(kefu_username=current_user.username, yc_status=YC_STATUS_ING)
     rds = get_redis("order")
     locking = {}
     for o in qs:
@@ -488,8 +534,9 @@ def dealing_order():
                             page=parse_page_data(qs),
                             status_msg=STATUS_MSG,
                             source_info=SOURCE_INFO,
-                            dealing_count=assign.waiting_lock_size()+qs.count(),
+                            dealing_count=assign.waiting_lock_size()+assign.dealing_size(current_user),
                             dealed_count=dealed_count,
+                            yichang_count=yichang_count,
                             online_users=AdminUser.objects.filter(db.Q(is_switch=True)| \
                                                                   db.Q(username__in=["luojunping", "xiangleilei"])) \
                                                           .filter(username__ne=current_user.username),
@@ -547,6 +594,7 @@ def fangbian_callback():
 
 
 dashboard.add_url_rule("/login", view_func=LoginInView.as_view('login'))
+dashboard.add_url_rule("/orders/<order_no>/yichang", view_func=YiChangeOP.as_view('yichang'))
 
 
 @dashboard.route('/users/config', methods=["POST"])
