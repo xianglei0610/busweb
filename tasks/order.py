@@ -125,6 +125,7 @@ def issued_callback(self, order_no, retry_seq=1):
             "sys_order_no": "",
             "out_order_no": "",
             "raw_order_no"; "",
+            "need_send_msg": 0,
             "pick_info":[{
                 "pick_code": "1",
                 "pck_msg": "2"
@@ -156,6 +157,7 @@ def issued_callback(self, order_no, retry_seq=1):
                 "out_order_no": order.out_order_no,
                 "raw_order_no": order.raw_order_no,
                 "pick_info": pick_info,
+                "need_send_msg": order.need_send_msg,
             }
         }
     elif order.status in [STATUS_GIVE_BACK, STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL]:
@@ -166,6 +168,7 @@ def issued_callback(self, order_no, retry_seq=1):
                 "sys_order_no": order.order_no,
                 "out_order_no": order.out_order_no,
                 "raw_order_no": order.raw_order_no,
+                "need_send_msg": order.need_send_msg,
             }
         }
     else:
@@ -178,4 +181,6 @@ def issued_callback(self, order_no, retry_seq=1):
         order_log.exception("issued_callback")
         self.retry(kwargs={"retry_seq": retry_seq+1}, countdown=30, max_retries=120)
     else:
-        order_log.info("[issue-callback-response]%s %s", order_no, response.read())
+        result = response.read()
+        order.add_trace(OT_ISSUE_CB, "出票回调成功 收到回应：%s" % result)
+        order_log.info("[issue-callback-response]%s %s", order_no, result)

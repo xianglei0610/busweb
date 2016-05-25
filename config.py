@@ -163,4 +163,8 @@ config_mapping = {
     'admin_local': AdminLocalConfig,
     'admin_dev': AdminDevConfig,
     'admin_prod': AdminProdConfig,
+
+    'dashboard_local': AdminLocalConfig,
+    'dashboard_dev': AdminDevConfig,
+    'dashboard_prod': AdminProdConfig,
 }

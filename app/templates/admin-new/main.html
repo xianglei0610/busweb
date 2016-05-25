@@ -9,12 +9,8 @@
   <frameset cols="187,*" frameborder="no" border="0" framespacing="0">
     <frame src="{{url_for('admin.left_page')}}" name="leftFrame" scrolling="No" noresize="noresize" id="leftFrame" title="leftFrame" />
 
-    {%if current_user.is_kefu %}
     <frame src="{{url_for('admin.my_order')}}" name="rightFrame" id="rightFrame" title="rightFrame" />
-    {% endif %}
-    {%if current_user.is_admin %}
     <frame src="{{url_for('admin.all_order')}}" name="rightFrame" id="rightFrame" title="rightFrame" />
-    {% endif %}
   </frameset>
 </frameset>
 <noframes>

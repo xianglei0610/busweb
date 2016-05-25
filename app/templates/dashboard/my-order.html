@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+{% extends 'dashboard/base.html'%}
+
+{% block style %}
+<style type="text/css">
+    .query-form .col-md-1, .query-form .col-md-4, .query-form .col-md-3{
+        padding-left: 2px;
+        padding-right: 6px;
+    }
+    table caption .pull-right span{
+        padding-right: 20px;
+    }
+    .price{
+        color: #f60;
+        font-size:16px;
+        font-family: Verdana,Geneva,sans-serif;
+    }
+    .table{
+        margin-bottom: 0px;
+    }
+</style>
+{%endblock%}
+
+{%block body%}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <ul class="breadcrumb">
+                <li><a href="/">首页</a></li>
+                <li class="active">我的订单</li>
+            </ul>
+        </div>
+    </div>
+    <div class="pull-right">
+        <form id="id-form-switch" action="/users/switch" method="POST">
+            <div class="switch switch-small" id="id-switch">
+                <input type="checkbox" {%if current_user.is_switch%}checked{%endif%} name="switch" id="id-input-switch">
+            </div>
+        <form>
+    </div>
+
+    <div id="content">
+    </div>
+</div>
+{%endblock%}
+
+{% block script_footer %}
+<script type="text/javascript">
+    var auto_reload = true;
+    $('.switch')['bootstrapSwitch']();
+    var idInt = setInterval(function(){
+        if(!auto_reload){
+            console.log("auto reload is off!");
+            return;
+        }
+        $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
+    },3000);
+    $("#content").load("/orders/dealing?tab={{tab}}&dc="+new Date().getTime());
+    $('#id-switch').on('switch-change', function (e, data) {
+        $("#id-form-switch").submit();
+    });
+
+    $('.sel-change').on('shown', function(e, editable) {
+        auto_reload=false;
+    });
+    $('.sel-change').on('hidden', function(e, reason) {
+        auto_reload=true;
+        if(reason === 'save' || reason === 'cancel') {
+        }
+    });
+    $('.sel-change').on('save', function(e, params) {
+        msg = params.response.msg
+        if(params.response.code==1){
+            $.scojs_message(msg, $.scojs_message.TYPE_OK);
+        }
+        else{
+            $.scojs_message(msg, $.scojs_message.TYPE_ERROR);
+        }
+    });
+
+</script>
+{% endblock %}

@@ -2237,6 +2237,7 @@ STATUS_ISSUE_FAIL = 13      # 出票失败, 支付完成后，已确认源网站
 STATUS_ISSUE_SUCC = 14      # 出票成功, 支付完成后，源网站也出票成功
 
 STATUS_MSG = {
+    0: "全部订单",
     STATUS_WAITING_ISSUE: "等待出票",
     STATUS_WAITING_LOCK: "等待下单",
     STATUS_ISSUE_FAIL: "出票失败",
@@ -2396,4 +2397,33 @@ ALIPAY_WY = {
     u"建行": "CCB",
     u"平安": "SPABANK",
     u"浦发": "SPDB",
+}
+
+# 订单追踪类型
+OT_CREATED = 1      # 订单创建
+OT_ASSIGN = 2       # 订单分派
+OT_LOCK_SUCC = 3    # 下单成功
+OT_LOCK_FAIL = 4    # 下单失败
+OT_LOCK_RETRY = 5   # 下单重试
+OT_ISSUE_FAIL = 6   # 出票失败
+OT_ISSUE_ING = 7    # 正在出票
+OT_ISSUE_SUCC = 8   # 出票成功
+OT_TRANSFER = 9     # 订单转移
+OT_LOCK_CB = 10     # 锁票回调
+OT_ISSUE_CB = 11    # 出票回调
+OT_REMARK = 12        # 增加备注内容
+
+OT_MSG = {
+    OT_CREATED: "创建订单",
+    OT_ASSIGN: "订单分派",
+    OT_LOCK_SUCC: "锁票成功",
+    OT_LOCK_FAIL: "锁票失败",
+    OT_LOCK_RETRY: "锁票重试",
+    OT_ISSUE_FAIL: "出票失败",
+    OT_ISSUE_ING: "正在出票",
+    OT_ISSUE_SUCC: "出票成功",
+    OT_TRANSFER: "订单转移",
+    OT_LOCK_CB: "锁票回调",
+    OT_ISSUE_CB: "出票回调",
+    OT_REMARK: "增加备注",
 }

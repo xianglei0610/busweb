@@ -45,14 +45,25 @@ class Flow(object):
             "out_order_no": order.out_order_no,
             "raw_order_no": order.raw_order_no,
         }
-        call_from = traceback.format_stack()[-2]
-        order_log.info("[lock-start] order: %s call from: %s", order.order_no, call_from.replace(os.linesep, " "))
+        order_log.info("[lock-start] order: %s", order.order_no)
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 防止重复下单
-            order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
+            order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
             return
 
-        ret = self.do_lock_ticket(order, **kwargs)
+        if (order.line.drv_datetime-dte.now()).total_seconds() <= 40*60:
+            ret = {
+                "lock_info": {},
+                "source_account": order.source_account,
+                "result_code": 0,
+                "result_reason": "[系统检查]距离开车时间太近",
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": "",
+                "pay_money": 0,
+            }
+        else:
+            ret = self.do_lock_ticket(order, **kwargs)
         order.reload()
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 再次检查, 防止重复支付
@@ -77,10 +88,11 @@ class Flow(object):
                 "total_price": order.order_price,
             })
             json_str = json.dumps({"code": RET_OK, "message": "OK", "data": data})
-            order_log.info("[lock-result] succ. order: %s source_account:%s", order.order_no, order.source_account)
+            order_log.info("[lock-result] succ. order: %s rebot:%s raw_order_no:%s pay_order_no:%s lock_info:%s", \
+                           order.order_no, order.source_account, order.raw_order_no, order.pay_order_no, order.lock_info)
         elif ret["result_code"] == 2:   # 锁票失败,进入锁票重试
             order.modify(source_account=ret["source_account"], lock_info=ret["lock_info"])
-            self.lock_ticket_retry(order)
+            self.lock_ticket_retry(order, reason=ret["result_reason"])
             order_log.info("[lock-result] retry. order: %s, reason: %s", order.order_no, ret["result_reason"])
             return
         elif ret["result_code"] == 0:   # 锁票失败
@@ -88,7 +100,7 @@ class Flow(object):
                          lock_info=ret["lock_info"],
                          lock_datetime=dte.now(),
                          source_account=ret["source_account"])
-            order.on_lock_fail()
+            order.on_lock_fail(reason=ret["result_reason"])
             json_str = json.dumps({"code": RET_LOCK_FAIL, "message": ret["result_reason"], "data": data})
             order_log.info("[lock-result] fail. order: %s, reason: %s", order.order_no, ret["result_reason"])
         elif ret["result_code"] == 3:   # 锁票输验证码
@@ -101,7 +113,9 @@ class Flow(object):
         if notify_url:
             order_log.info("[lock-callback] order:%s, %s %s", order.order_no, notify_url, json_str)
             response = urllib2.urlopen(notify_url, json_str, timeout=20)
-            order_log.info("[lock-callback-response] order:%s, %s", order.order_no, response.read())
+            result = response.read()
+            order.add_trace(OT_LOCK_CB, "锁票回调成功 收到回应：%s" % result)
+            order_log.info("[lock-callback-response] order:%s, %s", order.order_no, result)
 
     def do_lock_ticket(self, order, **kwargs):
         """
@@ -182,7 +196,7 @@ class Flow(object):
         elif code == 5:         # 超时过期, 进入锁票重试
             order_log.info("[issue-refresh-result] order: %s expire. msg:%s", order.order_no, ret["result_msg"])
             order.modify(pay_order_no="", raw_order_no="", lock_info={})
-            self.lock_ticket_retry(order)
+            self.lock_ticket_retry(order, reason=ret["result_msg"])
         else:
             order_log.error("[issue-refresh-result] order: %s error, 未处理状态 status:%s", order.order_no, code)
 
@@ -224,7 +238,7 @@ class Flow(object):
             u"四川": 120+20,
             u"重庆": 60+10,
         }
-        adv_minus = adv_info.get(line.s_province, 30)
+        adv_minus = adv_info.get(line.s_province, 60)
         if (line.drv_datetime-now).total_seconds() <= adv_minus*60:
             return False
 
@@ -291,9 +305,9 @@ class Flow(object):
         now = dte.now()
         line.modify(left_tickets=0, update_datetime=now, refresh_datetime=now)
 
-    def lock_ticket_retry(self, order):
+    def lock_ticket_retry(self, order, reason=""):
         order.modify(status=STATUS_LOCK_RETRY)
-        order.on_lock_retry()
+        order.on_lock_retry(reason=reason)
 
     def extract_alipay(self, content):
         """

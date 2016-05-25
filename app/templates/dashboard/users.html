@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+{% extends 'dashboard/base.html'%}
+
+{% block style %}
+<style type="text/css">
+    .query-form .col-md-1, .query-form .col-md-4 {
+        padding-left: 2px;
+        padding-right: 6px;
+    }
+    .panel{
+        margin-top: 20px;
+    }
+    table caption .pull-right span{
+        padding-right: 20px;
+    }
+</style>
+{%endblock%}
+
+{%block body%}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="breadcrumb">
+                    <li><a href="/">首页</a></li>
+                    <li class="active">系统用户</li>
+                </ul>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs">
+            <li role="presentation" class="{%if condition.tabtype=='all'%}active{%endif%}"><a href="javascript:search('all')">全部用户</a></li>
+            <li role="presentation" class="{%if condition.tabtype=='online'%}active{%endif%}"><a href="javascript:search('online')">正在接单</a></li>
+        </ul>
+
+        <form class="query-form" class="form-horizontal" method="POST">
+            <input type="hidden" name="tabtype" id="id-tabtype" value="all"/>
+        </form>
+
+        <table class="table table-hover" style="margin-bottom: 0px;">
+            <caption>
+                <div class="pull-right">
+                    <span>用户数：<label class="text-danger">{{stat.total_user}}人</label></span>
+                </div>
+            </caption>
+            <thead>
+                <tr>
+                    <th>账号</th>
+                    <th>支付宝网银类型</th>
+                    <th>接单类型</th>
+                    <th>允许/禁止接单</th>
+                    <th>创建时间</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for d in page["items"] %}
+                <tr>
+                    <td>{{d.username}}</td>
+                    <td>
+                        <a href="#" data-value="{{d.yh_type}}" class="sel-yhtype user-config-edit" id="yh_type" data-type="select" data-pk="{{d.username}}" data-url="/users/config" data-title="选择银行">{{yh_names[d.yh_type]}}</a>
+                    </td>
+                    <td>
+                        <a href="#" data-value="[{%for s in d.source_include%}'{{s}}',{%endfor%}]" id="jd_type" class="sel-jdtype user-config-edit" data-type="checklist" data-pk="{{d.username}}" data-url="/users/config" data-title="接单类型">
+                            {%for t in d.source_include %}
+                            {{pay_types[t]}}<br/>
+                            {%endfor%}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="switch switch-mini open-state" id="id-switch" data-user="{{d.username}}">
+                            <input type="checkbox" {%if not d.is_close%}checked{%endif%} name="switch" data-user="{{d.username}}">
+                        </div>
+                    </td>
+                    <td>{{d.create_datetime|format_datetime}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{%endblock%}
+
+{% block script_footer %}
+<script type="text/javascript">
+    $('.switch')['bootstrapSwitch']();
+    $('.open-state').on('switch-change', function (e, data) {
+		$.ajax({
+			url : '/users/config',
+			type : 'post',
+			data : {
+                action: "set_open",
+				username : $(this).attr("data-user"),
+                flag: data.value,
+			},
+			success : function(data){
+				if(data.code==1){
+                    $.scojs_message(data.msg, $.scojs_message.TYPE_OK);
+			    }else{
+                    $.scojs_message(data.msg, $.scojs_message.TYPE_ERROR);
+                }
+		    }
+		});
+    });
+    function search(tab){
+        $("#id-tabtype").val(tab);
+        $(".query-form").submit();
+    };
+    $('.sel-yhtype').editable({
+        source: [
+        {%for k,v in yh_names.items()%}
+            {value: '{{k}}', text: '{{v}}'},
+        {%endfor%}
+        ]
+    });
+
+    $('.sel-jdtype').editable({
+        source: [
+            {%for k,v in pay_types.items()%}
+                {value: '{{k}}', text: '{{v}}'},
+            {%endfor%}
+           ]
+    });
+
+    $('.user-config-edit').on('save', function(e, params) {
+        msg = params.response.msg
+        if(params.response.code==1){
+            $.scojs_message(msg, $.scojs_message.TYPE_OK);
+        }
+        else{
+            $.scojs_message(msg, $.scojs_message.TYPE_ERROR);
+        }
+    });
+</script>
+{%endblock%}

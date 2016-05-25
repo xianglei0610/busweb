@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
-from app import rebot_log, order_status_log, line_log
+from app import rebot_log, line_log
 
 
 class AdminUser(db.Document):
@@ -28,17 +28,16 @@ class AdminUser(db.Document):
     password = db.StringField(max_length=50)
     create_datetime = db.DateTimeField(default=dte.now)
     is_switch = db.IntField()
-    is_kefu = db.IntField()
-    is_admin = db.IntField(default=0)
     yh_type = db.StringField(default="BOCB2C")
     source_include = db.ListField(default=["yhzf", "zfb"])        # 该用户处理的源站
     is_close = db.BooleanField(default=False)
+    is_removed = db.IntField(default=0)
 
     meta = {
         "indexes": [
             "username",
-            "is_kefu",
             "is_switch",
+            "is_removed",
         ],
     }
 
@@ -130,36 +129,36 @@ class Line(db.Document):
     compatible_lines = db.DictField()               # 兼容的路线
 
     # starting
-    s_province = db.StringField(required=True)
-    s_city_id = db.StringField()
-    s_city_name = db.StringField(required=True)
-    s_sta_name = db.StringField(required=True)
-    s_sta_id = db.StringField()
-    s_city_code = db.StringField(required=True)
+    s_province = db.StringField(required=True)      # 出发省(必须有值)
+    s_city_id = db.StringField()                    # 出发城市id（可为空）
+    s_city_name = db.StringField(required=True)     # 出发城市名字(必须有值
+    s_sta_name = db.StringField(required=True)      # 出发站名字（必须有值)
+    s_sta_id = db.StringField()                     # 出发站id(可为空)
+    s_city_code = db.StringField(required=True)     # 出发城市拼音缩写(必须有值)
 
     # destination
-    d_city_name = db.StringField(required=True)
-    d_city_id = db.StringField()
-    d_city_code = db.StringField(required=True)
-    d_sta_name = db.StringField(required=True)
-    d_sta_id = db.StringField()
+    d_city_name = db.StringField(required=True)     # 目的地城市名字(必须有值)
+    d_city_id = db.StringField()                    # 目的地城市id(可为空)
+    d_city_code = db.StringField(required=True)     # 目的地城市拼音缩写(必须有值)
+    d_sta_name = db.StringField(required=True)      # 目的地站名字(必须有值)
+    d_sta_id = db.StringField()                     # 目的地站id(可为空)
 
-    drv_date = db.StringField(required=True)  # 开车日期 yyyy-MM-dd
-    drv_time = db.StringField(required=True)  # 开车时间 hh:mm
-    drv_datetime = db.DateTimeField()         # DateTime类型的开车时间
-    distance = db.StringField()
-    vehicle_type = db.StringField()  # 车型
-    seat_type = db.StringField()     # 座位类型
-    bus_num = db.StringField(required=True)       # 班次
-    full_price = db.FloatField()
-    half_price = db.FloatField()
-    fee = db.FloatField()                 # 手续费
-    crawl_datetime = db.DateTimeField()   # 爬取的时间
-    extra_info = db.DictField()           # 额外信息字段
-    left_tickets = db.IntField()          # 剩余票数
-    update_datetime = db.DateTimeField()  # 更新时间
-    refresh_datetime = db.DateTimeField()   # 线路刷新时间
-    shift_id = db.StringField()       # 车次
+    drv_date = db.StringField(required=True)        # 开车日期 yyyy-MM-dd (必须有值)
+    drv_time = db.StringField(required=True)        # 开车时间 hh:mm (必须有值)
+    drv_datetime = db.DateTimeField()               # DateTime类型的开车时间 (必须有值)
+    distance = db.StringField()                     # 行程距离(可为空)
+    vehicle_type = db.StringField()                 # 车型(可为空), eg:大型大巴
+    seat_type = db.StringField()                    # 座位类型(不重要)
+    bus_num = db.StringField(required=True)         # 车次(必须有值)
+    full_price = db.FloatField()                    # 票价(必须有值)
+    half_price = db.FloatField()                    # 儿童价(不重要)
+    fee = db.FloatField()                           # 手续费
+    crawl_datetime = db.DateTimeField()             # 爬取的时间
+    extra_info = db.DictField()                     # 额外信息字段
+    left_tickets = db.IntField()                    # 剩余票数
+    update_datetime = db.DateTimeField()            # 更新时间
+    refresh_datetime = db.DateTimeField()           # 余票刷新时间
+    shift_id = db.StringField()                     # 车次(不重要)
 
     meta = {
         "indexes": [
@@ -370,6 +369,9 @@ class Order(db.Document):
     kefu_updatetime = db.DateTimeField()
     kefu_assigntime = db.DateTimeField()
 
+    # 跟踪纪录
+    trace_list = db.ListField(db.ReferenceField("OrderTrace"))
+
 
     meta = {
         "indexes": [
@@ -384,6 +386,14 @@ class Order(db.Document):
             "kefu_username",
         ],
     }
+
+    @property
+    def need_send_msg(self):
+        if self.status in [STATUS_GIVE_BACK, STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL]:
+            return 1
+        if self.crawl_source in [SOURCE_BUS365, SOURCE_TC]:
+            return 0
+        return 1
 
     def __str__(self):
         return "[Order object %s]" % self.order_no
@@ -448,17 +458,20 @@ class Order(db.Document):
     def on_create(self, reason=""):
         if self.status != STATUS_WAITING_LOCK:
             return
-        order_status_log.info("[on_create] out_order_no: %s", self.out_order_no)
+        desc = "订单创建成功 12308订单号:%s" % self.out_order_no
+        self.add_trace(OT_CREATED, desc)
 
     def on_lock_fail(self, reason=""):
         if self.status != STATUS_LOCK_FAIL:
             return
-        order_status_log.info("[on_lock_fail] order: %s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
+        desc = "锁票失败 %s" % reason
+        self.add_trace(OT_LOCK_FAIL, desc)
 
     def on_lock_success(self, reason=""):
         if self.status != STATUS_WAITING_ISSUE:
             return
-        order_status_log.info("[on_lock_success] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
+        desc = "锁票成功 源站订单号:%s" % self.raw_order_no
+        self.add_trace(OT_LOCK_SUCC, desc)
 
         from tasks import async_refresh_order
         async_refresh_order.apply_async((self.order_no,), countdown=10)
@@ -466,12 +479,13 @@ class Order(db.Document):
     def on_lock_retry(self, reason=""):
         if self.status != STATUS_LOCK_RETRY:
             return
-        order_status_log.info("[on_lock_retry] order:%s", self.order_no)
+        desc = "锁票重试 原因：%s" % reason
+        self.add_trace(OT_LOCK_RETRY, desc)
 
     def on_give_back(self, reason=""):
         if self.status != STATUS_GIVE_BACK:
             return
-        order_status_log.info("[on_give_back] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
+        self.add_trace(OT_ISSUE_FAIL, "出票失败 原因：源站已退款")
 
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
@@ -480,7 +494,7 @@ class Order(db.Document):
     def on_issue_fail(self, reason=""):
         if self.status != STATUS_ISSUE_FAIL:
             return
-        order_status_log.info("[on_issue_fail] order:%s, out_order_no: %s, reason:%s", self.order_no, self.out_order_no, reason)
+        self.add_trace(OT_ISSUE_FAIL, "出票失败 原因：%s" % reason)
 
         from tasks import issue_fail_send_email
         r = getRedisObj()
@@ -493,7 +507,7 @@ class Order(db.Document):
     def on_issueing(self, reason=""):
         if self.status != STATUS_ISSUE_ING:
             return
-        order_status_log.info("[on_issueing] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
+        self.add_trace(OT_ISSUE_ING, "正在出票")
 
         r = getRedisObj()
         key = RK_ISSUEING_COUNT
@@ -502,7 +516,7 @@ class Order(db.Document):
     def on_issue_success(self, reason=""):
         if self.status != STATUS_ISSUE_SUCC:
             return
-        order_status_log.info("[on_issue_sucess] order:%s, out_order_no: %s", self.order_no, self.out_order_no)
+        self.add_trace(OT_ISSUE_SUCC, "出票成功 短信：%s" % self.pick_msg_list[0])
 
         r = getRedisObj()
         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
@@ -554,6 +568,36 @@ class Order(db.Document):
         from app.flow import get_flow
         flow = get_flow(self.crawl_source)
         return flow.refresh_issue(self, force=force)
+
+    def add_trace(self, ttype, desc, extra_info={}):
+        ot = OrderTrace(order_no=self.order_no,
+                        trace_type=ttype,
+                        desc=desc,
+                        extra_info=extra_info)
+        ot.save()
+        self.update(push__trace_list=ot)
+
+
+class OrderTrace(db.Document):
+    """
+    订单追踪
+    """
+    order_no = db.StringField(required=True)
+    trace_type = db.IntField()          # 追踪类型
+    desc = db.StringField()             # 描述文本
+    extra_info = db.DictField()         # 额外信息
+    create_datetime = db.DateTimeField(default=dte.now)
+
+    meta = {
+        "indexes": [
+            "trace_type",
+            "order_no",
+        ],
+    }
+
+    @property
+    def trace_type_msg(self):
+        return OT_MSG.get(self.trace_type, "其他")
 
 
 class Rebot(db.Document):

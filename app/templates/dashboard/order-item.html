@@ -1,0 +1,180 @@
+{% extends 'dashboard/base.html'%}
+{% block style %}
+<style type="text/css">
+    .price{
+        color: #f60;
+        font-size:16px;
+        font-family: Verdana,Geneva,sans-serif;
+    }
+</style>
+{%endblock%}
+{%block body%}
+		<div class="container">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="breadcrumb">
+                        <li><a href="#">首页</a></li>
+                        <li class="active">订单详情</li>
+                    </ul>
+                </div>
+            </div>
+			<div class="panel panel-default" style="padding-top:0px">
+				<div class="panel-heading" style="">订单信息</div>
+				<table class="table table-hover">
+					<thead>
+						<th>订单号</th>
+						<th>12308订单号</th>
+						<th>建单时间</th>
+						<th>锁票时间</th>
+						<th>锁票次数</th>
+						<th>票数</th>
+						<th>订单金额</th>
+						<th>订单状态</th>
+					</thead>
+					<tbody>
+						<tr>
+                            <td>{{order.order_no}}</td>
+                            <td>{{order.out_order_no}}</td>
+                            <td>{{order.create_date_time|format_datetime}}</td>
+                            <td>{{order.lock_datetime|format_datetime}}</td>
+							<td>1</td>
+                            <td>{{order.ticket_amount}} 张</td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.order_price}}</span></td>
+							<td class="{%if order.status==14%}text-success{%else%}text-danger{%endif%}"class="{%if order.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[order.status]}}</td>
+						</tr>
+						<tr><td colspan="8" style="text-align: center;">
+                            {% for s in order.pick_msg_list %}
+                            {{s}}
+                            <br />
+                            {% endfor %}
+						</td></tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="panel panel-default">
+				<div class="panel-heading">线路信息</div>
+				<table class="table table-hover">
+					<thead>
+						<th>线路ID</th>
+						<th>出发时间</th>
+						<th>车次号</th>
+						<th>行程</th>
+						<th>车票单价</th>
+						<th>手续费</th>
+					</thead>
+					<tbody>
+						<tr>
+                            <td>{%if order.line%}{{order.line.line_id}}{%endif%}</td>
+							<td>{{order.drv_datetime|format_datetime}}</td>
+                            <td>{{order.bus_num}}</td>
+                            <td>{{order.starting_name}} - {{order.destination_name}}</td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.ticket_price}}</span></td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.ticket_fee}}</span></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="panel panel-default">
+				<div class="panel-heading">源站信息</div>
+				<table class="table table-hover">
+					<thead>
+						<th>源站名称</th>
+						<th>源站订单号</th>
+						<th>源站账号</th>
+						<th>源站密码</th>
+					</thead>
+					<tbody>
+						<tr>
+                            <td>{{source_info[order.crawl_source]["name"]}}({{source_info[order.crawl_source]["website"]}})</td>
+                            <td>{{order.raw_order_no}}</td>
+                            <td>{{order.source_account}}</td>
+                            <td>{{order.source_account_pass}}</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="panel panel-default">
+				<div class="panel-heading">联系人和乘客信息</div>
+				<table class="table table-hover">
+					<thead>
+						<th>序号</th>
+						<th>姓名</th>
+						<th>手机号码</th>
+						<th>身份证号</th>
+					</thead>
+					<tbody>
+						<tr>
+							<td>联系人</td>
+                            <td>{{order.contact_info["name"]}}</td>
+                            <td>{{order.contact_info["telephone"]}}</td>
+                            <td>{{order.contact_info["id_number"]}}</td>
+						</tr>
+                        {%for r in order.riders%}
+						<tr>
+                            <td>乘客{{loop.index}}</td>
+                            <td>{{r["name"]}}</td>
+                            <td>{{r["telephone"]}}</td>
+                            <td>{{r["id_number"]}}</td>
+						</tr>
+                        {%endfor%}
+					</tbody>
+				</table>
+			</div>
+			<div class="panel panel-default">
+				<div class="panel-heading">支付信息</div>
+				<table class="table table-hover">
+					<thead>
+						<th>支付类型</th>
+						<th>支付状态</th>
+						<th>支付时间</th>
+						<th>支付账号</th>
+						<th>支付订单号</th>
+						<th>支付流水号</th>
+						<th>支付金额</th>
+						<th>退款流水号</th>
+						<th>退款金额</th>
+					</thead>
+					<tbody>
+						<tr>
+                            <td>{{order.pay_channel}}</td>
+                            <td>{{pay_status_msg[order.pay_status]}}</td>
+							<td>None</td>
+                            <td>{{order.pay_account}}</td>
+                            <td>{{order.pay_order_no}}</td>
+                            <td>{{order.pay_trade_no}}</td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.pay_money}}</span></td>
+                            <td>{{order.refund_trade_no}}</td>
+                            <td><span class="glyphicon glyphicon-jpy price">{{order.refund_money}}</span></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="panel panel-default">
+				<div class="panel-heading">操作人员信息</div>
+				<table class="table table-hover">
+					<thead>
+						<th>操作人</th>
+						<th>派单时间</th>
+						<th>处理时间</th>
+					</thead>
+					<tbody>
+						<tr>
+                            <td>{{order.kefu_username}}</td>
+                            <td>{{order.kefu_assigntime|format_datetime}}</td>
+                            <td>{{order.kefu_updatetime|format_datetime}}</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div class="panel panel-default">
+				<div class="panel-heading">订单追踪</div>
+				<div style="padding: 10px;">
+                   {%for trace in order.trace_list%}
+                    <p>{{trace.create_datetime|format_datetime}} 【{{trace.trace_type_msg}}】 {{trace.desc}}</p>
+                   {%endfor%}
+				</div>
+			</div>
+
+		</div>
+{%endblock%}
