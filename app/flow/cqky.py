@@ -132,6 +132,12 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
                     })
+                elif u"例行维护" in res["msg"]:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
+                    })
                 elif _check_fail(res["msg"]):
                     self.close_line(line, reason=res["msg"])
                     lock_result.update({
