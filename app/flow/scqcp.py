@@ -103,42 +103,15 @@ class Flow(BaseFlow):
                                    source_account=rebot.telephone,
                                    result_reason="获取token失败")
                 return lock_result
-            data = {
-              "sdfgfgfg": "on",
-              "contact_name": order.contact_info['name'],
-              "phone_num": order.contact_info['telephone'],
-              "contact_card_num": "",
-              "sign_id": order.line.extra_info['sign_id'],
-              "carry_sta_id": order.line.s_sta_id,
-              "drv_date_time": "%s %s" % (order.line.drv_date, order.line.drv_time),
-              "stop_name": order.line.d_city_name,
-              "token": token,
-              "is_act": "",
-              "passenger_num": "",
-              "is_save_contact_person": "false"
-              }
-            riders = order.riders
-            count = len(riders)
-            data['passenger_num'] = 'passenger_num%s' % str(count)
-            tmp = {}
-            for i in range(count):
-                tmp = {
-                    "birthday%s" % (i+1): "%s-%s-%s" % (riders[i]["id_number"][6:10],riders[i]["id_number"][10:12],riders[i]["id_number"][12:14]),
-                    "bring_child%s" % (i+1): '0',
-                    "passenger_card_num%s" % (i+1): riders[i]["id_number"],
-                    "passenger_card_type%s" % (i+1): "id_card",
-                    "passenger_name%s" % (i+1): riders[i]["name"],
-                    "passenger_ticket_type%s" % (i+1): "0",
-                }
-                data.update(tmp)
-            ret = self.send_lock_request(rebot, data)
+
+            ret = self.send_lock_request_by_web(rebot, order, token)
             if not ret:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
                 rebot = order.change_lock_rebot()
                 lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
-                                   result_reason="锁票时ip异常")
+                                   result_reason="锁票异常")
                 return lock_result
             lock_result = {
                 "lock_info": ret,
@@ -146,7 +119,7 @@ class Flow(BaseFlow):
                 "pay_money": 0,
             }
             if ret["status"] == 1:
-                expire_datetime = dte.now()+datetime.timedelta(seconds=10*60)
+                expire_datetime = dte.now()+datetime.timedelta(seconds=28*60)
                 lock_result.update({
                     "result_code": 1,
                     "result_reason": "",
@@ -193,7 +166,6 @@ class Flow(BaseFlow):
         """
         单纯向源站发锁票请求
         """
-        return self.send_lock_request_by_web(rebot, data)
         url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, "/api/v1/telecom/lock")
         headers = {
             "User-Agent": rebot.user_agent,
@@ -204,7 +176,35 @@ class Flow(BaseFlow):
         ret = r.json()
         return ret
 
-    def send_lock_request_by_web(self, rebot, data):
+    def send_lock_request_by_web(self, rebot, order, token):
+        data = {
+          "sdfgfgfg": "on",
+          "contact_name": order.contact_info['name'],
+          "phone_num": order.contact_info['telephone'],
+          "contact_card_num": "",
+          "sign_id": order.line.extra_info['sign_id'],
+          "carry_sta_id": order.line.s_sta_id,
+          "drv_date_time": "%s %s" % (order.line.drv_date, order.line.drv_time),
+          "stop_name": order.line.d_city_name,
+          "token": token,
+          "is_act": "",
+          "passenger_num": "",
+          "is_save_contact_person": "false"
+          }
+        riders = order.riders
+        count = len(riders)
+        data['passenger_num'] = 'passenger_num%s' % str(count)
+        tmp = {}
+        for i in range(count):
+            tmp = {
+                "birthday%s" % (i+1): "%s-%s-%s" % (riders[i]["id_number"][6:10],riders[i]["id_number"][10:12],riders[i]["id_number"][12:14]),
+                "bring_child%s" % (i+1): '0',
+                "passenger_card_num%s" % (i+1): riders[i]["id_number"],
+                "passenger_card_type%s" % (i+1): "id_card",
+                "passenger_name%s" % (i+1): riders[i]["name"],
+                "passenger_ticket_type%s" % (i+1): "0",
+            }
+            data.update(tmp)
         headers = rebot.http_header()
         url = 'http://scqcp.com/ticketOrder/lockTicket.html'
         r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers, cookies=json.loads(rebot.cookies),timeout=60,allow_redirects=False)
@@ -506,6 +506,7 @@ class Flow(BaseFlow):
                 except:
                     pass
                 return {"flag": "html", "content": r.content}
+            return {"flag": "error", "content": "锁票失败"}
         else:
             cookies = json.loads(rebot.cookies)
             login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()

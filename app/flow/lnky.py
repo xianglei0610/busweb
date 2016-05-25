@@ -365,16 +365,20 @@ class Flow(BaseFlow):
         return result_info
 
     def check_wap_status(self):
-        rebot = LnkyWapRebot.get_one()
-        headers = rebot.http_header()
-        if headers.has_key('Content-Type'):
-            del headers['Content-Type']
-        url = "http://www.jt306.cn/wap/login/home.do"
-        res = rebot.http_get(url, headers=headers)
-        if res.status_code == '404':
+        try:
+            rebot = LnkyWapRebot.get_one()
+            headers = rebot.http_header()
+            if headers.has_key('Content-Type'):
+                del headers['Content-Type']
+            url = "http://www.jt306.cn/wap/login/home.do"
+            res = rebot.http_get(url, headers=headers)
+            content = res.content
+            if res.status_code == '404' or content == '404':
+                return 0
+            else:
+                return 1
+        except:
             return 0
-        else:
-            return 1
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         flag = self.check_wap_status()
@@ -425,7 +429,7 @@ class Flow(BaseFlow):
                 if order.pay_order_no != pay_order_no:
                     order.update(pay_order_no=pay_order_no)
                 return {"flag": "html", "content": r.content}
-
+            return {"flag": "error", "content": "锁票失败"}
         is_login = rebot.test_login_status()
         if not is_login:
             rebot.login()
