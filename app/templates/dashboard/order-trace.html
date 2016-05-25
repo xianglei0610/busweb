@@ -21,6 +21,9 @@
 	<body>
         <div style="padding: 10px;">
             <table class="table table-condensed">
+                <caption>
+                    <a href="javascript:;" class="add-remark" pk="{{order.order_no}}">增加备注</a><br/>
+                </caption>
                <tbody>
                    {%for trace in order.trace_list|reverse%}
                    <tr><td>{{trace.create_datetime|format_datetime}}</td><td>【{{trace.trace_type_msg}}】 {{trace.desc}}</td></tr>
@@ -29,4 +32,30 @@
             </table>
         </div>
 	</body>
+
+<script type="text/javascript">
+    $(".add-remark").click(function(){
+        var orderno = $(this).attr("pk");
+        layer.prompt({
+            title: '输入备注内容',
+            formType: 2
+        }, function(text) {
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "/orders/"+orderno+"/addremark",
+                data:"content="+text,
+                async: false,
+                error: function(request) {
+                    layer.msg("网络错误!");
+                },
+                success: function(data) {
+                    layer.msg(data.msg);
+                    var modal = $.scojs_modal();
+                    modal.close();
+                }
+            });
+        });
+    });
+</script>
 </html>
