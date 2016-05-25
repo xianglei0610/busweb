@@ -275,6 +275,7 @@ def order_list():
                                 status_count=status_count,
                                 site_count=site_count,
                                 account_count=account_count,
+                                all_user=AdminUser.objects.filter(is_removed=0),
                                 )
 
 
@@ -402,7 +403,7 @@ def change_kefu():
     except:
         msg = "不存在%s这个账号" % kefu_name
         return jsonify({"code": 0, "msg": msg})
-    if not target.is_switch and target.username not in ["luojunping", "xiangleilei"]:
+    if order.yc_status != YC_STATUS_ING and (not target.is_switch and target.username not in ["luojunping", "xiangleilei"]):
         msg = "%s没在接单，禁止转单给他。" % target.username
         return jsonify({"code": 0, "msg": msg})
     access_log.info("%s 将%s转给 %s", current_user.username, order_no, kefu_name)
@@ -537,9 +538,7 @@ def dealing_order():
                             dealing_count=assign.waiting_lock_size()+assign.dealing_size(current_user),
                             dealed_count=dealed_count,
                             yichang_count=yichang_count,
-                            online_users=AdminUser.objects.filter(db.Q(is_switch=True)| \
-                                                                  db.Q(username__in=["luojunping", "xiangleilei"])) \
-                                                          .filter(username__ne=current_user.username),
+                            all_user=AdminUser.objects.filter(is_removed=0),
                             locking=locking)
 
 
