@@ -104,7 +104,7 @@ class YiChangeOP(MethodView):
             access_log.info("[yichangop] %s", msg)
             return jsonify({"code":1, "msg": "解除异常执行成功"})
         else:
-            if order.yc_status != YC_STATUS_NONE:
+            if order.yc_status == YC_STATUS_ING:
                 return jsonify({"code":0, "msg": "执行失败，已经是异常单了"})
             old_kefu = AdminUser.objects.get(username=order.kefu_username)
             order.modify(yc_status=YC_STATUS_ING, kefu_username=kefu)
