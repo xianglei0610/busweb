@@ -26,6 +26,12 @@ from tasks import async_lock_ticket, issued_callback
 from app import order_log, db, access_log
 
 
+@dashboard.before_request
+def log_request():
+    uname = getattr(current_user, "username", None)
+    access_log.info("[request] %s %s %s %s", uname, request.remote_addr, request.url, request.values)
+
+
 @dashboard.route('/logout')
 @login_required
 def logout():
