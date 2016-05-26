@@ -365,6 +365,7 @@ class Flow(BaseFlow):
         return result_info
 
     def check_wap_status(self):
+        return 0
         try:
             rebot = LnkyWapRebot.get_one()
             headers = rebot.http_header()
@@ -409,7 +410,8 @@ class Flow(BaseFlow):
                             pay_url = orderDetail['payURL']
                         elif orderDetail['status'] == '1':
                             return {"flag": "false", "content": '订单已经支付'}
-                        return {"flag": "false", "content": '订单不是待支付的状态'}
+                        else:
+                            return {"flag": "false", "content": '订单不是待支付的状态'}
                 else:
                     pay_url = order.lock_info.get("pay_url", '')
                 if not pay_url:
