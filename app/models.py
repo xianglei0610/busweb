@@ -2943,7 +2943,13 @@ class Bus365AppRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return ''
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_BUS365, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_BUS365)
+        self.modify(ip=ipstr)
+        return ipstr
 
     def http_header(self, ua=""):
         return {

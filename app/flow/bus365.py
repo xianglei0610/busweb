@@ -16,6 +16,7 @@ from app.models import Bus365AppRebot, Line, Bus365WebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from app import order_log, line_log
+from app.proxy import get_proxy
 
 
 class Flow(BaseFlow):
@@ -53,39 +54,8 @@ class Flow(BaseFlow):
             if order.line.left_tickets == 0:
                 lock_result.update(result_reason="该条线路余票不足", result_code=0)
                 return lock_result
-            data = {
-                "order.scheduleid": line.shift_id,
-                "getinsure": "1",
-                "order.seattype": line.seat_type,
-                "order.userid": rebot.user_id,
-                "order.username": rebot.telephone,
-                "order.passengername": order.contact_info['name'],
-                "order.passengerphone": order.contact_info['telephone'],
-                "order.passengeremail": '',
-                "order.idnum": '',
-                "order.issavepassenger":"1",
-                "token": json.dumps({"clienttoken": rebot.client_token, "clienttype":"android"}),
-                "clienttype": "android",
-                "usertoken": rebot.client_token,
-                "deviceid": rebot.deviceid,
-                "clientinfo": rebot.clientinfo,
-              }
-            riders = order.riders
-            count = len(riders)
-            pas_list = []
-            for i in range(count):
-                tmp = {
-                    "tickettype": '1',
-                    "cardtype": '1',
-                    "phonenum": riders[i]["telephone"],
-                    "idnum": riders[i]["id_number"],
-                    "premiumcount": "0",
-                    "premiumstate": "0",
-                    "name": riders[i]["name"],
-                }
-                pas_list.append(tmp)
-            data['order.passengers'] = json.dumps(pas_list)
-            res = self.send_lock_request(order, rebot, data=data)
+
+            res = self.send_lock_request(order, rebot)
   
             if isinstance(res, list):
                 res = res[0]
@@ -108,6 +78,16 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = res.get('message', '')
+                if u'同一IP一天内订票超过限制次数' in errmsg:
+                    res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["message"])
+                    get_proxy("bus365").remove_proxy(rebot.proxy_ip)
+                    rebot.modify(ip="")
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": "%s" % res["msg"],
+                    })
+                    return lock_result
                 flag = False
                 for i in [u"锁定接口异常",u"获取座位信息失败",u"当前班次异常", u"锁定接口异常",u"接口失败",u"授权请求不合法"]:
                     if i in errmsg:
@@ -134,10 +114,43 @@ class Flow(BaseFlow):
                 })
             return lock_result
 
-    def send_lock_request(self, order, rebot, data):
+    def send_lock_request(self, order, rebot):
         """
         单纯向源站发请求
         """
+        line = order.line
+        riders = order.riders
+        data = {
+            "order.scheduleid": line.shift_id,
+            "getinsure": "1",
+            "order.seattype": line.seat_type,
+            "order.userid": rebot.user_id,
+            "order.username": rebot.telephone,
+            "order.passengername": order.contact_info['name'],
+            "order.passengerphone": order.contact_info['telephone'],
+            "order.passengeremail": '',
+            "order.idnum": '',
+            "order.issavepassenger":"1",
+            "token": json.dumps({"clienttoken": rebot.client_token, "clienttype":"android"}),
+            "clienttype": "android",
+            "usertoken": rebot.client_token,
+            "deviceid": rebot.deviceid,
+            "clientinfo": rebot.clientinfo,
+          }
+        count = len(riders)
+        pas_list = []
+        for i in range(count):
+            tmp = {
+                "tickettype": '1',
+                "cardtype": '1',
+                "phonenum": riders[i]["telephone"],
+                "idnum": riders[i]["id_number"],
+                "premiumcount": "0",
+                "premiumstate": "0",
+                "name": riders[i]["name"],
+            }
+            pas_list.append(tmp)
+        data['order.passengers'] = json.dumps(pas_list)
         order_url = "http://%s/order/createorder" % order.line.extra_info['start_info']['netname']
         headers = rebot.http_header()
         r = rebot.http_post(order_url, data=data, headers=headers)

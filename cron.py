@@ -323,9 +323,11 @@ def main():
     # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["lnky"], minutes=1)
+    #sched.add_interval_job(check_consumer_proxy, args=["lnky"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["e8s"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["bus365"], minutes=1)
+
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
