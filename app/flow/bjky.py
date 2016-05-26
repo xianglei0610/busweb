@@ -330,7 +330,7 @@ class Flow(BaseFlow):
 #                 url = 'https://unionpaysecure.com/api/Pay.action'
 #                 r = requests.post(url, data=data, headers=headers, cookies=cookies)
                 return {"flag": "html", "content": r.content}
-
+            return {"flag": "error", "content": "锁票失败"}
         if valid_code:#  登陆
             key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
             data = json.loads(session[key])

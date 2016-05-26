@@ -2495,6 +2495,96 @@ class LnkyWapRebot(Rebot):
             return 0
 
 
+class LnkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField(default="")
+    user_id = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "lnkyweb_rebot",
+    }
+    crawl_source = SOURCE_LNKY
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         key = RK_PROXY_IP_LNKY
+#         if ipstr and rds.sismember(key, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(key)
+#         self.modify(ip=ipstr)
+#         return ipstr
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": self.user_agent or ua,
+        }
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[lnky] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[lnky] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        headers = self.http_header(ua)
+        pwd_info = SOURCE_INFO[SOURCE_LNKY]["pwd_encode"]
+        data = {
+              "account": self.telephone,
+              "password": pwd_info[self.password]
+              }
+        login_url = 'http://www.jt306.cn/ticket/uc/login.action'
+        cookies = {}
+        r = self.http_post(url=login_url, data=data, headers=headers)
+        content = r.content
+        if not isinstance(content, unicode):
+            content = content.decode('utf-8')
+        cookies.update(dict(r.cookies))
+        sel = etree.HTML(content)
+        login_error = sel.xpath('//form[@id="ucJumpForm"]/p[@class="ui-state-error"]/text()')
+        if not login_error:
+            matchObj = re.findall('top.infoLogin\((.*)\);', content)
+            user_info = matchObj[0].split(',')
+            username = user_info[0][1:-1]
+            user_id = user_info[1][1:-1]
+            self.last_login_time = dte.now()
+            self.user_agent = self.user_agent or ua
+            self.cookies = json.dumps(cookies)
+            self.is_active = True
+            self.user_id = user_id
+            self.save()
+            rebot_log.info("登陆成功 lnky %s,username:%s", self.telephone,username)
+            return "OK"
+        else:
+            rebot_log.error("登陆错误 lnky %s, %s", self.telephone, str(login_error[0]))
+            return "fail"
+
+    def test_login_status(self):
+        try:
+            user_url = "http://www.jt306.cn/ticket/uc/goUpdate.action?userId=%s"%self.user_id
+            headers = self.http_header()
+            cookies = json.loads(self.cookies)
+            data = {}
+            res = self.http_post(user_url, data=data, headers=headers, cookies=cookies)
+            content = res.content
+            if self.telephone in content:
+                return 1
+            else:
+                return 0
+        except:
+            return 0
+
+
 class E8sAppRebot(Rebot):
     user_agent = db.StringField(default="Apache-HttpClient/UNAVAILABLE (java 1.4)")
     user_id = db.StringField()

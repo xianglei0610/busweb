@@ -429,7 +429,7 @@ def order_pay(order_no):
     rds = get_redis("order")
     key = RK_ORDER_LOCKING % order.order_no
     if rds.get(key):
-        return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("admin.order_pay", order_no=order.order_no)
+        return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("dashboard.order_pay", order_no=order.order_no)
 
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, bank=current_user.yh_type)
@@ -438,16 +438,16 @@ def order_pay(order_no):
     flag = ret.get("flag", "")
     if flag == "url":
         if order.pay_money != order.order_price and not force:
-            return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("admin.order_pay", order_no=order.order_no, force=1)
+            return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("dashboard.order_pay", order_no=order.order_no, force=1)
         return redirect(ret["content"])
     elif flag == "html":
         if order.pay_money != order.order_price and not force:
-            return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("admin.order_pay", order_no=order.order_no, force=1)
+            return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("dashboard.order_pay", order_no=order.order_no, force=1)
         return ret["content"]
     elif flag == "input_code":
         return render_template('dashboard/src-code-input.html', order=order, source_info=SOURCE_INFO)
     elif flag == "error":
-        return "%s  <a href='%s'>点击重试</a>" % (ret["content"], url_for("admin.order_pay", order_no=order.order_no))
+        return "%s  <a href='%s'>点击重试</a>" % (ret["content"], url_for("dashboard.order_pay", order_no=order.order_no))
     return "异常页面 %s" % str(json.dumps(ret,ensure_ascii = False))
 
 
