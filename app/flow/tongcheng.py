@@ -446,7 +446,8 @@ class Flow(BaseFlow):
                     # return {"flag": "url", "content": pay_url}
 
                     r = rebot.http_get(pay_url, headers=headers, verify=False)
-                    soup = BeautifulSoup(r.content, "lxml")
+                    content = r.content
+                    soup = BeautifulSoup(content, "lxml")
                     sign = soup.select("#aliPay")[0].get("data-sign")
                     partner = soup.find("input", attrs={"name": "partner"}).get("value")
                     serial = soup.find("input", attrs={"name": "serial"}).get("value")

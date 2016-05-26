@@ -166,8 +166,8 @@
                 <th>创建/下单/出发时间</th>
                 <th>车次号/行程</th>
                 <th>源站信息</th>
-                <th>处理人</th>
-                <th>订票数/金额</th>
+                <th>处理人/支付账号/支付金额</th>
+                <th>订票数/订单金额</th>
                 <th>订单状态</th>
                 <th>操作</th>
             </tr>
@@ -181,7 +181,7 @@
                 <td style="white-space: nowrap;">{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
                 <td>{{item.bus_num}}<br>{{item.starting_name.split(';')[0]}} - {{item.destination_name.split(';')[0]}}</br>{{item.starting_name.split(';')[1]}} - {{item.destination_name.split(';')[1]}}</td>
                 <td>{{source_info[item.crawl_source]["name"]}}<br>{{item.source_account}}</br>{{item.source_account_pass}}</td>
-                <td>{{item.kefu_username}}</td>
+                <td>{{item.kefu_username}}<br/>{{item.pay_account}}<br/>{{item.pay_money}}</td>
                 <td>
                     {{item.riders|count}}张
                     <br /><br/>
