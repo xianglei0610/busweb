@@ -365,7 +365,7 @@ class Flow(BaseFlow):
         return result_info
 
     def check_wap_status(self):
-        return 0
+        return 1
         try:
             rebot = LnkyWapRebot.get_one()
             headers = rebot.http_header()
