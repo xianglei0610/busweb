@@ -439,7 +439,6 @@ class Bus365ProxyConsumer(ProxyConsumer):
                              timeout=3,
                              proxies={"http": "http://%s" % ipstr})
             res = r.json()
-            print res
         except:
             return False
         if r.status_code != 200 or res['totalpage'] == 0:
