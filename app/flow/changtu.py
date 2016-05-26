@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
 import random
-import requests
 import json
 import urllib
 import datetime

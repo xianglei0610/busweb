@@ -178,7 +178,7 @@ class Flow(BaseFlow):
                 "001004": "购票失败",
                 "001005": "退票成功",
                 "001006": "改签成功",
-                "001007": "等待出票"
+                "001007": "等待付款"
                 }
         if state == "001003": #"出票成功":
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]

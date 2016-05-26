@@ -279,7 +279,7 @@ class Flow(BaseFlow):
                 pay_url = orderDetail['payURL']
                 order.modify(pay_url=pay_url)
                 order.reload()
-                return {"state": u'等待出票'}
+                return {"state": u'等待付款'}
             elif orderDetail['status'] == '1':
                 return {"state": u"购票成功"}
 
@@ -305,7 +305,7 @@ class Flow(BaseFlow):
             if orderDetail == u'已支付':
                 return {"state": u"购票成功"}
             else:
-                return {"state": u'等待出票'}
+                return {"state": u'等待付款'}
 
     def do_refresh_issue(self, order):
         result_info = {
@@ -331,7 +331,7 @@ class Flow(BaseFlow):
         order_status_mapping = {
                 u"购票成功": "出票成功",
                 u"订单超时": "出票失败",
-                u'等待出票': "等待出票",
+                u'等待付款': "等待付款",
                 }
         if state in(u"购票成功"): #"出票成功":
             code_list = []
