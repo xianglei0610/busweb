@@ -392,7 +392,7 @@ def change_kefu():
     params = request.values.to_dict()
     order_no, kefu_name = params["pk"], params["value"]
     order = Order.objects.get(order_no=order_no)
-    if order.status in [12, 13, 14]:
+    if order.yc_status != YC_STATUS_ING and order.status in [12, 13, 14]:
         return jsonify({"code": 0, "msg": "已支付,不许转!"})
     if not kefu_name:
         return jsonify({"code": 0, "msg": "请选择目标账号!"})
