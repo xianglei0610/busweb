@@ -408,6 +408,44 @@ class ChangtuProxyConsumer(ProxyConsumer):
         return True
 
 
+class Bus365ProxyConsumer(ProxyConsumer):
+    PROXY_KEY = "proxy:bus365"
+    name = "bus365"
+
+    def valid_proxy(self, ipstr):
+        headers = {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded;",
+            "User-Agent": 'Apache-HttpClient/UNAVAILABLE (java 1.4)',
+            'Accept-Language': 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3',
+            "Connection": "keep-alive",
+            "accept": "application/json,",
+        }
+        init_params = {
+            "token": '{"clienttoken":"","clienttype":"android"}',
+            "clienttype": "android",
+            "usertoken": ''
+            }
+        params = {
+           "pagenum": "1",
+           "pagesize": "10"
+        }
+        params.update(init_params)
+        url = "http://www.bus365.com/app/noticepage/0"
+        notice_url = "%s?%s" % (url, urllib.urlencode(params))
+        try:
+            r = requests.get(notice_url,
+                             headers=headers,
+                             timeout=3,
+                             proxies={"http": "http://%s" % ipstr})
+            res = r.json()
+            print res
+        except:
+            return False
+        if r.status_code != 200 or res['totalpage'] == 0:
+            return False
+        return True
+
 proxy_producer = ProxyProducer()
 
 if "proxy_list" not in globals():
@@ -421,6 +459,7 @@ if "proxy_list" not in globals():
     proxy_list[LnkyProxyConsumer.name] = LnkyProxyConsumer()
     proxy_list[E8sProxyConsumer.name] = E8sProxyConsumer()
     proxy_list[ChangtuProxyConsumer.name] = ChangtuProxyConsumer()
+    proxy_list[Bus365ProxyConsumer.name] = Bus365ProxyConsumer()
 
     for name, obj in proxy_list.items():
         proxy_producer.registe_consumer(obj)

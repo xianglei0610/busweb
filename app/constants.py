@@ -2320,6 +2320,7 @@ RK_PROXY_IP_E8S = "proxy:e8s"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"        # 当前使用的
 
 RK_PROXY_IP_SCQCP = "proxy:scqcp"
+RK_PROXY_IP_BUS365 = "proxy:bus365"
 
 
 ASSIGN_FLAG = False #是否开启源站和账号分流
