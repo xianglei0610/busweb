@@ -101,7 +101,7 @@ class Flow(BaseFlow):
                     })
                     return lock_result
 
-                for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码",u"班次不是售票状态"]:
+                for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码",u"班次不是售票状态",u"剩余座位数不足"]:
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break
