@@ -29,7 +29,7 @@ from app import order_log, db, access_log
 @dashboard.before_request
 def log_request():
     uname = getattr(current_user, "username", None)
-    access_log.info("[request] %s %s %s %s", uname, request.remote_addr, request.url, request.values)
+    access_log.info("[request] %s %s %s %s", uname, request.environ.get('HTTP_X_REAL_IP', request.remote_addr), request.url, request.values)
 
 
 @dashboard.route('/logout')
