@@ -169,7 +169,13 @@ class Flow(BaseFlow):
         }
         order_detail_url = url + '?'+urllib.urlencode(param)
         r = rebot.http_get(order_detail_url, headers=headers)
-        ret = r.json()
+        try:
+            ret = r.json()
+        except:
+            rebot.modify(ip='')
+            r = rebot.http_get(order_detail_url, headers=headers)
+            ret = r.json()
+
         if ret['paystatus'] == 1 and ret['status'] == 0:
             return {"state": 6}
         return {"state": ret['status']}

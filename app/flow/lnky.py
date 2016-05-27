@@ -149,7 +149,7 @@ class Flow(BaseFlow):
                         break
                 lock_result.update({
                     "result_code": 0,
-                    "result_reason": res,
+                    "result_reason": errmsg,
                     "pay_url": "",
                     "raw_order_no": "",
                     "expire_datetime": None,
@@ -203,15 +203,17 @@ class Flow(BaseFlow):
                     "timeStatus": "1"
                     }
             r = rebot.http_post(unpay_all_order, data=data, headers=headers, cookies=json.loads(rebot.cookies))
-            res = r.json()
-            if res['resultCode'] == '0000':
-                for i in res['pageData']:
-                    if i['status']=='0' and i['startTime']==line.drv_time and i['startDate'] == line.drv_date \
-                         and i['price']==str(line.full_price) and i['startStationName']==line.s_sta_name and i['endStationName']==line.d_sta_name:
-                        count = Order.objects.filter(raw_order_no=i['orderNo']).count()
-                        if count == 0:
-                            ret = i['orderNo']
-                            break
+            content = r.content
+            if content != '404':
+                res = r.json()
+                if res['resultCode'] == '0000':
+                    for i in res['pageData']:
+                        if i['status']=='0' and i['startTime']==line.drv_time and i['startDate'] == line.drv_date \
+                             and i['price']==str(line.full_price) and i['startStationName']==line.s_sta_name and i['endStationName']==line.d_sta_name:
+                            count = Order.objects.filter(raw_order_no=i['orderNo']).count()
+                            if count == 0:
+                                ret = i['orderNo']
+                                break
         return {'flag': True, 'msg': ret}
 
     def send_lock_request_by_web(self, rebot, order, cookies, headers, depotId):

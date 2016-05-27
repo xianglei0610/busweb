@@ -28,49 +28,7 @@ class Flow(BaseFlow):
                 rebot.login()
                 rebot.reload()
             line = order.line
-            data = {
-               "busInfoModel.fcsk": line.drv_time,
-               "busInfoModel.ddz": line.d_sta_name,
-               "busInfoModel.scdbm": line.s_sta_id,
-#                "busInfoModel.bcjtbm": line.extra_info['busCompanyCode'],
-               "busInfoModel.scd": line.s_sta_name,
-               "busInfoModel.fcrq": line.drv_date,
-               "busInfoModel.ddzbm": line.d_sta_id,
-               "busInfoModel.bcbh": line.bus_num,
-               "busInfoModel.sfzx": line.extra_info['busCodeType'],
-               "busInfoModel.regsName": line.extra_info['regsName'],
-               "busInfoModel.bj": '0.00',
-               "busInfoModel.xspj": "0.00",
-               "busInfoModel.ptpj": str(line.full_price)+'0'
-               }
-
-            riders = order.riders
-            count = len(riders)
-            tmp = {}
-            for i in range(count):
-                tmp = {
-                    "passengers[%s].idCode" % i: riders[i]["id_number"],
-                    "passengers[%s].cname" % i: riders[i]["name"],
-                    "passengers[%s].phone" % i: riders[i]["telephone"],
-                    "passengers[%s].insTypeCode" % i: "2",
-                    "passengers[%s].psgBabyFlg" % i: "0",
-                    "passengers[%s].psgInsuranceFlg" % i: "0",
-                    "passengers[%s].ticketType" % i: '1',
-                    "passengers[%s].insPrice" % i: "0",
-                    "passengers[%s].idType" % i: "1",
-                }
-
-                data.update(tmp)
-            order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
-            try:
-                res = self.send_lock_request(order, rebot, data=data)
-            except Exception, e:
-                order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-                rebot.login()
-                rebot.reload()
-                res = self.send_lock_request(order, rebot, data=data)
-            order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
-
+            res = self.send_lock_request(order, rebot)
             if res.has_key('struts.token'):
                 del res['struts.token']
             lock_result = {
@@ -114,10 +72,44 @@ class Flow(BaseFlow):
                 })
             return lock_result
 
-    def send_lock_request(self, order, rebot, data):
+    def send_lock_request(self, order, rebot):
         """
         单纯向源站发请求
         """
+        line = order.line
+        data = {
+           "busInfoModel.fcsk": line.drv_time,
+           "busInfoModel.ddz": line.d_sta_name,
+           "busInfoModel.scdbm": line.s_sta_id,
+#                "busInfoModel.bcjtbm": line.extra_info['busCompanyCode'],
+           "busInfoModel.scd": line.s_sta_name,
+           "busInfoModel.fcrq": line.drv_date,
+           "busInfoModel.ddzbm": line.d_sta_id,
+           "busInfoModel.bcbh": line.bus_num,
+           "busInfoModel.sfzx": line.extra_info['busCodeType'],
+           "busInfoModel.regsName": line.extra_info['regsName'],
+           "busInfoModel.bj": '0.00',
+           "busInfoModel.xspj": "0.00",
+           "busInfoModel.ptpj": str(line.full_price)+'0'
+           }
+
+        riders = order.riders
+        count = len(riders)
+        tmp = {}
+        for i in range(count):
+            tmp = {
+                "passengers[%s].idCode" % i: riders[i]["id_number"],
+                "passengers[%s].cname" % i: riders[i]["name"],
+                "passengers[%s].phone" % i: riders[i]["telephone"],
+                "passengers[%s].insTypeCode" % i: "2",
+                "passengers[%s].psgBabyFlg" % i: "0",
+                "passengers[%s].psgInsuranceFlg" % i: "0",
+                "passengers[%s].ticketType" % i: '1',
+                "passengers[%s].insPrice" % i: "0",
+                "passengers[%s].idType" % i: "1",
+            }
+
+            data.update(tmp)
         order_url = "http://60.2.147.28/com/yxd/pris/openapi/addOrder.action"
         headers = rebot.http_header()
         r = rebot.http_post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
