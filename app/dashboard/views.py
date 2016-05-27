@@ -26,6 +26,12 @@ from tasks import async_lock_ticket, issued_callback
 from app import order_log, db, access_log
 
 
+@dashboard.before_request
+def log_request():
+    uname = getattr(current_user, "username", None)
+    access_log.info("[request] %s %s %s %s", uname, request.remote_addr, request.url, request.values)
+
+
 @dashboard.route('/logout')
 @login_required
 def logout():
@@ -392,7 +398,7 @@ def change_kefu():
     params = request.values.to_dict()
     order_no, kefu_name = params["pk"], params["value"]
     order = Order.objects.get(order_no=order_no)
-    if order.status in [12, 13, 14]:
+    if order.yc_status != YC_STATUS_ING and order.status in [12, 13, 14]:
         return jsonify({"code": 0, "msg": "已支付,不许转!"})
     if not kefu_name:
         return jsonify({"code": 0, "msg": "请选择目标账号!"})

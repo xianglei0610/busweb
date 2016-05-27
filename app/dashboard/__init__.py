@@ -27,10 +27,6 @@ def cut_str(context, value, size=20):
     return value[:size]+"..."
 
 
-@dashboard.before_request
-def log_request():
-    pass
-
 
 @dashboard.after_request
 def log_response(response):

@@ -59,7 +59,7 @@ class Flow(BaseFlow):
                     "passengers[%s].insPrice" % i: "0",
                     "passengers[%s].idType" % i: "1",
                 }
-  
+
                 data.update(tmp)
             order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
             try:
@@ -184,7 +184,7 @@ class Flow(BaseFlow):
                 "001004": "购票失败",
                 "001005": "退票成功",
                 "001006": "改签成功",
-                "001007": "等待出票"
+                "001007": "等待付款"
                 }
         if state == "001003": #"出票成功":
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]
@@ -303,7 +303,7 @@ class Flow(BaseFlow):
 #             "startDepotCode": line.extra_info['s_code'],
 #             "busCompanyCode": line.extra_info['busCompanyCode'],
 #             }
-# 
+#
 #         url = "http://60.2.147.28/com/yxd/pris/wsgp/isInternet.action"
 #         res = requests.post(url, data=data, headers=headers)
 #         ret = res.json()
