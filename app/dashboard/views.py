@@ -631,7 +631,7 @@ def user_config():
 
 
 @dashboard.route('/orders/<order_no>/addremark', methods=['POST'])
-@superuser_required
+@login_required
 def add_order_remark(order_no):
     "增加备注内容"
     order = Order.objects.get_or_404(order_no=order_no)
