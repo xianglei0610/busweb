@@ -13,6 +13,7 @@ import json
 import random
 import urllib
 import re
+import time
 
 from app.constants import *
 from datetime import datetime as dte, timedelta
@@ -215,7 +216,18 @@ class CqkyProxyConsumer(ProxyConsumer):
         rds = get_redis("default")
         return rds.set(RK_PROXY_CUR_CQKY, "")
 
+    def set_black(self, ipstr):
+        rds = get_redis("default")
+        key = RK_PROXY_IP_CQKY_BLACK % ipstr
+        rds.set(key, time.time())
+        rds.expire(key, 60*60*5)
+
     def valid_proxy(self, ipstr):
+        rds = get_redis("default")
+        key = RK_PROXY_IP_CQKY_BLACK % ipstr
+        if rds.get(key):
+            return False
+
         line_url = "http://www.96096kp.com/UserData/MQCenterSale.aspx"
         tomorrow = dte.now() + timedelta(days=1)
         params = {
