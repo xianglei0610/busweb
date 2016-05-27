@@ -241,7 +241,7 @@ class Flow(BaseFlow):
            "Charset": "UTF-8",
            }
         cookies = {}
-        if order.status == STATUS_LOCK_RETRY:
+        if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
             self.lock_ticket(order)
  
         if order.status == STATUS_WAITING_ISSUE:
