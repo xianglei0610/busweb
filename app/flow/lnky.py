@@ -425,7 +425,8 @@ class Flow(BaseFlow):
                     k, v = s.xpath("@name"), s.xpath("@value")
                     k, v = k[0], v[0] if v else ""
                     params[k] = v
-
+                if not params and pay_url:
+                    return {"flag": "url", "content": pay_url}
                 url = "http://61.161.205.217/payment/payment/gotoChinaPay.do"
                 r = requests.post(url, headers=headers, cookies=cookies, data=urllib.urlencode(params))
                 sel = etree.HTML(r.content)
