@@ -634,3 +634,11 @@ def add_order_remark(order_no):
         return jsonify({"code": 0, "msg":"内容不能为空"})
     order.add_trace(OT_REMARK, "%s：%s" % (current_user.username, content))
     return jsonify({"code": 1, "msg": "备注成功加入到追踪列表"})
+
+
+@dashboard.route('/orders/<order_no>/refresh', methods=['GET'])
+def order_refresh(order_no):
+    order = Order.objects.get(order_no=order_no)
+    flow = get_flow(order.crawl_source)
+    flow.refresh_issue(order)
+    return redirect(url_for('dashboard.order_list'))

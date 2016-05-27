@@ -197,6 +197,9 @@
                     <a data-trigger="modal" href="/orders/{{item.order_no}}/yichang?action=set" data-title="设置异常">设为异常</a>
                     {%else%}
                     <a data-trigger="modal" href="/orders/{{item.order_no}}/yichang?action=del" data-title="解除异常">解除异常</a>
+                    {%endif%}<br/>
+                    {%if item.status == 3%}
+                    <a  href="/orders/{{item.order_no}}/refresh" >刷新</a>
                     {%endif%}
             </tr>
             {%endfor%}
