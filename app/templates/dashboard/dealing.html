@@ -32,7 +32,7 @@
             </td>
             <td>
                 <br />
-                <span class="{%if item.status==14%}text-success{%else%}text-danger{%endif%}">{{status_msg[item.status]}}</span>
+                <span class="{%if item.status==14%}text-success{%elif item.status in [4, 7]%}text-warning{%elif item.status == 12%}text-primar{%else%}text-danger{%endif%}">{{status_msg[item.status]}}</span>
             </td>
             <td>
                 {% if locking[item.order_no]%}

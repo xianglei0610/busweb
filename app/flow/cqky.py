@@ -117,7 +117,7 @@ class Flow(BaseFlow):
                     })
                 elif u"同一IP一天最多可订" in res["msg"]:
                     res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
-                    get_proxy("cqky").remove_proxy(rebot.proxy_ip)
+                    get_proxy("cqky").set_black(rebot.proxy_ip)
                     rebot.modify(ip="")
                     lock_result.update({
                         "result_code": 2,
