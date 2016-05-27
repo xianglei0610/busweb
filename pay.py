@@ -22,7 +22,8 @@ COMPANY_TO_SOURCE = {
     "苏州汽车客运集团有限公司汽车客运总站": SOURCE_ZJGSM,
     "南京市道路客运联网售票管理服务中心": SOURCE_JSDLKY,
     "南京趣普电子商务有限公司": SOURCE_CHANGTU,
-    "南京晨之义软件科技有限公司": SOURCE_TZKY,
+    "南京晨之义软件科技有限公司": lambda name: SOURCE_NMGHY if u"内蒙古网站售票" in name else SOURCE_TZKY,
+    "北京盛威时代科技有限公司": SOURCE_BUS365,
 }
 
 def parse_alipay_record(f):
@@ -63,9 +64,12 @@ def match_alipay_order(trade_info):
     pay_datetime = dte.strptime(trade_info["交易创建时间"], "%Y-%m-%d %H:%M:%S")
     trade_no = trade_info["交易号"]
     trade_status = trade_info["交易状态"]
+    name= trade_info["商品名称"]
 
     # 通过商户订单号匹配
     crawl_source = COMPANY_TO_SOURCE.get(site, "")
+    if callable(crawl_source):
+        crawl_source = crawl_source(name)
     try:
         order = Order.objects.get(db.Q(pay_order_no=merchant_order)| \
                                   db.Q(raw_order_no=merchant_order),
@@ -111,7 +115,7 @@ def match_alipay_order(trade_info):
 def import_alipay_record(filename):
     account, trade_list = parse_alipay_record(filename)
 
-    kefu_log.info("支付宝账号:%s", account)
+    kefu_log.info("支付宝账号:%s %s", account, filename.name)
     cnt = 0
     for trade_info in trade_list:
         order = match_alipay_order(trade_info)
