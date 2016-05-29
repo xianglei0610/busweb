@@ -559,6 +559,7 @@ def user_switch():
     if is_switch != current_user.is_switch:
         current_user.modify(is_switch=is_switch)
     flash("%s接单" % msgs[is_switch])
+    access_log.info("[user_switch] %s %s接单", current_user.username, msgs[is_switch])
     return redirect(url_for("dashboard.my_order"))
 
 
