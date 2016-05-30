@@ -531,13 +531,16 @@ def dealing_order():
         qs = Order.objects.filter(kefu_username=current_user.username, yc_status=YC_STATUS_ING)
     rds = get_redis("order")
     locking = {}
+    dealing_seconds = {}
     for o in qs:
         if rds.get(RK_ORDER_LOCKING % o.order_no):
             locking[o.order_no] = 1
         else:
             locking[o.order_no] = 0
+        dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
     return render_template("dashboard/dealing.html",
                             tab=tab,
+                            dealing_seconds=dealing_seconds,
                             page=parse_page_data(qs),
                             status_msg=STATUS_MSG,
                             source_info=SOURCE_INFO,
