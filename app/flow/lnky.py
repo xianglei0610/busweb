@@ -253,9 +253,9 @@ class Flow(BaseFlow):
             content = content.decode('utf-8')
         sel = etree.HTML(content)
         pay_url = sel.xpath('//form[@id="payForm"]/@action')
-        state_error = sel.xpath('//form[@id="oJumpForm"]/p[@class="ui-state-error"]/text()')
+        state_error = sel.xpath('//form[@name="oJumpForm"]/p[@class="ui-state-error"]/text()')
         if state_error:
-            return {'flag': True, 'msg': state_error}
+            return {'flag': True, 'msg': state_error[0]}
         if pay_url:
             order_no = sel.xpath('//div[@class="pay-left"]/table[@class="pay-table"]/tr[1]/td[2]/text()')
             order_no = order_no[0]
