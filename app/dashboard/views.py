@@ -536,7 +536,6 @@ def dealing_order():
     rds = get_redis("order")
     locking = {}
     dealing_seconds = {}
-    is_warn = False
     is_close = False
     for o in qs:
         if rds.get(RK_ORDER_LOCKING % o.order_no):
@@ -551,8 +550,6 @@ def dealing_order():
             if warn_time > 15*60:
                 is_close = True
                 break
-            elif warn_time >= 3*60 and warn_time < 15*60:
-                is_warn = True
         if is_close:
             current_user.modify(is_close=is_close, is_switch=0)
         dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
@@ -567,7 +564,7 @@ def dealing_order():
                             yichang_count=yichang_count,
                             all_user=AdminUser.objects.filter(is_removed=0),
                             locking=locking,
-                            is_warn=is_warn)
+                            )
 
 
 @dashboard.route('/users/switch', methods=['POST'])
