@@ -20,7 +20,7 @@
 
     <tbody>
         {%for item in page["items"]%}
-        <tr>
+        <tr class="{%if dealing_seconds[item.order_no]>180%}danger{%endif%}">
             <td><a href="/orders/{{item.order_no}}" target="_blank">{{item.order_no}}</a></br>{{item.out_order_no}}</br>{{item.raw_order_no|cut_str}}</td>
             <td>{{item.create_date_time|format_datetime}}</br>{{item.lock_datetime|format_datetime}}</br>{{item.drv_datetime|format_datetime}}</td>
             <td>{{item.bus_num}}<br>{{item.starting_name.split(';')[0]}} - {{item.destination_name.split(';')[0]}}</br>{{item.starting_name.split(';')[1]}} - {{item.destination_name.split(';')[1]}}</td>
