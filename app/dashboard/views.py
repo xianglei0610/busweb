@@ -512,10 +512,10 @@ def dealing_order():
                 continue
             if order.kefu_username:
                 continue
-            if order.crawl_source in (SOURCE_BUS365):
-                if current_user.username not in ('xiangleilei', 'luojunping'):
-                    assign.enqueue_wating_lock(order)
-                    continue
+#             if order.crawl_source in (SOURCE_BUS365):
+#                 if current_user.username not in ('xiangleilei', 'luojunping'):
+#                     assign.enqueue_wating_lock(order)
+#                     continue
             order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
             assign.add_dealing(order, current_user)
 
