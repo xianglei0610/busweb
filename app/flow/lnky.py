@@ -367,7 +367,7 @@ class Flow(BaseFlow):
         return result_info
 
     def check_wap_status(self):
-        return 1
+        return 0
         try:
             rebot = LnkyWapRebot.get_one()
             headers = rebot.http_header()
@@ -388,7 +388,10 @@ class Flow(BaseFlow):
         if flag:
             rebot = LnkyWapRebot.objects.get(telephone=order.source_account)
         else:
-            rebot = LnkyWebRebot.objects.get(telephone=order.source_account)
+            try:
+                rebot = LnkyWebRebot.objects.get(telephone=order.source_account)
+            except:
+                rebot = LnkyWebRebot.get_one()
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
