@@ -542,6 +542,8 @@ def dealing_order():
             locking[o.order_no] = 1
         else:
             locking[o.order_no] = 0
+        dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
+
     if not current_user.is_superuser and not current_user.is_close:
         for o in qs:
             if not o.kefu_assigntime:
@@ -552,7 +554,6 @@ def dealing_order():
                 break
         if is_close:
             current_user.modify(is_close=is_close, is_switch=0)
-        dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
     return render_template("dashboard/dealing.html",
                             tab=tab,
                             dealing_seconds=dealing_seconds,
