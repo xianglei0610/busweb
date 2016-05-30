@@ -548,10 +548,10 @@ def dealing_order():
             if not o.kefu_assigntime:
                 continue
             warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
-            if warn_time > 10*60:
+            if warn_time > 15*60:
                 is_close = True
                 break
-            elif warn_time >= 3*60 and warn_time < 10*60:
+            elif warn_time >= 3*60 and warn_time < 15*60:
                 is_warn = True
         if is_close:
             current_user.modify(is_close=is_close, is_switch=0)
@@ -671,3 +671,18 @@ def order_refresh(order_no):
     flow = get_flow(order.crawl_source)
     flow.refresh_issue(order)
     return redirect(url_for('dashboard.order_list'))
+
+
+@dashboard.route('/orders/<order_no>/make_fail', methods=['POST'])
+@superuser_required
+def make_fail(order_no):
+    order = Order.objects.get(order_no=order_no)
+    content = request.form["content"]
+    if order.status not in [7]:
+        return jsonify({"code": 1, "msg": "非下单重试的单不允许失败"})
+    if not content:
+        return jsonify({"code": 0, "msg":"内容不能为空"})
+    order.add_trace(OT_REMARK, "%s：%s" % (current_user.username, content))
+    order.modify(status=5)
+    issued_callback(order)
+    return jsonify({"code": 1, "msg": "修改成功"})

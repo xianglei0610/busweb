@@ -201,6 +201,11 @@
                     {%if item.status == 3%}
                     <a  href="/orders/{{item.order_no}}/refresh" >刷新</a>
                     {%endif%}
+                    
+                    {%if current_user.is_superuser and item.status in (7,) %}
+                    	<a href="javascript:;" class="make-fail" pk="{{item.order_no}}">确认失败</a><br/>
+                	{%endif%}
+                    
             </tr>
             {%endfor%}
         </tbody>
@@ -289,5 +294,31 @@
         $("#id-status").val(stus);
         $(".query-form").submit();
     };
+    
+    
+    $(".make-fail").click(function(){
+        var orderno = $(this).attr("pk");
+        layer.prompt({
+            title: '输入失败原因',
+            formType: 2
+        }, function(text) {
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "/orders/"+orderno+"/make_fail",
+                data:"content="+text,
+                async: false,
+                error: function(request) {
+                    layer.msg("网络错误!");
+                },
+                success: function(data) {
+                    layer.msg(data.msg);
+                }
+            });
+        });
+    });
+    
+    
+    
 </script>
 {%endblock%}
