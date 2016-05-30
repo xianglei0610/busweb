@@ -210,7 +210,10 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = HebkyWebRebot.objects.get(telephone=order.source_account)
+        if order.source_account:
+            rebot = HebkyWebRebot.objects.get(telephone=order.source_account)
+        else:
+            rebot = HebkyWebRebot.get_one()
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
@@ -265,7 +268,7 @@ class Flow(BaseFlow):
         is_login = rebot.test_login_status()
 
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
                 self.lock_ticket(order)
             return _get_page(rebot)
         else:
