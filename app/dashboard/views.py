@@ -536,11 +536,25 @@ def dealing_order():
     rds = get_redis("order")
     locking = {}
     dealing_seconds = {}
+    is_warn = False
+    is_close = False
     for o in qs:
         if rds.get(RK_ORDER_LOCKING % o.order_no):
             locking[o.order_no] = 1
         else:
             locking[o.order_no] = 0
+    if not current_user.is_superuser and not current_user.is_close:
+        for o in qs:
+            if not o.kefu_assigntime:
+                continue
+            warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
+            if warn_time > 10*60:
+                is_close = True
+                break
+            elif warn_time >= 3*60 and warn_time < 10*60:
+                is_warn = True
+        if is_close:
+            current_user.modify(is_close=is_close, is_switch=0)
         dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
     return render_template("dashboard/dealing.html",
                             tab=tab,
@@ -552,7 +566,8 @@ def dealing_order():
                             dealed_count=dealed_count,
                             yichang_count=yichang_count,
                             all_user=AdminUser.objects.filter(is_removed=0),
-                            locking=locking)
+                            locking=locking,
+                            is_warn=is_warn)
 
 
 @dashboard.route('/users/switch', methods=['POST'])

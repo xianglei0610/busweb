@@ -1,3 +1,12 @@
+
+<div id="wating-deal-table1">
+{%if current_user.is_close %}
+	<center><span style="color: red; font-size:30px;">存在长时间未处理的订单，账号被关闭，请联系技术支持</span></center>
+{%elif is_warn %}
+	<center><span style="color: red; font-size:30px;">长时间不处理订单,账号将关闭</span></center>	
+{% endif %}	
+</div>
+
 <ul class="nav nav-tabs">
     <li role="presentation" class="{%if tab=='dealing'%}active{%endif%}"><a href="/orders/my?tab=dealing">待处理 {%if dealing_count%}<span class="badge" style="background-color:red"> {{dealing_count}}</span>{%endif%}</a></li>
     <li role="presentation" class="{%if tab=='dealed'%}active{%endif%}"><a href="/orders/my?tab=dealed">正在出票 {%if dealed_count%}<span class="badge" style="background-color:red"> {{dealed_count}}</span>{%endif%}</a></li>
