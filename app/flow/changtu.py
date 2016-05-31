@@ -42,30 +42,36 @@ class Flow(BaseFlow):
                 })
                 return lock_result
 
-            form_url = "http://www.changtu.com/trade/order/toFillOrderPage.htm"
+            form_url = "http://www.changtu.com/trade/order/index.htm"
             ticket_type =line.extra_info["ticketTypeStr"].split(",")[0]
             sta_city_id, s_pinyin = line.s_city_id.split("|")
             d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
-            params = dict(
+            params = [dict(
                 stationMapId=line.extra_info["stationMapId"],
                 planId=line.extra_info["id"],
-                stCityId=sta_city_id,
+                startCityId=sta_city_id,
                 endTypeId=d_end_type,
-                endCityId=end_city_id,
+                endId=end_city_id,
                 stationId=line.s_sta_id,
                 ticketType=ticket_type,
-                schSource=0,
-            )
+                orderModelId="1",
+                schSource="0",
+            )]
+            params = {
+                "t": json.dumps(params),
+                "orderType": "-1",
+                "refUrl": "http://www.changtu.com/"
+            }
             cookies = json.loads(rebot.cookies)
             r = rebot.http_get("%s?%s" %(form_url,urllib.urlencode(params)),
                              headers={"User-Agent": rebot.user_agent},
                              cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             try:
-                token = soup.select("#token")[0].get("value")
+                token = soup.select("#t")[0].get("value")
             except:
                 if r.status_code == 200 and "畅途网" in r.content:
-                    lock_result.update({"result_code": 0, "result_reason": "没拿到到token"})
+                    lock_result.update({"result_code": 2, "result_reason": "没拿到到token"})
                 return lock_result
             passenger_info = {}
             for i, r in enumerate(order.riders):
@@ -91,12 +97,17 @@ class Flow(BaseFlow):
                 "redPayMoney": "0.00",
                 "redPayPwd": "",
                 "reduceActionId": "",
-                "reduceMoney": "",
-                "orderModelId": 1,
+                "reduceMoney": 0,
+                "orderModelId": "1",
                 "fkReserveSchId": "",
                 "reserveNearbyFlag": "N",
                 "stationId": line.s_sta_id,
                 "actionFlag": 2,
+                "cbFlag": "N",
+                "payPwd": "",
+                "goBackFlag": "1",
+                "transportId": "",
+                "feeMoney": int(line.fee),
             }
 
             submit_data = {
@@ -107,7 +118,7 @@ class Flow(BaseFlow):
                 "t": token,
                 "fraud": json.dumps({"verifyCode": valid_code}),
                 "ordersJson": json.dumps([ticket_info], ensure_ascii=False),
-                "orderType": -1,
+                "orderType": "-1",
                 "reserveNearbyFlag": "N",
             }
 
@@ -377,7 +388,7 @@ class Flow(BaseFlow):
             "update_attrs": {},
         }
         now = dte.now()
-        line_url = "http://www.changtu.com/chepiao/querySchList.htm"
+        line_url = "http://www.changtu.com/chepiao/newQuerySchList.htm"
         sta_city_id, s_pinyin = line.s_city_id.split("|")
         d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
         params = dict(

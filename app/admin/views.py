@@ -336,6 +336,7 @@ class SubmitOrder(MethodView):
 
         api_url = urllib2.urlparse.urljoin(fd.get("api_url"), "/orders/submit")
         r = requests.post(api_url, data=json.dumps(data))
+        order_log.info("[submit] %s", r.content)
         return redirect(url_for('admin.order_list'))
 
 
