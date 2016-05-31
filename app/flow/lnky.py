@@ -451,6 +451,13 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
+        try:
+            return self.do_refresh_line_by_web(line)
+        except:
+            pass
+#             result_info.update(result_msg="timeout default 20", update_attrs={"left_tickets": 20, "refresh_datetime": now})
+#             return result_info
+
         now = dte.now()
         ua = random.choice(MOBILE_USER_AGENG)
         headers = {"User-Agent": ua}
@@ -506,4 +513,66 @@ class Flow(BaseFlow):
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
 
-
+    def do_refresh_line_by_web(self, line):
+        result_info = {
+            "result_msg": "",
+            "update_attrs": {},
+        }
+        rebot = LnkyWebRebot.get_one()
+        now = dte.now()
+        rebot.login()
+        rebot.reload()
+        headers = rebot.http_header()
+        cookies = json.loads(rebot.cookies)
+        line_url = 'http://www.jt306.cn/ticket/it/search.action'
+        data = {
+                "arrival": line.d_sta_name,
+                "beginStation": line.s_sta_name,
+                "randome": "".join(random.sample("0123456789abcdefghijklmnopqrstuvwxzy",4)),
+                "startTimeValue": "0",
+                "travelDate":  line.drv_date,
+                "type": "1",
+                }
+        r = requests.post(url=line_url, data=data, cookies=cookies, headers=headers)
+        content = r.content
+        if not isinstance(content, unicode):
+            content = content.decode('utf-8')
+        sel = etree.HTML(content)
+        update_attrs = {}
+        scheduleInfo = sel.xpath('//div[@class="gq-t2"]/table[@class="gq-table2"]/tbody/tr[@class="chage-color"]')
+        for i in scheduleInfo:
+            banci = i.xpath('td[1]/text()')
+            price = i.xpath('td[5]/text()')
+            left = i.xpath('td[6]/text()')
+            bus_num = banci[0].replace('\t','').replace('\n','').replace('\r','')
+            time = banci[1].replace('\t','').replace('\n','').replace('\r','').replace('出发','')
+            price = price[0].replace('\t','').replace('\n','').replace('\r','')
+            seatLast = left[0].replace('\t','').replace('\n','').replace('\r','').split('/')[0]
+            drv_datetime = dte.strptime("%s %s" % (line.drv_date, time), "%Y-%m-%d %H:%M")
+            line_id_args = {
+                "s_city_name": line.s_city_name,
+                "d_city_name": line.d_city_name,
+                "bus_num": bus_num,
+                "crawl_source": line.crawl_source,
+                "drv_datetime": drv_datetime,
+            }
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+            try:
+                obj = Line.objects.get(line_id=line_id)
+            except Line.DoesNotExist:
+                continue
+            info = {
+                "full_price": float(price),
+                "fee": 0,
+                "left_tickets": int(seatLast),
+                "refresh_datetime": now,
+            }
+            if line_id == line.line_id:
+                update_attrs = info
+            else:
+                obj.update(**info)
+        if not update_attrs:
+            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        else:
+            result_info.update(result_msg="ok", update_attrs=update_attrs)
+        return result_info
