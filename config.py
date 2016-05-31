@@ -21,7 +21,7 @@ class Config:
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
     CELERY_IMPORTS=("tasks")
 
-    PERMANENT_SESSION_LIFETIME = 24 * 60 * 60   # session有效期
+    PERMANENT_SESSION_LIFETIME = 30 * 60   # session有效期
 
     # 方便网接口地址
     FANGBIAN_API_URL = "http://testapi.fangbian.com:6801/fbapi.asmx"

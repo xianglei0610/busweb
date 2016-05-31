@@ -1453,7 +1453,7 @@ class ChangtuWebRebot(Rebot):
 
 class JsdlkyWebRebot(Rebot):
     user_agent = db.StringField()
-    cookies = db.StringField()
+    cookies = db.StringField(default="{}")
     ip = db.StringField()
 
     meta = {

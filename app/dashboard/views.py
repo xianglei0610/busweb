@@ -11,7 +11,7 @@ import traceback
 import csv
 import StringIO
 
-from datetime import datetime as dte
+from datetime import datetime as dte, timedelta
 from app.utils import md5, create_validate_code
 from app.constants import *
 from flask import render_template, request, redirect, url_for, jsonify, session, make_response, flash
@@ -196,10 +196,10 @@ def order_list():
         query.update(kefu_username=kefu_name)
 
     today = dte.now().strftime("%Y-%m-%d")
-    str_date = params.get("str_date", "") or today+" 00:00"
-    end_date = params.get("end_date", "") or today+" 23:59"
+    str_date = params.get("str_date", "") or today
+    end_date = params.get("end_date", "") or today
     query.update(create_date_time__gte=str_date)
-    query.update(create_date_time__lte=end_date)
+    query.update(create_date_time__lt=dte.strptime(end_date, "%Y-%m-%d")+timedelta(days=1))
     params["str_date"] = str_date
     params["end_date"] = end_date
 
