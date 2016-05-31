@@ -36,6 +36,16 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
                 "pay_money": line.real_price()*order.ticket_amount,
             }
+
+            if res['akfAjaxResult'] != '0':
+                lock_result.update({
+                    "result_code": 0,
+                    "result_reason": res['errorMessage'],
+                    "pay_url": "",
+                    "raw_order_no": "",
+                    "expire_datetime": None,
+                })
+                return lock_result
             if res['values']['result'] == 'success':
                 order_no = res["values"]['orderInfo']['orderMap']['ddh']
                 order_log.info("[lock-end] order: %s,account:%s start   query encode orderId request", order.order_no, rebot.telephone)
