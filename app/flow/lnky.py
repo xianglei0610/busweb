@@ -135,7 +135,7 @@ class Flow(BaseFlow):
                         "result_reason": str(rebot.telephone) + ':' + res["msg"],
                     })
                     return lock_result
-                if "E008" in errmsg:
+                if "您有未完成的订单，请在我的订单中查看" in errmsg:
                     rebot = order.change_lock_rebot()
                     lock_result.update({
                         "result_code": 2,
@@ -143,7 +143,7 @@ class Flow(BaseFlow):
                         "result_reason": str(rebot.telephone) + res["msg"],
                     })
                     return lock_result
-                for s in ["E015", "E001"]: #余票不足
+                for s in ["座位不足", "E001"]: #余票不足
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break
