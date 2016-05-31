@@ -251,11 +251,12 @@
     });
 
     $(".form_datetime").datetimepicker({
-        format: "yyyy-mm-dd hh:ii",
+        format: "yyyy-mm-dd",
         autoclose: true,
         todayBtn: true,
         pickerPosition: "bottom-left",
-        language: "zh-CN"
+        language: "zh-CN",
+        minView: 2,
     });
 
    $("#id-site").change(function(){
