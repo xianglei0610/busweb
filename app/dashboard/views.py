@@ -682,5 +682,5 @@ def make_fail(order_no):
         return jsonify({"code": 0, "msg":"内容不能为空"})
     order.add_trace(OT_REMARK, "%s：%s" % (current_user.username, content))
     order.modify(status=5)
-    issued_callback(order)
+    issued_callback.delay(order.order_no)
     return jsonify({"code": 1, "msg": "修改成功"})
