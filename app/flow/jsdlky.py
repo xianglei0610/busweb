@@ -305,7 +305,6 @@ class Flow(BaseFlow):
             res = r.json()
         except:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
-            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
         if res["rtn_code"] != "00":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
