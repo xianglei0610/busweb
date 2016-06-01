@@ -72,6 +72,8 @@ def init_logging(app, server_type):
                 "order": SysLogHandler.LOG_LOCAL1,
                 "line": SysLogHandler.LOG_LOCAL2,
                 "common": SysLogHandler.LOG_LOCAL3,
+                "access": SysLogHandler.LOG_LOCAL4,
+                "cron": SysLogHandler.LOG_LOCAL5,
             }
             file_hd = SysLogHandler(address=('10.51.9.34', 514), facility=mapping.get(s, SysLogHandler.LOG_LOCAL3))
         file_hd.setLevel(logging.INFO)

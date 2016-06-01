@@ -297,6 +297,7 @@ class Flow(BaseFlow):
             "param_key": json.dumps(params),
             "secret_key": md5("&".join(map(lambda a:"%s=%s" % (a[0], a[1]), sorted(params.items(), key=lambda i: i[0])))),
         }
+        now = dte.now()
         rebot = JsdlkyWebRebot.get_one()
         url = "%s?%s" % (line_url, urllib.urlencode(req_data))
         try:
@@ -306,7 +307,6 @@ class Flow(BaseFlow):
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
             return result_info
-        now = dte.now()
         if res["rtn_code"] != "00":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
