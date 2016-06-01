@@ -29,54 +29,15 @@ class Flow(BaseFlow):
                 rebot.login()
                 rebot.reload()
             self.send_check_request(rebot, order)
+
             line = order.line
-            params = {
-                    "bf": "2",
-                    "bxFlag": "",
-                    "cardtype": '0',
-                    "ceti_no": '',
-                    "dd_city": line.d_sta_name,
-                    "departdate": line.drv_date,
-                    "errorMsg": '',
-                    "full_price": int(line.full_price),
-                    "half_price": int(round(line.full_price/2.0)),
-                    "ispost": "1",
-                    "max_tickets": '5',
-                    "mobile": "",
-                    "realname": '',
-                    "schedulecode": line.bus_num,
-                    "start_city": line.s_sta_name,
-               }
-            params = urllib.urlencode(params)
-            riders = order.riders
-            count = len(riders)
-            tmp = {}
-            for i in range(count):
-                tmp = {
-                    "psgIdCode[]": riders[i]["id_number"],
-                    "psgIdType[]": '0',
-                    "psgName[]": riders[i]["name"],
-                    "psgTel[]": riders[i]["telephone"],
-                    "psgTicketType[]": '0'
-                }
-                params = params+'&'+urllib.urlencode(tmp)
-
-            order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
-            try:
-                res = self.send_lock_request(order, rebot, data=params)
-            except Exception, e:
-                order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-                rebot.login()
-                rebot.reload()
-                res = self.send_lock_request(order, rebot, data=params)
-            order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
-
+            res = self.send_lock_request(order, rebot)
             lock_result = {
                 "lock_info": res,
                 "source_account": rebot.telephone,
                 "pay_money": line.real_price()*order.ticket_amount,
             }
-            if res.get('raw_order_no',''):
+            if res.get('raw_order_no', ''):
                 expire_time = dte.now()+datetime.timedelta(seconds=28*60)
                 lock_result.update({
                     "result_code": 1,
@@ -88,7 +49,7 @@ class Flow(BaseFlow):
                 })
             else:
                 errmsg = res.get('msg','')
-                for s in ["该班次已停售"]:
+                for s in ["该班次已停售","班次不是售票状态"]:
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break
@@ -125,14 +86,45 @@ class Flow(BaseFlow):
         else:
             return False
 
-    def send_lock_request(self, order, rebot, data):
+    def send_lock_request(self, order, rebot):
         """
         单纯向源站发请求
         """
+        line = order.line
+        params = {
+                "bf": "2",
+                "bxFlag": "",
+                "cardtype": '0',
+                "ceti_no": '',
+                "dd_city": line.d_sta_name,
+                "departdate": line.drv_date,
+                "errorMsg": '',
+                "full_price": int(line.full_price),
+                "half_price": int(round(line.full_price/2.0)),
+                "ispost": "1",
+                "max_tickets": '5',
+                "mobile": "",
+                "realname": '',
+                "schedulecode": line.bus_num,
+                "start_city": line.s_sta_name,
+           }
+        params = urllib.urlencode(params)
+        riders = order.riders
+        count = len(riders)
+        tmp = {}
+        for i in range(count):
+            tmp = {
+                "psgIdCode[]": riders[i]["id_number"],
+                "psgIdType[]": '0',
+                "psgName[]": riders[i]["name"],
+                "psgTel[]": riders[i]["telephone"],
+                "psgTicketType[]": '0'
+            }
+            params = params+'&'+urllib.urlencode(tmp)
         order_url = "http://www.nmghyjt.com/index.php/busOrder/getticket/thispost"
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
-        r = rebot.http_post(order_url, data=data, headers=headers, cookies=cookies,allow_redirects=False)
+        r = rebot.http_post(order_url, data=params, headers=headers, cookies=cookies,allow_redirects=False)
 #         proxies = {
 #         'http': 'http://192.168.1.33:8888',
 #         'https': 'http://192.168.1.33:8888',
