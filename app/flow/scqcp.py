@@ -407,7 +407,7 @@ class Flow(BaseFlow):
             "Content-Type": "application/json; charset=UTF-8",
         }
         try:
-            r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers)
+            r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers,timeout=20)
             ret = r.json()
         except:
             result_info.update(result_msg="scqcp timeout default 15", update_attrs={"left_tickets": 15, "refresh_datetime": now})
