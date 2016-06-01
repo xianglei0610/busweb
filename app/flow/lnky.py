@@ -116,7 +116,7 @@ class Flow(BaseFlow):
             today = datetime.date.today()
             check_str = str(today).replace('-', '')
             if check_str in res['msg']:
-                order_no = res['msg'][1:-1]
+                order_no = res['msg']
                 expire_time = dte.now()+datetime.timedelta(seconds=60*40)
                 lock_result.update({
                     "result_code": 1,
