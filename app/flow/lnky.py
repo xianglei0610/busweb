@@ -136,10 +136,10 @@ class Flow(BaseFlow):
                     })
                     return lock_result
                 if "您有未完成的订单，请在我的订单中查看" in errmsg:
-                    rebot = order.change_lock_rebot()
+                    new_rebot = order.change_lock_rebot()
                     lock_result.update({
                         "result_code": 2,
-                        "source_account": rebot.telephone,
+                        "source_account": new_rebot.telephone,
                         "result_reason": str(rebot.telephone) + res["msg"],
                     })
                     return lock_result
