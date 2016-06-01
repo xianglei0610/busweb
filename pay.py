@@ -151,6 +151,9 @@ def import_alipay_record(filename):
             else:
                 status = PAY_STATUS_UNPAID
             pay_trade_no = trade_no
+        elif trade_status == "等待付款":
+            status = PAY_STATUS_UNPAID
+            pay_trade_no = trade_no
         elif trade_status == "交易成功":
             status = PAY_STATUS_PAID
             pay_trade_no = trade_no
