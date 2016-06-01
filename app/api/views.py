@@ -13,6 +13,11 @@ from tasks import async_lock_ticket
 from app import db
 
 
+@api.before_request
+def log_request():
+    access_log.info("[request] %s %s %s", request.environ.get('HTTP_X_REAL_IP', request.remote_addr), request.url, request.values)
+
+
 @api.route('/startings/query', methods=['POST'])
 def query_starting():
     """
