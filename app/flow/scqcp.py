@@ -406,13 +406,12 @@ class Flow(BaseFlow):
             "Authorization": rebot.token,
             "Content-Type": "application/json; charset=UTF-8",
         }
-        r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers)
         try:
-            ret = r.json()
-        except:
-            rebot.modify(ip='')
             r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers)
             ret = r.json()
+        except:
+            result_info.update(result_msg="scqcp timeout default 15", update_attrs={"left_tickets": 15, "refresh_datetime": now})
+            return result_info
 
         if ret["status"] == 1:
             if ret["plan_info"]:
