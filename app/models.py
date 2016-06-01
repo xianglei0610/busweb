@@ -1423,6 +1423,10 @@ class ChangtuWebRebot(Rebot):
     crawl_source = SOURCE_CHANGTU
     is_for_lock = True
 
+    @property
+    def proxy_ip(self):
+        return ""
+
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)
 
