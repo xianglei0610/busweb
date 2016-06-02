@@ -216,7 +216,7 @@ class Flow(BaseFlow):
             })
         elif status in (u"订单失效"):
             result_info.update({
-                "result_code": 4,
+                "result_code": 2,
                 "result_msg": order_status_mapping[status],
             })
         return result_info
@@ -304,7 +304,7 @@ class Flow(BaseFlow):
 #                 except Exception, e:
 #                     line_log.info("[refresh-result] request error line:%s,%s %s,%s ", line.crawl_source,line.s_city_name, line.line_id,e)
 #                     left_tickets = 0
-# 
+#
 #                 result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now,'full_price':full_price})
 #             elif str(trainInfo['flag']) == '1':
 #                 line_log.info("[refresh-result]  no left_tickets line:%s,%s %s,result:%s ", line.crawl_source,line.s_city_name, line.line_id,trainInfo)
