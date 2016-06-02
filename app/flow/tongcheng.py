@@ -133,12 +133,6 @@ class Flow(BaseFlow):
                     "pay_money": float(ret["body"]["payAmount"]),
                     "lock_info": ret["body"],
                 })
-            elif u"您所选择的车次信息已变更" in desc:
-                lock_result.update({
-                    "result_code": 2,
-                    "result_reason": desc,
-                    "source_account": rebot.telephone,
-                })
             else:
                 lock_result.update({
                     "result_code": 0,
