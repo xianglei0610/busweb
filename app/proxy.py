@@ -82,7 +82,7 @@ class ProxyProducer(object):
         return add_cnt
 
     def crawl_from_zdaye(self):
-        url = "http://api.zdaye.com/?api=201604061044324430&pw=efrfdaf&sleep=5%C3%EB%C4%DA&gb=2&post=%D6%A7%B3%D6&ct=200"
+        url = "http://api.zdaye.com/?api=201606021405523962&sleep=5%C3%EB%C4%DA&gb=2&post=%D6%A7%B3%D6&ct=200"
         proxy_lst = set()
         r = requests.get(url, timeout=6)
         proxy_lst=proxy_lst.union(set(re.findall(r"(\d+.\d+.\d+.\d+:\d+)", r.content)))
