@@ -44,6 +44,19 @@ def check(run_in_local=False):
     return wrap
 
 
+@check(run_in_local=True)
+def refresh_order_status():
+    from app.models import Order
+    cnt = 0
+    for o in Order.objects.filter(status__in=[3, 12]):
+        cnt += 1
+        try:
+            o.refresh_status()
+        except:
+            pass
+    return cnt
+
+
 @check()
 def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
     url_list = app.config["SCRAPYD_URLS"]
@@ -111,7 +124,7 @@ def clear_redis_data():
     return result
 
 
-@check(run_in_local=True)
+@check(run_in_local=False)
 def crawl_proxy_haodaili():
     from app.proxy import proxy_producer
     data = {}
@@ -119,7 +132,7 @@ def crawl_proxy_haodaili():
     data["haodaili"] = cnt
     return data
 
-@check(run_in_local=True)
+@check(run_in_local=False)
 def crawl_proxy_samair():
     from app.proxy import proxy_producer
     data = {}
@@ -128,7 +141,7 @@ def crawl_proxy_samair():
     return data
 
 
-@check(run_in_local=True)
+@check(run_in_local=False)
 def crawl_proxy_66ip():
     from app.proxy import proxy_producer
     data = {}
@@ -136,7 +149,7 @@ def crawl_proxy_66ip():
     data["66ip"] = cnt
     return data
 
-@check(run_in_local=True)
+@check(run_in_local=False)
 def crawl_proxy_xici():
     from app.proxy import proxy_producer
     data = {}
@@ -144,7 +157,7 @@ def crawl_proxy_xici():
     data["xici"] = cnt
     return data
 
-@check(run_in_local=True)
+@check(run_in_local=False)
 def crawl_proxy_zdaye():
     from app.proxy import proxy_producer
     data = {}
@@ -152,7 +165,7 @@ def crawl_proxy_zdaye():
     data["zdaye"] = cnt
     return data
 
-@check(run_in_local=True)
+@check(run_in_local=False)
 def check_proxy():
     from app.proxy import proxy_producer
     for ipstr in proxy_producer.all_proxy():
@@ -161,7 +174,7 @@ def check_proxy():
     return proxy_producer.proxy_size()
 
 
-@check(run_in_local=True)
+@check(run_in_local=False)
 def check_consumer_proxy(name):
     from tasks import check_remove_proxy_ip
     from app.proxy import get_proxy
@@ -329,6 +342,9 @@ def main():
     sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["bus365"], minutes=1)
 
+
+    #(补救措施) 定时刷新状态
+    sched.add_interval_job(refresh_order_status, minutes=4)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

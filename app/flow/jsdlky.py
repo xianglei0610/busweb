@@ -301,7 +301,7 @@ class Flow(BaseFlow):
         rebot = JsdlkyWebRebot.get_one()
         url = "%s?%s" % (line_url, urllib.urlencode(req_data))
         try:
-            r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)})
+            r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)}, timeout=10)
             res = r.json()
         except:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
