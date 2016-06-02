@@ -3183,18 +3183,19 @@ class XinTuYunWebRebot(Rebot):
         today = dte.now().strftime("%Y-%m-%d")
         all_accounts = set(cls.objects.filter(is_active=True, is_locked=False).distinct("telephone"))
         droped = set()
-        for d in Order.objects.filter(status=14,
-                                      crawl_source=SOURCE_XINTUYUN,
-                                      lock_datetime__gt=today) \
-                              .aggregate({
-                                  "$group":{
-                                      "_id": {"phone": "$source_account"},
-                                      "count": {"$sum": "$ticket_amount"}}
-                              }):
-            cnt = d["count"]
-            phone = d["_id"]["phone"]
-            if cnt + int(order.ticket_amount) > 20:
-                droped.add(phone)
+        if order:
+            for d in Order.objects.filter(status=14,
+                                          crawl_source=SOURCE_XINTUYUN,
+                                          lock_datetime__gt=today) \
+                                  .aggregate({
+                                      "$group":{
+                                          "_id": {"phone": "$source_account"},
+                                          "count": {"$sum": "$ticket_amount"}}
+                                  }):
+                cnt = d["count"]
+                phone = d["_id"]["phone"]
+                if cnt + int(order.ticket_amount) > 20:
+                    droped.add(phone)
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)
 
