@@ -3147,6 +3147,229 @@ class Bus365WebRebot(Rebot):
         rebot_log.info(">>>> end init bus365 web  success %d", valid_cnt)
 
 
+class XinTuYunWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField(default="{}")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "xintuyunweb_rebot",
+    }
+    crawl_source = SOURCE_XINTUYUN
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ''
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[xintuyun] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[xintuyun] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": self.user_agent or ua,
+        }
+
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source=SOURCE_XINTUYUN,
+                                      lock_datetime__gt=today) \
+                              .aggregate({
+                                  "$group":{
+                                      "_id": {"phone": "$source_account"},
+                                      "count": {"$sum": "$ticket_amount"}}
+                              }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt + int(order.ticket_amount) > 20:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts-droped))
+        return cls.objects.get(telephone=tele)
+
+    def test_login_status(self):
+        url = "http://www.xintuyun.cn/user.shtml"
+        headers = self.http_header()
+        cookies = json.loads(self.cookies)
+        res = requests.post(url, cookies=cookies, headers=headers)
+        content = res.content
+        if not isinstance(content, unicode):
+            content = content.decode('utf8')
+        check_str = self.telephone.replace(self.telephone[3:7], '****')
+        if check_str in content:
+            return 1
+        return 0
+
+    def login(self, valid_code="", token='', headers={}, cookies={}):
+        """
+        返回OK表示登陆成功
+        """
+        vcode_flag = False
+        valid_code = "".join(random.sample("0123456789abcdefghijklmnopqrstuvwxzy",4)),
+#         if not valid_code:
+#             login_form_url = "http://www.xintuyun.cn/login.shtml?%s"%time.time()
+#             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+#             r = self.http_get(login_form_url, headers=headers, cookies=cookies)
+#             sel = etree.HTML(r.content)
+#             cookies.update(dict(r.cookies))
+#             code_url = sel.xpath("//img[@id='validateImg']/@src")[0]
+#             code_url = 'http://www.xintuyun.cn'+code_url
+#             token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+#             r = self.http_get(code_url, headers=headers, cookies=cookies)
+#             cookies.update(dict(r.cookies))
+#             valid_code = vcode_xintuyun(r.content)
+#             vcode_flag = True
+
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", "") or self.user_agent,
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
+            data = {
+                "loginType": 0,
+                "backUrl": '',
+                "mobile": self.telephone,
+                "password": self.password,
+                "validateCode": valid_code
+            }
+            login_url = "http://www.xintuyun.cn/doLogin/ajax"
+            r = self.http_post(login_url, data=data, headers=headers, cookies=cookies)
+            res = r.json()
+            if res["flag"] == '0':     # 登陆成功
+                mobile = res["customer"]['mobile']
+                if mobile != self.telephone:  # cookie串了
+                    self.modify(cookies="{}")
+                    return "fail"
+                cookies.update(dict(r.cookies))
+                self.modify(cookies=json.dumps(cookies), is_active=True)
+                rebot_log.info("[xintuyun]登陆成功, %s vcode_flag:%s", self.telephone, vcode_flag)
+                return "OK"
+            else:
+                msg = res["msg"]
+                rebot_log.info("[xintuyun]%s %s vcode_flag:%s", self.telephone, msg, vcode_flag)
+                if u"验证码不正确" in msg:
+                    return "invalid_code"
+                return msg
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active = True
+            self.cookies = "{}"
+            self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+    def recrawl_shiftid(self, line):
+        """
+        重新获取线路ID
+        """
+        queryline_url = 'http://www.xintuyun.cn/getBusShift/ajax'
+        start_city_id = line.s_sta_id
+        start_city_name = line.s_city_name
+        target_city_name = line.d_sta_name
+        sdate = line.drv_date
+        drv_time = line.drv_time
+        if drv_time > '00:00' and drv_time <= '12:00':
+            sendTimes = "00:00-12:00"
+        elif drv_time > '12:00' and drv_time <= '18:00':
+            sendTimes = "12:00-18:00"
+        elif drv_time > '18:00' and drv_time <= '24:00':
+            sendTimes = "18:00-24:00"
+        else:
+            sendTimes = ''
+        payload = {
+            'companyNames': '',
+            'endName': target_city_name,
+            "isExpressway": '',
+            "sendDate": sdate,
+            "sendTimes": sendTimes,
+            "showRemainOnly": '',
+            "sort": "1",
+            "startId": start_city_id,
+            'startName': start_city_name,
+            'stationIds': '',
+            'ttsId': ''
+            }
+        self.recrawl_func(queryline_url, payload)
+
+    def recrawl_func(self, queryline_url, payload):
+        res = requests.post(queryline_url, data=payload)
+        trainListInfo = res.json()
+        if trainListInfo and trainListInfo.get('msg', ''):
+            nextPage = int(trainListInfo['nextPage'])
+            pageNo = int(trainListInfo['pageNo'])
+            content = trainListInfo['msg']
+            if not isinstance(content, unicode):
+                content = content.decode('utf8')
+            sel = etree.HTML(content)
+            trains = sel.xpath('//div[@class="trainList"]')
+            for n in trains:
+                d_str = n.xpath("@data-list")[0]
+                shift_str = d_str[d_str.index("id=")+3:]
+                left_str = d_str[d_str.index("leftSeatNum=")+12:]
+                shiftid = shift_str[:shift_str.index(",")]
+                leftSeatNum = left_str[:left_str.index(",")]
+                item = {}
+                time = n.xpath('ul/li[@class="time"]/p/strong/text()')
+                item['drv_time'] = time[0]
+                drv_datetime = dte.strptime(payload['sendDate']+' '+time[0], "%Y-%m-%d %H:%M")
+                bus_num = ''
+                bus_num = n.xpath('ul/li[@class="time"]/p[@class="carNum"]/text()')
+                if bus_num:
+                    bus_num = bus_num[0].replace('\r\n', '').replace(' ',  '')
+                bus_num = bus_num.decode("utf-8").strip().rstrip(u"次")
+                price = n.xpath('ul/li[@class="price"]/strong/text()')
+                flag = 0
+                buyInfo = n.xpath('ul/li[@class="buy"]/a[@class="btn"]/text()')
+                if buyInfo:
+                    flag = 1
+                item['extra_info'] = {"flag": flag}
+                item['bus_num'] = bus_num
+                item['shift_id'] = str(shiftid)
+                item['full_price'] = float(str(price[0]).split('￥')[-1])
+                item["refresh_datetime"] = dte.now()
+                line_id = md5("%s-%s-%s-%s-%s" % \
+                           (payload['startName'], payload['endName'], drv_datetime, bus_num, 'xintuyun'))
+                item['line_id'] = line_id
+                item['left_tickets'] = int(leftSeatNum)
+                try:
+                    line_obj = Line.objects.get(line_id=line_id)
+                    line_obj.modify(**item)
+                except Line.DoesNotExist:
+                    continue
+
+            if nextPage > pageNo:
+                url = 'http://www.xintuyun.cn/getBusShift/ajax'+'?pageNo=%s' % nextPage
+#                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
+                self.recrawl_func(url, payload)
+
+    def clear_riders(self):
+        url = "http://www.xintuyun.cn/people.shtml"
+        try:
+            response = requests.post(url, cookies=self.cookies)
+            sel = etree.HTML(response.content)
+            people_list = sel.xpath('//div[@class="p-edu"]')
+            for i in people_list:
+                res = i.xpath('a[@class="del trans"]/@onclick')[0]
+                userid = re.findall('del\(\'(.*)\'\);', res)[0]
+                del_url = "http://www.xintuyun.cn/user/delPeople/ajax?id=%s"%userid
+                response = requests.get(del_url, cookies=self.cookies)
+        except:
+            pass
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
