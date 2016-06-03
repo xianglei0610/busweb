@@ -8,7 +8,7 @@ from fabric.context_managers import cd
 SERVER_LIST = {
     "banana": "120.27.150.94",
     "apple": "114.55.74.162",
-    "orange": "120.26.58.41",
+    "pear": "114.55.100.171",
 }
 
 env.user = '12308'
