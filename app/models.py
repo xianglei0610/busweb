@@ -3303,9 +3303,9 @@ class XinTuYunWebRebot(Rebot):
             'stationIds': '',
             'ttsId': ''
             }
-        return self.recrawl_func(queryline_url, payload)
+        return self.recrawl_func(line, queryline_url, payload)
 
-    def recrawl_func(self, queryline_url, payload, is_exist=False):
+    def recrawl_func(self, line, queryline_url, payload, is_exist=False):
         res = requests.post(queryline_url, data=payload)
         trainListInfo = res.json()
         if trainListInfo and trainListInfo.get('msg', ''):
@@ -3336,26 +3336,35 @@ class XinTuYunWebRebot(Rebot):
                 buyInfo = n.xpath('ul/li[@class="buy"]/a[@class="btn"]/text()')
                 if buyInfo:
                     flag = 1
-                item['extra_info'] = {"flag": flag}
-                item['bus_num'] = bus_num
-                item['shift_id'] = str(shiftid)
-                item['full_price'] = float(str(price[0]).split('￥')[-1])
-                item["refresh_datetime"] = dte.now()
-                line_id = md5("%s-%s-%s-%s-%s" % \
-                           (payload['startName'], payload['endName'], drv_datetime, bus_num, 'xintuyun'))
-                item['line_id'] = line_id
-                item['left_tickets'] = int(leftSeatNum)
+                full_price = float(str(price[0]).split('￥')[-1])
+                line_id_args = {
+                    "s_city_name": line.s_city_name,
+                    "d_city_name": line.d_city_name,
+                    "bus_num": bus_num,
+                    "crawl_source": line.crawl_source,
+                    "drv_datetime": drv_datetime,
+                }
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 try:
-                    line_obj = Line.objects.get(line_id=line_id)
-                    line_obj.modify(**item)
-                    is_exist = True
+                    obj = Line.objects.get(line_id=line_id)
                 except Line.DoesNotExist:
                     continue
+                info = {
+                    "full_price": full_price,
+                    "fee": 0,
+                    "left_tickets": int(leftSeatNum),
+                    "refresh_datetime": dte.now(),
+                    "extra_info": {"flag": flag},
+                    "shift_id": shiftid
+                }
+                if line_id == line.line_id:
+                    is_exist = True
+                obj.modify(**info)
 
             if nextPage > pageNo:
                 url = 'http://www.xintuyun.cn/getBusShift/ajax'+'?pageNo=%s' % nextPage
 #                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
-                self.recrawl_func(url, payload, is_exist)
+                self.recrawl_func(line, url, payload, is_exist)
         return is_exist
 
     def clear_riders(self):
