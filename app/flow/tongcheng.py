@@ -592,8 +592,8 @@ class Flow(BaseFlow):
         update_attrs = {}
         for d in res["body"]["schedule"]:
             if not d["coachNo"]:
-                left = 0
-            elif d["canBooking"]:
+                continue
+            if d["canBooking"]:
                 left = int(d["ticketLeft"]) or 15
             else:
                 left = 0
@@ -611,6 +611,7 @@ class Flow(BaseFlow):
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:
                 continue
+
             info = {
                 "full_price": float(d["ticketPrice"]),
                 "fee": 0,
