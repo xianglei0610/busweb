@@ -3303,9 +3303,9 @@ class XinTuYunWebRebot(Rebot):
             'stationIds': '',
             'ttsId': ''
             }
-        self.recrawl_func(queryline_url, payload)
+        return self.recrawl_func(queryline_url, payload)
 
-    def recrawl_func(self, queryline_url, payload):
+    def recrawl_func(self, queryline_url, payload, is_exist=False):
         res = requests.post(queryline_url, data=payload)
         trainListInfo = res.json()
         if trainListInfo and trainListInfo.get('msg', ''):
@@ -3348,13 +3348,15 @@ class XinTuYunWebRebot(Rebot):
                 try:
                     line_obj = Line.objects.get(line_id=line_id)
                     line_obj.modify(**item)
+                    is_exist = True
                 except Line.DoesNotExist:
                     continue
 
             if nextPage > pageNo:
                 url = 'http://www.xintuyun.cn/getBusShift/ajax'+'?pageNo=%s' % nextPage
 #                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
-                self.recrawl_func(url, payload)
+                self.recrawl_func(url, payload, is_exist)
+        return is_exist
 
     def clear_riders(self):
         url = "http://www.xintuyun.cn/people.shtml"

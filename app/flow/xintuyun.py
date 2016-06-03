@@ -269,10 +269,12 @@ class Flow(BaseFlow):
             result_info.update(result_msg="no left_tickets line", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
         try:
-            rebot.recrawl_shiftid(line)
+            is_exist = rebot.recrawl_shiftid(line)
         except:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         line.reload()
+        if not is_exist:
+            line.modify(left_tickets=0)
         result_info.update(result_msg="ok", update_attrs={"left_tickets": line.left_tickets, "refresh_datetime": now,'full_price':line.full_price})
 #         url = "http://www.xintuyun.cn/getTrainInfo/ajax"
 #         payload = {
