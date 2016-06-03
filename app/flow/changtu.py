@@ -110,11 +110,14 @@ class Flow(BaseFlow):
                 "feeMoney": int(line.fee),
             }
 
+            tel = order.contact_info["telephone"]
+            if tel.startswith(u"171"):
+                tel = rebot.telephone
             submit_data = {
                 "saveReceUserFlag": "N",
                 "receUserName": order.contact_info["name"],
                 "receUserCardCode": order.contact_info["id_number"],
-                "receUserContact": order.contact_info["telephone"],
+                "receUserContact": tel,
                 "t": token,
                 "fraud": json.dumps({"verifyCode": valid_code}),
                 "ordersJson": json.dumps([ticket_info], ensure_ascii=False),
