@@ -278,7 +278,7 @@ class Flow(BaseFlow):
         if order.source_account:
             rebot = BjkyWebRebot.objects.get(telephone=order.source_account)
         else:
-            rebot = BjkyWebRebot.get_one()
+            rebot = BjkyWebRebot.get_one(order)
         is_login = rebot.test_login_status()
         if is_login:
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:

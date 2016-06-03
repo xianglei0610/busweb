@@ -240,7 +240,7 @@ class Flow(BaseFlow):
         if order.source_account:
             rebot = Bus365WebRebot.objects.get(telephone=order.source_account)
         else:
-            rebot = Bus365WebRebot.get_one()
+            rebot = Bus365WebRebot.get_one(order)
         
         headers = {
            "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
