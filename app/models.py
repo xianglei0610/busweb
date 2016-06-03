@@ -3295,7 +3295,7 @@ class XinTuYunWebRebot(Rebot):
             'endName': target_city_name,
             "isExpressway": '',
             "sendDate": sdate,
-            "sendTimes": sendTimes,
+            "sendTimes": '',
             "showRemainOnly": '',
             "sort": "1",
             "startId": start_city_id,
