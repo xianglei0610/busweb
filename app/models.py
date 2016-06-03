@@ -3364,7 +3364,7 @@ class XinTuYunWebRebot(Rebot):
             if nextPage > pageNo:
                 url = 'http://www.xintuyun.cn/getBusShift/ajax'+'?pageNo=%s' % nextPage
 #                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
-                self.recrawl_func(line, url, payload, is_exist)
+                is_exist = self.recrawl_func(line, url, payload, is_exist)
         return is_exist
 
     def clear_riders(self):
