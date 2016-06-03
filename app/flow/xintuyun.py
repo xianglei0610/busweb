@@ -78,7 +78,7 @@ class Flow(BaseFlow):
                                        source_account="",
                                        result_reason="源站系统错误，锁票重试")
                 else:
-                    for s in [u'该条线路无法购买',u"余票不足",u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位"]:
+                    for s in [u'班次信息错误',u'该条线路无法购买',u"余票不足",u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位"]:
                         if s in lock_msg:
                             self.close_line(line, reason=lock_msg)
                             break

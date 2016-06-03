@@ -237,6 +237,7 @@ class Flow(object):
         adv_info = {
             u"四川": 120+20,
             u"重庆": 60+10,
+            u"辽宁": 120+20,
         }
         adv_minus = adv_info.get(line.s_province, 60)
         if (line.drv_datetime-now).total_seconds() <= adv_minus*60:

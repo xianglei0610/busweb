@@ -432,8 +432,11 @@ class Flow(BaseFlow):
         request.add_header('accept', "application/json,")
         request.add_header('clienttype', "android")
         request.add_header('clienttoken', "")
-
-        response = urllib2.urlopen(request, timeout=30)
+        try:
+            response = urllib2.urlopen(request, timeout=20)
+        except:
+            result_info.update(result_msg="bus365 timeout default 15", update_attrs={"left_tickets": 15, "refresh_datetime": now})
+            return result_info
         res = json.loads(response.read())
         update_attrs = {}
         for d in res['schedules']:
