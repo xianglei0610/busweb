@@ -428,6 +428,11 @@ def order_pay(order_no):
     order = Order.objects.get(order_no=order_no)
     code = params.get("valid_code", "")
     force = int(params.get("force", "0"))
+
+    # 临时修复
+    if order.kefu_username in ["luojunping", "ck12308"] and order.crawl_source == SOURCE_XINTUYUN:
+        return "你不能支付新途云的单子，请转给其他人支付!"
+
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
         return "订单已成功或失败,不需要支付"
     if order.kefu_username != current_user.username:
