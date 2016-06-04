@@ -89,7 +89,7 @@ class Flow(BaseFlow):
                     })
                     return lock_result
                 flag = False
-                for i in [u"锁定接口异常",u"当前班次异常", u"锁定接口异常",u"接口失败",u"授权请求不合法"]:
+                for i in [u"锁定接口异常",u"当前班次异常",u"接口失败",u"授权请求不合法"]:
                     if i in errmsg:
                         flag = True
                         break
@@ -101,7 +101,8 @@ class Flow(BaseFlow):
                     })
                     return lock_result
 
-                for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码",u"班次不是售票状态",u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位"]:
+                for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码",u"班次不是售票状态",
+                          u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位",u'该班次为发车站专营班次']:
                     if s in errmsg:
                         self.close_line(line, reason=errmsg)
                         break
@@ -239,7 +240,7 @@ class Flow(BaseFlow):
         if order.source_account:
             rebot = Bus365WebRebot.objects.get(telephone=order.source_account)
         else:
-            rebot = Bus365WebRebot.get_one()
+            rebot = Bus365WebRebot.get_one(order)
         
         headers = {
            "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
@@ -432,8 +433,11 @@ class Flow(BaseFlow):
         request.add_header('accept', "application/json,")
         request.add_header('clienttype', "android")
         request.add_header('clienttoken', "")
-
-        response = urllib2.urlopen(request, timeout=30)
+        try:
+            response = urllib2.urlopen(request, timeout=20)
+        except:
+            result_info.update(result_msg="bus365 timeout default 15", update_attrs={"left_tickets": 15, "refresh_datetime": now})
+            return result_info
         res = json.loads(response.read())
         update_attrs = {}
         for d in res['schedules']:

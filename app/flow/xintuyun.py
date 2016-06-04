@@ -78,7 +78,7 @@ class Flow(BaseFlow):
                                        source_account="",
                                        result_reason="源站系统错误，锁票重试")
                 else:
-                    for s in [u'该条线路无法购买',u"余票不足",u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位"]:
+                    for s in [u'班次信息错误',u'该条线路无法购买',u"余票不足",u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位"]:
                         if s in lock_msg:
                             self.close_line(line, reason=lock_msg)
                             break
@@ -269,10 +269,12 @@ class Flow(BaseFlow):
             result_info.update(result_msg="no left_tickets line", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
         try:
-            rebot.recrawl_shiftid(line)
+            is_exist = rebot.recrawl_shiftid(line)
         except:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         line.reload()
+        if not is_exist:
+            line.modify(left_tickets=0)
         result_info.update(result_msg="ok", update_attrs={"left_tickets": line.left_tickets, "refresh_datetime": now,'full_price':line.full_price})
 #         url = "http://www.xintuyun.cn/getTrainInfo/ajax"
 #         payload = {

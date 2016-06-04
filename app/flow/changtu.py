@@ -110,11 +110,14 @@ class Flow(BaseFlow):
                 "feeMoney": int(line.fee),
             }
 
+            tel = order.contact_info["telephone"]
+            if tel.startswith(u"171"):
+                tel = rebot.telephone
             submit_data = {
                 "saveReceUserFlag": "N",
                 "receUserName": order.contact_info["name"],
                 "receUserCardCode": order.contact_info["id_number"],
-                "receUserContact": order.contact_info["telephone"],
+                "receUserContact": tel,
                 "t": token,
                 "fraud": json.dumps({"verifyCode": valid_code}),
                 "ordersJson": json.dumps([ticket_info], ensure_ascii=False),
@@ -159,11 +162,12 @@ class Flow(BaseFlow):
                     "12": "验证码输入错误",
                     "13": "需要验证码",
                     "14": "需要短信验证码",
+                    "16": "会员信息异常",
                     "000495": "不能重复购买",
                 }
                 fail_code = ret.get("failReason", "")
                 msg = code_names.get(fail_code, "")+" "+msg
-                if fail_code in ["13", "11", "12", "000010", "14"]:   # 要输字母验证码
+                if fail_code in ["13", "11", "12", "000010", "14", "16"]:   # 要输字母验证码
                     lock_result.update({
                         "result_code": 2,
                         "result_reason": "%s-%s" % (fail_code, msg),

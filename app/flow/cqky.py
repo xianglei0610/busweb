@@ -421,7 +421,10 @@ class Flow(BaseFlow):
             "cmd": "OnlineOrderGetList"
         }
         r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
-        res = json.loads(trans_js_str(r.content))
+        try:
+            res = json.loads(trans_js_str(r.content))
+        except:
+            res = json.loads(my_trans_js_str(r.content))
         for d in res["data"]:
             if d["OrderNo"] == order.raw_order_no:
                 return d
