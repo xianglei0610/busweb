@@ -335,6 +335,10 @@ class Flow(BaseFlow):
                 self.lock_ticket(order)
 
             if order.status == STATUS_WAITING_ISSUE:
+                self.refresh_issue(order)
+                order.reload()
+                if not order.raw_order_no:
+                    return {"flag": "error", "content": "没拿到源站订单号，不允许支付"}
                 headers = rebot.http_header()
                 headers.update({"X-Requested-With": "XMLHttpRequest"})
                 cookies = json.loads(rebot.cookies)
