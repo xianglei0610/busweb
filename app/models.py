@@ -3370,15 +3370,17 @@ class XinTuYunWebRebot(Rebot):
 
     def clear_riders(self):
         url = "http://www.xintuyun.cn/people.shtml"
+        headers = self.http_header()
+        cookies = json.loads(self.cookies)
         try:
-            response = requests.post(url, cookies=self.cookies)
+            response = requests.post(url, headers=headers, cookies=cookies)
             sel = etree.HTML(response.content)
             people_list = sel.xpath('//div[@class="p-edu"]')
             for i in people_list:
                 res = i.xpath('a[@class="del trans"]/@onclick')[0]
                 userid = re.findall('del\(\'(.*)\'\);', res)[0]
-                del_url = "http://www.xintuyun.cn/user/delPeople/ajax?id=%s"%userid
-                response = requests.get(del_url, cookies=self.cookies)
+                del_url = "http://xintuyun.cn/user/delPeople/ajax?id=%s"%userid
+                response = requests.get(del_url, headers=headers, cookies=cookies)
         except:
             pass
 

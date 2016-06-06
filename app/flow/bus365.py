@@ -79,6 +79,7 @@ class Flow(BaseFlow):
                     "result_code": 1,
                     "result_reason": "",
                     "pay_url": "",
+                    "lock_info": res['order'],
                     "raw_order_no": res['order']['orderno'],
                     "expire_datetime": expire_time,
                     "pay_money": float(res['order']['totalprice']),
@@ -255,9 +256,9 @@ class Flow(BaseFlow):
  
         if order.status == STATUS_WAITING_ISSUE:
             param = {
-                     "ordertoken": order.lock_info['order']['ordertoken'],
-                     "orderno": order.lock_info['order']['orderno'],
-                     "userid": str(order.lock_info['order']['userid'])
+                     "ordertoken": order.lock_info['ordertoken'],
+                     "orderno": order.lock_info['orderno'],
+                     "userid": str(order.lock_info['userid'])
                      }
             url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
             unpay_url = url + '?'+urllib.urlencode(param)
