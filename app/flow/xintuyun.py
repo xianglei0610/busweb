@@ -278,45 +278,56 @@ class Flow(BaseFlow):
             is_exist = rebot.recrawl_shiftid(line)
         except:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            return result_info
         line.reload()
         if not is_exist:
             line.modify(left_tickets=0)
-        result_info.update(result_msg="ok", update_attrs={"left_tickets": line.left_tickets, "refresh_datetime": now,'full_price':line.full_price})
-#         url = "http://www.xintuyun.cn/getTrainInfo/ajax"
-#         payload = {
-#             "shiftId": line.shift_id,
-#             "startId": line.s_sta_id,
-#             "startName": line.s_sta_name,
-#             "ttsId": ''
-#         }
-#         trainInfo = requests.post(url, data=payload, cookies=rebot.cookies)
-#         if trainInfo.status_code == 404:
-#             line_log.info("[refresh-result] request 404 line:%s,%s %s ", line.crawl_source,line.s_city_name, line.line_id)
-#             result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-#         else:
-#             trainInfo = trainInfo.json()
-#             if str(trainInfo['flag']) == '0':
-#                 sel = etree.HTML(trainInfo['msg'])
-#                 full_price = sel.xpath('//div[@class="order_detail"]/div[@class="left"]/p[@class="price"]/em/text()')
-#                 if full_price:
-#                     full_price = float(full_price[0])
-#                 try:
-#                     ticket_info = sel.xpath('//div[@class="order_detail"]/div[@class="right"]/p[3]/a/text()')[0]
-#                     p = re.compile(r'\d+')
-#                     left_ticketObj = p.findall(ticket_info)
-#                     left_tickets = 0
-#                     if left_ticketObj:
-#                         left_tickets = int(left_ticketObj[0])
-#                     if int(trainInfo['maxSellNum']) < 3:
-#                         left_tickets = 0
-#                 except Exception, e:
-#                     line_log.info("[refresh-result] request error line:%s,%s %s,%s ", line.crawl_source,line.s_city_name, line.line_id,e)
-#                     left_tickets = 0
-#
-#                 result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now,'full_price':full_price})
-#             elif str(trainInfo['flag']) == '1':
-#                 line_log.info("[refresh-result]  no left_tickets line:%s,%s %s,result:%s ", line.crawl_source,line.s_city_name, line.line_id,trainInfo)
-#                 result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="ok", update_attrs={"left_tickets": line.left_tickets, "refresh_datetime": now,'full_price':line.full_price})
+            return result_info
+        url = "http://www.xintuyun.cn/getTrainInfo/ajax"
+        payload = {
+            "shiftId": line.shift_id,
+            "startId": line.s_sta_id,
+            "startName": line.s_sta_name,
+            "ttsId": ''
+        }
+        headers = rebot.http_header()
+        cookies = json.loads(rebot.cookies)
+        try:
+            trainInfo = rebot.http_post(url, data=payload, headers=headers,cookies=cookies,timeout=20)
+        except:
+            result_info.update(result_msg="xintuyun timeout", update_attrs={"left_tickets": line.left_tickets, "refresh_datetime": now})
+            return result_info
+        if trainInfo.status_code == 404:
+            line_log.info("[refresh-result] request 404 line:%s,%s %s ", line.crawl_source,line.s_city_name, line.line_id)
+            result_info.update(result_msg="request 404", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        else:
+            trainInfo = trainInfo.json()
+            if str(trainInfo['flag']) == '0':
+                content = trainInfo['msg']
+                if not isinstance(content, unicode):
+                    content = content.decode('utf-8')
+                sel = etree.HTML(content)
+                full_price = sel.xpath('//div[@class="order_detail"]/div[@class="left"]/p[@class="price"]/em/text()')
+                if full_price:
+                    full_price = float(full_price[0])
+                try:
+                    ticket_info = sel.xpath('//div[@class="order_detail"]/div[@class="right"]/p[3]/a/text()')[0]
+                    p = re.compile(r'\d+')
+                    left_ticketObj = p.findall(ticket_info)
+                    left_tickets = 0
+                    if left_ticketObj:
+                        left_tickets = int(left_ticketObj[0])
+                    if int(trainInfo['maxSellNum']) < 3:
+                        left_tickets = 0
+                except Exception, e:
+                    line_log.info("[refresh-result] request error line:%s,%s %s,%s ", line.crawl_source,line.s_city_name, line.line_id,e)
+                    left_tickets = 0
+
+                result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now,'full_price':full_price})
+            elif str(trainInfo['flag']) == '1':
+                line_log.info("[refresh-result]  no left_tickets line:%s,%s %s,result:%s ", line.crawl_source,line.s_city_name, line.line_id,trainInfo)
+                result_info.update(result_msg="ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
 
         return result_info
 
