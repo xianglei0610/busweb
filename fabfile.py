@@ -16,8 +16,8 @@ env.hosts = SERVER_LIST.values()
 
 
 def deploy(name=""):
-    if name not in ("admin", "api", "celery", "dashboard"):
-        raise Exception("name should be in (admin, api, celery), but it's %s" % name)
+    if name not in ("api", "celery", "dashboard"):
+        raise Exception("name should be in (api, celery, dashboard), but it's %s" % name)
 
     with cd("/home/12308/code/busweb/"):
         # 拉代码
@@ -36,6 +36,6 @@ def deploy_all():
         run("git fetch")
         run("git merge origin/master")
 
-        for name in ["admin", "api", "celery", "dashboard"]:
+        for name in ["api", "celery", "dashboard"]:
             # 重启supervisor
             run("sudo supervisorctl restart server:%s" % name)
