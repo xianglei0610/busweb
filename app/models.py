@@ -279,7 +279,8 @@ class Line(db.Document):
                 if s_sta_name != u'首都机场站':
                     s_sta_name = self.s_sta_name.decode("utf-8").strip().rstrip(u"客运站")
                 if s_sta_name == u'四惠':
-                   return {}
+                    self.modify(compatible_lines={})
+                    return {}
             qs = Line.objects.filter(
                                      s_city_name=self.s_city_name,
                                      s_sta_name__startswith=unicode(s_sta_name),
