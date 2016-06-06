@@ -87,6 +87,12 @@ class Flow(BaseFlow):
             elif lock_flag == '99' or u'班次信息错误' in lock_msg:
                 lock_result.update(result_code=2,
                                    result_reason=lock_msg)
+            elif lock_flag == '1':
+                if u'请先支付或取消上一份订单' in lock_msg:
+                    new_rebot = order.change_lock_rebot()
+                    lock_result.update(result_code=2,
+                                       source_account=new_rebot.telephone,
+                                       result_reason=lock_msg)
             else:
                 lock_result.update({
                     "result_code": 0,
