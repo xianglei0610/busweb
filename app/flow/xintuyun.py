@@ -58,6 +58,7 @@ class Flow(BaseFlow):
                 lock_result.update(result_code=0,
                                    result_reason=lock_msg)
             if lock_flag == '0':    # 锁票成功
+
                 expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
                 lock_result.update({
                     "result_code": 1,
@@ -67,6 +68,14 @@ class Flow(BaseFlow):
                     "expire_datetime": expire_datetime,
                     "pay_money": order.order_price,
                 })
+                order.modify(lock_info=lock_info)
+                try:
+                    ret = self.send_order_request(order, rebot)
+                    order.modify(raw_order_no=ret['order_id'])
+                    lock_result.update({"raw_order_no": ret['order_id']})
+                except:
+                    lock_result.update(result_code=2,
+                                       result_reason='锁票后未获取到订单号，重新锁票')
             elif lock_flag == '2':
                 if u'同一出发日期限购6张' in lock_msg:
                     new_rebot = order.change_lock_rebot()
