@@ -43,9 +43,10 @@ def get_compatible_flow(line):
         jsky_lineid = line.compatible_lines.get("jsky", "")
         if False:
             return get_flow("jsky"), Line.objects.get(line_id=jsky_lineid)
-
     choose = weight_choice(weights)
     if not choose:
         return None, None
     new_line = Line.objects.get(line_id=line.compatible_lines[choose])
+    if new_line.crawl_source =='bjky' and new_line.s_sta_name == u'四惠':
+        return None, None
     return get_flow(choose), new_line
