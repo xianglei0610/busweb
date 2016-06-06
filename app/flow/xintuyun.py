@@ -378,13 +378,15 @@ class Flow(BaseFlow):
 
                 if not params and order.pay_url:
                     return {"flag": "url", "content": order.pay_url}
-                url = "http://pay.xintuyun.cn/payment/payment/gateWayPay.do"
-                r = requests.post(url, headers=headers, cookies=cookies, data=urllib.urlencode(params))
-                sel = etree.HTML(r.content)
-                pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
-                if order.pay_order_no != pay_order_no:
-                    order.update(pay_order_no=pay_order_no)
-                return {"flag": "html", "content": r.content}
+                pay_content = order.extra_info.get('pay_content', '')
+                if not pay_content:
+                    url = "http://pay.xintuyun.cn/payment/payment/gateWayPay.do"
+                    r = requests.post(url, headers=headers, cookies=cookies, data=urllib.urlencode(params))
+                    pay_content = r.content
+                    sel = etree.HTML(pay_content)
+                    pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
+                    order.update(pay_order_no=pay_order_no, extra_info={'pay_content': pay_content})
+                return {"flag": "html", "content": pay_content}
 
 #                 if not order.pay_url:
 #                     url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
