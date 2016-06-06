@@ -201,6 +201,7 @@ class Flow(BaseFlow):
         return res
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
+        rebot.modify(ip="")     # 解决代理ip缓存结果的问题
         order_detail_url = "http://e2go.com.cn/TicketOrder/OrderDetail/%s?seed=0.%s"%(order.lock_info['order_id'],random.randint(10000000,100000000000))
         headers = rebot.http_header()
 #         rebot.login()
@@ -278,7 +279,7 @@ class Flow(BaseFlow):
         if order.source_account:
             rebot = BjkyWebRebot.objects.get(telephone=order.source_account)
         else:
-            rebot = BjkyWebRebot.get_one()
+            rebot = BjkyWebRebot.get_one(order)
         is_login = rebot.test_login_status()
         if is_login:
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:

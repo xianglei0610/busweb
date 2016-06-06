@@ -54,9 +54,16 @@ class Flow(BaseFlow):
             if order.line.left_tickets == 0:
                 lock_result.update(result_reason="该条线路余票不足", result_code=0)
                 return lock_result
-
-            res = self.send_lock_request(order, rebot)
-  
+            try:
+                res = self.send_lock_request(order, rebot)
+            except:
+                rebot.modify(ip="")
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": "锁票失败，进入下单重试",
+                })
+                return lock_result
             if isinstance(res, list):
                 res = res[0]
             if res.has_key('getwaylist'):
@@ -169,14 +176,9 @@ class Flow(BaseFlow):
             "usertoken": rebot.client_token
         }
         order_detail_url = url + '?'+urllib.urlencode(param)
+        rebot.modify(ip='')
         r = rebot.http_get(order_detail_url, headers=headers)
-        try:
-            ret = r.json()
-        except:
-            rebot.modify(ip='')
-            r = rebot.http_get(order_detail_url, headers=headers)
-            ret = r.json()
-
+        ret = r.json()
         if ret['paystatus'] == 1 and ret['status'] == 0:
             return {"state": 6}
         return {"state": ret['status']}
@@ -240,7 +242,7 @@ class Flow(BaseFlow):
         if order.source_account:
             rebot = Bus365WebRebot.objects.get(telephone=order.source_account)
         else:
-            rebot = Bus365WebRebot.get_one()
+            rebot = Bus365WebRebot.get_one(order)
         
         headers = {
            "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),

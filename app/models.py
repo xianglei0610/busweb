@@ -278,6 +278,9 @@ class Line(db.Document):
             if self.crawl_source == SOURCE_CTRIP:
                 if s_sta_name != u'首都机场站':
                     s_sta_name = self.s_sta_name.decode("utf-8").strip().rstrip(u"客运站")
+                if s_sta_name == u'四惠':
+                    self.modify(compatible_lines={})
+                    return {}
             qs = Line.objects.filter(
                                      s_city_name=self.s_city_name,
                                      s_sta_name__startswith=unicode(s_sta_name),
@@ -2323,14 +2326,15 @@ class BjkyWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        key = RK_PROXY_IP_BJKY
-        if ipstr and rds.sismember(key, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(key)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         key = RK_PROXY_IP_BJKY
+#         if ipstr and rds.sismember(key, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(key)
+#         self.modify(ip=ipstr)
+#         return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -3364,7 +3368,7 @@ class XinTuYunWebRebot(Rebot):
             if nextPage > pageNo:
                 url = 'http://www.xintuyun.cn/getBusShift/ajax'+'?pageNo=%s' % nextPage
 #                 url = queryline_url.split('?')[0]+'?pageNo=%s'%nextPage
-                self.recrawl_func(line, url, payload, is_exist)
+                is_exist = self.recrawl_func(line, url, payload, is_exist)
         return is_exist
 
     def clear_riders(self):
