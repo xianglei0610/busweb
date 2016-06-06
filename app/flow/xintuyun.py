@@ -274,6 +274,7 @@ class Flow(BaseFlow):
             line_log.info("[refresh-result]  no left_tickets line:%s %s ", line.crawl_source, line.line_id)
             result_info.update(result_msg="no left_tickets line", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
+        is_exist = False
         try:
             is_exist = rebot.recrawl_shiftid(line)
         except:
