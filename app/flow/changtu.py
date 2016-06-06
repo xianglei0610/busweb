@@ -111,8 +111,8 @@ class Flow(BaseFlow):
             }
 
             tel = order.contact_info["telephone"]
-            if tel.startswith(u"171"):
-                tel = rebot.telephone
+            # if tel.startswith(u"171"):
+            #     tel = rebot.telephone
             submit_data = {
                 "saveReceUserFlag": "N",
                 "receUserName": order.contact_info["name"],
@@ -167,14 +167,14 @@ class Flow(BaseFlow):
                 }
                 fail_code = ret.get("failReason", "")
                 msg = code_names.get(fail_code, "")+" "+msg
-                if fail_code in ["13", "11", "12", "000010", "14", "16"]:   # 要输字母验证码
+                if fail_code in ["13", "11", "12", "000010", "14"]:   # 要输字母验证码
                     lock_result.update({
                         "result_code": 2,
                         "result_reason": "%s-%s" % (fail_code, msg),
                         "source_account": rebot.telephone,
                         "lock_info": ret,
                     })
-                elif fail_code in ["000124", "000240"]:
+                elif fail_code in ["000124", "000240", "16"]:
                     lock_result.update({
                         "result_code": 0,
                         "result_reason": "%s-%s" % (fail_code, msg),
