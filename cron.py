@@ -326,6 +326,9 @@ def main():
     # 新途云
     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['xintuyun'])
 
+    # 河南
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['hn96520'])
+
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=10)
