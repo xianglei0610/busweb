@@ -642,6 +642,8 @@ class Flow(BaseFlow):
                     obj = Order.objects.get(raw_order_no=raw_order, status=STATUS_ISSUE_SUCC)
                     if obj.order_no == order.order_no:
                         return
+                    else:
+                        continue
                 except Order.DoesNotExist:
                     old = order.raw_order_no
                     order.modify(raw_order_no=raw_order, pay_money=float(d["OrderMoney"]))
