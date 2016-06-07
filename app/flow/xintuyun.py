@@ -31,7 +31,12 @@ class Flow(BaseFlow):
         with XinTuYunWebRebot.get_and_lock(order) as rebot:
             is_login = rebot.test_login_status()
             if not is_login:
-                if rebot.login() != "OK":
+                flag = False
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        flag = True
+                        break
+                if not flag:
                     lock_result.update(result_code=2,
                                        source_account=rebot.telephone,
                                        result_reason="账号未登陆")
@@ -78,7 +83,9 @@ class Flow(BaseFlow):
                     order.modify(raw_order_no=ret['order_id'])
                     lock_result.update({"raw_order_no": ret['order_id']})
                 except:
+                    new_rebot = order.change_lock_rebot()
                     lock_result.update(result_code=2,
+                                       source_account=new_rebot.telephone,
                                        result_reason='锁票后未获取到订单号，重新锁票')
             elif lock_flag == '2':
                 if u'同一出发日期限购6张' in lock_msg:
@@ -127,7 +134,7 @@ class Flow(BaseFlow):
               "ttsId":  ''
         }
         try:
-            trainInfo = requests.post(url, data=data, headers=headers, cookies=cookies)
+            trainInfo = rebot.http_post(url, data=data, headers=headers, cookies=cookies)
             trainInfo = trainInfo.json()
             tickType = trainInfo.get('tickType', '')
             if tickType:
@@ -195,7 +202,9 @@ class Flow(BaseFlow):
 
         rebot = XinTuYunWebRebot.objects.get(telephone=order.source_account)
         if not rebot.test_login_status():
-            rebot.login()
+            for i in range(3):
+                if rebot.login() == "OK":
+                    break
         ret = self.send_order_request(order, rebot)
         code_list, msg_list = [], []
         status = ret.get("status", None)
@@ -245,7 +254,7 @@ class Flow(BaseFlow):
         url = "http://www.xintuyun.cn/orderInfo.shtml"
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
-        r = requests.post(url, data=data, headers=headers,cookies=cookies)
+        r = rebot.http_post(url, data=data, headers=headers,cookies=cookies)
         content = r.content
         if not isinstance(content, unicode):
             content = content.decode('utf-8')
