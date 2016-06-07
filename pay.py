@@ -24,6 +24,7 @@ COMPANY_TO_SOURCE = {
     "南京趣普电子商务有限公司": SOURCE_CHANGTU,
     "南京晨之义软件科技有限公司": lambda name: SOURCE_NMGHY if u"内蒙古网站售票" in name else SOURCE_TZKY,
     "北京盛威时代科技有限公司": SOURCE_BUS365,
+    "辽宁新途网络科技有限公司": SOURCE_XINTUYUN,
 }
 
 def parse_alipay_record(f):
@@ -113,9 +114,10 @@ def match_alipay_order(trade_info):
 
 
 def import_alipay_record(filename):
+    kefu_log.info("文件名:%s", filename.name)
     account, trade_list = parse_alipay_record(filename)
+    kefu_log.info("支付宝账号:%s", account)
 
-    kefu_log.info("支付宝账号:%s %s", account, filename.name)
     cnt = 0
     for trade_info in trade_list:
         order = match_alipay_order(trade_info)
