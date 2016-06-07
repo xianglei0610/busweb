@@ -31,7 +31,11 @@ class Flow(BaseFlow):
         with XinTuYunWebRebot.get_and_lock(order) as rebot:
             is_login = rebot.test_login_status()
             if not is_login:
-                rebot.login()
+                if rebot.login() != "OK":
+                    lock_result.update(result_code=2,
+                                       source_account=rebot.telephone,
+                                       result_reason="账号未登陆")
+                    return lock_result
             try:
                 rebot.recrawl_shiftid(order.line)
             except:
