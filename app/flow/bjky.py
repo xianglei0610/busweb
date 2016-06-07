@@ -405,7 +405,9 @@ class Flow(BaseFlow):
             if i.test_login_status():
                 rebot = i
                 break
+        bjky_flag = False
         if rebot:
+            bjky_flag = True
             queryline_url = "http://e2go.com.cn/TicketOrder/SearchSchedule"
             data = {
                 "ArrivingStop": line.d_city_name,
@@ -452,7 +454,7 @@ class Flow(BaseFlow):
                     update_attrs = info
                 else:
                     obj.update(**info)
-        if not update_attrs:
+        if not update_attrs and not bjky_flag:
             s_sta_name = line.s_sta_name
             d_city_name = line.d_city_name
             if line.s_sta_name != u'首都机场站':
