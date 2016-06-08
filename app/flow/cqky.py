@@ -51,6 +51,11 @@ class Flow(BaseFlow):
                 mode = 1
             order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
 
+            # 清理购物车
+            res = self.request_get_shoptcart(rebot)
+            for ids in res["data"][u"ShopTable"].keys():
+                d = self.request_del_shoptcart(rebot, ids)
+
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
             ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
@@ -637,6 +642,8 @@ class Flow(BaseFlow):
                     obj = Order.objects.get(raw_order_no=raw_order, status=STATUS_ISSUE_SUCC)
                     if obj.order_no == order.order_no:
                         return
+                    else:
+                        continue
                 except Order.DoesNotExist:
                     old = order.raw_order_no
                     order.modify(raw_order_no=raw_order, pay_money=float(d["OrderMoney"]))

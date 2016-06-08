@@ -82,9 +82,10 @@ class Flow(BaseFlow):
             if int(shopcartct) != len(order.riders):
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
+                new_rebot = order.change_lock_rebot()
                 lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="购物车中数量和购票人数不相同")
+                                   source_account=new_rebot.telephone,
+                                   result_reason=rebot.telephone+":购物车中数量和购票人数不相同")
                 return lock_result
             try:
                 res = self.request_create_order(order, rebot)
@@ -405,7 +406,9 @@ class Flow(BaseFlow):
             if i.test_login_status():
                 rebot = i
                 break
+        bjky_flag = False
         if rebot:
+            bjky_flag = True
             queryline_url = "http://e2go.com.cn/TicketOrder/SearchSchedule"
             data = {
                 "ArrivingStop": line.d_city_name,
@@ -430,6 +433,10 @@ class Flow(BaseFlow):
                 price = s.xpath('td[@class="ticketPriceCell"]/span[@class="ticketPriceSpan"]/span[@class="ticketPriceValueSpan"]/text()')[0]
 
                 drv_datetime = dte.strptime("%s %s" % (line.drv_date, time), "%Y-%m-%d %H:%M")
+                left_less = s.xpath('td[@class="memoCell"]/span/@class')
+                left_tickets = 45
+                if left_less:
+                    left_tickets = 0
                 line_id_args = {
                     "s_city_name": line.s_city_name,
                     "d_city_name": line.d_city_name,
@@ -445,14 +452,14 @@ class Flow(BaseFlow):
                 info = {
                     "full_price": float(price),
                     "fee": 0,
-                    "left_tickets": 45,
+                    "left_tickets": left_tickets,
                     "refresh_datetime": now,
                 }
                 if line_id == line.line_id:
                     update_attrs = info
                 else:
                     obj.update(**info)
-        if not update_attrs:
+        if not update_attrs and not bjky_flag:
             s_sta_name = line.s_sta_name
             d_city_name = line.d_city_name
             if line.s_sta_name != u'首都机场站':

@@ -164,6 +164,7 @@ class Flow(BaseFlow):
                     "14": "需要短信验证码",
                     "16": "会员信息异常",
                     "000495": "不能重复购买",
+                    "000127": "没这个班次?",
                 }
                 fail_code = ret.get("failReason", "")
                 msg = code_names.get(fail_code, "")+" "+msg
@@ -174,7 +175,7 @@ class Flow(BaseFlow):
                         "source_account": rebot.telephone,
                         "lock_info": ret,
                     })
-                elif fail_code in ["000124", "000240", "16"]:
+                elif fail_code in ["000124", "000240", "16", "000127"]:
                     lock_result.update({
                         "result_code": 0,
                         "result_reason": "%s-%s" % (fail_code, msg),

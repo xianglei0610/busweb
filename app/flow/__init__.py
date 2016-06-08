@@ -47,6 +47,6 @@ def get_compatible_flow(line):
     if not choose:
         return None, None
     new_line = Line.objects.get(line_id=line.compatible_lines[choose])
-    if new_line.crawl_source =='bjky' and new_line.s_sta_name == u'四惠':
-        return None, None
+#     if new_line.crawl_source =='bjky' and new_line.s_sta_name == u'四惠':
+#         return None, None
     return get_flow(choose), new_line

@@ -308,7 +308,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['ctrip'], kwargs={"crawl_kwargs":{"province": "北京"}})
 
     #北京省网
-    sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['bjky'])
+    sched.add_cron_job(bus_crawl, hour=8, minute=30, args=['bjky'])
 
     #唐山省网
     sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['hebky'])
@@ -325,6 +325,9 @@ def main():
 
     # 新途云
     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['xintuyun'])
+
+    # 河南
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['hn96520'])
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
