@@ -409,6 +409,7 @@ class Flow(BaseFlow):
                     pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
                     order.update(pay_order_no=pay_order_no, extra_info={'pay_content': pay_content})
                 return {"flag": "html", "content": pay_content}
+            return {"flag": "error", "content": "锁票失败"}
 
 #                 if not order.pay_url:
 #                     url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
