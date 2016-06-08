@@ -225,10 +225,6 @@ class Flow(BaseFlow):
             result_info.update(result_msg="1小时内的票不卖", update_attrs={
                                "left_tickets": 0, "refresh_datetime": now})
             return result_info
-
-        # result_info.update(result_msg="ok", update_attrs=update_attrs)
-        # return result_info
-
         pre = 'http://www.hn96520.com/placeorder.aspx?'
         params = {
             "start": line.s_city_name,
@@ -240,6 +236,7 @@ class Flow(BaseFlow):
         headers = {"User-Agent": ua,
                    "Content-Type": "application/x-www-form-urlencoded"}
         url = pre + urllib.urlencode(params)
+        rebot_log.info(url)
         r = requests.get(url, headers=headers, data=params)
         soup = bs(r.content, 'lxml')
         info = soup.find('table', attrs={'class': 'resulttb'}).find_all(
@@ -271,11 +268,13 @@ class Flow(BaseFlow):
                     'crawl_source': crawl_source,
                     'drv_datetime': drv_datetime,
                 }
-                line_id = md5(
-                    "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                rebot_log.info(line_id_args)
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 nt.add(line_id)
             except Exception as e:
                 print(e)
+        # rebot_log.info(t)
+        # rebot_log.info(nt)
         line_ids = t - nt
         if line_ids:
             update_attrs.update({
