@@ -639,7 +639,7 @@ class Flow(BaseFlow):
             if d["OrderStatus"] == "未支付" and float(d["OrderMoney"]) == order.order_price and int(d["TicketCount"]) == order.ticket_amount:
                 raw_order = d["OrderNo"]
                 try:
-                    obj = Order.objects.get(raw_order_no=raw_order, status=STATUS_ISSUE_SUCC)
+                    obj = Order.objects.get(raw_order_no=raw_order)
                     if obj.order_no == order.order_no:
                         return
                     else:
@@ -647,5 +647,6 @@ class Flow(BaseFlow):
                 except Order.DoesNotExist:
                     old = order.raw_order_no
                     order.modify(raw_order_no=raw_order, pay_money=float(d["OrderMoney"]))
+                    order.add_trace(OT_CHECK_RAW_ORDER, "%s=>%s" % (old, order.raw_order_no))
                     order_log.info("order:%s change raw_order_no %s to %s", order.order_no, old, order.raw_order_no)
                     return

@@ -3224,6 +3224,7 @@ OT_ISSUE_CB = 11  # 出票回调
 OT_REMARK = 12  # 增加备注内容
 OT_YICHANG = 13  # 设为异常
 OT_YICHANG2 = 14  # 解除异常
+OT_CHECK_RAW_ORDER = 15
 
 OT_MSG = {
     OT_CREATED: "创建订单",
@@ -3240,6 +3241,7 @@ OT_MSG = {
     OT_REMARK: "增加备注",
     OT_YICHANG: "设为异常",
     OT_YICHANG2: "解除异常",
+    OT_CHECK_RAW_ORDER: "源单校准",
 }
 
 
