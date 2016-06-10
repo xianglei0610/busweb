@@ -52,9 +52,9 @@ class Flow(BaseFlow):
             order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
 
             # 清理购物车
-            res = self.request_get_shoptcart(rebot)
-            for ids in res["data"][u"ShopTable"].keys():
-                d = self.request_del_shoptcart(rebot, ids)
+            # res = self.request_get_shoptcart(rebot)
+            # for ids in res["data"][u"ShopTable"].keys():
+            #     d = self.request_del_shoptcart(rebot, ids)
 
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
@@ -650,3 +650,7 @@ class Flow(BaseFlow):
                     order.add_trace(OT_CHECK_RAW_ORDER, "%s=>%s" % (old, order.raw_order_no))
                     order_log.info("order:%s change raw_order_no %s to %s", order.order_no, old, order.raw_order_no)
                     return
+        else:
+            order.add_trace(OT_CHECK_RAW_ORDER, "在源站没找到订单")
+            order.on_lock_retry(reason="在源站没找到订单")
+            order.modify(raw_order_no="", pay_order_no="", pay_money=0, status=STATUS_LOCK_RETRY)
