@@ -334,17 +334,17 @@ def main():
     sched.add_interval_job(crawl_proxy_samair, minutes=10)
     sched.add_interval_job(crawl_proxy_66ip, minutes=10)
     sched.add_interval_job(crawl_proxy_xici, minutes=10)
-    # sched.add_interval_job(crawl_proxy_zdaye, minutes=3)
+    sched.add_interval_job(crawl_proxy_zdaye, minutes=3)
 
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["tongcheng"], minutes=1)
+    # sched.add_interval_job(check_consumer_proxy, args=["tongcheng"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
+    # sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
+    # sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
     #sched.add_interval_job(check_consumer_proxy, args=["lnky"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["e8s"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=1)
+    # sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["bus365"], minutes=1)
 
 
