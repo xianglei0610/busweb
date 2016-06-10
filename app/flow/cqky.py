@@ -651,6 +651,6 @@ class Flow(BaseFlow):
                     order_log.info("order:%s change raw_order_no %s to %s", order.order_no, old, order.raw_order_no)
                     return
         else:
+            order.modify(raw_order_no="", pay_order_no="", pay_money=0, status=STATUS_LOCK_RETRY)
             order.add_trace(OT_CHECK_RAW_ORDER, "在源站没找到订单")
             order.on_lock_retry(reason="在源站没找到订单")
-            order.modify(raw_order_no="", pay_order_no="", pay_money=0, status=STATUS_LOCK_RETRY)
