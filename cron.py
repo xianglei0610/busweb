@@ -334,7 +334,7 @@ def main():
     sched.add_interval_job(crawl_proxy_samair, minutes=10)
     sched.add_interval_job(crawl_proxy_66ip, minutes=10)
     sched.add_interval_job(crawl_proxy_xici, minutes=10)
-    sched.add_interval_job(crawl_proxy_zdaye, minutes=3)
+    # sched.add_interval_job(crawl_proxy_zdaye, minutes=3)
 
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
