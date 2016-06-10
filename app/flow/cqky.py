@@ -51,11 +51,6 @@ class Flow(BaseFlow):
                 mode = 1
             order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
 
-            # 清理购物车
-            # res = self.request_get_shoptcart(rebot)
-            # for ids in res["data"][u"ShopTable"].keys():
-            #     d = self.request_del_shoptcart(rebot, ids)
-
             # 加入购物车
             res = self.request_add_shopcart(order, rebot, sta_mode=mode)
             ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
@@ -638,19 +633,17 @@ class Flow(BaseFlow):
         for d in order_list:
             if d["OrderStatus"] == "未支付" and float(d["OrderMoney"]) == order.order_price and int(d["TicketCount"]) == order.ticket_amount:
                 raw_order = d["OrderNo"]
-                try:
-                    obj = Order.objects.get(raw_order_no=raw_order)
-                    if obj.order_no == order.order_no:
-                        return
-                    else:
-                        continue
-                except Order.DoesNotExist:
+                qs = Order.objects.filter(raw_order_no=raw_order)
+                cnt = qs.count()
+                if not cnt:
                     old = order.raw_order_no
                     order.modify(raw_order_no=raw_order, pay_money=float(d["OrderMoney"]))
                     order.add_trace(OT_CHECK_RAW_ORDER, "%s=>%s" % (old, order.raw_order_no))
                     order_log.info("order:%s change raw_order_no %s to %s", order.order_no, old, order.raw_order_no)
                     return
-        else:
-            order.modify(raw_order_no="", pay_order_no="", pay_money=0, status=STATUS_LOCK_RETRY)
-            order.add_trace(OT_CHECK_RAW_ORDER, "在源站没找到订单")
-            order.on_lock_retry(reason="在源站没找到订单")
+                elif cnt == 1:
+                    if qs.first().order_no == order.order_no:
+                        return
+        #order.modify(raw_order_no="", pay_order_no="", pay_money=0, status=STATUS_LOCK_RETRY)
+        #order.add_trace(OT_CHECK_RAW_ORDER, "在源站没找到订单")
+        #order.on_lock_retry(reason="在源站没找到订单")
