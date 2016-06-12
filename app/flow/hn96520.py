@@ -216,16 +216,6 @@ class Flow(BaseFlow):
 
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
-        result_info = {
-            "result_msg": "",
-            "update_attrs": {},
-        }
-        now = dte.now()
-        if (line.drv_datetime - now).total_seconds() <= 65 * 60:    # 不卖一小时之内的票
-            result_info.update(result_msg="1小时内的票不卖", update_attrs={
-                               "left_tickets": 0, "refresh_datetime": now})
-            return result_info
-
         pre = 'http://www.hn96520.com/placeorder.aspx?'
         params = {
             "start": line.s_city_name,
@@ -243,14 +233,12 @@ class Flow(BaseFlow):
             'tbody', attrs={'class': 'rebody'})
         crawl_source = "hn96520"
         now = dte.now()
-        t = set()
-        nt = set()
         update_attrs = {}
         ft = Line.objects.filter(s_city_name=line.s_city_name,
                                  d_city_name=line.d_city_name, drv_date=line.drv_date)
-        for x in ft:
-            t.add(x.line_id)
+        t = {x.line_id:x for x in ft}
         s_city_name = line.s_city_name
+        update_attrs = {}
         for x in info:
             try:
                 bus_num = x.find(
@@ -260,6 +248,7 @@ class Flow(BaseFlow):
                 drv_time = x.find_all('td')[3].get_text().strip()
                 drv_datetime = dte.strptime("%s %s" % (
                     drv_date, drv_time), "%Y-%m-%d %H:%M")
+                left_tickets = int(x.find_all('td')[8].get_text().strip())
                 line_id_args = {
                     's_city_name': s_city_name,
                     'd_city_name': d_city_name,
@@ -268,41 +257,19 @@ class Flow(BaseFlow):
                     'drv_datetime': drv_datetime,
                 }
                 line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
-                nt.add(line_id)
+                if line_id in t:
+                    t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
+                if line_id == line.line_id:
+                    update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
             except Exception as e:
                 print(e)
-        line_ids = t - nt
-        # rebot_log.info(len(t))
-        # rebot_log.info(len(nt))
-        # rebot_log.info(line_ids)
-        # import ipdb
-        # ipdb.set_trace()
-        if line_ids:
-            update_attrs.update({
-                'left_tickets': 0,
-                "refresh_datetime": now,
-            })
-            for line_id in line_ids:
-                obj = Line.objects.get(line_id=line_id)
-                obj.update(**update_attrs)
-        else:
-            pass
 
-        # rebot_log.info(update_attrs)
-        if line.line_id in line_ids or line.left_tickets == 0:
-            result_info.update(result_msg="no line info", update_attrs={
-                               "left_tickets": line.left_tickets, "refresh_datetime": now})
+        result_info = {}
+        if not update_attrs:
+            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
-
-        # line_id_args = {
-        #     "s_city_name": line.s_city_name,
-        #     "d_city_name": line.d_city_name,
-        #     "bus_num": bus_num,
-        #     "crawl_source": line.crawl_source,
-        #     "drv_datetime": drv_datetime,
-        # }
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
