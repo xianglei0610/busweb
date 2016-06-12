@@ -3187,7 +3187,12 @@ class Bus365AppRebot(Rebot):
         }
         login_url = "http://www.bus365.com/user/login"
         r = self.http_post(login_url, data=data, headers=headers)
-        ret = r.json()
+        try:
+            ret = r.json()
+        except:
+            self.modify(ip='')
+            r = self.http_post(login_url, data=data, headers=headers)
+            ret = r.json()
         if ret:
             if ret['username'] == self.telephone:
                 self.last_login_time = dte.now()
@@ -3385,7 +3390,7 @@ class XinTuYunWebRebot(Rebot):
         url = "http://www.xintuyun.cn/user.shtml"
         headers = self.http_header()
         cookies = json.loads(self.cookies)
-        res = requests.post(url, cookies=cookies, headers=headers)
+        res = self.http_post(url, cookies=cookies, headers=headers)
         content = res.content
         if not isinstance(content, unicode):
             content = content.decode('utf8')
@@ -3551,15 +3556,17 @@ class XinTuYunWebRebot(Rebot):
 
     def clear_riders(self):
         url = "http://www.xintuyun.cn/people.shtml"
+        headers = self.http_header()
+        cookies = json.loads(self.cookies)
         try:
-            response = requests.post(url, cookies=self.cookies)
+            response = self.http_post(url, cookies=cookies, headers=headers)
             sel = etree.HTML(response.content)
             people_list = sel.xpath('//div[@class="p-edu"]')
             for i in people_list:
                 res = i.xpath('a[@class="del trans"]/@onclick')[0]
                 userid = re.findall('del\(\'(.*)\'\);', res)[0]
                 del_url = "http://www.xintuyun.cn/user/delPeople/ajax?id=%s"%userid
-                response = requests.get(del_url, cookies=self.cookies)
+                response = self.http_get(del_url, cookies=cookies, headers=headers)
         except:
             pass
 

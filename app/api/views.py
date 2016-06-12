@@ -152,7 +152,7 @@ def query_line():
                         "data": ""})
 
     try:
-        open_city = OpenCity.objects.get(city_name=starting_name, is_active=True)
+        open_city = OpenCity.objects.get(city_name=starting_name)
     except Exception, e:
         return jsonify({"code": RET_CITY_NOT_OPEN,
                         "message": "%s is not open" % starting_name,
@@ -165,9 +165,6 @@ def query_line():
 
     data = []
     for line in qs_line:
-        # 过滤不在预售期的
-        if (line.drv_datetime-now).total_seconds <= open_city.advance_order_time*60:
-            continue
         data.append(line.get_json())
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 

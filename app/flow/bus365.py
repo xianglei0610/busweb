@@ -36,8 +36,6 @@ class Flow(BaseFlow):
         }
         with Bus365AppRebot.get_and_lock(order) as rebot:
 #             if not rebot.test_login_status():
-#                 rebot.login()
-#                 rebot.reload()
             line = order.line
             try:
                 rebot.recrawl_shiftid(line)
@@ -53,6 +51,11 @@ class Flow(BaseFlow):
             lock_result.update(source_account=rebot.telephone)
             if order.line.left_tickets == 0:
                 lock_result.update(result_reason="该条线路余票不足", result_code=0)
+                return lock_result
+            if rebot.login() != 'OK':
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="账号未登陆")
                 return lock_result
             try:
                 res = self.send_lock_request(order, rebot)

@@ -58,6 +58,18 @@ class Flow(BaseFlow):
                 return lock_result
 
             ttype, ttpwd = self.request_ticket_info(order, rebot)
+            is_login = rebot.test_login_status()
+            if not is_login:
+                flag = False
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        flag = True
+                        break
+                if not flag:
+                    lock_result.update(result_code=2,
+                                       source_account=rebot.telephone,
+                                       result_reason="账号未登陆")
+                    return lock_result
             lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
             order_log.info("[lock-result]  request_create_order . order: %s,account:%s,result:%s", order.order_no,rebot.telephone,lock_info)
             lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
@@ -67,7 +79,6 @@ class Flow(BaseFlow):
                 lock_result.update(result_code=0,
                                    result_reason=lock_msg)
             if lock_flag == '0':    # 锁票成功
-
                 expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
                 lock_result.update({
                     "result_code": 1,
@@ -133,6 +144,7 @@ class Flow(BaseFlow):
               "startName": order.line.s_sta_name,
               "ttsId":  ''
         }
+        trainInfo = {}
         try:
             trainInfo = rebot.http_post(url, data=data, headers=headers, cookies=cookies)
             trainInfo = trainInfo.json()
@@ -213,7 +225,7 @@ class Flow(BaseFlow):
                 u"订单失效": "订单失效",
                 u'正在出票': "正在出票",
                 }
-        if status in (u"购票成功"):
+        if status in (u"购票成功",):
             dx_templ = DUAN_XIN_TEMPL[SOURCE_XINTUYUN]
             ticketPassword = ''
             if ret.get('ticketPassword', ''):
@@ -237,12 +249,12 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
-        elif status in (u"正在出票"):
+        elif status in (u"正在出票",):
             result_info.update({
                 "result_code": 4,
                 "result_msg": order_status_mapping[status],
             })
-        elif status in (u"订单失效"):
+        elif status in (u"订单失效",):
             result_info.update({
                 "result_code": 2,
                 "result_msg": order_status_mapping[status],
@@ -409,6 +421,7 @@ class Flow(BaseFlow):
                     pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
                     order.update(pay_order_no=pay_order_no, extra_info={'pay_content': pay_content})
                 return {"flag": "html", "content": pay_content}
+            return {"flag": "error", "content": "锁票失败"}
 
 #                 if not order.pay_url:
 #                     url = "http://www.84100.com/pay/ajax?orderId=%s" % order.lock_info["orderId"]
