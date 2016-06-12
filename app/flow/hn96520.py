@@ -225,6 +225,7 @@ class Flow(BaseFlow):
             result_info.update(result_msg="1小时内的票不卖", update_attrs={
                                "left_tickets": 0, "refresh_datetime": now})
             return result_info
+
         pre = 'http://www.hn96520.com/placeorder.aspx?'
         params = {
             "start": line.s_city_name,
@@ -236,7 +237,6 @@ class Flow(BaseFlow):
         headers = {"User-Agent": ua,
                    "Content-Type": "application/x-www-form-urlencoded"}
         url = pre + urllib.urlencode(params)
-        rebot_log.info(url)
         r = requests.get(url, headers=headers, data=params)
         soup = bs(r.content, 'lxml')
         info = soup.find('table', attrs={'class': 'resulttb'}).find_all(
@@ -250,12 +250,11 @@ class Flow(BaseFlow):
                                  d_city_name=line.d_city_name, drv_date=line.drv_date)
         for x in ft:
             t.add(x.line_id)
+        s_city_name = line.s_city_name
         for x in info:
             try:
                 bus_num = x.find(
                     'td', attrs={'align': 'center'}).get_text().strip()
-                s_city_name = x.find_all(
-                    'td')[1].get_text().split()[0]
                 d_city_name = x.find_all('td')[1].get_text().split()[1]
                 drv_date = x.find_all('td')[2].get_text().strip()
                 drv_time = x.find_all('td')[3].get_text().strip()
@@ -268,14 +267,16 @@ class Flow(BaseFlow):
                     'crawl_source': crawl_source,
                     'drv_datetime': drv_datetime,
                 }
-                rebot_log.info(line_id_args)
                 line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 nt.add(line_id)
             except Exception as e:
                 print(e)
-        # rebot_log.info(t)
-        # rebot_log.info(nt)
         line_ids = t - nt
+        # rebot_log.info(len(t))
+        # rebot_log.info(len(nt))
+        # rebot_log.info(line_ids)
+        # import ipdb
+        # ipdb.set_trace()
         if line_ids:
             update_attrs.update({
                 'left_tickets': 0,
@@ -287,7 +288,8 @@ class Flow(BaseFlow):
         else:
             pass
 
-        if not update_attrs:
+        # rebot_log.info(update_attrs)
+        if line.line_id in line_ids or line.left_tickets == 0:
             result_info.update(result_msg="no line info", update_attrs={
                                "left_tickets": line.left_tickets, "refresh_datetime": now})
         else:
