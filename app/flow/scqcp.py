@@ -107,7 +107,7 @@ class Flow(BaseFlow):
                 token = res.get('token', '')
             elif res.get('status', '') == 1:
                 msg = res.get('msg', '')
-                lock_result.update(result_code=2,
+                lock_result.update(result_code=0,
                                    source_account=rebot.telephone,
                                    result_reason="获取token失败:"+msg)
                 return lock_result
@@ -165,12 +165,12 @@ class Flow(BaseFlow):
                 }
         url = "%s?%s" % (url, urllib.urlencode(params))
         try:
-            r = rebot.http_get(url, headers=new_headers)
+            r = rebot.http_get(url, headers=new_headers, timeout=15)
             sel = etree.HTML(r.content)
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
         except:
-            r = rebot.http_get(url, headers=new_headers, timeout=100, allow_redirects=False)
+            r = rebot.http_get(url, headers=new_headers, timeout=70, allow_redirects=False)
             location_url = r.headers.get('location', '')
             res = {}
             if location_url:
