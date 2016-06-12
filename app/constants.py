@@ -2974,7 +2974,7 @@ SOURCE_INFO = {
     },
 
     SOURCE_HN96520: {
-        "name": "河南省公路客运联网售票网",
+        "name": "河南客运",
         "website": "http://www.hn96520.com",
         "accounts": {
             "15338702029": ("123456", "90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a"),
