@@ -3187,7 +3187,12 @@ class Bus365AppRebot(Rebot):
         }
         login_url = "http://www.bus365.com/user/login"
         r = self.http_post(login_url, data=data, headers=headers)
-        ret = r.json()
+        try:
+            ret = r.json()
+        except:
+            self.modify(ip='')
+            r = self.http_post(login_url, data=data, headers=headers)
+            ret = r.json()
         if ret:
             if ret['username'] == self.telephone:
                 self.last_login_time = dte.now()
