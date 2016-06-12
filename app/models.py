@@ -2009,8 +2009,7 @@ class CqkyWebRebot(Rebot):
                     return "fail"
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s",
-                               self.telephone, vcode_flag)
+                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s cookeis:%s", self.telephone, vcode_flag, cookies)
                 return "OK"
             else:
                 msg = res["msg"]
@@ -2042,6 +2041,7 @@ class CqkyWebRebot(Rebot):
         soup = BeautifulSoup(r.content, "lxml")
         tel = soup.select_one("#ctl00_FartherMain_txt_Mobile").get("value")
         if tel != self.telephone:
+            self.modify(cookies="{}")
             return 0
         return 1
 
