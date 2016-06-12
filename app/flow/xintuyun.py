@@ -225,7 +225,7 @@ class Flow(BaseFlow):
                 u"订单失效": "订单失效",
                 u'正在出票': "正在出票",
                 }
-        if status in (u"购票成功"):
+        if status in (u"购票成功",):
             dx_templ = DUAN_XIN_TEMPL[SOURCE_XINTUYUN]
             ticketPassword = ''
             if ret.get('ticketPassword', ''):
@@ -249,12 +249,12 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
-        elif status in (u"正在出票"):
+        elif status in (u"正在出票",):
             result_info.update({
                 "result_code": 4,
                 "result_msg": order_status_mapping[status],
             })
-        elif status in (u"订单失效"):
+        elif status in (u"订单失效",):
             result_info.update({
                 "result_code": 2,
                 "result_msg": order_status_mapping[status],
