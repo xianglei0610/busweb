@@ -1980,6 +1980,7 @@ class CqkyWebRebot(Rebot):
             r = self.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
             valid_code = vcode_cqky(r.content)
             vcode_flag = True
 
