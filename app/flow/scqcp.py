@@ -90,8 +90,8 @@ class Flow(BaseFlow):
 
             if not is_login:
                 lock_result.update(result_code=2,
-                                    source_account=rebot.telephone,
-                                    result_reason="账号未登陆")
+                                   source_account=rebot.telephone,
+                                   result_reason="账号未登陆")
                 return lock_result
 
             try:
@@ -118,7 +118,7 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
                 "pay_money": 0,
             }
-            if ret["status"] == 1:
+            if ret.get("status", '') == 1:
                 expire_datetime = dte.now()+datetime.timedelta(seconds=28*60)
                 lock_result.update({
                     "result_code": 1,

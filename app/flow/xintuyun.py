@@ -144,6 +144,7 @@ class Flow(BaseFlow):
               "startName": order.line.s_sta_name,
               "ttsId":  ''
         }
+        trainInfo = {}
         try:
             trainInfo = rebot.http_post(url, data=data, headers=headers, cookies=cookies)
             trainInfo = trainInfo.json()
