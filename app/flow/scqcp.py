@@ -164,9 +164,9 @@ class Flow(BaseFlow):
                 "stop_name": order.line.d_city_name,
                 }
         url = "%s?%s" % (url, urllib.urlencode(params))
-        r = rebot.http_get(url, headers=new_headers)
-        sel = etree.HTML(r.content)
         try:
+            r = rebot.http_get(url, headers=new_headers)
+            sel = etree.HTML(r.content)
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
         except:
