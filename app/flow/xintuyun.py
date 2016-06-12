@@ -58,6 +58,18 @@ class Flow(BaseFlow):
                 return lock_result
 
             ttype, ttpwd = self.request_ticket_info(order, rebot)
+            is_login = rebot.test_login_status()
+            if not is_login:
+                flag = False
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        flag = True
+                        break
+                if not flag:
+                    lock_result.update(result_code=2,
+                                       source_account=rebot.telephone,
+                                       result_reason="账号未登陆")
+                    return lock_result
             lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
             order_log.info("[lock-result]  request_create_order . order: %s,account:%s,result:%s", order.order_no,rebot.telephone,lock_info)
             lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
@@ -67,7 +79,6 @@ class Flow(BaseFlow):
                 lock_result.update(result_code=0,
                                    result_reason=lock_msg)
             if lock_flag == '0':    # 锁票成功
-
                 expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
                 lock_result.update({
                     "result_code": 1,
