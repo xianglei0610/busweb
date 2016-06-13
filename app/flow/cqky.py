@@ -38,8 +38,10 @@ class Flow(BaseFlow):
             line = order.line
             is_login = rebot.test_login_status()
             if not is_login:
-                if rebot.login() == "OK":
-                    is_login = True
+                for i in range(3):
+                    if rebot.login() == "OK":
+                        is_login = True
+                        break
 
             if not is_login:
                 lock_result.update({
@@ -492,7 +494,7 @@ class Flow(BaseFlow):
             return {"flag": "error", "content": "锁票失败"}
 
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-            cookies = json.loads(rebot.cookies)
+            cookies = {}
             login_form = "http://www.96096kp.com/CusLogin.aspx"
             valid_url = "http://www.96096kp.com/ValidateCode.aspx?_=%s" % random.randint(1, 10000)
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
