@@ -453,8 +453,6 @@ class Flow(BaseFlow):
                 elif msg == "invalid_pwd":
                     rebot.modify(is_active=False)
                     rebot = order.change_lock_rebot()
-            if not is_login and rebot.login() == "OK":
-                is_login = True
             if is_login:
                 self.lock_ticket(order)
         order.reload()

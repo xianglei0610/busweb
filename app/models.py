@@ -2011,7 +2011,7 @@ class CqkyWebRebot(Rebot):
             if success:     # 登陆成功
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                if not self.test_login_status():
+                if res["Code"] != self.telephone:
                     return "fail"
                 rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s cookeis:%s", self.telephone, vcode_flag, cookies)
                 return "OK"
