@@ -18,6 +18,7 @@ from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
 from app import rebot_log, line_log
+from app.proxy import get_proxy
 
 
 class AdminUser(db.Document):
@@ -2047,6 +2048,7 @@ class CqkyWebRebot(Rebot):
         #     return 1
         # return 0
         if tel != self.telephone:
+            get_proxy("cqky").set_black(self.proxy_ip)
             self.modify(cookies="{}")
             return 0
         return 1
