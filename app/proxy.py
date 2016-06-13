@@ -225,6 +225,7 @@ class CqkyProxyConsumer(ProxyConsumer):
         key = RK_PROXY_IP_CQKY_BLACK % ipstr
         rds.set(key, time.time())
         rds.expire(key, 60*60*5)
+        self.remove_proxy(ipstr)
 
     def valid_proxy(self, ipstr):
         rds = get_redis("default")
