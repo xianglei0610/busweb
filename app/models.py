@@ -1979,7 +1979,12 @@ class CqkyWebRebot(Rebot):
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
             r = self.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
-            r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            for i in range(3):
+                r = self.http_get(valid_url, headers=headers, cookies=cookies)
+                if "image" not in r.headers.get('content-type'):
+                    self.modify(ip="")
+                else:
+                    break
             cookies.update(dict(r.cookies))
             valid_code = vcode_cqky(r.content)
             vcode_flag = True
@@ -2038,6 +2043,9 @@ class CqkyWebRebot(Rebot):
         r = self.http_get(user_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
         tel = soup.select_one("#ctl00_FartherMain_txt_Mobile").get("value")
+        # if tel:
+        #     return 1
+        # return 0
         if tel != self.telephone:
             self.modify(cookies="{}")
             return 0

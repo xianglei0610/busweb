@@ -20,6 +20,7 @@ from datetime import datetime as dte, timedelta
 from bs4 import BeautifulSoup
 from lxml import etree
 from app.utils import get_redis
+from app import rebot_log
 
 
 class ProxyProducer(object):
@@ -46,6 +47,7 @@ class ProxyProducer(object):
                 ip, port = td_lst[0].text.strip(), td_lst[1].text.strip()
                 ipstr = "%s:%s" % (ip, port)
                 if self.valid_proxy(ipstr):
+                    rebot_log.info("[crawl_from_haodaili] %s", ipstr)
                     self.add_proxy(ipstr)
                     add_cnt += 1
         return add_cnt
@@ -61,6 +63,7 @@ class ProxyProducer(object):
                 lst = re.findall(r"(\d+.\d+.\d+.\d+:\d+)", trobj.text)
                 for ipstr in lst:
                     if self.valid_proxy(ipstr):
+                        rebot_log.info("[crawl_from_samair] %s", ipstr)
                         self.add_proxy(ipstr)
                         add_cnt += 1
         return add_cnt
@@ -89,6 +92,7 @@ class ProxyProducer(object):
         add_cnt = 0
         for ipstr in proxy_lst:
             if self.valid_proxy(ipstr):
+                rebot_log.info("[crawl_from_zdaye] %s", ipstr)
                 self.add_proxy(ipstr)
                 add_cnt += 1
         return add_cnt
