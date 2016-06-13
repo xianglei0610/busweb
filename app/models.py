@@ -861,6 +861,122 @@ class Hn96520WebRebot(Rebot):
             uid = x.get('id').strip()
             uid = str(re.search(r'\d+', uid).group(0))
             if uid in riders.values() or not riders:
+                delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid={1}'.format(uid, self.memid)
+                requests.get(delurl, headers=headers, cookies=cookies)
+
+    def add_riders(self, order):
+        id_lst = {}
+        is_login = self.test_login_status()
+        if not is_login:
+            pass
+        riders = order.riders
+        headers = {'User-Agent': self.user_agent}
+        cookies = json.loads(self.cookies)
+        for rider in riders:
+            name = rider.get('name', '')
+            cardid = rider.get('id_number', '')
+            sel = rider.get('telephone', '')
+            addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid={0}&name={1}&cardid={2}&sel={3}'.format(self.memid, name, cardid, sel)
+            # rebot_log.info(addurl)
+            # rebot_log.info(headers)
+            r = requests.get(addurl, headers=headers, cookies=cookies)
+            if r.content != '0':
+                id_lst['cardid'] = r.content
+                # rebot_log.info('添加乘客 => {0}'.format(name))
+            else:
+                pass
+        return id_lst
+    # def check_code_status(self, code):
+    #     rebot_log.info('code is {0}'.format(code))
+    #     url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(code)
+    #     headers = {'User-Agent': self.user_agent}
+    #     cookies = json.loads(self.cookies)
+    #     r = requests.get(url, headers=headers, cookies=cookies)
+    #     rebot_log.info(code)
+    #     rebot_log.info(dict(r.cookies))
+    #     if 'true' in r.content:
+    #         return 1
+    #     else:
+    #         return 0
+
+    def test_login_status(self):
+        # self.is_locked = True
+        # self.save()
+        undone_order_url = "http://www.hn96520.com/member/modify.aspx"
+        headers = {"User-Agent": self.user_agent}
+        try:
+            cookies = json.loads(self.cookies)
+        except:
+            cookies = ''
+        r = requests.get(undone_order_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        try:
+            memid = soup.find('a', attrs={'id': re.compile(r"\w\d+")}).get('href', '')
+            memid = re.findall(r'\d+', memid)[-1]
+        except:
+            memid = 0
+        if memid:
+            self.memid = memid
+            self.save()
+            rebot_log.info(memid)
+            cookies.update(r.cookies)
+            # rebot_log.info('成功登录 tel {0}'.format(tel))
+            return 1
+        else:
+            # rebot_log.info('fail登录 tel {0}'.format(tel))
+            return 0
+
+    # 初始化帐号
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+
+class CcwWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    # ip = db.StringField(default="")
+    # indexes索引, 'collections'
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "ccwweb_rebot",
+    }
+    crawl_source = SOURCE_CCW
+    is_for_lock = True
+
+    # @property
+    # def proxy_ip(self):
+    #     return ''
+    #     rds = get_redis("default")
+    #     ipstr = self.ip
+    #     key = RK_PROXY_IP_WXSZ
+    #     if ipstr and rds.sismember(key, ipstr):
+    #         return ipstr
+    #     ipstr = rds.srandmember(key)
+    #     self.modify(ip=ipstr)
+    #     return ipstr
+    def clear_riders(self, riders={}):
+        # 默认的不能删除
+        is_login = self.test_login_status()
+        if not is_login:
+            return
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        rider_url = 'http://www.hn96520.com/member/modify.aspx'
+        r = requests.get(rider_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, 'lxml')
+        info = soup.find('table', attrs={'class': 'tblp shadow', 'style': True}).find_all('tr', attrs={'id': True})
+        for x in info:
+            uid = x.get('id').strip()
+            uid = str(re.search(r'\d+', uid).group(0))
+            if uid in riders.values() or not riders:
                 delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid=449606'.format(uid)
                 requests.get(delurl, headers=headers, cookies=cookies)
 
@@ -902,7 +1018,7 @@ class Hn96520WebRebot(Rebot):
     def test_login_status(self):
         # self.is_locked = True
         # self.save()
-        undone_order_url = "http://www.hn96520.com/member/changeselfinfo.aspx"
+        undone_order_url = "http://www.chechuw.com/UserCenter/userDataEdit"
         headers = {"User-Agent": self.user_agent}
         try:
             cookies = json.loads(self.cookies)
@@ -912,7 +1028,7 @@ class Hn96520WebRebot(Rebot):
         soup = BeautifulSoup(r.content, "lxml")
         try:
             tel = soup.find(
-                'input', attrs={'id': 'txtHandset', 'name': 'txtHandset'}).get('value')
+                'input', attrs={'id': 'telphone', 'class': 'text'}).get('value')
         except:
             tel = 0
         if tel:
@@ -3828,120 +3944,6 @@ class Bus100Rebot(Rebot):
                 response = requests.get(del_url, cookies=self.cookies)
         except:
             pass
-
-
-# 代理ip, is_locked
-class Hn96520WebRebot(Rebot):
-    user_agent = db.StringField()
-    cookies = db.StringField()
-    # ip = db.StringField(default="")
-    # indexes索引, 'collections'
-    meta = {
-        "indexes": ["telephone", "is_active", "is_locked"],
-        "collection": "hn96520web_rebot",
-    }
-    crawl_source = SOURCE_HN96520
-    is_for_lock = True
-
-    # @property
-    # def proxy_ip(self):
-    #     return ''
-    #     rds = get_redis("default")
-    #     ipstr = self.ip
-    #     key = RK_PROXY_IP_WXSZ
-    #     if ipstr and rds.sismember(key, ipstr):
-    #         return ipstr
-    #     ipstr = rds.srandmember(key)
-    #     self.modify(ip=ipstr)
-    #     return ipstr
-    def clear_riders(self, riders={}):
-        # 默认的不能删除
-        is_login = self.test_login_status()
-        if not is_login:
-            return
-        headers = {"User-Agent": self.user_agent}
-        cookies = json.loads(self.cookies)
-        rider_url = 'http://www.hn96520.com/member/modify.aspx'
-        r = requests.get(rider_url, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, 'lxml')
-        info = soup.find('table', attrs={'class': 'tblp shadow', 'style': True}).find_all('tr', attrs={'id': True})
-        for x in info:
-            uid = x.get('id').strip()
-            uid = str(re.search(r'\d+', uid).group(0))
-            if uid in riders.values() or not riders:
-                delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid=449606'.format(uid)
-                requests.get(delurl, headers=headers, cookies=cookies)
-
-    def add_riders(self, order):
-        id_lst = {}
-        is_login = self.test_login_status()
-        if not is_login:
-            pass
-        riders = order.riders
-        headers = {'User-Agent': self.user_agent}
-        cookies = json.loads(self.cookies)
-        for rider in riders:
-            name = rider.get('name', '')
-            cardid = rider.get('id_number', '')
-            sel = rider.get('telephone', '')
-            addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid=449606&name={0}&cardid={1}&sel={2}'.format(name, cardid, sel)
-            # rebot_log.info(addurl)
-            # rebot_log.info(headers)
-            r = requests.get(addurl, headers=headers, cookies=cookies)
-            if r.content != '0':
-                id_lst['cardid'] = r.content
-                # rebot_log.info('添加乘客 => {0}'.format(name))
-            else:
-                pass
-        return id_lst
-    # def check_code_status(self, code):
-    #     rebot_log.info('code is {0}'.format(code))
-    #     url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(code)
-    #     headers = {'User-Agent': self.user_agent}
-    #     cookies = json.loads(self.cookies)
-    #     r = requests.get(url, headers=headers, cookies=cookies)
-    #     rebot_log.info(code)
-    #     rebot_log.info(dict(r.cookies))
-    #     if 'true' in r.content:
-    #         return 1
-    #     else:
-    #         return 0
-
-    def test_login_status(self):
-        # self.is_locked = True
-        # self.save()
-        undone_order_url = "http://www.hn96520.com/member/changeselfinfo.aspx"
-        headers = {"User-Agent": self.user_agent}
-        try:
-            cookies = json.loads(self.cookies)
-        except:
-            cookies = ''
-        r = requests.get(undone_order_url, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, "lxml")
-        try:
-            tel = soup.find(
-                'input', attrs={'id': 'txtHandset', 'name': 'txtHandset'}).get('value')
-        except:
-            tel = 0
-        if tel:
-            cookies.update(r.cookies)
-            # rebot_log.info('成功登录 tel {0}'.format(tel))
-            return 1
-        else:
-            # rebot_log.info('fail登录 tel {0}'.format(tel))
-            return 0
-
-    # 初始化帐号
-
-    def login(self):
-        ua = random.choice(BROWSER_USER_AGENT)
-        self.last_login_time = dte.now()
-        self.user_agent = ua
-        self.is_active = True
-        self.cookies = "{}"
-        self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
-        return "OK"
 
 
 if not "_rebot_class" in globals():
