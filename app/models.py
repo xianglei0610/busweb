@@ -1979,7 +1979,12 @@ class CqkyWebRebot(Rebot):
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
             r = self.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
-            r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            for i in range(3):
+                r = self.http_get(valid_url, headers=headers, cookies=cookies)
+                if "image" not in r.headers.get('content-type'):
+                    self.modify(ip="")
+                else:
+                    break
             cookies.update(dict(r.cookies))
             valid_code = vcode_cqky(r.content)
             vcode_flag = True
