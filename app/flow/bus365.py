@@ -59,11 +59,14 @@ class Flow(BaseFlow):
                 return lock_result
             try:
                 res = self.send_lock_request(order, rebot)
-                if res['order']['username'] != rebot.telephone:
-                    lock_result.update(result_code=2,
-                                       source_account=rebot.telephone,
-                                       result_reason="账号未登陆")
-                    return lock_result
+                if isinstance(res, list):
+                    res = res[0]
+                if res.get('order', ''):
+                    if res['order']['username'] != rebot.telephone:
+                        lock_result.update(result_code=2,
+                                           source_account=rebot.telephone,
+                                           result_reason="账号未登陆")
+                        return lock_result
             except:
                 rebot.modify(ip="")
                 lock_result.update({

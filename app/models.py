@@ -18,6 +18,7 @@ from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
 from app import rebot_log, line_log
+from app.proxy import get_proxy
 
 
 class AdminUser(db.Document):
@@ -2047,6 +2048,7 @@ class CqkyWebRebot(Rebot):
         #     return 1
         # return 0
         if tel != self.telephone:
+            get_proxy("cqky").set_black(self.proxy_ip)
             self.modify(cookies="{}")
             return 0
         return 1
@@ -3265,6 +3267,29 @@ class Bus365AppRebot(Rebot):
                     line_obj.modify(**item)
                 except Line.DoesNotExist:
                     continue
+
+    def clear_riders(self):
+        url = "http://www.bus365.com/passenger/getPiList/0"
+        param = {
+            "page": "1",
+            "size": "100",
+            "userId": self.user_id,
+            "token": json.dumps({"clienttoken": self.client_token, "clienttype":"android"}),
+            "clienttype": 'android',
+            "usertoken": self.client_token
+        }
+        url = url + '?'+urllib.urlencode(param)
+        headers = self.http_header()
+        try:
+            res = self.http_get(url, headers=headers)
+            res = res.json()
+            for i in res.get('pis', []):
+                del_url = "http://www.bus365.com/passenger/deletePi/0"
+                param.update({"deviceid": self.deviceid, "piIds": i['id']})
+                res = self.http_post(del_url, data=param, headers=headers)
+                res = res.json()
+        except:
+            pass
 
 
 class Bus365WebRebot(Rebot):
