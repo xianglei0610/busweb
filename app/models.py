@@ -2038,10 +2038,12 @@ class CqkyWebRebot(Rebot):
         r = self.http_get(user_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
         tel = soup.select_one("#ctl00_FartherMain_txt_Mobile").get("value")
-        if tel != self.telephone:
-            self.modify(cookies="{}")
-            return 0
-        return 1
+        if tel:
+            return 1
+        return 0
+        #if tel != self.telephone:
+        #    self.modify(cookies="{}")
+        #    return 0
 
 
 class TCAppRebot(Rebot):
