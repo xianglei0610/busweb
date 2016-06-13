@@ -1999,17 +1999,14 @@ class CqkyWebRebot(Rebot):
                 "cmd": "Login",
             }
             login_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
-            r = self.http_post(login_url, data=urllib.urlencode(
-                params), headers=headers, cookies=cookies)
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
             res = json.loads(trans_js_str(r.content))
             success = res.get("success", True)
             if success:     # 登陆成功
-                username = res["Code"]
-                if username != self.telephone:  # cookie串了
-                    self.modify(cookies="{}")
-                    return "fail"
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
+                if not self.test_login_status():
+                    return "fail"
                 rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s cookeis:%s", self.telephone, vcode_flag, cookies)
                 return "OK"
             else:

@@ -174,9 +174,9 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
-        # if not self.need_refresh_issue(order):
-        #     result_info.update(result_msg="状态未变化")
-        #     return result_info
+        if not self.need_refresh_issue(order):
+            result_info.update(result_msg="状态未变化")
+            return result_info
         ret = self.send_order_request(order)
         # rebot_log.info(ret)
         state = ret['state']
@@ -339,6 +339,7 @@ class Flow(BaseFlow):
             # rebot_log.info(r.cookies)
             rebot.modify(cookies=json.dumps(cookies))
         is_login = rebot.test_login_status()
+        rebot.is_locked = True
         # 更换rebot
         # if not rebot.is_locked:
         #     is_login = rebot.test_login_status()
