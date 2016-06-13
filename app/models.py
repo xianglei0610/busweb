@@ -1967,7 +1967,11 @@ class CqkyWebRebot(Rebot):
         rebot_log.info("[cqky] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
-    def login(self, valid_code="", headers={}, cookies={}):
+    def login(self, valid_code="", headers=None, cookies=None):
+        if not headers:
+            headers = {}
+        if not cookies:
+            cookies = {}
         vcode_flag = False
         if not valid_code:
             login_form = "http://www.96096kp.com/CusLogin.aspx"
@@ -1976,6 +1980,7 @@ class CqkyWebRebot(Rebot):
             r = self.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
             valid_code = vcode_cqky(r.content)
             vcode_flag = True
 
@@ -2005,8 +2010,7 @@ class CqkyWebRebot(Rebot):
                     return "fail"
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s",
-                               self.telephone, vcode_flag)
+                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s cookeis:%s", self.telephone, vcode_flag, cookies)
                 return "OK"
             else:
                 msg = res["msg"]
@@ -2027,29 +2031,20 @@ class CqkyWebRebot(Rebot):
             return "fail"
 
     def test_login_status(self):
-        login_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
+        user_url = "http://www.96096kp.com/UpdateMember.aspx"
         headers = {
             "User-Agent": self.user_agent,
             "Referer": "http://www.96096kp.com/TicketMain.aspx",
             "Origin": "http://www.96096kp.com",
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(self.cookies)
-        today = dte.now().strftime("%Y-%m-%d")
-        params = {
-            "beginDate": today,
-            "endDate": today,
-            "isCheck": "false",
-            "Code": "",
-            "cmd": "GetMobileList",
-        }
-        r = self.http_post(login_url, data=urllib.urlencode(
-            params), headers=headers, cookies=cookies)
-        lst = re.findall(r'success:"(\w+)"', r.content)
-        succ = lst and lst[0] or ""
-        if succ == "true":
-            return 1
-        return 0
+        r = self.http_get(user_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        tel = soup.select_one("#ctl00_FartherMain_txt_Mobile").get("value")
+        if tel != self.telephone:
+            self.modify(cookies="{}")
+            return 0
+        return 1
 
 
 class TCAppRebot(Rebot):
@@ -3936,5 +3931,4 @@ if not "_rebot_class" in globals():
 
 
 def get_rebot_class(source):
-    print(source)
     return _rebot_class.get(source, [])

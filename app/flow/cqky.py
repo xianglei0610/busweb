@@ -38,11 +38,16 @@ class Flow(BaseFlow):
             line = order.line
             is_login = rebot.test_login_status()
             if not is_login:
-                for i in range(3):
-                    if rebot.login() == "OK":
-                        break
-                    rebot = order.change_lock_rebot()
+                if rebot.login() == "OK":
+                    is_login = True
 
+            if not is_login:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": "账号未登录",
+                })
+                return lock_result
 
             res = self.request_station_status(line, rebot)
             if res["success"]:
