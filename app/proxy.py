@@ -52,6 +52,27 @@ class ProxyProducer(object):
                     add_cnt += 1
         return add_cnt
 
+    def crawl_from_kxdaili(self):
+        url_tpl = "http://www.kxdaili.com/dailiip/%s/%s.html"
+        add_cnt = 0
+        for i in [1, 2]:
+            for j in range(1, 6):
+                url = url_tpl % (i, j)
+                try:
+                    r = requests.get(url, timeout=10, headers={"User-Agent": "Chrome"})
+                except Exception, e:
+                    continue
+                soup = BeautifulSoup(r.content, "lxml")
+                for s in soup.select(".table tr")[1:]:
+                    td_lst = s.findAll("td")
+                    ip, port = td_lst[0].text.strip(), td_lst[1].text.strip()
+                    ipstr = "%s:%s" % (ip, port)
+                    if self.valid_proxy(ipstr):
+                        rebot_log.info("[crawl_from_kxdaili] %s", ipstr)
+                        self.add_proxy(ipstr)
+                        add_cnt += 1
+        return add_cnt
+
     def crawl_from_samair(self):
         add_cnt = 0
         for i in range(1, 10):

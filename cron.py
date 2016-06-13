@@ -166,6 +166,14 @@ def crawl_proxy_zdaye():
     return data
 
 @check(run_in_local=False)
+def crawl_proxy_kxdaili():
+    from app.proxy import proxy_producer
+    data = {}
+    cnt = proxy_producer.crawl_from_kxdaili()
+    data["kxdaili"] = cnt
+    return data
+
+@check(run_in_local=False)
 def check_proxy():
     from app.proxy import proxy_producer
     for ipstr in proxy_producer.all_proxy():
@@ -335,6 +343,7 @@ def main():
     sched.add_interval_job(crawl_proxy_66ip, minutes=10)
     sched.add_interval_job(crawl_proxy_xici, minutes=10)
     sched.add_interval_job(crawl_proxy_zdaye, minutes=3)
+    sched.add_interval_job(crawl_proxy_kxdaili, minutes=5)
 
     sched.add_interval_job(check_proxy, minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
