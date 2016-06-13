@@ -73,6 +73,29 @@ class ProxyProducer(object):
                         add_cnt += 1
         return add_cnt
 
+    def crawl_from_ip181(self):
+        url_tpl = "http://www.ip181.com/daili/%s.html"
+        add_cnt = 0
+        for i in range(1, 6):
+            url = url_tpl % i
+            try:
+                r = requests.get(url, timeout=10, headers={"User-Agent": "Chrome"})
+            except Exception, e:
+                continue
+            soup = BeautifulSoup(r.content, "lxml")
+            for s in soup.select(".table tr")[1:]:
+                td_lst = s.findAll("td")
+                ip, port = td_lst[0].text.strip(), td_lst[1].text.strip()
+                speed = float(td_lst[4].text.rstrip("秒").strip())
+                if speed > 1:
+                    continue
+                ipstr = "%s:%s" % (ip, port)
+                if self.valid_proxy(ipstr):
+                    rebot_log.info("[crawl_from_ip181] %s", ipstr)
+                    self.add_proxy(ipstr)
+                    add_cnt += 1
+        return add_cnt
+
     def crawl_from_samair(self):
         add_cnt = 0
         for i in range(1, 10):
