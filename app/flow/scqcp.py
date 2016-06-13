@@ -90,12 +90,12 @@ class Flow(BaseFlow):
 
             if not is_login:
                 lock_result.update(result_code=2,
-                                    source_account=rebot.telephone,
-                                    result_reason="账号未登陆")
+                                   source_account=rebot.telephone,
+                                   result_reason="账号未登陆")
                 return lock_result
 
             try:
-                token = self.request_query_token_by_web(rebot, order)
+                res = self.request_query_token_by_web(rebot, order)
             except:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
@@ -103,7 +103,14 @@ class Flow(BaseFlow):
                                    source_account=rebot.telephone,
                                    result_reason="获取token失败")
                 return lock_result
-
+            if res.get('status', '') == 0:
+                token = res.get('token', '')
+            elif res.get('status', '') == 1:
+                msg = res.get('msg', '')
+                lock_result.update(result_code=0,
+                                   source_account=rebot.telephone,
+                                   result_reason="获取token失败:"+msg)
+                return lock_result
             ret = self.send_lock_request_by_web(rebot, order, token)
             if not ret:
                 rebot.modify(ip="")
@@ -118,7 +125,7 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
                 "pay_money": 0,
             }
-            if ret["status"] == 1:
+            if ret.get("status", '') == 1:
                 expire_datetime = dte.now()+datetime.timedelta(seconds=28*60)
                 lock_result.update({
                     "result_code": 1,
@@ -157,10 +164,21 @@ class Flow(BaseFlow):
                 "stop_name": order.line.d_city_name,
                 }
         url = "%s?%s" % (url, urllib.urlencode(params))
-        r = rebot.http_get(url, headers=new_headers)
-        sel = etree.HTML(r.content)
-        token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')
-        return token[0]
+        try:
+            r = rebot.http_get(url, headers=new_headers, timeout=15)
+            sel = etree.HTML(r.content)
+            token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
+            return {"status": 0, 'token': token}
+        except:
+            r = rebot.http_get(url, headers=new_headers, timeout=70, allow_redirects=False)
+            location_url = r.headers.get('location', '')
+            res = {}
+            if location_url:
+                result = urlparse.urlparse(location_url)
+                params = urlparse.parse_qs(result.query, True)
+                errorMsg = params.get('errorMsg', [])
+                res = {"status": 1, 'msg': errorMsg[0].decode('utf8')}
+            return res
 
     def send_lock_request(self, rebot, data):
         """
