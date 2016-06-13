@@ -2045,7 +2045,8 @@ class CqkyWebRebot(Rebot):
         soup = BeautifulSoup(r.content, "lxml")
         tel = soup.select_one("#ctl00_FartherMain_txt_Mobile").get("value")
         if tel != self.telephone:
-            # get_proxy("cqky").set_black(self.proxy_ip)
+            if tel: # 问题代理ip嫌疑
+                get_proxy("cqky").set_black(self.proxy_ip)
             self.modify(cookies="{}")
             return 0
         return 1
