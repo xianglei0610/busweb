@@ -29,6 +29,7 @@ SOURCE_NMGHY = 'nmghy'
 SOURCE_BUS365 = 'bus365'
 SOURCE_XINTUYUN = 'xintuyun'
 SOURCE_HN96520 = 'hn96520'
+SOURCE_CCW = 'ccw'
 
 PAY_TYPE_SOURCE = {
     "zfb": [SOURCE_BUS100,
@@ -2713,6 +2714,13 @@ SOURCE_INFO = {
             "17071527232": ("123456", "90e7709954c38af75c7caf4c2712456d746ef744f1ec28d3a781a709ba83a8ed"),
             "17092502883": ("123456", "90e7709954c38af75c7caf4c2712456dc97e156df7501bf4da6b4f59d259e475"),
             "17051322190": ("123456", "90e7709954c38af75c7caf4c2712456dc97e156df7501bf4e8e964cb318c6701"),
+        }
+    },
+    SOURCE_CCW: {
+        "name": "车楚网",
+        "website": "http://www.chechuw.com/qiche/",
+        "accounts": {
+            "a15338702029": ("a123456", "90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a"),
         }
     },
 }
