@@ -439,8 +439,8 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
-        is_login = rebot.test_login_status()
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+            is_login = rebot.test_login_status()
             if not is_login and valid_code:
                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                 info = json.loads(session[key])
