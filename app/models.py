@@ -3268,6 +3268,29 @@ class Bus365AppRebot(Rebot):
                 except Line.DoesNotExist:
                     continue
 
+    def clear_riders(self):
+        url = "http://www.bus365.com/passenger/getPiList/0"
+        param = {
+            "page": "1",
+            "size": "100",
+            "userId": self.user_id,
+            "token": json.dumps({"clienttoken": self.client_token, "clienttype":"android"}),
+            "clienttype": 'android',
+            "usertoken": self.client_token
+        }
+        url = url + '?'+urllib.urlencode(param)
+        headers = self.http_header()
+        try:
+            res = self.http_get(url, headers=headers)
+            res = res.json()
+            for i in res.get('pis', []):
+                del_url = "http://www.bus365.com/passenger/deletePi/0"
+                param.update({"deviceid": self.deviceid, "piIds": i['id']})
+                res = self.http_post(del_url, data=param, headers=headers)
+                res = res.json()
+        except:
+            pass
+
 
 class Bus365WebRebot(Rebot):
     user_agent = db.StringField()
