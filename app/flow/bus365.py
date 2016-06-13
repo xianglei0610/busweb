@@ -59,6 +59,8 @@ class Flow(BaseFlow):
                 return lock_result
             try:
                 res = self.send_lock_request(order, rebot)
+                if isinstance(res, list):
+                    res = res[0]
                 if res.get('order', ''):
                     if res['order']['username'] != rebot.telephone:
                         lock_result.update(result_code=2,
