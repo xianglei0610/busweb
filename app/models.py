@@ -1864,7 +1864,6 @@ class JskyWebRebot(Rebot):
             self.cookies = json.dumps(dict(r.cookies))
             self.save()
             return "OK"
-        else:
         return "fail"
 
 
