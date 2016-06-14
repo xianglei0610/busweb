@@ -28,109 +28,109 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with XinTuYunWebRebot.get_and_lock(order) as rebot:
-            is_login = rebot.test_login_status()
-            if not is_login:
-                flag = False
-                for i in range(3):
-                    if rebot.login() == "OK":
-                        flag = True
-                        break
-                if not flag:
-                    lock_result.update(result_code=2,
-                                       source_account=rebot.telephone,
-                                       result_reason="账号未登陆")
-                    return lock_result
-            try:
-                rebot.recrawl_shiftid(order.line)
-            except:
+        rebot = order.get_lock_rebot()
+        is_login = rebot.test_login_status()
+        if not is_login:
+            flag = False
+            for i in range(3):
+                if rebot.login() == "OK":
+                    flag = True
+                    break
+            if not flag:
                 lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="源站刷新线路错误，锁票重试")
+                                    source_account=rebot.telephone,
+                                    result_reason="账号未登陆")
                 return lock_result
-
-            line = Line.objects.get(line_id=order.line.line_id)
-            order.modify(line=line)
-
-            lock_result.update(source_account=rebot.telephone)
-            if order.line.shift_id == "0" or not order.line.extra_info.get('flag', 0):
-                lock_result.update(result_reason="该条线路无法购买", result_code=0)
-                return lock_result
-
-            ttype, ttpwd = self.request_ticket_info(order, rebot)
-            is_login = rebot.test_login_status()
-            if not is_login:
-                flag = False
-                for i in range(3):
-                    if rebot.login() == "OK":
-                        flag = True
-                        break
-                if not flag:
-                    lock_result.update(result_code=2,
-                                       source_account=rebot.telephone,
-                                       result_reason="账号未登陆")
-                    return lock_result
-            lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
-            order_log.info("[lock-result]  request_create_order . order: %s,account:%s,result:%s", order.order_no,rebot.telephone,lock_info)
-            lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
-            if u"乘车人不能超过" in lock_msg:
-                order.line.shift_id = "0"
-                order.save()
-                lock_result.update(result_code=0,
-                                   result_reason=lock_msg)
-            if lock_flag == '0':    # 锁票成功
-                expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "lock_info": lock_info,
-                    "pay_url": "",
-                    "raw_order_no": '',
-                    "expire_datetime": expire_datetime,
-                    "pay_money": order.order_price,
-                })
-                order.modify(lock_info=lock_info)
-                try:
-                    ret = self.send_order_request(order, rebot)
-                    order.modify(raw_order_no=ret['order_id'])
-                    lock_result.update({"raw_order_no": ret['order_id']})
-                except:
-                    new_rebot = order.change_lock_rebot()
-                    lock_result.update(result_code=2,
-                                       source_account=new_rebot.telephone,
-                                       result_reason='锁票后未获取到订单号，重新锁票')
-            elif lock_flag == '2':
-                if u'同一出发日期限购6张' in lock_msg:
-                    new_rebot = order.change_lock_rebot()
-                    lock_result.update(result_code=2,
-                                       source_account=new_rebot.telephone,
-                                       result_reason="账号被限购，锁票重试")
-                elif u'Could not return the resource to the pool' in lock_msg:
-                    lock_result.update(result_code=2,
-                                       source_account="",
-                                       result_reason="源站系统错误，锁票重试")
-                else:
-                    for s in [u'班次信息错误',u'该条线路无法购买',u"余票不足",u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位"]:
-                        if s in lock_msg:
-                            self.close_line(line, reason=lock_msg)
-                            break
-                    lock_result.update(result_code=0,
-                                       result_reason=lock_msg)
-            elif lock_flag == '99' or u'班次信息错误' in lock_msg:
-                lock_result.update(result_code=2,
-                                   result_reason=lock_msg)
-            elif lock_flag == '1':
-                if u'请先支付或取消上一份订单' in lock_msg:
-                    new_rebot = order.change_lock_rebot()
-                    lock_result.update(result_code=2,
-                                       source_account=new_rebot.telephone,
-                                       result_reason=lock_msg)
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "lock_info": lock_info,
-                    "result_reason": lock_msg,
-                })
+        try:
+            rebot.recrawl_shiftid(order.line)
+        except:
+            lock_result.update(result_code=2,
+                                source_account=rebot.telephone,
+                                result_reason="源站刷新线路错误，锁票重试")
             return lock_result
+
+        line = Line.objects.get(line_id=order.line.line_id)
+        order.modify(line=line)
+
+        lock_result.update(source_account=rebot.telephone)
+        if order.line.shift_id == "0" or not order.line.extra_info.get('flag', 0):
+            lock_result.update(result_reason="该条线路无法购买", result_code=0)
+            return lock_result
+
+        ttype, ttpwd = self.request_ticket_info(order, rebot)
+        is_login = rebot.test_login_status()
+        if not is_login:
+            flag = False
+            for i in range(3):
+                if rebot.login() == "OK":
+                    flag = True
+                    break
+            if not flag:
+                lock_result.update(result_code=2,
+                                    source_account=rebot.telephone,
+                                    result_reason="账号未登陆")
+                return lock_result
+        lock_info = self.request_create_order(order, rebot, ttype, ttpwd)
+        order_log.info("[lock-result]  request_create_order . order: %s,account:%s,result:%s", order.order_no,rebot.telephone,lock_info)
+        lock_flag, lock_msg = lock_info["flag"], lock_info.get("msg", "")
+        if u"乘车人不能超过" in lock_msg:
+            order.line.shift_id = "0"
+            order.save()
+            lock_result.update(result_code=0,
+                                result_reason=lock_msg)
+        if lock_flag == '0':    # 锁票成功
+            expire_datetime = dte.now()+datetime.timedelta(seconds=20*60)
+            lock_result.update({
+                "result_code": 1,
+                "lock_info": lock_info,
+                "pay_url": "",
+                "raw_order_no": '',
+                "expire_datetime": expire_datetime,
+                "pay_money": order.order_price,
+            })
+            order.modify(lock_info=lock_info)
+            try:
+                ret = self.send_order_request(order, rebot)
+                order.modify(raw_order_no=ret['order_id'])
+                lock_result.update({"raw_order_no": ret['order_id']})
+            except:
+                new_rebot = order.change_lock_rebot()
+                lock_result.update(result_code=2,
+                                    source_account=new_rebot.telephone,
+                                    result_reason='锁票后未获取到订单号，重新锁票')
+        elif lock_flag == '2':
+            if u'同一出发日期限购6张' in lock_msg:
+                new_rebot = order.change_lock_rebot()
+                lock_result.update(result_code=2,
+                                    source_account=new_rebot.telephone,
+                                    result_reason="账号被限购，锁票重试")
+            elif u'Could not return the resource to the pool' in lock_msg:
+                lock_result.update(result_code=2,
+                                    source_account="",
+                                    result_reason="源站系统错误，锁票重试")
+            else:
+                for s in [u'班次信息错误',u'该条线路无法购买',u"余票不足",u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位"]:
+                    if s in lock_msg:
+                        self.close_line(line, reason=lock_msg)
+                        break
+                lock_result.update(result_code=0,
+                                    result_reason=lock_msg)
+        elif lock_flag == '99' or u'班次信息错误' in lock_msg:
+            lock_result.update(result_code=2,
+                                result_reason=lock_msg)
+        elif lock_flag == '1':
+            if u'请先支付或取消上一份订单' in lock_msg:
+                new_rebot = order.change_lock_rebot()
+                lock_result.update(result_code=2,
+                                    source_account=new_rebot.telephone,
+                                    result_reason=lock_msg)
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "lock_info": lock_info,
+                "result_reason": lock_msg,
+            })
+        return lock_result
 
     def request_ticket_info(self, order, rebot):
         ticketType = u'全'

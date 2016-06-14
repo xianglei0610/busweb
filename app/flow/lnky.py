@@ -35,59 +35,60 @@ class Flow(BaseFlow):
         }
         if not self.check_wap_status():
             return self.do_lock_ticket_by_web(order)
-        with LnkyWapRebot.get_and_lock(order) as rebot:
-            if not rebot.test_login_status():
-                rebot.login()
-                rebot.reload()
-            line = order.line
-            res = self.send_lock_request(order, rebot)
+
+        rebot = order.get_lock_rebot()
+        if not rebot.test_login_status():
+            rebot.login()
+            rebot.reload()
+        line = order.line
+        res = self.send_lock_request(order, rebot)
+        lock_result.update({
+            "lock_info": res,
+            "source_account": rebot.telephone,
+            "pay_money": line.real_price()*order.ticket_amount,
+        })
+        today = datetime.date.today()
+        check_str = str(today).replace('-', '')
+        if check_str in res['msg']:
+            order_no = res['msg'][1:-1]
+            expire_time = dte.now()+datetime.timedelta(seconds=60*40)
             lock_result.update({
-                "lock_info": res,
-                "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": '',
+                "raw_order_no": order_no,
+                "expire_datetime": expire_time,
+                "lock_info": res
             })
-            today = datetime.date.today()
-            check_str = str(today).replace('-', '')
-            if check_str in res['msg']:
-                order_no = res['msg'][1:-1]
-                expire_time = dte.now()+datetime.timedelta(seconds=60*40)
+        else:
+            errmsg = res['msg']
+            if "404" in errmsg:
                 lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": '',
-                    "raw_order_no": order_no,
-                    "expire_datetime": expire_time,
-                    "lock_info": res
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": str(rebot.telephone) + ':' + res["msg"],
                 })
-            else:
-                errmsg = res['msg']
-                if "404" in errmsg:
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": str(rebot.telephone) + ':' + res["msg"],
-                    })
-                    return lock_result
-                if "E008" in errmsg:
-                    rebot = order.change_lock_rebot()
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": str(rebot.telephone) + res["msg"],
-                    })
-                    return lock_result
-                for s in ["E015", "E001"]: #余票不足
-                    if s in errmsg:
-                        self.close_line(line, reason=errmsg)
-                        break
+                return lock_result
+            if "E008" in errmsg:
+                rebot = order.change_lock_rebot()
                 lock_result.update({
-                    "result_code": 0,
-                    "result_reason": res,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": str(rebot.telephone) + res["msg"],
                 })
-            return lock_result
+                return lock_result
+            for s in ["E015", "E001"]: #余票不足
+                if s in errmsg:
+                    self.close_line(line, reason=errmsg)
+                    break
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": res,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def do_lock_ticket_by_web(self, order):
         lock_result = {
@@ -100,61 +101,61 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with LnkyWebRebot.get_and_lock(order) as rebot:
-            rebot.login()
-            rebot.reload()
-            cookies = json.loads(rebot.cookies)
-            headers = rebot.http_header()
-            line = order.line
-            depotId = self.query_station_depotId_by_web(rebot, order, cookies, headers)
-            res = self.send_lock_request_by_web(rebot, order, cookies, headers,depotId)
+        rebot = order.get_lock_rebot()
+        rebot.login()
+        rebot.reload()
+        cookies = json.loads(rebot.cookies)
+        headers = rebot.http_header()
+        line = order.line
+        depotId = self.query_station_depotId_by_web(rebot, order, cookies, headers)
+        res = self.send_lock_request_by_web(rebot, order, cookies, headers,depotId)
+        lock_result.update({
+            "lock_info": res,
+            "source_account": rebot.telephone,
+            "pay_money": line.real_price()*order.ticket_amount,
+        })
+        today = datetime.date.today()
+        check_str = str(today).replace('-', '')
+        if check_str in res['msg']:
+            order_no = res['msg']
+            expire_time = dte.now()+datetime.timedelta(seconds=60*40)
             lock_result.update({
-                "lock_info": res,
-                "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": res.get('pay_url', ''),
+                "raw_order_no": order_no,
+                "expire_datetime": expire_time,
+                "lock_info": res
             })
-            today = datetime.date.today()
-            check_str = str(today).replace('-', '')
-            if check_str in res['msg']:
-                order_no = res['msg']
-                expire_time = dte.now()+datetime.timedelta(seconds=60*40)
+        else:
+            errmsg = res['msg']
+            if "404" in errmsg:
                 lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": res.get('pay_url', ''),
-                    "raw_order_no": order_no,
-                    "expire_datetime": expire_time,
-                    "lock_info": res
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": str(rebot.telephone) + ':' + res["msg"],
                 })
-            else:
-                errmsg = res['msg']
-                if "404" in errmsg:
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": str(rebot.telephone) + ':' + res["msg"],
-                    })
-                    return lock_result
-                if "您有未完成的订单，请在我的订单中查看" in errmsg:
-                    new_rebot = order.change_lock_rebot()
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": new_rebot.telephone,
-                        "result_reason": str(rebot.telephone) + res["msg"],
-                    })
-                    return lock_result
-                for s in ["座位不足", "E001"]: #余票不足
-                    if s in errmsg:
-                        self.close_line(line, reason=errmsg)
-                        break
+                return lock_result
+            if "您有未完成的订单，请在我的订单中查看" in errmsg:
+                new_rebot = order.change_lock_rebot()
                 lock_result.update({
-                    "result_code": 0,
-                    "result_reason": errmsg,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
+                    "result_code": 2,
+                    "source_account": new_rebot.telephone,
+                    "result_reason": str(rebot.telephone) + res["msg"],
                 })
-            return lock_result
+                return lock_result
+            for s in ["座位不足", "E001"]: #余票不足
+                if s in errmsg:
+                    self.close_line(line, reason=errmsg)
+                    break
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": errmsg,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def query_station_depotId_by_web(self, rebot, order, cookies, headers):
         line = order.line

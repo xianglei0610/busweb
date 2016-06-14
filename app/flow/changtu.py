@@ -32,169 +32,169 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with ChangtuWebRebot.get_and_lock(order) as rebot:
-            line = order.line
-            # 未登录
-            if not login_checked and not rebot.test_login_status():
-                lock_result.update({ "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": u"账号未登录",
-                })
-                return lock_result
+        rebot = order.get_lock_rebot()
+        line = order.line
+        # 未登录
+        if not login_checked and not rebot.test_login_status():
+            lock_result.update({ "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": u"账号未登录",
+            })
+            return lock_result
 
-            form_url = "http://www.changtu.com/trade/order/index.htm"
-            ticket_type =line.extra_info["ticketTypeStr"].split(",")[0]
-            sta_city_id, s_pinyin = line.s_city_id.split("|")
-            d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
-            params = [dict(
-                stationMapId=line.extra_info["stationMapId"],
-                planId=line.extra_info["id"],
-                startCityId=sta_city_id,
-                endTypeId=d_end_type,
-                endId=end_city_id,
-                stationId=line.s_sta_id,
-                ticketType=ticket_type,
-                orderModelId="1",
-                schSource="0",
-            )]
-            params = {
-                "t": json.dumps(params),
-                "orderType": "-1",
-                "refUrl": "http://www.changtu.com/"
+        form_url = "http://www.changtu.com/trade/order/index.htm"
+        ticket_type =line.extra_info["ticketTypeStr"].split(",")[0]
+        sta_city_id, s_pinyin = line.s_city_id.split("|")
+        d_end_type, d_pinyin, end_city_id = line.d_city_id.split("|")
+        params = [dict(
+            stationMapId=line.extra_info["stationMapId"],
+            planId=line.extra_info["id"],
+            startCityId=sta_city_id,
+            endTypeId=d_end_type,
+            endId=end_city_id,
+            stationId=line.s_sta_id,
+            ticketType=ticket_type,
+            orderModelId="1",
+            schSource="0",
+        )]
+        params = {
+            "t": json.dumps(params),
+            "orderType": "-1",
+            "refUrl": "http://www.changtu.com/"
+        }
+        cookies = json.loads(rebot.cookies)
+        r = rebot.http_get("%s?%s" %(form_url,urllib.urlencode(params)),
+                            headers={"User-Agent": rebot.user_agent},
+                            cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        try:
+            token = soup.select("#t")[0].get("value")
+        except:
+            if r.status_code == 200 and "畅途网" in r.content:
+                lock_result.update({"result_code": 2, "result_reason": "没拿到到token"})
+            return lock_result
+        passenger_info = {}
+        for i, r in enumerate(order.riders):
+            passenger_info.update({
+                "ticketInfo_%s" % i: "1♂%s♂%s♂0♂♂N" % (r["name"], r["id_number"])
+            })
+
+        ticket_info = {
+            "refUrl": "http://www.changtu.com/",
+            "stationMapId": line.extra_info["stationMapId"],
+            "planId": line.extra_info["id"],
+            "planDate": line.drv_date,
+            "orderCount": order.ticket_amount,
+            "arMoney": order.order_price,
+            "passengerStr": passenger_info,
+            "yhqMoney": 0,
+            "yhqId": "",
+            "tickType": ticket_type,
+            "saveReceUserFlag": "N",
+            "endTypeId": d_end_type,
+            "endId": end_city_id,
+            "startCityId": sta_city_id,
+            "redPayMoney": "0.00",
+            "redPayPwd": "",
+            "reduceActionId": "",
+            "reduceMoney": 0,
+            "orderModelId": "1",
+            "fkReserveSchId": "",
+            "reserveNearbyFlag": "N",
+            "stationId": line.s_sta_id,
+            "actionFlag": 2,
+            "cbFlag": "N",
+            "payPwd": "",
+            "goBackFlag": "1",
+            "transportId": "",
+            "feeMoney": int(line.fee),
+        }
+
+        tel = order.contact_info["telephone"]
+        # if tel.startswith(u"171"):
+        #     tel = rebot.telephone
+        submit_data = {
+            "saveReceUserFlag": "N",
+            "receUserName": order.contact_info["name"],
+            "receUserCardCode": order.contact_info["id_number"],
+            "receUserContact": tel,
+            "t": token,
+            "fraud": json.dumps({"verifyCode": valid_code}),
+            "ordersJson": json.dumps([ticket_info], ensure_ascii=False),
+            "orderType": "-1",
+            "reserveNearbyFlag": "N",
+        }
+
+        ret = self.send_lock_request(order, rebot, submit_data)
+        msg = ret.get("msg", "")
+        if not ret:
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": "存在待支付单 "+msg,
+                "source_account": rebot.telephone,
+                "lock_info": ret,
+            })
+            return lock_result
+
+        flag = int(ret["flag"])
+        if flag == 1:
+            expire_time = dte.now()+datetime.timedelta(seconds=10*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": msg,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                "lock_info": ret,
+            })
+        else:
+            code_names = {
+                "1": "联系人姓名格式不正确",
+                "2": "联系人身份证号不正确",
+                "3": "联系人手机号不正确",
+                "4": "乘车人姓名格式不正确",
+                "5": "乘车人身份证号不正确",
+                "6": "您当前不符合立减条件，订单提交失败",
+                "7":  "余票不足，提交订单失败",
+                "000010": "验证码输入错误，请重新输入",
+                "11": "需要验证码",
+                "12": "验证码输入错误",
+                "13": "需要验证码",
+                "14": "需要短信验证码",
+                "16": "会员信息异常",
+                "000495": "不能重复购买",
+                "000127": "没这个班次?",
             }
-            cookies = json.loads(rebot.cookies)
-            r = rebot.http_get("%s?%s" %(form_url,urllib.urlencode(params)),
-                             headers={"User-Agent": rebot.user_agent},
-                             cookies=cookies)
-            soup = BeautifulSoup(r.content, "lxml")
-            try:
-                token = soup.select("#t")[0].get("value")
-            except:
-                if r.status_code == 200 and "畅途网" in r.content:
-                    lock_result.update({"result_code": 2, "result_reason": "没拿到到token"})
-                return lock_result
-            passenger_info = {}
-            for i, r in enumerate(order.riders):
-                passenger_info.update({
-                    "ticketInfo_%s" % i: "1♂%s♂%s♂0♂♂N" % (r["name"], r["id_number"])
-                })
-
-            ticket_info = {
-                "refUrl": "http://www.changtu.com/",
-                "stationMapId": line.extra_info["stationMapId"],
-                "planId": line.extra_info["id"],
-                "planDate": line.drv_date,
-                "orderCount": order.ticket_amount,
-                "arMoney": order.order_price,
-                "passengerStr": passenger_info,
-                "yhqMoney": 0,
-                "yhqId": "",
-                "tickType": ticket_type,
-                "saveReceUserFlag": "N",
-                "endTypeId": d_end_type,
-                "endId": end_city_id,
-                "startCityId": sta_city_id,
-                "redPayMoney": "0.00",
-                "redPayPwd": "",
-                "reduceActionId": "",
-                "reduceMoney": 0,
-                "orderModelId": "1",
-                "fkReserveSchId": "",
-                "reserveNearbyFlag": "N",
-                "stationId": line.s_sta_id,
-                "actionFlag": 2,
-                "cbFlag": "N",
-                "payPwd": "",
-                "goBackFlag": "1",
-                "transportId": "",
-                "feeMoney": int(line.fee),
-            }
-
-            tel = order.contact_info["telephone"]
-            # if tel.startswith(u"171"):
-            #     tel = rebot.telephone
-            submit_data = {
-                "saveReceUserFlag": "N",
-                "receUserName": order.contact_info["name"],
-                "receUserCardCode": order.contact_info["id_number"],
-                "receUserContact": tel,
-                "t": token,
-                "fraud": json.dumps({"verifyCode": valid_code}),
-                "ordersJson": json.dumps([ticket_info], ensure_ascii=False),
-                "orderType": "-1",
-                "reserveNearbyFlag": "N",
-            }
-
-            ret = self.send_lock_request(order, rebot, submit_data)
-            msg = ret.get("msg", "")
-            if not ret:
+            fail_code = ret.get("failReason", "")
+            msg = code_names.get(fail_code, "")+" "+msg
+            if fail_code in ["13", "11", "12", "000010", "14"]:   # 要输字母验证码
                 lock_result.update({
                     "result_code": 2,
-                    "result_reason": "存在待支付单 "+msg,
+                    "result_reason": "%s-%s" % (fail_code, msg),
                     "source_account": rebot.telephone,
                     "lock_info": ret,
                 })
-                return lock_result
-
-            flag = int(ret["flag"])
-            if flag == 1:
-                expire_time = dte.now()+datetime.timedelta(seconds=10*60)
+            elif fail_code in ["000124", "000240", "16", "000127"]:
                 lock_result.update({
-                    "result_code": 1,
-                    "result_reason": msg,
+                    "result_code": 0,
+                    "result_reason": "%s-%s" % (fail_code, msg),
+                    "source_account": rebot.telephone,
+                    "lock_info": ret,
+                })
+            else:   # 未知错误
+                if "无效订单" in msg:
+                    rebot.modify(cookies="{}", ip="")
+                lock_result.update({
+                    "result_code": 2,
+                    "result_reason": "%s-%s" % (fail_code, msg),
                     "pay_url": "",
                     "raw_order_no": "",
-                    "expire_datetime": expire_time,
+                    "expire_datetime": None,
                     "source_account": rebot.telephone,
                     "lock_info": ret,
                 })
-            else:
-                code_names = {
-                    "1": "联系人姓名格式不正确",
-                    "2": "联系人身份证号不正确",
-                    "3": "联系人手机号不正确",
-                    "4": "乘车人姓名格式不正确",
-                    "5": "乘车人身份证号不正确",
-                    "6": "您当前不符合立减条件，订单提交失败",
-                    "7":  "余票不足，提交订单失败",
-                    "000010": "验证码输入错误，请重新输入",
-                    "11": "需要验证码",
-                    "12": "验证码输入错误",
-                    "13": "需要验证码",
-                    "14": "需要短信验证码",
-                    "16": "会员信息异常",
-                    "000495": "不能重复购买",
-                    "000127": "没这个班次?",
-                }
-                fail_code = ret.get("failReason", "")
-                msg = code_names.get(fail_code, "")+" "+msg
-                if fail_code in ["13", "11", "12", "000010", "14"]:   # 要输字母验证码
-                    lock_result.update({
-                        "result_code": 2,
-                        "result_reason": "%s-%s" % (fail_code, msg),
-                        "source_account": rebot.telephone,
-                        "lock_info": ret,
-                    })
-                elif fail_code in ["000124", "000240", "16", "000127"]:
-                    lock_result.update({
-                        "result_code": 0,
-                        "result_reason": "%s-%s" % (fail_code, msg),
-                        "source_account": rebot.telephone,
-                        "lock_info": ret,
-                    })
-                else:   # 未知错误
-                    if "无效订单" in msg:
-                        rebot.modify(cookies="{}", ip="")
-                    lock_result.update({
-                        "result_code": 2,
-                        "result_reason": "%s-%s" % (fail_code, msg),
-                        "pay_url": "",
-                        "raw_order_no": "",
-                        "expire_datetime": None,
-                        "source_account": rebot.telephone,
-                        "lock_info": ret,
-                    })
-            return lock_result
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         """

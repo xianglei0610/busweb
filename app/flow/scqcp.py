@@ -24,49 +24,50 @@ class Flow(BaseFlow):
 
     def do_lock_ticket(self, order):
         return self.do_lock_ticket_by_web(order)
-        with ScqcpAppRebot.get_and_lock(order) as rebot:
-            tickets = []
-            for r in order.riders:
-                lst = [r["id_number"], r["name"], r["telephone"], "0", "0"]
-                tickets.append("|".join(lst))
-            data = {
-                "carry_sta_id": order.line.s_sta_id,
-                "stop_name": order.line.d_city_name,
-                "str_date": "%s %s" % (order.line.drv_date, order.line.drv_time),
-                "sign_id": order.line.extra_info["sign_id"],
-                "phone_num": order.contact_info["telephone"],
-                "buy_ticket_info": "$".join(tickets),
-                "open_id": rebot.open_id,
-            }
-            ret = self.send_lock_request(rebot, data)
-            lock_result = {
-                "lock_info": ret,
-                "source_account": rebot.telephone,
-                "pay_money": 0,
-            }
-            if ret["status"] == 1:
-                pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
-                total_price = 0
-                for ticket in ret["ticket_list"]:
-                    total_price += ticket["server_price"]
-                    total_price += ticket["real_price"]
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": pay_url,
-                    "raw_order_no": ",".join(ret["web_order_id"]),
-                    "expire_datetime": dte.strptime(ret["expire_time"], "%Y-%m-%d %H:%M:%S"),
-                    "pay_money": total_price,
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": ret["msg"],
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": "",
-                })
-            return lock_result
+
+        rebot = order.get_lock_rebot()
+        tickets = []
+        for r in order.riders:
+            lst = [r["id_number"], r["name"], r["telephone"], "0", "0"]
+            tickets.append("|".join(lst))
+        data = {
+            "carry_sta_id": order.line.s_sta_id,
+            "stop_name": order.line.d_city_name,
+            "str_date": "%s %s" % (order.line.drv_date, order.line.drv_time),
+            "sign_id": order.line.extra_info["sign_id"],
+            "phone_num": order.contact_info["telephone"],
+            "buy_ticket_info": "$".join(tickets),
+            "open_id": rebot.open_id,
+        }
+        ret = self.send_lock_request(rebot, data)
+        lock_result = {
+            "lock_info": ret,
+            "source_account": rebot.telephone,
+            "pay_money": 0,
+        }
+        if ret["status"] == 1:
+            pay_url = "http://www.scqcp.com/ticketOrder/redirectOrder.html?pay_order_id=%s" % ret["pay_order_id"]
+            total_price = 0
+            for ticket in ret["ticket_list"]:
+                total_price += ticket["server_price"]
+                total_price += ticket["real_price"]
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": pay_url,
+                "raw_order_no": ",".join(ret["web_order_id"]),
+                "expire_datetime": dte.strptime(ret["expire_time"], "%Y-%m-%d %H:%M:%S"),
+                "pay_money": total_price,
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": ret["msg"],
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": "",
+            })
+        return lock_result
 
     def do_lock_ticket_by_web(self, order):
         lock_result = {
@@ -79,77 +80,77 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with ScqcpWebRebot.get_and_lock(order) as rebot:
-            is_login = rebot.test_login_status()
-            if not is_login:
-                for i in range(3):
-                    if rebot.login() == "OK":
-                        is_login = True
-                        break
-                    rebot = order.change_lock_rebot()
-
-            if not is_login:
-                lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="账号未登陆")
-                return lock_result
-
-            try:
-                res = self.request_query_token_by_web(rebot, order)
-            except:
-                rebot.modify(ip="")
-                rebot.modify(cookies="{}")
-                lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="获取token失败")
-                return lock_result
-            if res.get('status', '') == 0:
-                token = res.get('token', '')
-            elif res.get('status', '') == 1:
-                msg = res.get('msg', '')
-                lock_result.update(result_code=0,
-                                   source_account=rebot.telephone,
-                                   result_reason="获取token失败:"+msg)
-                return lock_result
-            ret = self.send_lock_request_by_web(rebot, order, token)
-            if not ret:
-                rebot.modify(ip="")
-                rebot.modify(cookies="{}")
+        rebot = order.get_lock_rebot()
+        is_login = rebot.test_login_status()
+        if not is_login:
+            for i in range(3):
+                if rebot.login() == "OK":
+                    is_login = True
+                    break
                 rebot = order.change_lock_rebot()
-                lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="锁票异常")
-                return lock_result
-            lock_result = {
-                "lock_info": ret,
-                "source_account": rebot.telephone,
-                "pay_money": 0,
-            }
-            if ret.get("status", '') == 1:
-                expire_datetime = dte.now()+datetime.timedelta(seconds=28*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": ret["pay_url"],
-                    "raw_order_no": "",
-                    "expire_datetime": expire_datetime,
-                    "pay_money": order.order_price,
-                })
-            else:
-                errmsg = ret['msg']
-                for s in ["余票不足","只能预售2小时之后的票","余位不够","车票已售完"]:
-                    if s in errmsg:
-                        self.close_line(order.line, reason=errmsg)
-                        break
 
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": ret['msg'],
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": "",
-                })
+        if not is_login:
+            lock_result.update(result_code=2,
+                                source_account=rebot.telephone,
+                                result_reason="账号未登陆")
             return lock_result
+
+        try:
+            res = self.request_query_token_by_web(rebot, order)
+        except:
+            rebot.modify(ip="")
+            rebot.modify(cookies="{}")
+            lock_result.update(result_code=2,
+                                source_account=rebot.telephone,
+                                result_reason="获取token失败")
+            return lock_result
+        if res.get('status', '') == 0:
+            token = res.get('token', '')
+        elif res.get('status', '') == 1:
+            msg = res.get('msg', '')
+            lock_result.update(result_code=0,
+                                source_account=rebot.telephone,
+                                result_reason="获取token失败:"+msg)
+            return lock_result
+        ret = self.send_lock_request_by_web(rebot, order, token)
+        if not ret:
+            rebot.modify(ip="")
+            rebot.modify(cookies="{}")
+            rebot = order.change_lock_rebot()
+            lock_result.update(result_code=2,
+                                source_account=rebot.telephone,
+                                result_reason="锁票异常")
+            return lock_result
+        lock_result = {
+            "lock_info": ret,
+            "source_account": rebot.telephone,
+            "pay_money": 0,
+        }
+        if ret.get("status", '') == 1:
+            expire_datetime = dte.now()+datetime.timedelta(seconds=28*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": ret["pay_url"],
+                "raw_order_no": "",
+                "expire_datetime": expire_datetime,
+                "pay_money": order.order_price,
+            })
+        else:
+            errmsg = ret['msg']
+            for s in ["余票不足","只能预售2小时之后的票","余位不够","车票已售完"]:
+                if s in errmsg:
+                    self.close_line(order.line, reason=errmsg)
+                    break
+
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": ret['msg'],
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": "",
+            })
+        return lock_result
 
     def request_query_token_by_web(self, rebot, order):
         url = "http://scqcp.com/userCommon/createTicketOrder.html"

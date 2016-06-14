@@ -31,90 +31,86 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with CBDRebot.get_and_lock(order) as rebot:
-            # 未登录
-            if not rebot.test_login_status():
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": "账号未登录",
-                })
-                return lock_result
-            line = order.line
-            ticket_info = line.extra_info["raw_info"]
-            ticket_info.update(week=chinese_week_day(line.drv_datetime), optionType=1)
-            rider_info = []
-            for r in order.riders:
-                rider_info.append({
-                    "name": r["name"],
-                    "mobileNo": r["telephone"],
-                    "IDCard": r["id_number"],
-                    "IDType": 1,
-                    "passengerType": 0
-                })
-            data  = OrderedDict(
-                ticketsInfo=ticket_info,
-                dptStationCode=ticket_info["dptStationCode"],
-                passengersInfo=rider_info,
-                contactInfo={
-                    "name": order.contact_info["name"],
-                    #"mobileNo": order.contact_info["telephone"],
-                    "mobileNo": rebot.telephone,
-                    "IDCard": order.contact_info["id_number"],
-                    "IDType": 1,
-                    "passengerType": 0
-                },
-                insuranceId="",
-                insuranceAmount="NaN",
-                totalAmount=str(line.real_price()*order.ticket_amount),
-                count=order.ticket_amount,
-                reductAmount="0",
-                activityType="",
-                activityId="0",
-                couponCode="",
-                couponAmount="0"
-            )
-
-            ret = self.send_lock_request(order, rebot, data=data)
-            res = ret["response"]
+        rebot = order.get_lock_rebot()
+        # 未登录
+        if not rebot.test_login_status():
             lock_result.update({
-                "lock_info": {"raw_return": ret},
+                "result_code": 2,
                 "source_account": rebot.telephone,
-                "pay_money": 0,
+                "result_reason": "账号未登录",
             })
-            msg = res["header"]["rspDesc"]
-            if int(res["header"]["rspCode"]) == 0:
-                pay_url = res["body"]["PayUrl"]
-                pay_ret = self.send_pay_request(pay_url, rebot)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": pay_url,
-                    "raw_order_no": "",
-                    "expire_datetime": pay_ret["expire_time"],
-                    "pay_money": pay_ret["total_price"],
-                })
-                lock_result["lock_info"].update(order_detail_url=pay_ret["detail_url"])
-            elif u"您的账户近期购票数量存在异常" in msg:
-                rebot.modify(is_active=False)
-                rebot.remove_doing_order(order)
-                order.modify(source_account="")
-                with CBDRebot.get_and_lock(order) as newrebot:
-                    account = newrebot.telephone
-                lock_result.update({
-                    "result_code": 2,
-                    "result_reason": "%s-%s" % (rebot.telephone, msg),
-                    "source_account": account,
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": res["header"]["rspDesc"],
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                })
             return lock_result
+        line = order.line
+        ticket_info = line.extra_info["raw_info"]
+        ticket_info.update(week=chinese_week_day(line.drv_datetime), optionType=1)
+        rider_info = []
+        for r in order.riders:
+            rider_info.append({
+                "name": r["name"],
+                "mobileNo": r["telephone"],
+                "IDCard": r["id_number"],
+                "IDType": 1,
+                "passengerType": 0
+            })
+        data  = OrderedDict(
+            ticketsInfo=ticket_info,
+            dptStationCode=ticket_info["dptStationCode"],
+            passengersInfo=rider_info,
+            contactInfo={
+                "name": order.contact_info["name"],
+                #"mobileNo": order.contact_info["telephone"],
+                "mobileNo": rebot.telephone,
+                "IDCard": order.contact_info["id_number"],
+                "IDType": 1,
+                "passengerType": 0
+            },
+            insuranceId="",
+            insuranceAmount="NaN",
+            totalAmount=str(line.real_price()*order.ticket_amount),
+            count=order.ticket_amount,
+            reductAmount="0",
+            activityType="",
+            activityId="0",
+            couponCode="",
+            couponAmount="0"
+        )
+
+        ret = self.send_lock_request(order, rebot, data=data)
+        res = ret["response"]
+        lock_result.update({
+            "lock_info": {"raw_return": ret},
+            "source_account": rebot.telephone,
+            "pay_money": 0,
+        })
+        msg = res["header"]["rspDesc"]
+        if int(res["header"]["rspCode"]) == 0:
+            pay_url = res["body"]["PayUrl"]
+            pay_ret = self.send_pay_request(pay_url, rebot)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": pay_url,
+                "raw_order_no": "",
+                "expire_datetime": pay_ret["expire_time"],
+                "pay_money": pay_ret["total_price"],
+            })
+            lock_result["lock_info"].update(order_detail_url=pay_ret["detail_url"])
+        elif u"您的账户近期购票数量存在异常" in msg:
+            newrebot = order.change_lock_rebot()
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": "%s-%s" % (rebot.telephone, msg),
+                "source_account": newrebot.telephone,
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": res["header"]["rspDesc"],
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         """

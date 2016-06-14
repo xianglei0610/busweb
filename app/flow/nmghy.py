@@ -4,19 +4,16 @@
 import requests
 import json
 import urllib
-import urlparse
-
 import datetime
 import random
 from lxml import etree
-from bs4 import BeautifulSoup
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import NmghyWebRebot, Line
+from app.models import Line
 from datetime import datetime as dte
 from app.utils import md5
-from app import order_log, line_log
+from app import order_log
 
 
 class Flow(BaseFlow):
@@ -24,44 +21,44 @@ class Flow(BaseFlow):
     name = "nmghy"
 
     def do_lock_ticket(self, order):
-        with NmghyWebRebot.get_and_lock(order) as rebot:
-            if not rebot.test_login_status():
-                rebot.login()
-                rebot.reload()
-            self.send_check_request(rebot, order)
+        rebot = order.get_lock_rebot()
+        if not rebot.test_login_status():
+            rebot.login()
+            rebot.reload()
+        self.send_check_request(rebot, order)
 
-            line = order.line
-            res = self.send_lock_request(order, rebot)
-            lock_result = {
-                "lock_info": res,
-                "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
-            }
-            if res.get('raw_order_no', ''):
-                expire_time = dte.now()+datetime.timedelta(seconds=28*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": "",
-                    "raw_order_no": res['raw_order_no'],
-                    "expire_datetime": expire_time,
-                    "lock_info": res
-                })
-            else:
-                errmsg = res.get('msg','')
-                for s in ["该班次已停售","班次不是售票状态"]:
-                    if s in errmsg:
-                        self.close_line(line, reason=errmsg)
-                        break
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": errmsg,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                })
-            return lock_result
-    
+        line = order.line
+        res = self.send_lock_request(order, rebot)
+        lock_result = {
+            "lock_info": res,
+            "source_account": rebot.telephone,
+            "pay_money": line.real_price()*order.ticket_amount,
+        }
+        if res.get('raw_order_no', ''):
+            expire_time = dte.now()+datetime.timedelta(seconds=28*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": "",
+                "raw_order_no": res['raw_order_no'],
+                "expire_datetime": expire_time,
+                "lock_info": res
+            })
+        else:
+            errmsg = res.get('msg','')
+            for s in ["该班次已停售","班次不是售票状态"]:
+                if s in errmsg:
+                    self.close_line(line, reason=errmsg)
+                    break
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": errmsg,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
+
     def send_check_request(self, rebot, order):
         """
         单纯向源站发请求
@@ -194,7 +191,7 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
-        rebot = NmghyWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
         if not rebot.test_login_status():
             rebot.login()
             rebot.reload()

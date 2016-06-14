@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
-from app import rebot_log, line_log
+from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
 
 
@@ -407,6 +407,7 @@ class Order(db.Document):
     def __str__(self):
         return "[Order object %s]" % self.order_no
 
+    @property
     def log_name(self):
         return "%s %s" % (self.crawl_source, self.order_no)
 
@@ -420,20 +421,34 @@ class Order(db.Document):
                 rebot_cls = cls
                 break
         try:
-            rebot = rebot_cls.objects.get(telephone=self.source_account)
+            old_rebot = rebot_cls.objects.get(telephone=self.source_account)
         except rebot_cls.DoesNotExist:
-            rebot = None
+            old_rebot = None
 
+        # 已经锁票或已出票等不允许切换rebot
         if self.status not in [STATUS_WAITING_LOCK, STATUS_LOCK_RETRY]:
-            return rebot
-        old = self.source_account
-        self.modify(source_account="")
-        with rebot_cls.get_and_lock(self) as newrebot:
-            self.modify(source_account=newrebot.telephone)
-            new = self.source_account
-            rebot_log.info(
-                "[change_lock_rebot] succ. order: %s %s => %s", self.order_no, old, new)
-            return newrebot
+            return old_rebot
+
+        # 检查释放被锁的账号
+        for rebot in cls.objects.filter(is_locked=True, is_active=True):
+            for no in rebot.doing_orders.keys():
+                try:
+                    tmp_order = Order.objects.get(order_no=no)
+                except:
+                    tmp_order = None
+                else:
+                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL, STATUS_GIVE_BACK]:
+                        rebot.remove_doing_order(tmp_order)
+
+        # 释放旧rebot
+        if old_rebot:
+            old_rebot.remove_doing_order(self)
+
+        # 申请新rebot
+        new_rebot = rebot_cls.get_one(order=self)
+        if new_rebot:
+            new_rebot.add_doing_order(self)
+        return new_rebot
 
     @property
     def source_account_pass(self):
@@ -442,7 +457,7 @@ class Order(db.Document):
 
     def get_lock_rebot(self):
         """
-        获取用于锁票的rebot
+        获取用于锁票的rebot, 如果没有则新申请一个。
         """
         cls_lst = get_rebot_class(self.crawl_source)
         rebot_cls = None
@@ -451,8 +466,6 @@ class Order(db.Document):
                 rebot_cls = cls
                 break
         try:
-            rebot_log.info(rebot_cls.objects.get(
-                telephone=self.source_account))
             return rebot_cls.objects.get(telephone=self.source_account)
         except rebot_cls.DoesNotExist:
             return self.change_lock_rebot()
@@ -697,61 +710,6 @@ class Rebot(db.Document):
         rd = random.randint(0, size - 1)
         return qs[rd]
 
-    @classmethod
-    @contextmanager
-    def get_and_lock(cls, order):
-        # 检查释放被锁的账号
-        for rebot in cls.objects.filter(is_locked=True, is_active=True):
-            for no in rebot.doing_orders.keys():
-                try:
-                    tmp_order = Order.objects.get(order_no=no)
-                except:
-                    tmp_order = None
-                if tmp_order:
-                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL, STATUS_GIVE_BACK]:
-                        rebot.remove_doing_order(tmp_order)
-
-        if order.source_account:
-            obj = cls.objects.get(telephone=order.source_account)
-        else:
-            obj = cls.get_one(order=order)
-        if obj:
-            obj.add_doing_order(order)
-            rebot_log.info(
-                "[get_and_lock] succ. tele: %s, order: %s", obj.telephone, order.order_no)
-        else:
-            rebot_log.info("[get_and_lock] fail. order: %s", order.order_no)
-        try:
-            yield obj
-        except Exception, e:
-            if obj:
-                obj.remove_doing_order(order)
-            raise e
-
-    @classmethod
-    def get_lock_one(cls, order):
-        """
-        后面会逐步替代get_and_lock
-        """
-        # 检查释放被锁的账号
-        for rebot in cls.objects.filter(is_locked=True, is_active=True):
-            for no in rebot.doing_orders.keys():
-                try:
-                    tmp_order = Order.objects.get(order_no=no)
-                except:
-                    tmp_order = None
-                if tmp_order:
-                    if tmp_order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_LOCK_FAIL, STATUS_GIVE_BACK]:
-                        rebot.remove_doing_order(tmp_order)
-
-        if order.source_account:
-            obj = cls.objects.get(telephone=order.source_account)
-        else:
-            obj = cls.get_one(order=order)
-        if obj:
-            obj.add_doing_order(order)
-        return obj
-
     def add_doing_order(self, order):
         order.modify(source_account=self.telephone)
         d = self.doing_orders
@@ -776,11 +734,22 @@ class Rebot(db.Document):
     def on_remove_doing_order(self, order):
         pass
 
+    @property
+    def log_name(self):
+        return "%s %s" % (self.crawl_source, self.telephone)
+
     def test_login_status(self):
         """
         验证此账号是否已经登录
         """
-        raise Exception("Not Implemented")
+        is_login = check_login()
+        msg_dict = {0: "未登录", 1: "已登录"}
+        rebot_log.info("[check_login] %s, result: %s" % (self.log_name, msg_dict[is_login]))
+        return is_login
+
+
+    def check_login(self):
+        return 1
 
     def login(self):
         """
@@ -899,7 +868,7 @@ class Hn96520WebRebot(Rebot):
     #     else:
     #         return 0
 
-    def test_login_status(self):
+    def check_login(self):
         # self.is_locked = True
         # self.save()
         undone_order_url = "http://www.hn96520.com/member/modify.aspx"
@@ -1015,7 +984,7 @@ class CcwWebRebot(Rebot):
     #     else:
     #         return 0
 
-    def test_login_status(self):
+    def check_login(self):
         # self.is_locked = True
         # self.save()
         undone_order_url = "http://www.chechuw.com/UserCenter/userDataEdit"
@@ -1154,7 +1123,7 @@ class TzkyWebRebot(Rebot):
             self.update(cookies="{}")
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         user_url = "http://www.tzfeilu.com:8086/index.php/profile/index"
         headers = {"User-Agent": self.user_agent}
         r = self.http_get(user_url, headers=headers,
@@ -1214,7 +1183,7 @@ class WxszRebot(Rebot):
         rebot_log.info("登陆失败wxsz %s %s", self.telephone, error)
         return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         user_url = "http://content.2500city.com/ucenter/user/getuserinfo"
         params = {
             "sign": self.sign,
@@ -1343,7 +1312,7 @@ class ZjgsmWebRebot(Rebot):
         self.modify(ip=ipstr)
         return ipstr
 
-    def test_login_status(self):
+    def check_login(self):
         headers = {
             "User-Agent": self.user_agent,
             "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -1466,7 +1435,7 @@ class ScqcpAppRebot(Rebot):
             self.save()
             return "OK"
 
-    def test_login_status(self):
+    def check_login(self):
         uri = "/scqcp/api/v2/ticket/query_rider"
         check_url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         headers = {
@@ -1597,7 +1566,7 @@ class ScqcpWebRebot(Rebot):
         rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             #             url = 'http://scqcp.com/login/isLogin.json?r=0.5511045664326151&is_show=no&_=1459936544981'
             headers = self.http_header()
@@ -1646,7 +1615,7 @@ class CBDRebot(Rebot):
     crawl_source = SOURCE_CBD
     is_for_lock = True
 
-    def test_login_status(self):
+    def check_login(self):
         url = "http://m.chebada.com/Order/OrderList"
         headers = {"User-Agent": self.user_agent}
         if not self.cookies:
@@ -1756,7 +1725,7 @@ class ChangtuWebRebot(Rebot):
         rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
-    def test_login_status(self):
+    def check_login(self):
         check_url = "http://www.changtu.com/trade/order/userInfo.htm"
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
@@ -1826,7 +1795,7 @@ class JsdlkyWebRebot(Rebot):
         else:
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         user_url = "http://www.jslw.gov.cn/registerUser.do"
         headers = {"User-Agent": self.user_agent}
         r = self.http_get(user_url, headers=headers,
@@ -1903,7 +1872,7 @@ class BabaWebRebot(Rebot):
             return 0
         return 1
 
-    def test_login_status(self):
+    def check_login(self):
         undone_order_url = "http://www.bababus.com/order/list.htm?billStatus=0&currentLeft=11"
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
@@ -2201,7 +2170,7 @@ class CqkyWebRebot(Rebot):
             self.save()
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         user_url = "http://www.96096kp.com/UpdateMember.aspx"
         headers = {
             "User-Agent": self.user_agent,
@@ -2310,7 +2279,7 @@ class TCAppRebot(Rebot):
             rebot_log.info("登陆错误 tcapp %s, %s", self.telephone, str(res))
         return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         user_url = "http://tcmobileapi.17usoft.com/member/membershiphandler.ashx"
         data = {
             "memberId": self.member_id,
@@ -2382,7 +2351,7 @@ class TCWebRebot(Rebot):
             return 0
         return 1
 
-    def test_login_status(self):
+    def check_login(self):
         user_url = "http://member.ly.com/Member/MemberInfomation.aspx"
         headers = {
             "User-Agent": self.user_agent or random.choice(BROWSER_USER_AGENT)}
@@ -2413,7 +2382,7 @@ class GzqcpWebRebot(Rebot):
     }
     crawl_source = SOURCE_GZQCP
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             user_url = "http://www.gzsqcp.com//com/yxd/pris/grzx/grzl/detailPersonalData.action"
             headers = {"User-Agent": self.user_agent}
@@ -2524,7 +2493,7 @@ class GzqcpAppRebot(Rebot):
             rebot_log.error("登陆错误gzqcp %s, %s", self.telephone, str(ret))
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             user_url = "http://www.gzsqcp.com//com/yxd/pris/openapi/detailPersonalData.action"
             headers = {"User-Agent": self.user_agent}
@@ -2595,7 +2564,7 @@ class KuaibaWapRebot(Rebot):
             rebot_log.error("登陆错误 kuaiba %s, %s", self.telephone, str(ret))
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             user_url = "http://m.daba.cn/gwapi/passenger/queryPassengers.json?c=h5&sr=6963&sc=729&ver=1.5.0&env=0&st=1456996592487"
             headers = {"User-Agent": self.user_agent}
@@ -2719,7 +2688,7 @@ class BjkyWebRebot(Rebot):
             valid_cnt += 1
         rebot_log.info(">>>> end init bjky success %d", valid_cnt)
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             url = "http://e2go.com.cn/TicketOrder/Notic"
     #         cookie ="Hm_lvt_0b26ef32b58e6ad386a355fa169e6f06=1456970104,1457072900,1457316719,1457403102; ASP.NET_SessionId=uuppwd3q4j3qo5vwcka2v04y; Hm_lpvt_0b26ef32b58e6ad386a355fa169e6f06=1457415243"
@@ -2818,7 +2787,7 @@ class LnkyWapRebot(Rebot):
             rebot_log.error("登陆错误 lnky %s, %s", self.telephone, str(ret))
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             user_url = "http://www.jt306.cn/wap/userCenter/personalInformation.do"
             headers = self.http_header()
@@ -2907,7 +2876,7 @@ class LnkyWebRebot(Rebot):
             rebot_log.error("登陆错误 lnky %s, %s", self.telephone, str(login_error[0]))
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             user_url = "http://www.jt306.cn/ticket/uc/goUpdate.action?userId=%s"%self.user_id
             headers = self.http_header()
@@ -3067,7 +3036,7 @@ class HebkyAppRebot(Rebot):
             rebot_log.error("登陆错误 hebky %s, %s", self.telephone, str(ret))
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             user_url = "http://60.2.147.28/com/yxd/pris/grzx/grzl/detailPersonalData.action"
             headers = {"User-Agent": self.user_agent}
@@ -3101,7 +3070,7 @@ class HebkyWebRebot(Rebot):
     def proxy_ip(self):
         return ''
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             user_url = "http://www.hb96505.com//com/yxd/pris/grzx/grzl/detailPersonalData.action"
             headers = {"User-Agent": self.user_agent}
@@ -3240,7 +3209,7 @@ class NmghyWebRebot(Rebot):
                             self.telephone, str(telephone))
             return "fail"
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             url = "http://www.nmghyjt.com/index.php/login/getuserstatus"
             headers = self.http_header()
@@ -3472,7 +3441,7 @@ class Bus365WebRebot(Rebot):
     def proxy_ip(self):
         return ''
 
-    def test_login_status(self):
+    def check_login(self):
         try:
             user_url = "http://www.bus365.com/userinfo0"
             headers = {
@@ -3577,7 +3546,7 @@ class XinTuYunWebRebot(Rebot):
         tele = random.choice(list(all_accounts-droped))
         return cls.objects.get(telephone=tele)
 
-    def test_login_status(self):
+    def check_login(self):
         url = "http://www.xintuyun.cn/user.shtml"
         headers = self.http_header()
         cookies = json.loads(self.cookies)
@@ -3792,7 +3761,7 @@ class Bus100Rebot(Rebot):
             if rebot.is_active:
                 return rebot
 
-    def test_login_status(self):
+    def check_login(self):
         url = "http://www.84100.com/user.shtml"
         res = requests.post(url, cookies=self.cookies)
         res = res.content
@@ -3865,10 +3834,6 @@ class Bus100Rebot(Rebot):
                 continue
             pwd, openid = accounts[bot.telephone]
             bot.modify(password=pwd, open_id=openid)
-
-#             if bot.login() == "OK":
-#                 rebot_log.info("%s 登陆成功" % bot.telephone)
-#                 valid_cnt += 1
 
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:

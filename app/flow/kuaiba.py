@@ -24,78 +24,78 @@ class Flow(BaseFlow):
     name = "kuaiba"
 
     def do_lock_ticket(self, order):
-        with KuaibaWapRebot.get_and_lock(order) as rebot:
-            if not rebot.test_login_status():
-                rebot.login()
-                rebot.reload()
-            line = order.line
-            riders = order.riders
-            contact_info = order.contact_info
-            passengers = []
-            buyPersonCard = riders[0]['id_number']
-            buyPersonName = riders[0]['name']
-            buyPersonPhone = contact_info['telephone']
-            for r in riders:
-                cyuserid = self.send_add_passenger(r["id_number"], r["name"], rebot)
-                passengers.append(cyuserid)
-                if r["id_number"] == contact_info['id_number'] and r["name"] == contact_info['name']: #如果联系人中没有乘车人就取第一个乘车人作为取票人
-                    buyPersonName = contact_info['name']
-                    buyPersonCard = contact_info['id_number']
-            data = {
-                "userId": rebot.user_id,
-                "buyPersonName": buyPersonName,
-                "insuCode": "",
-                "buyPersonCard": buyPersonCard,
-                "insuType": '',
-                "buyPersonPhone": buyPersonPhone,
-                "couponId": '',
-                "insuPrice": '0',
-                'token': '',
-                "lineBcId": order.line.bus_num,
-                "passengers": ','.join(passengers),
-                }
-
-            order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
-            try:
-                res = self.send_lock_request(order, rebot, data=data)
-            except Exception, e:
-                order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-                rebot.login()
-                rebot.reload()
-                res = self.send_lock_request(order, rebot, data=data)
-            order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
-            lock_result = {
-                "lock_info": res,
-                "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
+        rebot = order.get_lock_rebot()
+        if not rebot.test_login_status():
+            rebot.login()
+            rebot.reload()
+        line = order.line
+        riders = order.riders
+        contact_info = order.contact_info
+        passengers = []
+        buyPersonCard = riders[0]['id_number']
+        buyPersonName = riders[0]['name']
+        buyPersonPhone = contact_info['telephone']
+        for r in riders:
+            cyuserid = self.send_add_passenger(r["id_number"], r["name"], rebot)
+            passengers.append(cyuserid)
+            if r["id_number"] == contact_info['id_number'] and r["name"] == contact_info['name']: #如果联系人中没有乘车人就取第一个乘车人作为取票人
+                buyPersonName = contact_info['name']
+                buyPersonCard = contact_info['id_number']
+        data = {
+            "userId": rebot.user_id,
+            "buyPersonName": buyPersonName,
+            "insuCode": "",
+            "buyPersonCard": buyPersonCard,
+            "insuType": '',
+            "buyPersonPhone": buyPersonPhone,
+            "couponId": '',
+            "insuPrice": '0',
+            'token': '',
+            "lineBcId": order.line.bus_num,
+            "passengers": ','.join(passengers),
             }
-            if res['code'] == '100':
-                order_no = res["data"]['orderid']
-                closetime = int(res["data"]['closetime'])
-                expire_time = dte.now()+datetime.timedelta(seconds=60*closetime)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": "",
-                    "raw_order_no": order_no,
-                    "expire_datetime": expire_time,
-                    "lock_info": res
-                })
-            else:
-                errmsg = res['msg']
-                for s in ["班次余票不足"]:
-                    if s in errmsg:
-                        self.close_line(line, reason=errmsg)
-                        break
 
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": errmsg,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                })
-            return lock_result
+        order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
+        try:
+            res = self.send_lock_request(order, rebot, data=data)
+        except Exception, e:
+            order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
+            rebot.login()
+            rebot.reload()
+            res = self.send_lock_request(order, rebot, data=data)
+        order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
+        lock_result = {
+            "lock_info": res,
+            "source_account": rebot.telephone,
+            "pay_money": line.real_price()*order.ticket_amount,
+        }
+        if res['code'] == '100':
+            order_no = res["data"]['orderid']
+            closetime = int(res["data"]['closetime'])
+            expire_time = dte.now()+datetime.timedelta(seconds=60*closetime)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": "",
+                "raw_order_no": order_no,
+                "expire_datetime": expire_time,
+                "lock_info": res
+            })
+        else:
+            errmsg = res['msg']
+            for s in ["班次余票不足"]:
+                if s in errmsg:
+                    self.close_line(line, reason=errmsg)
+                    break
+
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": errmsg,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def send_add_passenger(self, id_card, name, rebot):
         url = "http://m.daba.cn/gwapi/passenger/addPassenger.json?c=h5&sr=3966&sc=331&ver=1.5.0&env=0&st=1456998910554"

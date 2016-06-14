@@ -30,81 +30,81 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with ZjgsmWebRebot.get_and_lock(order) as rebot:
-            line = order.line
-            # 未登录
-            if not login_checked and not rebot.test_login_status():
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": u"账号未登录",
-                })
-                return lock_result
-            lock_result.update(source_account=rebot.telephone)
-
-            # 检验验证码
-            headers = {"User-Agent": rebot.user_agent}
-            cookies = json.loads(rebot.cookies)
-            verify_url = "https://zjgsmwy.com/sso/servlet/checkCode?veryCode=%s&_t=%s" % (valid_code, time.time())
-            r = rebot.http_get(verify_url, headers=headers, cookies=cookies)
-            res = json.loads(r.content[r.content.index("(")+1: r.content.rindex(")")])
-            if res["rtn_code"] != "000000":
-                rebot.modify(cookies="{}")
-                lock_result.update(result_code=2, result_reason="需要锁票验证码")
-                return lock_result
-            rtn_key = res["rtn_key"]
-
-            rider_lst = []
-            for r in order.riders:
-                rider_lst.append("-0-%s-01-%s-%s-false" % (r["name"], r["id_number"], rebot.telephone))
-
-            params = {
-                "shift": line.bus_num,
-                "startStation": line.extra_info["startstation"],
-                "terminalStation": line.extra_info["terminalstation"],
-                "offstationcode": line.d_sta_id,
-                "startDate": line.drv_date,
-                "startTime": line.drv_time,
-                "price": "%.2f" % order.order_price,
-                "fullprice": "%.2f" % line.full_price,
-                "halfprice": "%.2f" % line.half_price,
-                "fullTicketNum": order.ticket_amount,
-                "halfTicketNum": 0,
-                "freeTicketNum": 0,
-                "paramcode": rtn_key,
-                "phoneCheckCode": valid_code,
-                "passengerlist": "@".join(rider_lst),
-            }
-            ret = self.send_lock_request(order, rebot, params)
-            msg = ret["rtnMsg"]
-            if ret["rtnCode"] == "000000":
-                lock_data = ret["responseData"]
-                expire_time = dte.now()+datetime.timedelta(seconds=15*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": msg,
-                    "raw_order_no": lock_data["orderid"],
-                    "expire_datetime": expire_time,
-                    "pay_money": float(lock_data["price"]),
-                })
-            elif "验证码错误" in msg:
-                lock_result.update({
-                    "result_code": 2,
-                    "result_reason": msg,
-                })
-            elif "您当日购票数量" in msg:
-                rebot = order.change_lock_rebot()
-                lock_result.update({
-                    "result_code": 2,
-                    "result_reason": msg,
-                    "source_account": rebot.telephone,
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": msg,
-                })
+        rebot = order.get_lock_rebot()
+        line = order.line
+        # 未登录
+        if not login_checked and not rebot.test_login_status():
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": u"账号未登录",
+            })
             return lock_result
+        lock_result.update(source_account=rebot.telephone)
+
+        # 检验验证码
+        headers = {"User-Agent": rebot.user_agent}
+        cookies = json.loads(rebot.cookies)
+        verify_url = "https://zjgsmwy.com/sso/servlet/checkCode?veryCode=%s&_t=%s" % (valid_code, time.time())
+        r = rebot.http_get(verify_url, headers=headers, cookies=cookies)
+        res = json.loads(r.content[r.content.index("(")+1: r.content.rindex(")")])
+        if res["rtn_code"] != "000000":
+            rebot.modify(cookies="{}")
+            lock_result.update(result_code=2, result_reason="需要锁票验证码")
+            return lock_result
+        rtn_key = res["rtn_key"]
+
+        rider_lst = []
+        for r in order.riders:
+            rider_lst.append("-0-%s-01-%s-%s-false" % (r["name"], r["id_number"], rebot.telephone))
+
+        params = {
+            "shift": line.bus_num,
+            "startStation": line.extra_info["startstation"],
+            "terminalStation": line.extra_info["terminalstation"],
+            "offstationcode": line.d_sta_id,
+            "startDate": line.drv_date,
+            "startTime": line.drv_time,
+            "price": "%.2f" % order.order_price,
+            "fullprice": "%.2f" % line.full_price,
+            "halfprice": "%.2f" % line.half_price,
+            "fullTicketNum": order.ticket_amount,
+            "halfTicketNum": 0,
+            "freeTicketNum": 0,
+            "paramcode": rtn_key,
+            "phoneCheckCode": valid_code,
+            "passengerlist": "@".join(rider_lst),
+        }
+        ret = self.send_lock_request(order, rebot, params)
+        msg = ret["rtnMsg"]
+        if ret["rtnCode"] == "000000":
+            lock_data = ret["responseData"]
+            expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": msg,
+                "raw_order_no": lock_data["orderid"],
+                "expire_datetime": expire_time,
+                "pay_money": float(lock_data["price"]),
+            })
+        elif "验证码错误" in msg:
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": msg,
+            })
+        elif "您当日购票数量" in msg:
+            rebot = order.change_lock_rebot()
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": msg,
+                "source_account": rebot.telephone,
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": msg,
+            })
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         lock_url = "http://www.zjgsmwy.com/busticket/busticket/service/Busticket.orderBusTicket.json"

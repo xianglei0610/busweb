@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import GzqcpAppRebot, Line, GzqcpWebRebot
+from app.models import GzqcpAppRebot, Line
 from datetime import datetime as dte
 from app.utils import md5
 from app import order_log, line_log
@@ -23,90 +23,90 @@ class Flow(BaseFlow):
     name = "gzqcp"
 
     def do_lock_ticket(self, order):
-        with GzqcpAppRebot.get_and_lock(order) as rebot:
-            if not rebot.test_login_status():
-                rebot.login()
-                rebot.reload()
-            line = order.line
-            data = {
-               "busInfoModel.fcsk": line.drv_time,
-               "busInfoModel.ddz": line.d_sta_name,
-               "busInfoModel.scdbm": line.s_sta_id,
-               "busInfoModel.bcjtbm": line.extra_info['busCompanyCode'],
-               "busInfoModel.scd": line.s_sta_name,
-               "busInfoModel.fcrq": line.drv_date,
-               "busInfoModel.ddzbm": line.d_sta_id,
-               "busInfoModel.bcbh": line.bus_num,
-               "busInfoModel.sfzx": line.extra_info['busCodeType'],
-               "busInfoModel.regsName": line.extra_info['regsName'],
-               }
-            riders = order.riders
-            tmp = {}
-            for i in range(len(riders)):
-                tmp = {
-                    "passengers[%s].idCode" % i: riders[i]["id_number"],
-                    "passengers[%s].cname" % i: riders[i]["name"],
-                    "passengers[%s].phone" % i: riders[i]["telephone"],
-                    "passengers[%s].insTypeCode" % i: "2",
-                    "passengers[%s].psgBabyFlg" % i: "0",
-                    "passengers[%s].psgInsuranceFlg" % i: "0",
-                    "passengers[%s].ticketType" % i: '0',
-                    "passengers[%s].insPrice" % i: "0",
-                    "passengers[%s].idType" % i: "1101",
-                }
-                data.update(tmp)
-            order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
-            try:
-                res = self.send_lock_request(order, rebot, data=data)
-            except Exception, e:
-                order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-                rebot.login()
-                rebot.reload()
-                res = self.send_lock_request(order, rebot, data=data)
-            order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
-
-            if res.has_key('struts.token'):
-                del res['struts.token']
-            lock_result = {
-                "lock_info": res,
-                "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
+        rebot = order.get_lock_rebot()
+        if not rebot.test_login_status():
+            rebot.login()
+            rebot.reload()
+        line = order.line
+        data = {
+            "busInfoModel.fcsk": line.drv_time,
+            "busInfoModel.ddz": line.d_sta_name,
+            "busInfoModel.scdbm": line.s_sta_id,
+            "busInfoModel.bcjtbm": line.extra_info['busCompanyCode'],
+            "busInfoModel.scd": line.s_sta_name,
+            "busInfoModel.fcrq": line.drv_date,
+            "busInfoModel.ddzbm": line.d_sta_id,
+            "busInfoModel.bcbh": line.bus_num,
+            "busInfoModel.sfzx": line.extra_info['busCodeType'],
+            "busInfoModel.regsName": line.extra_info['regsName'],
             }
-            if res['values']['result'] == 'success':
-                order_no = res["values"]['orderInfo']['orderMap']['ddh']
-                order_log.info("[lock-end] order: %s,account:%s start   query encode orderId request", order.order_no, rebot.telephone)
-                try:
-                    encode_order_detail = self.send_order_request(rebot, lock_info=res)
-                except Exception, e:
-                    order_log.info("[lock-end] order: %s,account:%s start query encode orderId request error %s", order.order_no, rebot.telephone,e)
-                    rebot.login()
-                    rebot.reload()
-                    encode_order_detail = self.send_order_request(rebot, lock_info=res)
-                order_log.info("[lock-end] order: %s,account:%s query encode orderId request result:%s", order.order_no, rebot.telephone,encode_order_detail)
-                res.update({"encode_orderId": encode_order_detail['orderId']})
-                expire_time = dte.now()+datetime.timedelta(seconds=10*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": "",
-                    "raw_order_no": order_no,
-                    "expire_datetime": expire_time,
-                    "lock_info": res
-                })
-            else:
-                errmsg = res['values']['result'].replace("\r\n", " ")
-                for s in ["剩余座位数不足"]:
-                    if s in errmsg:
-                        self.close_line(line, reason=errmsg)
-                        break
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": res['values']['result'],
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                })
-            return lock_result
+        riders = order.riders
+        tmp = {}
+        for i in range(len(riders)):
+            tmp = {
+                "passengers[%s].idCode" % i: riders[i]["id_number"],
+                "passengers[%s].cname" % i: riders[i]["name"],
+                "passengers[%s].phone" % i: riders[i]["telephone"],
+                "passengers[%s].insTypeCode" % i: "2",
+                "passengers[%s].psgBabyFlg" % i: "0",
+                "passengers[%s].psgInsuranceFlg" % i: "0",
+                "passengers[%s].ticketType" % i: '0',
+                "passengers[%s].insPrice" % i: "0",
+                "passengers[%s].idType" % i: "1101",
+            }
+            data.update(tmp)
+        order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
+        try:
+            res = self.send_lock_request(order, rebot, data=data)
+        except Exception, e:
+            order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
+            rebot.login()
+            rebot.reload()
+            res = self.send_lock_request(order, rebot, data=data)
+        order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
+
+        if res.has_key('struts.token'):
+            del res['struts.token']
+        lock_result = {
+            "lock_info": res,
+            "source_account": rebot.telephone,
+            "pay_money": line.real_price()*order.ticket_amount,
+        }
+        if res['values']['result'] == 'success':
+            order_no = res["values"]['orderInfo']['orderMap']['ddh']
+            order_log.info("[lock-end] order: %s,account:%s start   query encode orderId request", order.order_no, rebot.telephone)
+            try:
+                encode_order_detail = self.send_order_request(rebot, lock_info=res)
+            except Exception, e:
+                order_log.info("[lock-end] order: %s,account:%s start query encode orderId request error %s", order.order_no, rebot.telephone,e)
+                rebot.login()
+                rebot.reload()
+                encode_order_detail = self.send_order_request(rebot, lock_info=res)
+            order_log.info("[lock-end] order: %s,account:%s query encode orderId request result:%s", order.order_no, rebot.telephone,encode_order_detail)
+            res.update({"encode_orderId": encode_order_detail['orderId']})
+            expire_time = dte.now()+datetime.timedelta(seconds=10*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": "",
+                "raw_order_no": order_no,
+                "expire_datetime": expire_time,
+                "lock_info": res
+            })
+        else:
+            errmsg = res['values']['result'].replace("\r\n", " ")
+            for s in ["剩余座位数不足"]:
+                if s in errmsg:
+                    self.close_line(line, reason=errmsg)
+                    break
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": res['values']['result'],
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         """
@@ -212,7 +212,7 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = GzqcpWebRebot.objects.get(telephone=order.source_account)
+        rebot = order.get_lock_rebot()
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:

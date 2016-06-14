@@ -33,93 +33,93 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with BjkyWebRebot.get_and_lock(order) as rebot:
-            if not rebot.test_login_status():
-                lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="账号未登陆")
-                return lock_result
-            self.request_select_schedule(order, rebot)
-            try:
-                shopcartct = self.request_query_shopcart(rebot)
-            except:
-                rebot.modify(ip="")
+        rebot = order.get_lock_rebot()
+        if not rebot.test_login_status():
+            lock_result.update(result_code=2,
+                                source_account=rebot.telephone,
+                                result_reason="账号未登陆")
+            return lock_result
+        self.request_select_schedule(order, rebot)
+        try:
+            shopcartct = self.request_query_shopcart(rebot)
+        except:
+            rebot.modify(ip="")
+            rebot.modify(cookies="{}")
+            lock_result.update(result_code=2,
+                                source_account=rebot.telephone,
+                                result_reason="查询购物车1异常")
+            return lock_result
+        if shopcartct != '0':
+            self.request_clear_shopcart(rebot)
+        errmsg = self.request_add_shopcart(order, rebot)
+        if errmsg:
+            if "您今天可购票数" in errmsg[0]:
                 rebot.modify(cookies="{}")
+                rebot = order.change_lock_rebot()
                 lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="查询购物车1异常")
+                                    source_account=rebot.telephone,
+                                    result_reason="可购票数超过了")
                 return lock_result
-            if shopcartct != '0':
+            if "购物车中已经存在发车日期" in errmsg[0]:
                 self.request_clear_shopcart(rebot)
+            elif errmsg:
+                if "余票数不足" in errmsg[0]:
+                    self.close_line(order.line, reason=errmsg)
+                lock_result.update(result_code=0,
+                                    source_account=rebot.telephone,
+                                    result_reason='add_shopcart1'+errmsg[0],
+                                    lock_info={'result_reason': errmsg[0]})
+            return lock_result
+        shopcartct = self.request_query_shopcart(rebot)
+        if shopcartct == '0':
             errmsg = self.request_add_shopcart(order, rebot)
             if errmsg:
-                if "您今天可购票数" in errmsg[0]:
-                    rebot.modify(cookies="{}")
-                    rebot = order.change_lock_rebot()
-                    lock_result.update(result_code=2,
-                                       source_account=rebot.telephone,
-                                       result_reason="可购票数超过了")
-                    return lock_result
-                if "购物车中已经存在发车日期" in errmsg[0]:
-                    self.request_clear_shopcart(rebot)
-                elif errmsg:
-                    if "余票数不足" in errmsg[0]:
-                        self.close_line(order.line, reason=errmsg)
-                    lock_result.update(result_code=0,
-                                       source_account=rebot.telephone,
-                                       result_reason='add_shopcart1'+errmsg[0],
-                                       lock_info={'result_reason': errmsg[0]})
+                lock_result.update(result_code=0,
+                                    source_account=rebot.telephone,
+                                    result_reason='add_shopcart2'+errmsg[0],
+                                    lock_info={'result_reason': errmsg[0]})
                 return lock_result
-            shopcartct = self.request_query_shopcart(rebot)
-            if shopcartct == '0':
-                errmsg = self.request_add_shopcart(order, rebot)
-                if errmsg:
-                    lock_result.update(result_code=0,
-                                       source_account=rebot.telephone,
-                                       result_reason='add_shopcart2'+errmsg[0],
-                                       lock_info={'result_reason': errmsg[0]})
-                    return lock_result
-            if int(shopcartct) != len(order.riders):
-                rebot.modify(ip="")
-                rebot.modify(cookies="{}")
-                new_rebot = order.change_lock_rebot()
-                lock_result.update(result_code=2,
-                                   source_account=new_rebot.telephone,
-                                   result_reason=rebot.telephone+":购物车中数量和购票人数不相同")
-                return lock_result
-            try:
-                res = self.request_create_order(order, rebot)
-            except Exception, e:
-                order_log.info("[lock-error] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-                res = self.request_create_order(order, rebot)
-            if res['order_no']:
-                res['order_no'] = res['order_no'][0]
-                res['order_id'] = res['pay_url'][0].split('/')[-1]
-            lock_result = {
-                "lock_info": res,
-                "source_account": rebot.telephone,
-                "pay_money": order.line.real_price()*order.ticket_amount,
-            }
-            if res['order_no']:
-                order_no = res['order_no']
-                expire_time = dte.now()+datetime.timedelta(seconds=60*24)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": '',
-                    "raw_order_no": order_no,
-                    "expire_datetime": expire_time,
-                    "lock_info": res
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": res,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                })
+        if int(shopcartct) != len(order.riders):
+            rebot.modify(ip="")
+            rebot.modify(cookies="{}")
+            new_rebot = order.change_lock_rebot()
+            lock_result.update(result_code=2,
+                                source_account=new_rebot.telephone,
+                                result_reason=rebot.telephone+":购物车中数量和购票人数不相同")
             return lock_result
+        try:
+            res = self.request_create_order(order, rebot)
+        except Exception, e:
+            order_log.info("[lock-error] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
+            res = self.request_create_order(order, rebot)
+        if res['order_no']:
+            res['order_no'] = res['order_no'][0]
+            res['order_id'] = res['pay_url'][0].split('/')[-1]
+        lock_result = {
+            "lock_info": res,
+            "source_account": rebot.telephone,
+            "pay_money": order.line.real_price()*order.ticket_amount,
+        }
+        if res['order_no']:
+            order_no = res['order_no']
+            expire_time = dte.now()+datetime.timedelta(seconds=60*24)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": '',
+                "raw_order_no": order_no,
+                "expire_datetime": expire_time,
+                "lock_info": res
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": res,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def request_select_schedule(self, order, rebot):
         line = order.line
