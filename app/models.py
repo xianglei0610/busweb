@@ -2133,7 +2133,7 @@ class CqkyWebRebot(Rebot):
         if tel != self.telephone:
             if tel: # 问题代理ip嫌疑
                 get_proxy("cqky").set_black(self.proxy_ip)
-            self.modify(cookies="{}")
+            self.modify(cookies="{}", ip="")
             return 0
         return 1
 
