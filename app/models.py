@@ -2106,7 +2106,8 @@ class CqkyWebRebot(Rebot):
                     ret = "invalid_pwd"
                 elif u"请正确输入验证码" in msg or u"验证码已过期" in msg:
                     ret = "invalid_code"
-                ret = msg
+                else:
+                    ret = msg
         else:
             ua = random.choice(BROWSER_USER_AGENT)
             self.last_login_time = dte.now()
@@ -2115,7 +2116,7 @@ class CqkyWebRebot(Rebot):
             self.cookies = "{}"
             self.save()
             ret = "create"
-        rebot_log.info("[login]%s,%s,result:%s,ip:%s,cookie:%s,vcode:%s", self.log_name, ret, self.proxy_ip, cookies, "auto" if vcode_flag else "manual")
+        rebot_log.info("[login]%s,result:%s,ip:%s,cookie:%s,vcode:%s", self.log_name, ret, self.proxy_ip, cookies, "auto" if vcode_flag else "manual")
         return ret
 
     def check_login(self):
