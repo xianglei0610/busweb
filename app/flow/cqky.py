@@ -39,9 +39,13 @@ class Flow(BaseFlow):
         is_login = rebot.test_login_status()
         if not is_login:
             for i in range(3):
-                if rebot.login() == "OK":
+                msg = rebot.login()
+                if msg == "OK" and rebot.test_login_status():
                     is_login = True
                     break
+                elif msg == "invalid_pwd":
+                    rebot.modify(is_active=False)
+                    rebot = order.change_lock_rebot()
 
         if not is_login:
             lock_result.update({
@@ -448,7 +452,6 @@ class Flow(BaseFlow):
                 msg = rebot.login(valid_code=valid_code, headers=headers, cookies=cookies)
                 if msg == "OK":
                     is_login = True
-                    rebot.modify(cookies=json.dumps(cookies))
                 elif msg == "invalid_pwd":
                     rebot.modify(is_active=False)
                     rebot = order.change_lock_rebot()
