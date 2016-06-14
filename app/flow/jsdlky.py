@@ -30,106 +30,106 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with JsdlkyWebRebot.get_and_lock(order) as rebot:
-            line = order.line
-            is_login = rebot.test_login_status()
-            if not is_login:
-                if rebot.login() == "OK":
-                    is_login = True
-            if not is_login:
+        rebot = order.get_lock_rebot()
+        line = order.line
+        is_login = rebot.test_login_status()
+        if not is_login:
+            if rebot.login() == "OK":
+                is_login = True
+        if not is_login:
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": u"账号未登录",
+            })
+            return lock_result
+
+        form_url = "http://www.jslw.gov.cn/busOrder.do"
+        params = {
+            "event": "init_query",
+            "max_date": dte.now().strftime("%Y-%m-%d"),
+            "drive_date1": line.drv_date,
+            "bus_code": line.bus_num,
+            "sstcode": line.extra_info["startstationcode"],
+            "rstcode": line.s_sta_id,
+            "dstcode": line.d_sta_id,
+            "rst_name1": line.s_sta_name,
+            "dst_name1": line.d_sta_name,
+            "rst_name": line.s_sta_name,
+            "dst_name": line.d_sta_name,
+            "drive_date": line.drv_date,
+            "checkcode": "",
+        }
+        cookies = json.loads(rebot.cookies)
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": rebot.user_agent,
+        }
+        r = rebot.http_post(form_url,
+                            data=urllib.urlencode(params),
+                            headers=headers,
+                            cookies=cookies)
+
+        soup = BeautifulSoup(r.content, "lxml")
+        # 构造表单参数
+        raw_form = {}
+        for obj in soup.find_all("input"):
+            name, val = obj.get("name"), obj.get("value")
+            if name in ["None", "none", '']:
+                continue
+            raw_form[name] = val
+        for k in ["psgName", "psgIdType", "psgIdCode", "psgTicketType", "psgBabyFlg", "psgTel", "psgEmail"]:
+            if k in raw_form:
+                del raw_form[k]
+        raw_form["event"] = "retainSeat"
+        encode_list= [urllib.urlencode(raw_form),]
+        for r in order.riders:
+            d = {
+                "psgName": r["name"],
+                "psgIdType": "01",
+                "psgIdCode": r["id_number"],
+                "psgTicketType": 0,
+                "psgBabyFlg": 0,
+                "psgTel":  rebot.telephone,
+                "psgEmail": raw_form["contactEmail"],
+            }
+            encode_list.append(urllib.urlencode(d))
+        encode_str = "&".join(encode_list)
+        ret = self.send_lock_request(order, rebot, encode_str)
+
+        if ret["success"]:
+            expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "raw_order_no": ret["order_no"],
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                "lock_info": ret,
+                "pay_money": ret["pay_money"],
+            })
+        else:
+            msg = ret["msg"]
+            if "该站限售人数不够" in msg or "班次余票数不够" in msg or "申请座位失败" in msg:
+                self.close_line(line, reason=msg)
                 lock_result.update({
-                    "result_code": 2,
+                    "result_code": 0,
+                    "result_reason": msg,
                     "source_account": rebot.telephone,
-                    "result_reason": u"账号未登录",
                 })
                 return lock_result
-
-            form_url = "http://www.jslw.gov.cn/busOrder.do"
-            params = {
-                "event": "init_query",
-                "max_date": dte.now().strftime("%Y-%m-%d"),
-                "drive_date1": line.drv_date,
-                "bus_code": line.bus_num,
-                "sstcode": line.extra_info["startstationcode"],
-                "rstcode": line.s_sta_id,
-                "dstcode": line.d_sta_id,
-                "rst_name1": line.s_sta_name,
-                "dst_name1": line.d_sta_name,
-                "rst_name": line.s_sta_name,
-                "dst_name": line.d_sta_name,
-                "drive_date": line.drv_date,
-                "checkcode": "",
-            }
-            cookies = json.loads(rebot.cookies)
-            headers = {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "User-Agent": rebot.user_agent,
-            }
-            r = rebot.http_post(form_url,
-                                data=urllib.urlencode(params),
-                                headers=headers,
-                                cookies=cookies)
-
-            soup = BeautifulSoup(r.content, "lxml")
-            # 构造表单参数
-            raw_form = {}
-            for obj in soup.find_all("input"):
-                name, val = obj.get("name"), obj.get("value")
-                if name in ["None", "none", '']:
-                    continue
-                raw_form[name] = val
-            for k in ["psgName", "psgIdType", "psgIdCode", "psgTicketType", "psgBabyFlg", "psgTel", "psgEmail"]:
-                if k in raw_form:
-                    del raw_form[k]
-            raw_form["event"] = "retainSeat"
-            encode_list= [urllib.urlencode(raw_form),]
-            for r in order.riders:
-                d = {
-                    "psgName": r["name"],
-                    "psgIdType": "01",
-                    "psgIdCode": r["id_number"],
-                    "psgTicketType": 0,
-                    "psgBabyFlg": 0,
-                    "psgTel":  rebot.telephone,
-                    "psgEmail": raw_form["contactEmail"],
-                }
-                encode_list.append(urllib.urlencode(d))
-            encode_str = "&".join(encode_list)
-            ret = self.send_lock_request(order, rebot, encode_str)
-
-            if ret["success"]:
-                expire_time = dte.now()+datetime.timedelta(seconds=15*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "raw_order_no": ret["order_no"],
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                    "lock_info": ret,
-                    "pay_money": ret["pay_money"],
-                })
-            else:
-                msg = ret["msg"]
-                if "该站限售人数不够" in msg or "班次余票数不够" in msg or "申请座位失败" in msg:
-                    self.close_line(line, reason=msg)
-                    lock_result.update({
-                        "result_code": 0,
-                        "result_reason": msg,
-                        "source_account": rebot.telephone,
-                    })
-                    return lock_result
-                elif u"今天的订票次数(未支付)已满3次" in msg:
-                    rebot.modify(is_active=False)
-                    rebot = order.change_lock_rebot()
-                lock_result.update({
-                    "result_code": 2,
-                    "result_reason": msg,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                    "source_account": rebot.telephone,
-                })
-            return lock_result
+            elif u"今天的订票次数(未支付)已满3次" in msg:
+                rebot.modify(is_active=False)
+                rebot = order.change_lock_rebot()
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": msg,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+                "source_account": rebot.telephone,
+            })
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         """

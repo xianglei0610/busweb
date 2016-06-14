@@ -11,11 +11,10 @@ import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import Line, BabaWebRebot
+from app.models import Line
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
-from tasks import async_send_email
 from app import line_log
 
 
@@ -40,7 +39,7 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        rebot = BabaWebRebot.get_lock_one(order)
+        rebot = order.get_lock_rebot(order)
         line = order.line
         params = {
             "startPlace":line.s_city_name,

@@ -32,68 +32,68 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with TzkyWebRebot.get_and_lock(order) as rebot:
-            line = order.line
-            # 未登录
-            if not rebot.test_login_status():
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": u"账号未登录",
-                })
-                return lock_result
-
-            form_url = self.BASE_URL+line.extra_info["lock_form_url"]
-            cookies = json.loads(rebot.cookies)
-            headers = {
-                #"Content-Type": "application/x-www-form-urlencoded",
-                "User-Agent": rebot.user_agent,
-            }
-            r = rebot.http_get(form_url, headers=headers, cookies=cookies)
-
-            soup = BeautifulSoup(r.content, "lxml")
-            # 构造表单参数
-            raw_form = {}
-            for obj in soup.select("#busSearchForm input"):
-                name, val = obj.get("name"), obj.get("value")
-                if name in ["None", "none", '']:
-                    continue
-                raw_form[name] = val
-            raw_form["cardtype"] = "01"
-            raw_form["mian"] = 0
-            raw_form["bxFlag"] = 0      # 保险
-            encode_list= [urllib.urlencode(raw_form),]
-            for r in order.riders:
-                d = {
-                    "psgName[]": r["name"],
-                    "psgIdType[]": "01",
-                    "psgIdCode[]": r["id_number"],
-                    "psgTel[]": rebot.telephone,
-                    "psgTicketType[]": 0,
-                }
-                encode_list.append(urllib.urlencode(d))
-            encode_str = "&".join(encode_list)
-
-            submit_url = soup.select_one("#busSearchForm").get("action")
-            headers["Content-Type"] = "application/x-www-form-urlencoded"
-            r = rebot.http_post(submit_url, headers=headers, cookies=cookies, data=encode_str)
-            if u"busOrder/zhifu" in r.url:
-                expire_time = dte.now()+datetime.timedelta(seconds=15*60)
-                lock_info = {"detail_url": r.url}
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                    "lock_info": lock_info,
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": u"不明原因:"+r.url,
-                    "source_account": rebot.telephone,
-                })
+        rebot = order.get_lock_rebot()
+        line = order.line
+        # 未登录
+        if not rebot.test_login_status():
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": u"账号未登录",
+            })
             return lock_result
+
+        form_url = self.BASE_URL+line.extra_info["lock_form_url"]
+        cookies = json.loads(rebot.cookies)
+        headers = {
+            #"Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": rebot.user_agent,
+        }
+        r = rebot.http_get(form_url, headers=headers, cookies=cookies)
+
+        soup = BeautifulSoup(r.content, "lxml")
+        # 构造表单参数
+        raw_form = {}
+        for obj in soup.select("#busSearchForm input"):
+            name, val = obj.get("name"), obj.get("value")
+            if name in ["None", "none", '']:
+                continue
+            raw_form[name] = val
+        raw_form["cardtype"] = "01"
+        raw_form["mian"] = 0
+        raw_form["bxFlag"] = 0      # 保险
+        encode_list= [urllib.urlencode(raw_form),]
+        for r in order.riders:
+            d = {
+                "psgName[]": r["name"],
+                "psgIdType[]": "01",
+                "psgIdCode[]": r["id_number"],
+                "psgTel[]": rebot.telephone,
+                "psgTicketType[]": 0,
+            }
+            encode_list.append(urllib.urlencode(d))
+        encode_str = "&".join(encode_list)
+
+        submit_url = soup.select_one("#busSearchForm").get("action")
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        r = rebot.http_post(submit_url, headers=headers, cookies=cookies, data=encode_str)
+        if u"busOrder/zhifu" in r.url:
+            expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+            lock_info = {"detail_url": r.url}
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                "lock_info": lock_info,
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": u"不明原因:"+r.url,
+                "source_account": rebot.telephone,
+            })
+        return lock_result
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()

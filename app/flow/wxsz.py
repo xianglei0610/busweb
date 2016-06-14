@@ -7,7 +7,7 @@ import json
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import Line, WxszRebot
+from app.models import Line
 from datetime import datetime as dte
 from app.utils import md5
 
@@ -27,74 +27,74 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with WxszRebot.get_and_lock(order) as rebot:
-            line = order.line
-            # 未登录
-            if not rebot.test_login_status():
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": u"账号未登录",
-                })
-                return lock_result
-
-            if len(set([d["id_number"] for d in order.riders])) != len(order.riders):
-                lock_result.update({
-                    "result_code": 0,
-                    "source_account": rebot.telephone,
-                    "result_reason": u"乘客身份证号重复",
-                })
-                return lock_result
-            params = {
-                "insurance": 0,
-                "uid": rebot.uid,
-                "passengers": ",".join(rebot.add_riders(order)),
-                "schedulecode": line.bus_num,
-                "fromcode": line.s_sta_id,
-                "nopay_child_ticket": 0,
-                "departdate": line.drv_datetime.strftime("%Y%m%d"),
-                "finish_code": line.d_sta_id,
-                "from": line.s_sta_name,
-                "pay_child_ticket": 0,
-                "destination": line.d_sta_name,
-            }
-
-            headers = {
-                "User-Agent": rebot.user_agent,
-                "Content-Type": "application/json;charset=UTF-8",
-            }
-            lock_url = "http://coach.wisesz.mobi/coach_v38/main/confirm_order"
-            lock_url= "%s?%s" % (lock_url, urllib.urlencode(params))
-            r = rebot.http_post(lock_url, headers=headers)
-            ret = r.json()
-            msg = ret["errorMsg"]
-            if ret["errorCode"] == 0:
-                expire_time = dte.now()+datetime.timedelta(seconds=15*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": msg,
-                    "raw_order_no": "",
-                    "expire_datetime": expire_time,
-                    "pay_money": 0,
-                    "lock_info": {"order_id": ret["data"]["ord_id"]},
-                    "source_account": rebot.telephone,
-                })
-            elif u"账户异常" in msg:
-                rebot = order.change_lock_rebot()
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": msg,
-                })
-            else:
-                if u"所购车次已无余票" in msg:
-                    self.close_line(line, reason=msg)
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": msg,
-                    "source_account": rebot.telephone,
-                })
+        rebot = order.get_lock_rebot()
+        line = order.line
+        # 未登录
+        if not rebot.test_login_status():
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": u"账号未登录",
+            })
             return lock_result
+
+        if len(set([d["id_number"] for d in order.riders])) != len(order.riders):
+            lock_result.update({
+                "result_code": 0,
+                "source_account": rebot.telephone,
+                "result_reason": u"乘客身份证号重复",
+            })
+            return lock_result
+        params = {
+            "insurance": 0,
+            "uid": rebot.uid,
+            "passengers": ",".join(rebot.add_riders(order)),
+            "schedulecode": line.bus_num,
+            "fromcode": line.s_sta_id,
+            "nopay_child_ticket": 0,
+            "departdate": line.drv_datetime.strftime("%Y%m%d"),
+            "finish_code": line.d_sta_id,
+            "from": line.s_sta_name,
+            "pay_child_ticket": 0,
+            "destination": line.d_sta_name,
+        }
+
+        headers = {
+            "User-Agent": rebot.user_agent,
+            "Content-Type": "application/json;charset=UTF-8",
+        }
+        lock_url = "http://coach.wisesz.mobi/coach_v38/main/confirm_order"
+        lock_url= "%s?%s" % (lock_url, urllib.urlencode(params))
+        r = rebot.http_post(lock_url, headers=headers)
+        ret = r.json()
+        msg = ret["errorMsg"]
+        if ret["errorCode"] == 0:
+            expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": msg,
+                "raw_order_no": "",
+                "expire_datetime": expire_time,
+                "pay_money": 0,
+                "lock_info": {"order_id": ret["data"]["ord_id"]},
+                "source_account": rebot.telephone,
+            })
+        elif u"账户异常" in msg:
+            rebot = order.change_lock_rebot()
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": msg,
+            })
+        else:
+            if u"所购车次已无余票" in msg:
+                self.close_line(line, reason=msg)
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": msg,
+                "source_account": rebot.telephone,
+            })
+        return lock_result
 
     def send_order_request(self, order):
         detail_url = "http://coach.wisesz.mobi/coach_v38/order/ondetail"

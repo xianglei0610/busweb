@@ -24,68 +24,65 @@ class Flow(BaseFlow):
     name = "e8s"
 
     def do_lock_ticket(self, order):
-        with E8sAppRebot.get_and_lock(order) as rebot:
-#             if not rebot.test_login_status():
-#                 rebot.login()
-#                 rebot.reload()
-            line = order.line
-            data = {
-                    "drvDate": line.drv_date,
-                    "orderSourceId": '7',
-                    "userId": rebot.user_id,
-                    "stopId": line.d_city_id,
-                    "carryStaId": line.s_sta_id,
-                    "schId": line.bus_num,
-                    }
-            jsonStr = {"carryPersonInfo": [], "ticketAmount":0}
-            riders = order.riders
-            tmp = {}
-            ticketAmount = len(riders)
-            jsonStr['ticketAmount'] = ticketAmount
-            for i in riders:
-                tmp = {
-                    "cardCode": i["id_number"],
-                    "insuranceFlag": "N",
-                    "cardName": i["name"],
-                    "mobile": i["telephone"],
+        rebot = order.get_lock_rebot()
+        line = order.line
+        data = {
+                "drvDate": line.drv_date,
+                "orderSourceId": '7',
+                "userId": rebot.user_id,
+                "stopId": line.d_city_id,
+                "carryStaId": line.s_sta_id,
+                "schId": line.bus_num,
                 }
-                jsonStr['carryPersonInfo'].append(tmp)
-            data['jsonStr'] = json.dumps(jsonStr)
-            order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
-            try:
-                res = self.send_lock_request(order, rebot, data=data)
-            except Exception, e:
-                order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-                rebot.login()
-                rebot.reload()
-                res = self.send_lock_request(order, rebot, data=data)
-            order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
-#             {"detail":{"orderCode":"160412010300100009","orderId":"439997"},"flag":"1"}
-            lock_result = {
-                "lock_info": res,
-                "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
+        jsonStr = {"carryPersonInfo": [], "ticketAmount":0}
+        riders = order.riders
+        tmp = {}
+        ticketAmount = len(riders)
+        jsonStr['ticketAmount'] = ticketAmount
+        for i in riders:
+            tmp = {
+                "cardCode": i["id_number"],
+                "insuranceFlag": "N",
+                "cardName": i["name"],
+                "mobile": i["telephone"],
             }
-            if res['detail']:
-                order_no = res["detail"]['orderCode']
-                expire_time = dte.now()+datetime.timedelta(seconds=10*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": "",
-                    "raw_order_no": order_no,
-                    "expire_datetime": expire_time,
-                    "lock_info": res
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": res,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                })
-            return lock_result
+            jsonStr['carryPersonInfo'].append(tmp)
+        data['jsonStr'] = json.dumps(jsonStr)
+        order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
+        try:
+            res = self.send_lock_request(order, rebot, data=data)
+        except Exception, e:
+            order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
+            rebot.login()
+            rebot.reload()
+            res = self.send_lock_request(order, rebot, data=data)
+        order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
+#             {"detail":{"orderCode":"160412010300100009","orderId":"439997"},"flag":"1"}
+        lock_result = {
+            "lock_info": res,
+            "source_account": rebot.telephone,
+            "pay_money": line.real_price()*order.ticket_amount,
+        }
+        if res['detail']:
+            order_no = res["detail"]['orderCode']
+            expire_time = dte.now()+datetime.timedelta(seconds=10*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": "",
+                "raw_order_no": order_no,
+                "expire_datetime": expire_time,
+                "lock_info": res
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": res,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         """
