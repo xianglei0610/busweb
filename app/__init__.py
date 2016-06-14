@@ -36,7 +36,6 @@ kefu_log = logging.getLogger("kefu")
 access_log = logging.getLogger("access")
 rebot_log = logging.getLogger("rebot")
 cron_log = logging.getLogger("cron")
-http_log = logging.getLogger("http")
 dashboard_log = logging.getLogger("dashboard")
 
 

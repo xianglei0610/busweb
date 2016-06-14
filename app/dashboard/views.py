@@ -409,7 +409,7 @@ def change_kefu():
     except:
         msg = "不存在%s这个账号" % kefu_name
         return jsonify({"code": 0, "msg": msg})
-    if order.yc_status != YC_STATUS_ING and (not target.is_switch and target.username not in ["luojunping", "xiangleilei"]):
+    if order.yc_status != YC_STATUS_ING and (not target.is_switch and target.username not in ["luojunping", "xiangleilei", "chengxiaokang"]):
         msg = "%s没在接单，禁止转单给他。" % target.username
         return jsonify({"code": 0, "msg": msg})
     access_log.info("%s 将%s转给 %s", current_user.username, order_no, kefu_name)

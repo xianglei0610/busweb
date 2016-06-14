@@ -40,9 +40,16 @@ class Flow(BaseFlow):
             if not is_login:
                 for i in range(3):
                     if rebot.login() == "OK":
+                        is_login = True
                         break
-                    rebot = order.change_lock_rebot()
 
+            if not is_login:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": "账号未登录",
+                })
+                return lock_result
 
             res = self.request_station_status(line, rebot)
             if res["success"]:
@@ -432,8 +439,8 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
-        is_login = rebot.test_login_status()
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+            is_login = rebot.test_login_status()
             if not is_login and valid_code:
                 key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                 info = json.loads(session[key])
@@ -487,7 +494,7 @@ class Flow(BaseFlow):
             return {"flag": "error", "content": "锁票失败"}
 
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-            cookies = json.loads(rebot.cookies)
+            cookies = {}
             login_form = "http://www.96096kp.com/CusLogin.aspx"
             valid_url = "http://www.96096kp.com/ValidateCode.aspx?_=%s" % random.randint(1, 10000)
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}

@@ -18,6 +18,7 @@ from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
 from app import rebot_log, line_log
+from app.proxy import get_proxy
 
 
 class AdminUser(db.Document):
@@ -2138,7 +2139,11 @@ class CqkyWebRebot(Rebot):
         rebot_log.info("[cqky] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
-    def login(self, valid_code="", headers={}, cookies={}):
+    def login(self, valid_code="", headers=None, cookies=None):
+        if not headers:
+            headers = {}
+        if not cookies:
+            cookies = {}
         vcode_flag = False
         if not valid_code:
             login_form = "http://www.96096kp.com/CusLogin.aspx"
@@ -2146,7 +2151,13 @@ class CqkyWebRebot(Rebot):
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
             r = self.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
-            r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            for i in range(3):
+                r = self.http_get(valid_url, headers=headers, cookies=cookies)
+                if "image" not in r.headers.get('content-type'):
+                    self.modify(ip="")
+                else:
+                    break
+            cookies.update(dict(r.cookies))
             valid_code = vcode_cqky(r.content)
             vcode_flag = True
 
@@ -2165,19 +2176,15 @@ class CqkyWebRebot(Rebot):
                 "cmd": "Login",
             }
             login_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
-            r = self.http_post(login_url, data=urllib.urlencode(
-                params), headers=headers, cookies=cookies)
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
             res = json.loads(trans_js_str(r.content))
             success = res.get("success", True)
             if success:     # 登陆成功
-                username = res["Code"]
-                if username != self.telephone:  # cookie串了
-                    self.modify(cookies="{}")
-                    return "fail"
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s",
-                               self.telephone, vcode_flag)
+                if res["Code"] != self.telephone:
+                    return "fail"
+                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s cookeis:%s", self.telephone, vcode_flag, cookies)
                 return "OK"
             else:
                 msg = res["msg"]
@@ -2198,29 +2205,22 @@ class CqkyWebRebot(Rebot):
             return "fail"
 
     def test_login_status(self):
-        login_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
+        user_url = "http://www.96096kp.com/UpdateMember.aspx"
         headers = {
             "User-Agent": self.user_agent,
             "Referer": "http://www.96096kp.com/TicketMain.aspx",
             "Origin": "http://www.96096kp.com",
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(self.cookies)
-        today = dte.now().strftime("%Y-%m-%d")
-        params = {
-            "beginDate": today,
-            "endDate": today,
-            "isCheck": "false",
-            "Code": "",
-            "cmd": "GetMobileList",
-        }
-        r = self.http_post(login_url, data=urllib.urlencode(
-            params), headers=headers, cookies=cookies)
-        lst = re.findall(r'success:"(\w+)"', r.content)
-        succ = lst and lst[0] or ""
-        if succ == "true":
-            return 1
-        return 0
+        r = self.http_get(user_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        tel = soup.select_one("#ctl00_FartherMain_txt_Mobile").get("value")
+        if tel != self.telephone:
+            if tel: # 问题代理ip嫌疑
+                get_proxy("cqky").set_black(self.proxy_ip)
+            self.modify(cookies="{}")
+            return 0
+        return 1
 
 
 class TCAppRebot(Rebot):
@@ -3437,6 +3437,29 @@ class Bus365AppRebot(Rebot):
                 except Line.DoesNotExist:
                     continue
 
+    def clear_riders(self):
+        url = "http://www.bus365.com/passenger/getPiList/0"
+        param = {
+            "page": "1",
+            "size": "100",
+            "userId": self.user_id,
+            "token": json.dumps({"clienttoken": self.client_token, "clienttype":"android"}),
+            "clienttype": 'android',
+            "usertoken": self.client_token
+        }
+        url = url + '?'+urllib.urlencode(param)
+        headers = self.http_header()
+        try:
+            res = self.http_get(url, headers=headers)
+            res = res.json()
+            for i in res.get('pis', []):
+                del_url = "http://www.bus365.com/passenger/deletePi/0"
+                param.update({"deviceid": self.deviceid, "piIds": i['id']})
+                res = self.http_post(del_url, data=param, headers=headers)
+                res = res.json()
+        except:
+            pass
+
 
 class Bus365WebRebot(Rebot):
     user_agent = db.StringField()
@@ -3993,5 +4016,4 @@ if not "_rebot_class" in globals():
 
 
 def get_rebot_class(source):
-    print(source)
     return _rebot_class.get(source, [])

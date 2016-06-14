@@ -20,6 +20,7 @@ from datetime import datetime as dte, timedelta
 from bs4 import BeautifulSoup
 from lxml import etree
 from app.utils import get_redis
+from app import rebot_log
 
 
 class ProxyProducer(object):
@@ -46,6 +47,51 @@ class ProxyProducer(object):
                 ip, port = td_lst[0].text.strip(), td_lst[1].text.strip()
                 ipstr = "%s:%s" % (ip, port)
                 if self.valid_proxy(ipstr):
+                    rebot_log.info("[crawl_from_haodaili] %s", ipstr)
+                    self.add_proxy(ipstr)
+                    add_cnt += 1
+        return add_cnt
+
+    def crawl_from_kxdaili(self):
+        url_tpl = "http://www.kxdaili.com/dailiip/%s/%s.html"
+        add_cnt = 0
+        for i in [1, 2]:
+            for j in range(1, 6):
+                url = url_tpl % (i, j)
+                try:
+                    r = requests.get(url, timeout=10, headers={"User-Agent": "Chrome"})
+                except Exception, e:
+                    continue
+                soup = BeautifulSoup(r.content, "lxml")
+                for s in soup.select(".table tr")[1:]:
+                    td_lst = s.findAll("td")
+                    ip, port = td_lst[0].text.strip(), td_lst[1].text.strip()
+                    ipstr = "%s:%s" % (ip, port)
+                    if self.valid_proxy(ipstr):
+                        rebot_log.info("[crawl_from_kxdaili] %s", ipstr)
+                        self.add_proxy(ipstr)
+                        add_cnt += 1
+        return add_cnt
+
+    def crawl_from_ip181(self):
+        url_tpl = "http://www.ip181.com/daili/%s.html"
+        add_cnt = 0
+        for i in range(1, 6):
+            url = url_tpl % i
+            try:
+                r = requests.get(url, timeout=10, headers={"User-Agent": "Chrome"})
+            except Exception, e:
+                continue
+            soup = BeautifulSoup(r.content, "lxml")
+            for s in soup.select(".table tr")[1:]:
+                td_lst = s.findAll("td")
+                ip, port = td_lst[0].text.strip(), td_lst[1].text.strip()
+                speed = float(td_lst[4].text.rstrip("秒").strip())
+                if speed > 1:
+                    continue
+                ipstr = "%s:%s" % (ip, port)
+                if self.valid_proxy(ipstr):
+                    rebot_log.info("[crawl_from_ip181] %s", ipstr)
                     self.add_proxy(ipstr)
                     add_cnt += 1
         return add_cnt
@@ -61,6 +107,7 @@ class ProxyProducer(object):
                 lst = re.findall(r"(\d+.\d+.\d+.\d+:\d+)", trobj.text)
                 for ipstr in lst:
                     if self.valid_proxy(ipstr):
+                        rebot_log.info("[crawl_from_samair] %s", ipstr)
                         self.add_proxy(ipstr)
                         add_cnt += 1
         return add_cnt
@@ -89,6 +136,7 @@ class ProxyProducer(object):
         add_cnt = 0
         for ipstr in proxy_lst:
             if self.valid_proxy(ipstr):
+                rebot_log.info("[crawl_from_zdaye] %s", ipstr)
                 self.add_proxy(ipstr)
                 add_cnt += 1
         return add_cnt
@@ -221,6 +269,7 @@ class CqkyProxyConsumer(ProxyConsumer):
         key = RK_PROXY_IP_CQKY_BLACK % ipstr
         rds.set(key, time.time())
         rds.expire(key, 60*60*5)
+        self.remove_proxy(ipstr)
 
     def valid_proxy(self, ipstr):
         rds = get_redis("default")
