@@ -14,7 +14,6 @@ from datetime import datetime as dte
 from flask import json
 from lxml import etree
 from bs4 import BeautifulSoup
-from contextlib import contextmanager
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
 from app import rebot_log, line_log, order_log
@@ -210,8 +209,6 @@ class Line(db.Document):
         """
         delta = self.drv_datetime - dte.now()
         left_tickets = self.left_tickets
-        if delta.total_seconds < 40 * 60:
-            left_tickets = 0
         return {
             "line_id": self.line_id,
             "starting_city": self.s_city_name,
@@ -448,6 +445,7 @@ class Order(db.Document):
         new_rebot = rebot_cls.get_one(order=self)
         if new_rebot:
             new_rebot.add_doing_order(self)
+        order_log.info("[change_lock_rebot] %s,%s=>%s" % (order.log_name, getattr(old_rebot, "telephone", ""), getattr(new_rebot, "telephone", "")))
         return new_rebot
 
     @property
@@ -670,9 +668,7 @@ class Rebot(db.Document):
                 continue
             pwd, _ = accounts[bot.telephone]
             bot.modify(password=pwd)
-            msg = bot.login()
-            rebot_log.info("[login_all] %s %s %s",
-                           cls.crawl_source, bot.telephone, msg)
+            bot.login()
 
         for tele, (pwd, openid) in accounts.items():
             if tele in has_checked:
@@ -682,9 +678,7 @@ class Rebot(db.Document):
                       telephone=tele,
                       password=pwd,)
             bot.save()
-            msg = bot.login()
-            rebot_log.info("[login_all] %s %s %s",
-                           cls.crawl_source, bot.telephone, msg)
+            bot.login()
 
     @classmethod
     def get_one(cls, order=None):
@@ -720,8 +714,6 @@ class Rebot(db.Document):
         self.on_add_doing_order(order)
 
     def remove_doing_order(self, order):
-        rebot_log.info("[remove_doing_order] %s order: %s account: %s %s",
-                       self.crawl_source, order.order_no, self.telephone, self.doing_orders)
         d = self.doing_orders
         if order.order_no in d:
             del d[order.order_no]
@@ -846,23 +838,18 @@ class Hn96520WebRebot(Rebot):
             cardid = rider.get('id_number', '')
             sel = rider.get('telephone', '')
             addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid={0}&name={1}&cardid={2}&sel={3}'.format(self.memid, name, cardid, sel)
-            # rebot_log.info(addurl)
-            # rebot_log.info(headers)
             r = requests.get(addurl, headers=headers, cookies=cookies)
             if r.content != '0':
                 id_lst['cardid'] = r.content
-                # rebot_log.info('添加乘客 => {0}'.format(name))
             else:
                 pass
         return id_lst
+
     # def check_code_status(self, code):
-    #     rebot_log.info('code is {0}'.format(code))
     #     url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(code)
     #     headers = {'User-Agent': self.user_agent}
     #     cookies = json.loads(self.cookies)
     #     r = requests.get(url, headers=headers, cookies=cookies)
-    #     rebot_log.info(code)
-    #     rebot_log.info(dict(r.cookies))
     #     if 'true' in r.content:
     #         return 1
     #     else:
@@ -887,16 +874,12 @@ class Hn96520WebRebot(Rebot):
         if memid:
             self.memid = memid
             self.save()
-            # rebot_log.info(memid)
             cookies.update(r.cookies)
-            # rebot_log.info('成功登录 tel {0}'.format(tel))
             return 1
         else:
-            # rebot_log.info('fail登录 tel {0}'.format(tel))
             return 0
 
     # 初始化帐号
-
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
         self.last_login_time = dte.now()
@@ -904,7 +887,6 @@ class Hn96520WebRebot(Rebot):
         self.is_active = True
         self.cookies = "{}"
         self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
 
@@ -962,23 +944,18 @@ class CcwWebRebot(Rebot):
             cardid = rider.get('id_number', '')
             sel = rider.get('telephone', '')
             addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid=449606&name={0}&cardid={1}&sel={2}'.format(name, cardid, sel)
-            # rebot_log.info(addurl)
-            # rebot_log.info(headers)
             r = requests.get(addurl, headers=headers, cookies=cookies)
             if r.content != '0':
                 id_lst['cardid'] = r.content
-                # rebot_log.info('添加乘客 => {0}'.format(name))
             else:
                 pass
         return id_lst
+
     # def check_code_status(self, code):
-    #     rebot_log.info('code is {0}'.format(code))
     #     url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(code)
     #     headers = {'User-Agent': self.user_agent}
     #     cookies = json.loads(self.cookies)
     #     r = requests.get(url, headers=headers, cookies=cookies)
-    #     rebot_log.info(code)
-    #     rebot_log.info(dict(r.cookies))
     #     if 'true' in r.content:
     #         return 1
     #     else:
@@ -1002,14 +979,11 @@ class CcwWebRebot(Rebot):
             tel = 0
         if tel:
             cookies.update(r.cookies)
-            # rebot_log.info('成功登录 tel {0}'.format(tel))
             return 1
         else:
-            # rebot_log.info('fail登录 tel {0}'.format(tel))
             return 0
 
     # 初始化帐号
-
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
         self.last_login_time = dte.now()
@@ -1017,7 +991,6 @@ class CcwWebRebot(Rebot):
         self.is_active = True
         self.cookies = "{}"
         self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
 
@@ -1047,12 +1020,9 @@ class XyjtWebRebot(Rebot):
             cardid = rider.get('id_number', '')
             sel = rider.get('telephone', '')
             addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid={0}&name={1}&cardid={2}&sel={3}'.format(self.memid, name, cardid, sel)
-            # rebot_log.info(addurl)
-            # rebot_log.info(headers)
             r = requests.get(addurl, headers=headers, cookies=cookies)
             if r.content != '0':
                 id_lst['cardid'] = r.content
-                # rebot_log.info('添加乘客 => {0}'.format(name))
             else:
                 pass
         return id_lst
@@ -1069,7 +1039,6 @@ class XyjtWebRebot(Rebot):
         self.is_active = True
         self.cookies = "{}"
         self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
 
@@ -1161,7 +1130,6 @@ class WxszRebot(Rebot):
 
     def login(self):
         if self.test_login_status():
-            rebot_log.info("已经登陆wxsz %s" % self.telephone)
             return "OK"
         url = "http://content.2500city.com/ucenter/user/login"
         params = dict(
@@ -1180,7 +1148,6 @@ class WxszRebot(Rebot):
             _, sign = SOURCE_INFO[SOURCE_WXSZ]["accounts"][self.telephone]
             self.modify(uid=res["data"]["uid"], sign=sign)
             return "OK"
-        rebot_log.info("登陆失败wxsz %s %s", self.telephone, error)
         return "fail"
 
     def check_login(self):
@@ -1546,13 +1513,9 @@ class ScqcpWebRebot(Rebot):
             if res["success"]:     # 登陆成功
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                rebot_log.info("[scqcp]登陆成功, %s vcode_flag:%s",
-                               self.telephone, vcode_flag)
                 return "OK"
             else:
                 msg = res["msg"]
-                rebot_log.info("[scqcp]%s %s vcode_flag:%s",
-                               self.telephone, msg, vcode_flag)
                 if u"验证码不正确" in msg:
                     return "invalid_code"
                 return msg
@@ -1563,7 +1526,6 @@ class ScqcpWebRebot(Rebot):
             self.is_active = True
             self.cookies = "{}"
             self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
     def check_login(self):
@@ -1628,7 +1590,6 @@ class CBDRebot(Rebot):
 
     def login(self):
         if self.test_login_status():
-            rebot_log.info("已登录cbd %s", self.telephone)
             return "OK"
         from selenium import webdriver
         driver = webdriver.PhantomJS()
@@ -1652,11 +1613,9 @@ class CBDRebot(Rebot):
             self.user_agent = ua
             self.cookies = json.dumps(dict(r.cookies))
             self.save()
-            rebot_log.info("登陆成功cbd %s", self.telephone)
             return "OK"
         else:
             self.modify(is_active=False)
-            rebot_log.error("登陆错误cbd %s, %s", self.telephone, str(ret))
         return "fail"
 
     @property
@@ -1722,7 +1681,6 @@ class ChangtuWebRebot(Rebot):
         self.is_active = True
         self.cookies = "{}"
         self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
     def check_login(self):
@@ -1849,11 +1807,9 @@ class BabaWebRebot(Rebot):
                           headers=post_headers, cookies=cookies)
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[baba] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[baba] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     def login(self):
@@ -1863,7 +1819,6 @@ class BabaWebRebot(Rebot):
         self.is_active = True
         self.cookies = "{}"
         self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
     def check_login_by_resp(self, resp):
@@ -1908,10 +1863,8 @@ class JskyWebRebot(Rebot):
             self.user_agent = ua
             self.cookies = json.dumps(dict(r.cookies))
             self.save()
-            rebot_log.info("登陆成功webjsky %s", self.telephone)
             return "OK"
         else:
-            rebot_log.error("登陆错误webjsky %s, %s", self.telephone, str(ret))
         return "fail"
 
 
@@ -1980,10 +1933,7 @@ class JskyAppRebot(Rebot):
             self.member_id = ret["body"]["memberId"]
             self.authorize_code = ret["body"]["authorizeCode"]
             self.save()
-            rebot_log.info("登陆成功 jsky %s", self.telephone)
             return "OK"
-        else:
-            rebot_log.error("登陆错误jsky %s, %s", self.telephone, str(ret))
         return "fail"
 
 
@@ -2041,7 +1991,6 @@ class CTripRebot(Rebot):
                 driver.quit()
                 return "OK"
         driver.quit()
-        rebot_log.info("%s 登陆失败" % self.telephone)
         return "fail"
 
     def http_post(self, url, data):
@@ -2098,11 +2047,9 @@ class CqkyWebRebot(Rebot):
         return cls.objects.get(telephone=tele)
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[cqky] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[cqky] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     def login(self, valid_code="", headers=None, cookies=None):
@@ -2127,6 +2074,7 @@ class CqkyWebRebot(Rebot):
             valid_code = vcode_cqky(r.content)
             vcode_flag = True
 
+        ret = "fail"
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
@@ -2148,19 +2096,15 @@ class CqkyWebRebot(Rebot):
             if success:     # 登陆成功
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                if res["Code"] != self.telephone:
-                    return "fail"
-                rebot_log.info("[cqky]登陆成功, %s vcode_flag:%s cookeis:%s", self.telephone, vcode_flag, cookies)
-                return "OK"
+                if res["Code"] == self.telephone:
+                    ret = "OK"
             else:
                 msg = res["msg"]
-                rebot_log.info("[cqky]%s %s vcode_flag:%s",
-                               self.telephone, msg, vcode_flag)
                 if u"用户名或密码错误" in msg:
-                    return "invalid_pwd"
+                    ret = "invalid_pwd"
                 elif u"请正确输入验证码" in msg or u"验证码已过期" in msg:
-                    return "invalid_code"
-                return msg
+                    ret = "invalid_code"
+                ret = msg
         else:
             ua = random.choice(BROWSER_USER_AGENT)
             self.last_login_time = dte.now()
@@ -2168,7 +2112,9 @@ class CqkyWebRebot(Rebot):
             self.is_active = True
             self.cookies = "{}"
             self.save()
-            return "fail"
+            ret = "create"
+        rebot_log.info("[login]%s,%s,result:%s,ip:%s,cookie:%s,vcode:%s", self.log_name, ret, self.proxy_ip, cookies, "auto" if vcode_flag else "manual")
+        return ret
 
     def check_login(self):
         user_url = "http://www.96096kp.com/UpdateMember.aspx"
@@ -2252,7 +2198,6 @@ class TCAppRebot(Rebot):
 
     def login(self):
         if self.test_login_status():
-            rebot_log.info("已登陆 tcapp %s", self.telephone)
             return "OK"
         log_url = "http://tcmobileapi.17usoft.com/member/MembershipHandler.ashx"
         data = OrderedDict({
@@ -2272,11 +2217,9 @@ class TCAppRebot(Rebot):
             self.member_id = res["body"]["memberId"]
             self.user_id = res["body"]["externalMemberId"]
             self.save()
-            rebot_log.info("登陆成功 tcapp %s", self.telephone)
             return "OK"
         else:
             self.update(is_active=False)
-            rebot_log.info("登陆错误 tcapp %s, %s", self.telephone, str(res))
         return "fail"
 
     def check_login(self):
@@ -2337,12 +2280,9 @@ class TCWebRebot(Rebot):
                     self.user_id = v
                     break
             self.save()
-            rebot_log.info("登陆成功 %s %s", self.crawl_source, self.telephone)
             return "OK"
         else:
             self.modify(is_active=True)
-            rebot_log.error("登陆失败 %s %s, %s", self.crawl_source,
-                            self.telephone, str(ret))
             return "fail"
 
     def check_login_by_resp(self, resp):
@@ -2356,8 +2296,7 @@ class TCWebRebot(Rebot):
         headers = {
             "User-Agent": self.user_agent or random.choice(BROWSER_USER_AGENT)}
         cookies = json.loads(self.cookies)
-        resp = self.http_get(user_url, headers=headers,
-                             cookies=cookies, verify=False)
+        resp = self.http_get(user_url, headers=headers, cookies=cookies, verify=False)
         return self.check_login_by_resp(resp)
 
     @property
@@ -2401,7 +2340,6 @@ class GzqcpWebRebot(Rebot):
     @classmethod
     def login_all(cls):
         """预设账号"""
-        rebot_log.info(">>>> start to init gzqcp web:")
         valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[SOURCE_GZQCP]["accounts"]
@@ -2423,7 +2361,6 @@ class GzqcpWebRebot(Rebot):
                       password=pwd,)
             bot.save()
             valid_cnt += 1
-        rebot_log.info(">>>> end init gzqcp web  success %d", valid_cnt)
 
 
 class GzqcpAppRebot(Rebot):
@@ -2462,11 +2399,9 @@ class GzqcpAppRebot(Rebot):
                 return rebot
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[gzqcp] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[gzqcp] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     def login(self):
@@ -2487,10 +2422,8 @@ class GzqcpAppRebot(Rebot):
             self.cookies = json.dumps(dict(r.cookies))
             self.is_active = True
             self.save()
-            rebot_log.info("登陆成功gzqcp %s", self.telephone)
             return "OK"
         else:
-            rebot_log.error("登陆错误gzqcp %s, %s", self.telephone, str(ret))
             return "fail"
 
     def check_login(self):
@@ -2499,8 +2432,7 @@ class GzqcpAppRebot(Rebot):
             headers = {"User-Agent": self.user_agent}
             cookies = json.loads(self.cookies)
             data = {}
-            res = requests.post(user_url, data=data,
-                                headers=headers, cookies=cookies)
+            res = requests.post(user_url, data=data, headers=headers, cookies=cookies)
             res = res.json()
             if res.get('akfAjaxResult', '') == '0' and res['values']['member']:
                 return 1
@@ -2530,11 +2462,9 @@ class KuaibaWapRebot(Rebot):
         }
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[kuaiba] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[kuaiba] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     def login(self):
@@ -2557,11 +2487,9 @@ class KuaibaWapRebot(Rebot):
             self.cookies = json.dumps(dict(r.cookies))
             self.is_active = True
             self.save()
-            rebot_log.info("登陆成功 kuaiba %s", self.telephone)
             self.test_login_status()
             return "OK"
         else:
-            rebot_log.error("登陆错误 kuaiba %s, %s", self.telephone, str(ret))
             return "fail"
 
     def check_login(self):
@@ -2657,7 +2585,6 @@ class BjkyWebRebot(Rebot):
     @classmethod
     def login_all(cls):
         """登陆所有预设账号"""
-        rebot_log.info(">>>> start to init bjky:")
         valid_cnt = 0
         has_checked = {}
         ua = random.choice(BROWSER_USER_AGENT)
@@ -2670,9 +2597,6 @@ class BjkyWebRebot(Rebot):
             pwd, _ = accounts[bot.telephone]
             bot.modify(password=pwd)
 
-#             if bot.login() == "OK":
-#                 rebot_log.info("%s 登陆成功" % bot.telephone)
-#                 valid_cnt += 1
         for tele, (pwd, _) in accounts.items():
             if tele in has_checked:
                 continue
@@ -2683,10 +2607,7 @@ class BjkyWebRebot(Rebot):
                       user_agent=ua
                       )
             bot.save()
-#             if bot.login() == "OK":
-#                 rebot_log.info("%s 登陆成功" % bot.telephone)
             valid_cnt += 1
-        rebot_log.info(">>>> end init bjky success %d", valid_cnt)
 
     def check_login(self):
         try:
@@ -2757,11 +2678,9 @@ class LnkyWapRebot(Rebot):
         }
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[lnky] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[lnky] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     def login(self):
@@ -2781,10 +2700,8 @@ class LnkyWapRebot(Rebot):
             self.cookies = json.dumps(dict(r.cookies))
             self.is_active = True
             self.save()
-            rebot_log.info("登陆成功 lnky %s", self.telephone)
             return "OK"
         else:
-            rebot_log.error("登陆错误 lnky %s, %s", self.telephone, str(ret))
             return "fail"
 
     def check_login(self):
@@ -2835,11 +2752,9 @@ class LnkyWebRebot(Rebot):
         }
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[lnky] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[lnky] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     def login(self):
@@ -2870,10 +2785,8 @@ class LnkyWebRebot(Rebot):
             self.is_active = True
             self.user_id = user_id
             self.save()
-            rebot_log.info("登陆成功 lnky %s,username:%s", self.telephone,username)
             return "OK"
         else:
-            rebot_log.error("登陆错误 lnky %s, %s", self.telephone, str(login_error[0]))
             return "fail"
 
     def check_login(self):
@@ -2965,11 +2878,9 @@ class HebkyAppRebot(Rebot):
     is_for_lock = True
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[hebky] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[hebky] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     @property
@@ -3030,10 +2941,8 @@ class HebkyAppRebot(Rebot):
             self.cookies = json.dumps(dict(r.cookies))
             self.is_active = True
             self.save()
-            rebot_log.info("登陆成功 hebky %s", self.telephone)
             return "OK"
         else:
-            rebot_log.error("登陆错误 hebky %s, %s", self.telephone, str(ret))
             return "fail"
 
     def check_login(self):
@@ -3094,7 +3003,6 @@ class HebkyWebRebot(Rebot):
     @classmethod
     def login_all(cls):
         """预设账号"""
-        rebot_log.info(">>>> start to init hebky web:")
         valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[SOURCE_HEBKY]["accounts"]
@@ -3116,7 +3024,6 @@ class HebkyWebRebot(Rebot):
                       password=pwd,)
             bot.save()
             valid_cnt += 1
-        rebot_log.info(">>>> end init hebky web  success %d", valid_cnt)
 
 
 class NmghyWebRebot(Rebot):
@@ -3132,11 +3039,9 @@ class NmghyWebRebot(Rebot):
     is_for_lock = True
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[nmghy] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[nmghy] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     @property
@@ -3197,16 +3102,11 @@ class NmghyWebRebot(Rebot):
                 self.cookies = json.dumps(dict(r.cookies))
                 self.is_active = True
                 self.save()
-                rebot_log.info("登陆成功 nmghy %s", self.telephone)
                 self.test_login_status()
                 return "OK"
             else:
-                rebot_log.error("登陆错误 nmghy %s, %s",
-                                self.telephone, str(telephone))
                 return "fail"
         else:
-            rebot_log.error("登陆错误 nmghy %s, %s",
-                            self.telephone, str(telephone))
             return "fail"
 
     def check_login(self):
@@ -3251,11 +3151,9 @@ class Bus365AppRebot(Rebot):
     is_for_lock = True
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[bus365] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[bus365] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     @property
@@ -3339,13 +3237,10 @@ class Bus365AppRebot(Rebot):
                 self.deviceid = deviceid
                 self.client_token = ret['clienttoken']
                 self.save()
-                rebot_log.info("登陆成功 bus365 %s", self.telephone)
                 return "OK"
             else:
-                rebot_log.error("登陆错误 bus365 %s, %s", self.telephone, str(ret))
                 return "fail"
         else:
-            rebot_log.error("登陆错误 bus365 %s, %s", self.telephone, str(ret))
             return "fail"
 
     def recrawl_shiftid(self, line):
@@ -3469,7 +3364,6 @@ class Bus365WebRebot(Rebot):
     @classmethod
     def login_all(cls):
         """预设账号"""
-        rebot_log.info(">>>> start to init bus365 web:")
         valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[SOURCE_BUS365]["accounts"]
@@ -3491,7 +3385,6 @@ class Bus365WebRebot(Rebot):
                       password=pwd,)
             bot.save()
             valid_cnt += 1
-        rebot_log.info(">>>> end init bus365 web  success %d", valid_cnt)
 
 
 class XinTuYunWebRebot(Rebot):
@@ -3511,11 +3404,9 @@ class XinTuYunWebRebot(Rebot):
         return ''
 
     def on_add_doing_order(self, order):
-        rebot_log.info("[xintuyun] %s locked", self.telephone)
         self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
-        rebot_log.info("[xintuyun] %s unlocked", self.telephone)
         self.modify(is_locked=False)
 
     def http_header(self, ua=""):
@@ -3601,11 +3492,9 @@ class XinTuYunWebRebot(Rebot):
                     return "fail"
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                rebot_log.info("[xintuyun]登陆成功, %s vcode_flag:%s", self.telephone, vcode_flag)
                 return "OK"
             else:
                 msg = res["msg"]
-                rebot_log.info("[xintuyun]%s %s vcode_flag:%s", self.telephone, msg, vcode_flag)
                 if u"验证码不正确" in msg:
                     return "invalid_code"
                 return msg
@@ -3616,7 +3505,6 @@ class XinTuYunWebRebot(Rebot):
             self.is_active = True
             self.cookies = "{}"
             self.save()
-        rebot_log.info("创建成功 %s", self.telephone)
         return "OK"
 
     def recrawl_shiftid(self, line):
@@ -3813,8 +3701,6 @@ class Bus100Rebot(Rebot):
         ret = self.http_post(uri, data, user_agent=ua)
         if ret['returnCode'] != "0000":
             # 登陆失败
-            rebot_log.error("%s %s login failed! %s", self.telephone,
-                            self.password, ret.get("returnMsg", ""))
             self.modify(is_active=False)
             return ret.get("returnMsg", "fail")
         self.modify(is_active=True, last_login_time=dte.now(), user_agent=ua)
@@ -3823,7 +3709,6 @@ class Bus100Rebot(Rebot):
     @classmethod
     def login_all(cls):
         """登陆所有预设账号"""
-        rebot_log.info(">>>> start to init 84100:")
         valid_cnt = 0
         has_checked = {}
         accounts = SOURCE_INFO[SOURCE_BUS100]["accounts"]
@@ -3844,10 +3729,7 @@ class Bus100Rebot(Rebot):
                       password=pwd,
                       open_id=openid)
             bot.save()
-#             if bot.login() == "OK":
-#                 rebot_log.info("%s 登陆成功" % bot.telephone)
             valid_cnt += 1
-        rebot_log.info(">>>> end init 84100 success %d", valid_cnt)
 
     def http_post(self, uri, data, user_agent=None, token=None):
         url = urllib2.urlparse.urljoin(Bus100_DOMAIN, uri)
