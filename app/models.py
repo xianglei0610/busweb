@@ -445,7 +445,7 @@ class Order(db.Document):
         new_rebot = rebot_cls.get_one(order=self)
         if new_rebot:
             new_rebot.add_doing_order(self)
-        order_log.info("[change_lock_rebot] %s,%s=>%s" % (order.log_name, getattr(old_rebot, "telephone", ""), getattr(new_rebot, "telephone", "")))
+        order_log.info("[change_lock_rebot] %s,%s=>%s" % (self.log_name, getattr(old_rebot, "telephone", ""), getattr(new_rebot, "telephone", "")))
         return new_rebot
 
     @property
