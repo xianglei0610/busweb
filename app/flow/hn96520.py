@@ -36,12 +36,14 @@ class Flow(BaseFlow):
             "pay_money": 0,
         }
         rebot = order.get_lock_rebot()
+        pk = len(order.riders)
         for y in xrange(5):
+            # rebot.clear_riders()
             riders = rebot.add_riders(order)
-            if riders:
+            if riders and pk == len(riders):
                 break
             else:
-                rebot.clear_riders(order)
+                rebot.clear_riders()
         takeman = ''
         for rider in riders:
             takeman += ',' + str(rider)
@@ -51,7 +53,7 @@ class Flow(BaseFlow):
             'date': line.extra_info.get('date', ''),
             'global': line.extra_info.get('g', ''),
             'o': '0',
-            'tSum': line.full_price,
+            'tSum': line.full_price * pk,
             'takemanIds': takeman,
             'tid': line.extra_info.get('t', ''),
             'txtCode': order.extra_info.get('code'),
@@ -352,18 +354,17 @@ class Flow(BaseFlow):
             cookies.update(dict(r.cookies))
             # rebot_log.info(r.cookies)
             rebot.modify(cookies=json.dumps(cookies))
-        if rebot.is_locked:
-            rebot.change_lock_rebot()
+        # try:
+        #     is_login
+        # except:
+        #     is_login = 0
+        # if rebot.is_locked and not is_login:
+        #     rebot.change_lock_rebot()
         is_login = rebot.test_login_status()
-        rebot.is_locked = True
-        # 更换rebot
-        # if not rebot.is_locked:
-        #     is_login = rebot.test_login_status()
-        # else:
-        #     pass
+        # rebot.is_locked = True
+        # rebot.save()
 
         # 检查vcode, 更新到extra_info
-
         check_code_status(valid_code, order)
 
         # 已经登录, 而且取到code
@@ -371,9 +372,8 @@ class Flow(BaseFlow):
             # 锁票
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
-            # rebot.clear_riders()
-            rebot.is_locked = False
-            rebot.save()
+            # rebot.is_locked = False
+            # rebot.save()
             return _get_page(rebot)
         # 未登录
         elif not is_login:
