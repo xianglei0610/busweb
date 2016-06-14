@@ -734,7 +734,7 @@ class Rebot(db.Document):
         """
         验证此账号是否已经登录
         """
-        is_login = self.check_login()
+        is_login = 1 if  self.check_login() else 0
         msg_dict = {0: "未登录", 1: "已登录"}
         rebot_log.info("[check_login] %s, result: %s" % (self.log_name, msg_dict[is_login]))
         return is_login
