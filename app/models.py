@@ -1051,14 +1051,14 @@ class CcwWebRebot(Rebot):
         return "OK"
 
 
-class CyjtWebRebot(Rebot):
+class XyjtWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
-        "collection": "cyjtweb_rebot",
+        "collection": "xyjtweb_rebot",
     }
-    crawl_source = SOURCE_CYJT
+    crawl_source = SOURCE_XYJT
     is_for_lock = True
 
     def clear_riders(self, riders={}):

@@ -30,7 +30,7 @@ SOURCE_BUS365 = 'bus365'
 SOURCE_XINTUYUN = 'xintuyun'
 SOURCE_HN96520 = 'hn96520'
 SOURCE_CCW = 'ccw'
-SOURCE_CYJT = 'cyjt'
+SOURCE_XYJT = 'xyjt'
 
 PAY_TYPE_SOURCE = {
     "zfb": [SOURCE_BUS100,
@@ -2992,7 +2992,7 @@ SOURCE_INFO = {
             "a15338702029": ("a123456", "90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a"),
         }
     },
-    SOURCE_CYJT: {
+    SOURCE_XYJT: {
         "name": "徐运集团",
         "website": "http://www.xuyunjt.com/",
         "accounts": {

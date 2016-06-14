@@ -36,7 +36,12 @@ class Flow(BaseFlow):
             "pay_money": 0,
         }
         rebot = order.get_lock_rebot()
-        riders = rebot.add_riders(order)
+        for y in xrange(5):
+            riders = rebot.add_riders(order)
+            if riders:
+                break
+            else:
+                rebot.clear_riders()
         takeman = ''
         for rider in riders.values():
             takeman += ',' + str(rider)
@@ -51,52 +56,52 @@ class Flow(BaseFlow):
             'tid': line.extra_info.get('t', ''),
             'txtCode': order.extra_info.get('code'),
         }
-        rebot_log.info(param)
         url = 'http://www.hn96520.com/putin.aspx?' + urllib.urlencode(param)
+        rebot_log.info(url)
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
         # 买票, 添加乘客, 购买班次
-        r = requests.get(url, headers=headers, cookies=cookies)
+        r = requests.get(url, headers=headers, cookies=cookies,
+                         data=urllib.urlencode(param))
         soup = bs(r.content, 'lxml')
-        try:
-            title = soup.title
-            info = soup.find('table', attrs={
-                             'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
-            pay_money = info[-1].find_all('td')[-1].get_text()
-            pay_money = float(re.search(r'\d+', pay_money).group(0))
-            raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
-                'value').split('=')[-1]
+        title = soup.title
+        rebot_log.info(title)
+        info = soup.find('table', attrs={
+                         'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+        pay_money = info[-1].find_all('td')[-1].get_text()
+        pay_money = float(re.search(r'\d+', pay_money).group(0))
+        raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
+            'value').split('=')[-1]
 
-            if '准备付款' in title:
-                # rebot_log.info('添加订单成功')
-                expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-                lock_result.update({
-                    'result_code': 1,
-                    'raw_order_no': raw_order_no,
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                    'pay_money': pay_money,
-                })
-                # rebot_log.info(lock_result)
-            else:
-                errmsg = title
-                lock_result.update({
-                    'result_code': 0,
-                    "result_reason": errmsg,
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                    'pay_money': 0,
-                })
-            # 删除之前乘客
-            rebot.clear_riders(riders)
-            return lock_result
-        except:
-            rebot.clear_riders(riders)
+        if '准备付款' in title:
+            # rebot_log.info('添加订单成功')
+            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+            lock_result.update({
+                'result_code': 1,
+                'raw_order_no': raw_order_no,
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                'pay_money': pay_money,
+            })
+            # rebot_log.info(lock_result)
+        else:
+            errmsg = title
+            lock_result.update({
+                'result_code': 0,
+                "result_reason": errmsg,
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                'pay_money': 0,
+            })
+        # 删除之前乘客
+        rebot.clear_riders(riders)
+        return lock_result
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
         sn = order.pay_order_no
-        sign = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-1]
+        sign = SOURCE_INFO.get('hn96520').get(
+            'accounts').get(order.source_account)[-1]
         # sign = '90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a'
         username = order.source_account
         password = md5(order.source_account_pass)
@@ -112,7 +117,8 @@ class Flow(BaseFlow):
             "(") + 1: r.content.rindex(")")]).get('UserId', '')
         ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
             userid, sign, time.time())
-        r = requests.get(ourl, headers=headers, cookies=r.cookies, timeout=2048)
+        r = requests.get(ourl, headers=headers,
+                         cookies=r.cookies, timeout=2048)
         # rebot_log.info(ourl)
         info = json.loads(r.content[r.content.index(
             "(") + 1: r.content.rindex(")")]).get('OrderList', [])
@@ -236,7 +242,7 @@ class Flow(BaseFlow):
         update_attrs = {}
         ft = Line.objects.filter(s_city_name=line.s_city_name,
                                  d_city_name=line.d_city_name, drv_date=line.drv_date)
-        t = {x.line_id:x for x in ft}
+        t = {x.line_id: x for x in ft}
         s_city_name = line.s_city_name
         update_attrs = {}
         for x in info:
@@ -256,17 +262,21 @@ class Flow(BaseFlow):
                     'crawl_source': crawl_source,
                     'drv_datetime': drv_datetime,
                 }
-                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                line_id = md5(
+                    "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
-                    t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
+                    t[line_id].update(
+                        **{"left_tickets": left_tickets, "refresh_datetime": now})
                 if line_id == line.line_id:
-                    update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
+                    update_attrs = {
+                        "left_tickets": left_tickets, "refresh_datetime": now}
             except Exception as e:
                 print(e)
 
         result_info = {}
         if not update_attrs:
-            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="no line info", update_attrs={
+                               "left_tickets": 0, "refresh_datetime": now})
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
