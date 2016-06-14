@@ -41,9 +41,9 @@ class Flow(BaseFlow):
             if riders:
                 break
             else:
-                rebot.clear_riders()
+                rebot.clear_riders(order)
         takeman = ''
-        for rider in riders.values():
+        for rider in riders:
             takeman += ',' + str(rider)
         line = order.line
         param = {

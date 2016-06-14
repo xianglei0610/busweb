@@ -821,10 +821,12 @@ class Rebot(db.Document):
                 continue
             return r
 
+
 # 代理ip, is_locked
 class Hn96520WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    memid = db.StringField()
     # ip = db.StringField(default="")
     # indexes索引, 'collections'
     meta = {
@@ -859,12 +861,13 @@ class Hn96520WebRebot(Rebot):
         for x in info:
             uid = x.get('id').strip()
             uid = str(re.search(r'\d+', uid).group(0))
-            if uid in riders.values() or not riders:
+            if uid in riders or not riders:
                 delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid={1}'.format(uid, self.memid)
+                rebot_log.info(delurl)
                 requests.get(delurl, headers=headers, cookies=cookies)
 
     def add_riders(self, order):
-        id_lst = {}
+        id_lst = []
         is_login = self.test_login_status()
         if not is_login:
             pass
@@ -880,7 +883,7 @@ class Hn96520WebRebot(Rebot):
             # rebot_log.info(headers)
             r = requests.get(addurl, headers=headers, cookies=cookies)
             if r.content != '0':
-                id_lst['cardid'] = r.content
+                id_lst.append(r.content)
                 # rebot_log.info('添加乘客 => {0}'.format(name))
             else:
                 pass
