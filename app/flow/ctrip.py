@@ -17,69 +17,69 @@ class Flow(BaseFlow):
     name = "ctrip"
 
     def do_lock_ticket(self, order):
-        with CTripRebot.get_and_lock(order) as rebot:
-            line = order.line
-            data = {
-                "head": rebot.head,
-                "fromCityName": line.s_city_name,
-                "toCityName": line.d_city_name,
-                "fromStationName": line.s_sta_name,
-                "toStationName": line.d_sta_name,
-                "ticketDate": line.drv_date,
-                "ticketTime": line.drv_time,
-                "busNumber": line.bus_num,
-                "busType": line.vehicle_type,
-                "toTime": "",
-                "toDays": 0,
-                "contactMobile": order.contact_info["telephone"],
-                "ticket_type": "成人票",
-                "acceptFreeInsurance": True,
-                "selectServicePackage2": "0",
-                "clientType": "Android--h5",
-                "identityInfoCount": len(order.riders),
-                "isJoinActivity": 0,
-                "selectOffsetActivityType": 0,
-                "couponCode": "",
-                "useCouponClientType": 2,
-                "acceptFromDateFloating": False,
-                "productPackageId": 0,
-                "DispatchType": 0,
-                "contactName": order.contact_info["name"],
-                "contactPaperType": "身份证",
-                "contactPaperNum": order.contact_info["id_number"],
-                "contentType": "json"
-            }
-            for i, r in enumerate(order.riders):
-                idcard = r["id_number"]
-                birthday = idcard_birthday(idcard).strftime("%Y-%m-%d")
-                data.update({"identityInfo%d" % (i+1): "%s;身份证;%s;%s" % (r["name"], idcard, birthday)})
-            ret = self.send_lock_request(rebot, data)
+        rebot = order.get_lock_rebot()
+        line = order.line
+        data = {
+            "head": rebot.head,
+            "fromCityName": line.s_city_name,
+            "toCityName": line.d_city_name,
+            "fromStationName": line.s_sta_name,
+            "toStationName": line.d_sta_name,
+            "ticketDate": line.drv_date,
+            "ticketTime": line.drv_time,
+            "busNumber": line.bus_num,
+            "busType": line.vehicle_type,
+            "toTime": "",
+            "toDays": 0,
+            "contactMobile": order.contact_info["telephone"],
+            "ticket_type": "成人票",
+            "acceptFreeInsurance": True,
+            "selectServicePackage2": "0",
+            "clientType": "Android--h5",
+            "identityInfoCount": len(order.riders),
+            "isJoinActivity": 0,
+            "selectOffsetActivityType": 0,
+            "couponCode": "",
+            "useCouponClientType": 2,
+            "acceptFromDateFloating": False,
+            "productPackageId": 0,
+            "DispatchType": 0,
+            "contactName": order.contact_info["name"],
+            "contactPaperType": "身份证",
+            "contactPaperNum": order.contact_info["id_number"],
+            "contentType": "json"
+        }
+        for i, r in enumerate(order.riders):
+            idcard = r["id_number"]
+            birthday = idcard_birthday(idcard).strftime("%Y-%m-%d")
+            data.update({"identityInfo%d" % (i+1): "%s;身份证;%s;%s" % (r["name"], idcard, birthday)})
+        ret = self.send_lock_request(rebot, data)
 
-            lock_result = {
-                "lock_info": ret,
-                "source_account": rebot.telephone,
-            }
-            if ret["code"] == 1:
-                raw_order = ret["return"]["orderNumber"]
-                expire_time = dte.now()+datetime.timedelta(seconds=60*60)
-                total_price = ret["return"]["displayRealPayFee"]
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": "",
-                    "raw_order_no": raw_order,
-                    "expire_datetime": expire_time,
-                    "pay_money": total_price,
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": ret["message"],
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                })
-            return lock_result
+        lock_result = {
+            "lock_info": ret,
+            "source_account": rebot.telephone,
+        }
+        if ret["code"] == 1:
+            raw_order = ret["return"]["orderNumber"]
+            expire_time = dte.now()+datetime.timedelta(seconds=60*60)
+            total_price = ret["return"]["displayRealPayFee"]
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": "",
+                "raw_order_no": raw_order,
+                "expire_datetime": expire_time,
+                "pay_money": total_price,
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": ret["message"],
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def send_lock_request(self, rebot, data):
         """

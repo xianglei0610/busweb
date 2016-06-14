@@ -34,145 +34,144 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with CqkyWebRebot.get_and_lock(order) as rebot:
-            line = order.line
-            is_login = rebot.test_login_status()
-            if not is_login:
-                for i in range(3):
-                    if rebot.login() == "OK":
-                        is_login = True
-                        break
+        rebot = order.get_lock_rebot()
+        line = order.line
+        is_login = rebot.test_login_status()
+        if not is_login:
+            for i in range(3):
+                if rebot.login() == "OK":
+                    is_login = True
+                    break
 
-            if not is_login:
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": "账号未登录",
-                })
-                return lock_result
-
-            res = self.request_station_status(line, rebot)
-            if res["success"]:
-                mode = 2
-            else:
-                mode = 1
-            order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
-
-            # 加入购物车
-            res = self.request_add_shopcart(order, rebot, sta_mode=mode)
-            ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
-            # 清理购物车
-            amount = ilst and int(ilst[0]) or 0
-            msg = res.get("msg", "")
-            if (amount and amount != order.ticket_amount) or u"单笔订单一次只允许购买3张车票" in msg or u"单笔订单只能购买一个车站的票" in msg:
-                res = self.request_get_shoptcart(rebot)
-                del_success = False
-                for ids in res["data"][u"ShopTable"].keys():
-                    d = self.request_del_shoptcart(rebot, ids)
-                    if d.get("success", False):
-                        del_success = True
-                if not del_success:
-                    rebot.modify(cookies="{}")
-                    rebot = order.change_lock_rebot()
-                lock_result.update({
-                    "result_code": 2,
-                    "result_reason": u"购物车数量不对:%s, %s" % (msg, del_success),
-                    "source_account": rebot.telephone,
-                })
-                return lock_result
-
-            def _check_fail(msg):
-                if u"当前系统维护中" in msg:
-                    return False
-                lst = [
-                    u"可售票数量不足",
-                    u"锁票超时超过10次",
-                    u"当前班次座位资源紧张",
-                    u"可能车站已调整票价",
-                    u"拒绝售票",
-                    u"提前时间不足",
-                    u"班次席位可售数不足",
-                    u"班次站点无可售席位",
-                    u"班次状态为停班",
-                    u"无可售席位资源",
-                    u"可售数不足",
-                    u"班次状态为保班",
-                    u"无可售席位",
-                    u"中心转发30003请求TKLock_3失败",
-                    u"班次状态为作废",
-                    u"不允许锁位",
-                    u"锁位失败"
-                ]
-                for s in lst:
-                    if s in msg:
-                        return True
-                return False
-
-            if res["success"]:
-                res = self.request_lock(order, rebot, sta_mode=mode)
-                if res["success"]:
-                    expire_time = dte.now()+datetime.timedelta(seconds=15*60)
-                    lock_result.update({
-                        "result_code": 1,
-                        "result_reason": "",
-                        "pay_url": "",
-                        "raw_order_no": res["raw_order_no"],
-                        "expire_datetime": expire_time,
-                        "source_account": rebot.telephone,
-                        "pay_money": res["pay_money"],
-                        "lock_info": {"mode": mode},
-                    })
-                elif u"同一IP一天最多可订" in res["msg"]:
-                    res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
-                    get_proxy("cqky").set_black(rebot.proxy_ip)
-                    rebot.modify(ip="")
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
-                    })
-                elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
-                    rebot.modify(cookies="{}")
-                    rebot = order.change_lock_rebot()
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
-                    })
-                elif u"例行维护" in res["msg"] or u"暂停网上购票业务" in res["msg"]:
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
-                    })
-                elif _check_fail(res["msg"]):
-                    self.close_line(line, reason=res["msg"])
-                    lock_result.update({
-                        "result_code": 0,
-                        "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
-                    })
-                else:
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
-                    })
-            elif u"您未登录或登录已过期" in res["msg"] or u"例行维护" in res["msg"]:
-                rebot.modify(ip="")
-                lock_result.update({
-                     "result_code": 2,
-                     "source_account": rebot.telephone,
-                     "result_reason": res["msg"],
-                 })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": "add_shopcart fail, %s" % res["msg"],
-                    "source_account": rebot.telephone,
-                })
+        if not is_login:
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": "账号未登录",
+            })
             return lock_result
 
+        res = self.request_station_status(line, rebot)
+        if res["success"]:
+            mode = 2
+        else:
+            mode = 1
+        order_log.info("[locking] order:%s account:%s ip:%s", order.order_no, rebot.telephone, rebot.proxy_ip)
+
+        # 加入购物车
+        res = self.request_add_shopcart(order, rebot, sta_mode=mode)
+        ilst = re.findall(r"(\d+)\s张车票", str(res.get("msg", "")))
+        # 清理购物车
+        amount = ilst and int(ilst[0]) or 0
+        msg = res.get("msg", "")
+        if (amount and amount != order.ticket_amount) or u"单笔订单一次只允许购买3张车票" in msg or u"单笔订单只能购买一个车站的票" in msg:
+            res = self.request_get_shoptcart(rebot)
+            del_success = False
+            for ids in res["data"][u"ShopTable"].keys():
+                d = self.request_del_shoptcart(rebot, ids)
+                if d.get("success", False):
+                    del_success = True
+            if not del_success:
+                rebot.modify(cookies="{}")
+                rebot = order.change_lock_rebot()
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": u"购物车数量不对:%s, %s" % (msg, del_success),
+                "source_account": rebot.telephone,
+            })
+            return lock_result
+
+        def _check_fail(msg):
+            if u"当前系统维护中" in msg:
+                return False
+            lst = [
+                u"可售票数量不足",
+                u"锁票超时超过10次",
+                u"当前班次座位资源紧张",
+                u"可能车站已调整票价",
+                u"拒绝售票",
+                u"提前时间不足",
+                u"班次席位可售数不足",
+                u"班次站点无可售席位",
+                u"班次状态为停班",
+                u"无可售席位资源",
+                u"可售数不足",
+                u"班次状态为保班",
+                u"无可售席位",
+                u"中心转发30003请求TKLock_3失败",
+                u"班次状态为作废",
+                u"不允许锁位",
+                u"锁位失败"
+            ]
+            for s in lst:
+                if s in msg:
+                    return True
+            return False
+
+        if res["success"]:
+            res = self.request_lock(order, rebot, sta_mode=mode)
+            if res["success"]:
+                expire_time = dte.now()+datetime.timedelta(seconds=15*60)
+                lock_result.update({
+                    "result_code": 1,
+                    "result_reason": "",
+                    "pay_url": "",
+                    "raw_order_no": res["raw_order_no"],
+                    "expire_datetime": expire_time,
+                    "source_account": rebot.telephone,
+                    "pay_money": res["pay_money"],
+                    "lock_info": {"mode": mode},
+                })
+            elif u"同一IP一天最多可订" in res["msg"]:
+                res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["msg"])
+                get_proxy("cqky").set_black(rebot.proxy_ip)
+                rebot.modify(ip="")
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
+                })
+            elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
+                rebot.modify(cookies="{}")
+                rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
+                })
+            elif u"例行维护" in res["msg"] or u"暂停网上购票业务" in res["msg"]:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
+                })
+            elif _check_fail(res["msg"]):
+                self.close_line(line, reason=res["msg"])
+                lock_result.update({
+                    "result_code": 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": res["msg"],
+                })
+            else:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
+                })
+        elif u"您未登录或登录已过期" in res["msg"] or u"例行维护" in res["msg"]:
+            rebot.modify(ip="")
+            lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": res["msg"],
+                })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": "add_shopcart fail, %s" % res["msg"],
+                "source_account": rebot.telephone,
+            })
+        return lock_result
 
     def request_lock(self, order, rebot, sta_mode=1):
         headers = {

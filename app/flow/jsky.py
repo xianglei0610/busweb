@@ -20,78 +20,78 @@ class Flow(BaseFlow):
     name = "jsky"
 
     def do_lock_ticket(self, order):
-        with JskyAppRebot.get_and_lock(order) as rebot:
-            line = order.line
-            rider_info = []
-            for r in order.riders:
-                rider_info.append({
-                    "name": r["name"],
-                    "mobileNo": r["telephone"],
-                    "idCard": r["id_number"],
-                    "idType": 0,
-                })
-            body = {
-                "activityId": "0",
-                "activityType": "",
-                "childCount": "0",
-                "contactInfo": {
-                    "name": order.contact_info["name"],
-                    "mobileNo": order.contact_info["telephone"],
-                    "idCard": order.contact_info["id_number"],
-                    "idType": "0",
-                },
-                "count": str(order.ticket_amount),
-                "insuranceAmount": "0.0",
-                "insuranceId": "null",
-                "memberId": rebot.member_id,
-                "passengersInfo": rider_info,
-                "reductAmount": "0",
-                "sessionId": "",
-                "ticketsInfo": {
-                    "arrStation": line.d_sta_name,
-                    "childPrice": line.half_price,
-                    "coachNo": line.bus_num,
-                    "coachType": line.vehicle_type,
-                    "departure": line.s_city_name,
-                    "destination": line.d_city_name,
-                    "dptDate": line.drv_date,
-                    "dptDateTime": "%s %s:00.000" % (line.drv_date, line.drv_time),
-                    "dptStation": line.s_sta_name,
-                    "dptTime": line.drv_time,
-                    "remainChildNum": "0",
-                    "ticketFee": str(line.fee),
-                    "ticketPrice": str(line.full_price),
-                },
-                "totalAmount": str(line.real_price()*order.ticket_amount),
-            }
-            data = rebot.post_data_templ("createbusorder", body)
-            res = self.send_lock_request(order, rebot, data=data)
+        rebot = order.get_lock_rebot()
+        line = order.line
+        rider_info = []
+        for r in order.riders:
+            rider_info.append({
+                "name": r["name"],
+                "mobileNo": r["telephone"],
+                "idCard": r["id_number"],
+                "idType": 0,
+            })
+        body = {
+            "activityId": "0",
+            "activityType": "",
+            "childCount": "0",
+            "contactInfo": {
+                "name": order.contact_info["name"],
+                "mobileNo": order.contact_info["telephone"],
+                "idCard": order.contact_info["id_number"],
+                "idType": "0",
+            },
+            "count": str(order.ticket_amount),
+            "insuranceAmount": "0.0",
+            "insuranceId": "null",
+            "memberId": rebot.member_id,
+            "passengersInfo": rider_info,
+            "reductAmount": "0",
+            "sessionId": "",
+            "ticketsInfo": {
+                "arrStation": line.d_sta_name,
+                "childPrice": line.half_price,
+                "coachNo": line.bus_num,
+                "coachType": line.vehicle_type,
+                "departure": line.s_city_name,
+                "destination": line.d_city_name,
+                "dptDate": line.drv_date,
+                "dptDateTime": "%s %s:00.000" % (line.drv_date, line.drv_time),
+                "dptStation": line.s_sta_name,
+                "dptTime": line.drv_time,
+                "remainChildNum": "0",
+                "ticketFee": str(line.fee),
+                "ticketPrice": str(line.full_price),
+            },
+            "totalAmount": str(line.real_price()*order.ticket_amount),
+        }
+        data = rebot.post_data_templ("createbusorder", body)
+        res = self.send_lock_request(order, rebot, data=data)
 
-            lock_result = {
-                "lock_info": res,
-                "source_account": rebot.telephone,
-                "pay_money": line.real_price()*order.ticket_amount,
-            }
-            if res["header"]["rspCode"] == "0000":
-                detail = self.send_order_request(rebot, lock_info=res)
-                expire_time = dte.now()+datetime.timedelta(seconds=20*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": "",
-                    "raw_order_no": detail["order_no"],
-                    "expire_datetime": expire_time,
+        lock_result = {
+            "lock_info": res,
+            "source_account": rebot.telephone,
+            "pay_money": line.real_price()*order.ticket_amount,
+        }
+        if res["header"]["rspCode"] == "0000":
+            detail = self.send_order_request(rebot, lock_info=res)
+            expire_time = dte.now()+datetime.timedelta(seconds=20*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": "",
+                "raw_order_no": detail["order_no"],
+                "expire_datetime": expire_time,
 
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": res["header"]["rspCode"],
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
-                })
-            return lock_result
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": res["header"]["rspCode"],
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         """

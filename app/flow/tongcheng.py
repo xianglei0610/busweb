@@ -31,115 +31,115 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with TCAppRebot.get_and_lock(order) as rebot:
-            line = order.line
+        rebot = order.get_lock_rebot()
+        line = order.line
 
-            is_login = rebot.test_login_status()
-            if not is_login:
-                if rebot.login() == "OK":
-                    is_login = 1
-            # 未登录
-            if not is_login:
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": u"账号未登录",
-                })
-                return lock_result
-
-            # 构造表单参数
-            riders = []
-            for r in order.riders:
-                riders.append({
-                    "name": unicode(r["name"]),
-                    "IDType": "1",
-                    "IDCard": r["id_number"],
-                    "passengersType": "0",
-                })
-            data = {
-                "memberId": rebot.user_id,
-                "ticketsInfo": [{
-                    "coachType": line.vehicle_type,
-                    "coachNo": line.bus_num,
-                    "departure": line.s_city_name,
-                    "destination": line.d_city_name,
-                    "dptStation": line.s_sta_name,
-                    "arrStation": line.d_sta_name,
-                    "dptDateTime": "%sT%s:00" % (line.drv_date, line.drv_time),
-                    "dptDate": line.drv_date,
-                    "dptTime": line.drv_time,
-                    "ticketPrice": line.full_price,
-                    "ticketFee": 0,
-                    "ticketLeft": str(line.left_tickets),
-                    "canBooking": True,
-                    "bookingType": 1,
-                    "timePeriodType": line.extra_info.get("timePeriodType", 1),
-                    "dptStationCode": line.s_sta_id,
-                    "exData2": "",
-                    "runTime": line.extra_info.get("runTime", ""),
-                    "distance": "",
-                    "runThrough": "",
-                    "AgentType": line.extra_info.get("AgentType", 7),
-                    "ExtraSchFlag": 0,
-                    "serviceChargeID": 0,
-                    "serviceChargePrice":0,
-                    "isHomeDelivery":0,
-                    # "$$hashKey": "09X",
-                    "$$hashKey": "017",
-                    "optionType": 1
-                }],
-                "contactInfo": {
-                    "name": order.contact_info["name"],
-                    "IDCard": order.contact_info["id_number"],
-                    "IDType": 1,
-                    "mobileNo": order.contact_info["telephone"],
-                },
-                "passengersInfo": riders,
-
-                "totalAmount": order.order_price,
-                "stationCode": line.s_sta_id,
-                "AlternativeFlag":0,
-                "isSubscribe":False,
-                "count":1,
-                "coachType": line.vehicle_type,
-                "activityId":0,
-                "reductAmount":0,
-                "reduceType":0,
-                "activityType":0,
-                "couponCode":"",
-                "couponAmount":0,
-                "insuranceId":0,
-                "insuranceAmount":0,
-                "voucherId":0,
-                "voucherSellPrice":0,
-                "serviceChargeId":0,
-                "serviceChargeType":0,
-                "serviceChargeAmount":0,
-                "sessionId":"100362285"
-            }
-            url = "http://tcmobileapi.17usoft.com/bus/OrderHandler.ashx"
-            r = rebot.http_post(url, "createbusorder", data)
-            ret = r.json()["response"]
-            desc = ret["header"]["rspDesc"]
-            if ret["header"]["rspCode"] == "0002":
-                expire_time = dte.now()+datetime.timedelta(seconds=20*60)
-                lock_result.update({
-                    "result_code": 1,
-                    "result_reason": desc,
-                    "pay_url": "",
-                    "raw_order_no":  ret["body"]["orderSerialId"],
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                    "pay_money": float(ret["body"]["payAmount"]),
-                    "lock_info": ret["body"],
-                })
-            else:
-                lock_result.update({
-                    "result_code": 0,
-                    "result_reason": desc,
-                    "source_account": rebot.telephone,
-                })
+        is_login = rebot.test_login_status()
+        if not is_login:
+            if rebot.login() == "OK":
+                is_login = 1
+        # 未登录
+        if not is_login:
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": u"账号未登录",
+            })
             return lock_result
+
+        # 构造表单参数
+        riders = []
+        for r in order.riders:
+            riders.append({
+                "name": unicode(r["name"]),
+                "IDType": "1",
+                "IDCard": r["id_number"],
+                "passengersType": "0",
+            })
+        data = {
+            "memberId": rebot.user_id,
+            "ticketsInfo": [{
+                "coachType": line.vehicle_type,
+                "coachNo": line.bus_num,
+                "departure": line.s_city_name,
+                "destination": line.d_city_name,
+                "dptStation": line.s_sta_name,
+                "arrStation": line.d_sta_name,
+                "dptDateTime": "%sT%s:00" % (line.drv_date, line.drv_time),
+                "dptDate": line.drv_date,
+                "dptTime": line.drv_time,
+                "ticketPrice": line.full_price,
+                "ticketFee": 0,
+                "ticketLeft": str(line.left_tickets),
+                "canBooking": True,
+                "bookingType": 1,
+                "timePeriodType": line.extra_info.get("timePeriodType", 1),
+                "dptStationCode": line.s_sta_id,
+                "exData2": "",
+                "runTime": line.extra_info.get("runTime", ""),
+                "distance": "",
+                "runThrough": "",
+                "AgentType": line.extra_info.get("AgentType", 7),
+                "ExtraSchFlag": 0,
+                "serviceChargeID": 0,
+                "serviceChargePrice":0,
+                "isHomeDelivery":0,
+                # "$$hashKey": "09X",
+                "$$hashKey": "017",
+                "optionType": 1
+            }],
+            "contactInfo": {
+                "name": order.contact_info["name"],
+                "IDCard": order.contact_info["id_number"],
+                "IDType": 1,
+                "mobileNo": order.contact_info["telephone"],
+            },
+            "passengersInfo": riders,
+
+            "totalAmount": order.order_price,
+            "stationCode": line.s_sta_id,
+            "AlternativeFlag":0,
+            "isSubscribe":False,
+            "count":1,
+            "coachType": line.vehicle_type,
+            "activityId":0,
+            "reductAmount":0,
+            "reduceType":0,
+            "activityType":0,
+            "couponCode":"",
+            "couponAmount":0,
+            "insuranceId":0,
+            "insuranceAmount":0,
+            "voucherId":0,
+            "voucherSellPrice":0,
+            "serviceChargeId":0,
+            "serviceChargeType":0,
+            "serviceChargeAmount":0,
+            "sessionId":"100362285"
+        }
+        url = "http://tcmobileapi.17usoft.com/bus/OrderHandler.ashx"
+        r = rebot.http_post(url, "createbusorder", data)
+        ret = r.json()["response"]
+        desc = ret["header"]["rspDesc"]
+        if ret["header"]["rspCode"] == "0002":
+            expire_time = dte.now()+datetime.timedelta(seconds=20*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": desc,
+                "pay_url": "",
+                "raw_order_no":  ret["body"]["orderSerialId"],
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                "pay_money": float(ret["body"]["payAmount"]),
+                "lock_info": ret["body"],
+            })
+        else:
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": desc,
+                "source_account": rebot.telephone,
+            })
+        return lock_result
 
     def do_lock_ticket(self, order):
         return self.do_lock_ticket_by_app(order)
@@ -415,6 +415,8 @@ class Flow(BaseFlow):
         # return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
+        if not order.source_account:
+            rebot = order.get_lock_rebot()
         rebot = TCWebRebot.objects.get(telephone=order.source_account)
         if valid_code:
             info = json.loads(session["pay_login_info"])

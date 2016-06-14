@@ -34,105 +34,104 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        with Bus365AppRebot.get_and_lock(order) as rebot:
-#             if not rebot.test_login_status():
-            line = order.line
-            try:
-                rebot.recrawl_shiftid(line)
-            except:
-                lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="源站刷新线路错误，锁票重试")
-                return lock_result
-            line = Line.objects.get(line_id=order.line.line_id)
-            order.line = line
-            order.save()
+        rebot = order.get_lock_rebot()
+        line = order.line
+        try:
+            rebot.recrawl_shiftid(line)
+        except:
+            lock_result.update(result_code=2,
+                                source_account=rebot.telephone,
+                                result_reason="源站刷新线路错误，锁票重试")
+            return lock_result
+        line = Line.objects.get(line_id=order.line.line_id)
+        order.line = line
+        order.save()
 
-            lock_result.update(source_account=rebot.telephone)
-            if order.line.left_tickets == 0:
-                lock_result.update(result_reason="该条线路余票不足", result_code=0)
-                return lock_result
-            if rebot.login() != 'OK':
-                lock_result.update(result_code=2,
-                                   source_account=rebot.telephone,
-                                   result_reason="账号未登陆")
-                return lock_result
-            try:
-                res = self.send_lock_request(order, rebot)
-                if isinstance(res, list):
-                    res = res[0]
-                if res.get('order', ''):
-                    if res['order']['username'] != rebot.telephone:
-                        lock_result.update(result_code=2,
-                                           source_account=rebot.telephone,
-                                           result_reason="账号未登陆")
-                        return lock_result
-            except:
+        lock_result.update(source_account=rebot.telephone)
+        if order.line.left_tickets == 0:
+            lock_result.update(result_reason="该条线路余票不足", result_code=0)
+            return lock_result
+        if rebot.login() != 'OK':
+            lock_result.update(result_code=2,
+                                source_account=rebot.telephone,
+                                result_reason="账号未登陆")
+            return lock_result
+        try:
+            res = self.send_lock_request(order, rebot)
+            if isinstance(res, list):
+                res = res[0]
+            if res.get('order', ''):
+                if res['order']['username'] != rebot.telephone:
+                    lock_result.update(result_code=2,
+                                        source_account=rebot.telephone,
+                                        result_reason="账号未登陆")
+                    return lock_result
+        except:
+            rebot.modify(ip="")
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": "锁票失败，进入下单重试",
+            })
+            return lock_result
+        if isinstance(res, list):
+            res = res[0]
+        if res.has_key('getwaylist'):
+            del res['getwaylist']
+
+        lock_result.update({
+            "source_account": rebot.telephone,
+            "lock_info": res,
+        })
+        if res.get('order', ''):
+            expire_time = dte.now()+datetime.timedelta(seconds=20*60)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": "",
+                "pay_url": "",
+                "lock_info": res['order'],
+                "raw_order_no": res['order']['orderno'],
+                "expire_datetime": expire_time,
+                "pay_money": float(res['order']['totalprice']),
+            })
+        else:
+            errmsg = res.get('message', '')
+            if u'同一IP一天内订票超过限制次数' in errmsg:
+                res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["message"])
+                get_proxy("bus365").remove_proxy(rebot.proxy_ip)
                 rebot.modify(ip="")
                 lock_result.update({
                     "result_code": 2,
                     "source_account": rebot.telephone,
-                    "result_reason": "锁票失败，进入下单重试",
+                    "result_reason": "%s" % res["msg"],
                 })
                 return lock_result
-            if isinstance(res, list):
-                res = res[0]
-            if res.has_key('getwaylist'):
-                del res['getwaylist']
-
-            lock_result.update({
-                "source_account": rebot.telephone,
-                "lock_info": res,
-            })
-            if res.get('order', ''):
-                expire_time = dte.now()+datetime.timedelta(seconds=20*60)
+            flag = False
+            for i in [u"锁定接口异常",u"当前班次异常",u"接口失败",u"授权请求不合法"]:
+                if i in errmsg:
+                    flag = True
+                    break
+            if flag:
                 lock_result.update({
-                    "result_code": 1,
-                    "result_reason": "",
-                    "pay_url": "",
-                    "lock_info": res['order'],
-                    "raw_order_no": res['order']['orderno'],
-                    "expire_datetime": expire_time,
-                    "pay_money": float(res['order']['totalprice']),
-                })
-            else:
-                errmsg = res.get('message', '')
-                if u'同一IP一天内订票超过限制次数' in errmsg:
-                    res["msg"] = "ip: %s %s" % (rebot.proxy_ip, res["message"])
-                    get_proxy("bus365").remove_proxy(rebot.proxy_ip)
-                    rebot.modify(ip="")
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": "%s" % res["msg"],
-                    })
-                    return lock_result
-                flag = False
-                for i in [u"锁定接口异常",u"当前班次异常",u"接口失败",u"授权请求不合法"]:
-                    if i in errmsg:
-                        flag = True
-                        break
-                if flag:
-                    lock_result.update({
-                        "result_code": 2,
-                        "source_account": rebot.telephone,
-                        "result_reason": res.get("message", '') or res,
-                    })
-                    return lock_result
-
-                for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码",u"班次不是售票状态",u"剩余座位数不够",
-                          u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位",u'该班次为发车站专营班次',u'余票不足']:
-                    if s in errmsg:
-                        self.close_line(line, reason=errmsg)
-                        break
-                lock_result.update({
-                    "result_code": 0,
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
                     "result_reason": res.get("message", '') or res,
-                    "pay_url": "",
-                    "raw_order_no": "",
-                    "expire_datetime": None,
                 })
-            return lock_result
+                return lock_result
+
+            for s in [u'班次已停售',u"该班次不可售", u"不存在到站编码",u"班次不是售票状态",u"剩余座位数不够",
+                        u"剩余座位数不足",u"获取座位信息失败",u"没有可售的座位",u'该班次为发车站专营班次',u'余票不足']:
+                if s in errmsg:
+                    self.close_line(line, reason=errmsg)
+                    break
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": res.get("message", '') or res,
+                "pay_url": "",
+                "raw_order_no": "",
+                "expire_datetime": None,
+            })
+        return lock_result
 
     def send_lock_request(self, order, rebot):
         """
@@ -255,7 +254,7 @@ class Flow(BaseFlow):
             rebot = Bus365WebRebot.objects.get(telephone=order.source_account)
         else:
             rebot = Bus365WebRebot.get_one(order)
-        
+
         headers = {
            "User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT),
            "Content-Type": "application/x-www-form-urlencoded",
@@ -264,7 +263,7 @@ class Flow(BaseFlow):
         cookies = {}
         if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
             self.lock_ticket(order)
- 
+
         if order.status == STATUS_WAITING_ISSUE:
             param = {
                      "ordertoken": order.lock_info['ordertoken'],
@@ -288,7 +287,7 @@ class Flow(BaseFlow):
                 script = "<script>document.form_payment0.submit();</script>"
                 content = content + script
                 return {"flag": "html", "content": content}
-        return {"flag": "error", "content": "锁票失败"}    
+        return {"flag": "error", "content": "锁票失败"}
 #         is_login = rebot.test_login_status()
 #         if not is_login:
 #             if valid_code:#  登陆
@@ -328,7 +327,7 @@ class Flow(BaseFlow):
 #         if is_login:
 #             if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
 #                 self.lock_ticket(order)
-# 
+#
 #             if order.status == STATUS_WAITING_ISSUE:
 #                 param = {
 #                          "ordertoken": order.lock_info['order']['ordertoken'],
@@ -347,7 +346,7 @@ class Flow(BaseFlow):
 #                     middle_url = "http://%s/ticket/paymentParams/0" % order.line.extra_info['start_info']['netname']
 #                     pay_url = middle_url + '?'+urllib.urlencode(param)
 #                     r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
-#                     content = r.content 
+#                     content = r.content
 #                     content = content.replace("target='_blank'",'')
 #                     script = "<script>document.form_payment0.submit();</script>"
 #                     content = content + script
@@ -437,7 +436,7 @@ class Flow(BaseFlow):
 #         'https': 'http://192.168.1.33:8888',
 #         }
 #         r = requests.get(line_url, headers=headers)
-        
+
 #         proxy = urllib2.ProxyHandler(proxies)
 #         opener = urllib2.build_opener(proxy)
 #         urllib2.install_opener(opener)
