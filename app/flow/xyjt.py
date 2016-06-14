@@ -9,7 +9,7 @@ import urllib
 import datetime
 import random
 from bs4 import BeautifulSoup as bs
-# from PIL import Image
+from PIL import Image
 
 from app.constants import *
 from datetime import datetime as dte
@@ -17,11 +17,11 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5
 from app import rebot_log
-# import cStringIO
+import cStringIO
 
 
 class Flow(BaseFlow):
-    name = 'hn96520'
+    name = 'xyjt'
 
     # 锁票
     def do_lock_ticket(self, order):
@@ -36,12 +36,7 @@ class Flow(BaseFlow):
             "pay_money": 0,
         }
         rebot = order.get_lock_rebot()
-        for y in xrange(5):
-            riders = rebot.add_riders(order)
-            if riders:
-                break
-            else:
-                rebot.clear_riders()
+        riders = rebot.add_riders(order)
         takeman = ''
         for rider in riders.values():
             takeman += ',' + str(rider)
@@ -56,52 +51,52 @@ class Flow(BaseFlow):
             'tid': line.extra_info.get('t', ''),
             'txtCode': order.extra_info.get('code'),
         }
+        rebot_log.info(param)
         url = 'http://www.hn96520.com/putin.aspx?' + urllib.urlencode(param)
-        rebot_log.info(url)
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
         # 买票, 添加乘客, 购买班次
-        r = requests.get(url, headers=headers, cookies=cookies,
-                         data=urllib.urlencode(param))
+        r = requests.get(url, headers=headers, cookies=cookies)
         soup = bs(r.content, 'lxml')
-        title = soup.title
-        rebot_log.info(title)
-        info = soup.find('table', attrs={
-                         'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
-        pay_money = info[-1].find_all('td')[-1].get_text()
-        pay_money = float(re.search(r'\d+', pay_money).group(0))
-        raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
-            'value').split('=')[-1]
+        try:
+            title = soup.title
+            info = soup.find('table', attrs={
+                             'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+            pay_money = info[-1].find_all('td')[-1].get_text()
+            pay_money = float(re.search(r'\d+', pay_money).group(0))
+            raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
+                'value').split('=')[-1]
 
-        if '准备付款' in title:
-            # rebot_log.info('添加订单成功')
-            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-            lock_result.update({
-                'result_code': 1,
-                'raw_order_no': raw_order_no,
-                "expire_datetime": expire_time,
-                "source_account": rebot.telephone,
-                'pay_money': pay_money,
-            })
-            # rebot_log.info(lock_result)
-        else:
-            errmsg = title
-            lock_result.update({
-                'result_code': 0,
-                "result_reason": errmsg,
-                "expire_datetime": expire_time,
-                "source_account": rebot.telephone,
-                'pay_money': 0,
-            })
-        # 删除之前乘客
-        rebot.clear_riders(riders)
-        return lock_result
+            if '准备付款' in title:
+                # rebot_log.info('添加订单成功')
+                expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+                lock_result.update({
+                    'result_code': 1,
+                    'raw_order_no': raw_order_no,
+                    "expire_datetime": expire_time,
+                    "source_account": rebot.telephone,
+                    'pay_money': pay_money,
+                })
+                # rebot_log.info(lock_result)
+            else:
+                errmsg = title
+                lock_result.update({
+                    'result_code': 0,
+                    "result_reason": errmsg,
+                    "expire_datetime": expire_time,
+                    "source_account": rebot.telephone,
+                    'pay_money': 0,
+                })
+            # 删除之前乘客
+            rebot.clear_riders(riders)
+            return lock_result
+        except:
+            rebot.clear_riders(riders)
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
         sn = order.pay_order_no
-        sign = SOURCE_INFO.get('hn96520').get(
-            'accounts').get(order.source_account)[-1]
+        sign = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-1]
         # sign = '90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a'
         username = order.source_account
         password = md5(order.source_account_pass)
@@ -117,8 +112,7 @@ class Flow(BaseFlow):
             "(") + 1: r.content.rindex(")")]).get('UserId', '')
         ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
             userid, sign, time.time())
-        r = requests.get(ourl, headers=headers,
-                         cookies=r.cookies, timeout=2048)
+        r = requests.get(ourl, headers=headers, cookies=r.cookies, timeout=2048)
         # rebot_log.info(ourl)
         info = json.loads(r.content[r.content.index(
             "(") + 1: r.content.rindex(")")]).get('OrderList', [])
@@ -222,10 +216,6 @@ class Flow(BaseFlow):
 
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
-        now = dte.now()
-        if 6 <= int(line.drv_datetime.strftime('%H')) < 23:
-            result_info.update(result_msg="卖票时间为早上6点到晚上23点", update_attrs={"refresh_datetime": now})
-            return result_info
         pre = 'http://www.hn96520.com/placeorder.aspx?'
         params = {
             "start": line.s_city_name,
@@ -246,7 +236,7 @@ class Flow(BaseFlow):
         update_attrs = {}
         ft = Line.objects.filter(s_city_name=line.s_city_name,
                                  d_city_name=line.d_city_name, drv_date=line.drv_date)
-        t = {x.line_id: x for x in ft}
+        t = {x.line_id:x for x in ft}
         s_city_name = line.s_city_name
         update_attrs = {}
         for x in info:
@@ -266,45 +256,23 @@ class Flow(BaseFlow):
                     'crawl_source': crawl_source,
                     'drv_datetime': drv_datetime,
                 }
-                line_id = md5(
-                    "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
-                    t[line_id].update(
-                        **{"left_tickets": left_tickets, "refresh_datetime": now})
+                    t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
                 if line_id == line.line_id:
-                    update_attrs = {
-                        "left_tickets": left_tickets, "refresh_datetime": now}
+                    update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
             except Exception as e:
                 print(e)
 
         result_info = {}
         if not update_attrs:
-            result_info.update(result_msg="no line info", update_attrs={
-                               "left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
-
-        # 检测是否取到code
-        def check_code_status(code, order):
-            try:
-                info = json.loads(session["pay_login_info"])
-                headers = info['headers']
-                cookies = info['cookies']
-            except:
-                cookies = ''
-                headers = ''
-            url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(
-                code)
-            r = requests.get(url, headers=headers, cookies=cookies)
-            if 'true' in r.content:
-                order.modify(extra_info={"code": code})
-                return 1
-            else:
-                return 0
 
         # 获取alipay付款界面
         def _get_page(rebot):
@@ -329,10 +297,15 @@ class Flow(BaseFlow):
                     order.modify(pay_money=pay_money, pay_order_no=trade_no)
                 return {"flag": "html", "content": r.content}
         # 登录验证码
-        if valid_code:
-            info = json.loads(session["pay_login_info"])
-            headers = info["headers"]
-            cookies = info["cookies"]
+        if not valid_code:
+            try:
+                info = json.loads(session["pay_login_info"])
+                headers = info["headers"]
+                cookies = info["cookies"]
+            except:
+                ua = random.choice(BROWSER_USER_AGENT)
+                headers = {"User-Agent": ua}
+                cookies = {}
             params = {
                 "userid": rebot.telephone,
                 "pwd": rebot.password,
