@@ -9,7 +9,7 @@ import urllib
 import datetime
 import random
 from bs4 import BeautifulSoup as bs
-from PIL import Image
+# from PIL import Image
 
 from app.constants import *
 from datetime import datetime as dte
@@ -17,7 +17,7 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5
 from app import rebot_log
-import cStringIO
+# import cStringIO
 
 
 class Flow(BaseFlow):
@@ -222,6 +222,10 @@ class Flow(BaseFlow):
 
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
+        now = dte.now()
+        if 6 <= int(line.drv_datetime.strftime('%H')) < 23:
+            result_info.update(result_msg="卖票时间为早上6点到晚上23点", update_attrs={"refresh_datetime": now})
+            return result_info
         pre = 'http://www.hn96520.com/placeorder.aspx?'
         params = {
             "start": line.s_city_name,

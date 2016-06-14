@@ -917,7 +917,7 @@ class Hn96520WebRebot(Rebot):
         if memid:
             self.memid = memid
             self.save()
-            rebot_log.info(memid)
+            # rebot_log.info(memid)
             cookies.update(r.cookies)
             # rebot_log.info('成功登录 tel {0}'.format(tel))
             return 1
