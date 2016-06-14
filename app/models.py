@@ -1051,6 +1051,58 @@ class CcwWebRebot(Rebot):
         return "OK"
 
 
+class CyjtWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "cyjtweb_rebot",
+    }
+    crawl_source = SOURCE_CYJT
+    is_for_lock = True
+
+    def clear_riders(self, riders={}):
+        pass
+
+    def add_riders(self, order):
+        id_lst = {}
+        is_login = self.test_login_status()
+        if not is_login:
+            pass
+        riders = order.riders
+        headers = {'User-Agent': self.user_agent}
+        cookies = json.loads(self.cookies)
+        for rider in riders:
+            name = rider.get('name', '')
+            cardid = rider.get('id_number', '')
+            sel = rider.get('telephone', '')
+            addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid={0}&name={1}&cardid={2}&sel={3}'.format(self.memid, name, cardid, sel)
+            # rebot_log.info(addurl)
+            # rebot_log.info(headers)
+            r = requests.get(addurl, headers=headers, cookies=cookies)
+            if r.content != '0':
+                id_lst['cardid'] = r.content
+                # rebot_log.info('添加乘客 => {0}'.format(name))
+            else:
+                pass
+        return id_lst
+
+    def test_login_status(self):
+        pass
+
+    # 初始化帐号
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        rebot_log.info("创建成功 %s", self.telephone)
+        return "OK"
+
+
 class TzkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
