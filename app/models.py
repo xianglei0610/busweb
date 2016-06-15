@@ -800,6 +800,7 @@ class Hn96520WebRebot(Rebot):
 
     @property
     def proxy_ip(self):
+        return ""
         rds = get_redis("default")
         ipstr = self.ip
         key = RK_PROXY_IP_ALL

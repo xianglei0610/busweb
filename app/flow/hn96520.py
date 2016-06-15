@@ -38,7 +38,7 @@ class Flow(BaseFlow):
         }
         rebot = order.get_lock_rebot()
         pk = len(order.riders)
-        for y in xrange(5):
+        for y in xrange(3):
             # rebot.clear_riders()
             riders = rebot.add_riders(order)
             if riders and pk == len(riders):
@@ -65,30 +65,35 @@ class Flow(BaseFlow):
         # 买票, 添加乘客, 购买班次
         for x in xrange(1):
             r = rebot.http_get(url, headers=headers, cookies=cookies, data=urllib.urlencode(param))
-            soup = bs(r.content, 'html5lib')
+            errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url))
+            errmsg = errlst and errlst[0] or ""
+            if errmsg and "服务器生成订单失败" in errmsg:
+                lock_result.update({
+                    'result_code': 2,
+                    "source_account": rebot.telephone,
+                    "result_msg": errmsg,
+                })
+                return lock_result
+
+            soup = bs(r.content, 'lxml')
             title = soup.title
-            try:
-                info = soup.find('table', attrs={'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
-                pay_money = info[-1].find_all('td')[-1].get_text()
-                pay_money = float(re.search(r'\d+', pay_money).group(0))
-                raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
-                    'value').split('=')[-1]
-                if '准备付款' in title:
-                    expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-                    lock_result.update({
-                        'result_code': 1,
-                        'raw_order_no': raw_order_no,
-                        "expire_datetime": expire_time,
-                        "source_account": rebot.telephone,
-                        'pay_money': pay_money,
-                    })
-                    # 删除之前乘客
-                    rebot.clear_riders(riders)
-                    return lock_result
-            except:
-                pass
-            finally:
-                sleep(0.25)
+            info = soup.find('table', attrs={'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+            pay_money = info[-1].find_all('td')[-1].get_text()
+            pay_money = float(re.search(r'\d+', pay_money).group(0))
+            raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
+                'value').split('=')[-1]
+            if '准备付款' in title:
+                expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+                lock_result.update({
+                    'result_code': 1,
+                    'raw_order_no': raw_order_no,
+                    "expire_datetime": expire_time,
+                    "source_account": rebot.telephone,
+                    'pay_money': pay_money,
+                })
+                # 删除之前乘客
+                rebot.clear_riders(riders)
+                return lock_result
 
         errmsg = soup.find(
             'td', attrs={'class': 'mmainbody'}).get_text().strip().encode('utf-8')
