@@ -65,7 +65,7 @@ class Flow(BaseFlow):
         headers = {'User-Agent': rebot.user_agent}
         # 买票, 添加乘客, 购买班次
         for x in xrange(5):
-            r = requests.get(url, headers=headers, cookies=cookies,
+            r = rebot.http_get(url, headers=headers, cookies=cookies,
                              data=urllib.urlencode(param))
             # rebot_log.info(r.content)
             soup = bs(r.content, 'html5lib')
@@ -122,13 +122,13 @@ class Flow(BaseFlow):
         headers = {
             "User-Agent": rebot.user_agent,
         }
-        r = requests.get(url, headers=headers)
-        # requests.get(url, headers=headers, cookies=r.cookies)
+        r = rebot.http_get(url, headers=headers)
+        # rebot.http_get(url, headers=headers, cookies=r.cookies)
         userid = json.loads(r.content[r.content.index(
             "(") + 1: r.content.rindex(")")]).get('UserId', '')
         ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
             userid, sign, time.time())
-        r = requests.get(ourl, headers=headers,
+        r = rebot.http_get(ourl, headers=headers,
                          cookies=r.cookies, timeout=2048)
         # rebot_log.info(ourl)
         info = json.loads(r.content[r.content.index(
@@ -156,7 +156,7 @@ class Flow(BaseFlow):
         #     "User-Agent": rebot.user_agent,
         # }
         # cookies = json.loads(rebot.cookies)
-        # r = requests.get(detail_url, headers=headers, cookies=cookies)
+        # r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
         # soup = bs(r.content, "lxml")
         # info = soup.find(
         #     'table', attrs={'class': 'tblOrder shadow'}).find_all('tr')
@@ -167,7 +167,7 @@ class Flow(BaseFlow):
         # url = 'http://www.hn96520.com/text.aspx?p={0}'.format(sn)
         # from pytesseract import image_to_string
         # from app.utils import ecp
-        # r = requests.get(url, headers=headers, cookies=cookies)
+        # r = rebot.http_get(url, headers=headers, cookies=cookies)
         # tmpIm = cStringIO.StringIO(r.content)
         # im = Image.open(tmpIm)
         # im = im.crop((140, 70, 225, 90)).convert(
@@ -299,7 +299,8 @@ class Flow(BaseFlow):
         # 检测是否取到code
         def check_code_status(code, order):
             try:
-                info = json.loads(session["pay_login_info"])
+                key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+                info = json.loads(session[key])
                 headers = info['headers']
                 cookies = info['cookies']
             except:
@@ -307,7 +308,7 @@ class Flow(BaseFlow):
                 headers = ''
             url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(
                 code)
-            r = requests.get(url, headers=headers, cookies=cookies)
+            r = rebot.http_get(url, headers=headers, cookies=cookies)
             if 'true' in r.content:
                 order.modify(extra_info={"code": code})
                 return 1
@@ -328,7 +329,7 @@ class Flow(BaseFlow):
                     "paymentType": 202,  # alipay参数
                 }
                 cookies = json.loads(rebot.cookies)
-                r = requests.post(pay_url, data=urllib.urlencode(
+                r = rebot.http_post(pay_url, data=urllib.urlencode(
                     params), headers=headers, cookies=cookies)
                 data = self.extract_alipay(r.content)
                 pay_money = float(data["total_fee"])
@@ -338,7 +339,8 @@ class Flow(BaseFlow):
                 return {"flag": "html", "content": r.content}
         # 登录验证码
         if valid_code:
-            info = json.loads(session["pay_login_info"])
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            info = json.loads(session[key])
             headers = info["headers"]
             cookies = info["cookies"]
             params = {
@@ -352,7 +354,7 @@ class Flow(BaseFlow):
                 {"X-Requested-With": "XMLHttpRequest"})
             custom_headers.update(
                 {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'})
-            r = requests.post("http://www.hn96520.com/member/ajax/login.aspx",
+            r = rebot.http_post("http://www.hn96520.com/member/ajax/login.aspx",
                               data=urllib.urlencode(params),
                               headers=custom_headers,
                               allow_redirects=False,
@@ -386,18 +388,20 @@ class Flow(BaseFlow):
             valid_url = 'http://www.hn96520.com/membercode.aspx'
             ua = random.choice(BROWSER_USER_AGENT)
             headers = {"User-Agent": ua}
-            r = requests.get(valid_url, headers=headers)
+            r = rebot.http_get(valid_url, headers=headers)
             data = {
                 "cookies": dict(r.cookies),
                 "headers": headers,
                 "valid_url": valid_url,
             }
-            session["pay_login_info"] = json.dumps(data)
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
         # 未取到code
         elif not order.extra_info.get('code', ''):
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
             try:
-                info = json.loads(session["pay_login_info"])
+                info = json.loads(session[key])
                 headers = info["headers"]
                 cookies = info["cookies"]
                 valid_url = 'http://www.hn96520.com/verifycode.aspx'
@@ -406,17 +410,17 @@ class Flow(BaseFlow):
                     "headers": headers,
                     "valid_url": valid_url,
                 }
-                session["pay_login_info"] = json.dumps(data)
+                session[key] = json.dumps(data)
                 return {"flag": "input_code", "content": ""}
             except:
                 valid_url = 'http://www.hn96520.com/verifycode.aspx'
                 ua = random.choice(BROWSER_USER_AGENT)
                 headers = {"User-Agent": ua}
-                r = requests.get(valid_url, headers=headers)
+                r = rebot.http_get(valid_url, headers=headers)
                 data = {
                     "cookies": dict(r.cookies),
                     "headers": headers,
                     "valid_url": valid_url,
                 }
-                session["pay_login_info"] = json.dumps(data)
+                session[key] = json.dumps(data)
                 return {"flag": "input_code", "content": ""}
