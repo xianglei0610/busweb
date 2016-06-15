@@ -100,7 +100,7 @@ class Flow(BaseFlow):
         # rebot_log.info(errmsg)
         expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
         lock_result.update({
-            'result_code': 0,
+            'result_code': 2,
             "result_reason": errmsg,
             "expire_datetime": expire_time,
             "source_account": rebot.telephone,
