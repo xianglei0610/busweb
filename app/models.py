@@ -1521,7 +1521,7 @@ class ScqcpWebRebot(Rebot):
             self.is_active = True
             self.cookies = "{}"
             self.save()
-        return "OK"
+            return "fail"
 
     def check_login(self):
         try:
@@ -2090,8 +2090,10 @@ class CqkyWebRebot(Rebot):
             if success:     # 登陆成功
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                if res["Code"] == self.telephone:
+                if self.test_login_status():
                     ret = "OK"
+                else:
+                    ret = "check_fail"
             else:
                 msg = res["msg"]
                 if u"用户名或密码错误" in msg:

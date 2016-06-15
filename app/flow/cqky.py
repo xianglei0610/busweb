@@ -40,7 +40,7 @@ class Flow(BaseFlow):
         if not is_login:
             for i in range(3):
                 msg = rebot.login()
-                if msg == "OK" and rebot.test_login_status():
+                if msg == "OK":
                     is_login = True
                     break
                 elif msg == "invalid_pwd":
@@ -443,20 +443,20 @@ class Flow(BaseFlow):
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-            is_login = rebot.test_login_status()
-            if not is_login and valid_code:
-                key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-                info = json.loads(session[key])
-                headers = info["headers"]
-                cookies = info["cookies"]
-                msg = rebot.login(valid_code=valid_code, headers=headers, cookies=cookies)
-                if msg == "OK":
-                    is_login = True
-                elif msg == "invalid_pwd":
-                    rebot.modify(is_active=False)
-                    rebot = order.change_lock_rebot()
-            if is_login:
-                self.lock_ticket(order)
+            # is_login = rebot.test_login_status()
+            # if not is_login and valid_code:
+            #     key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            #     if key in session:
+            #         info = json.loads(session[key])
+            #         headers = info["headers"]
+            #         cookies = info["cookies"]
+            #         msg = rebot.login(valid_code=valid_code, headers=headers, cookies=cookies)
+            #         if msg == "OK":
+            #             is_login = True
+            #         elif msg == "invalid_pwd":
+            #             rebot.modify(is_active=False)
+            #             rebot = order.change_lock_rebot()
+            self.lock_ticket(order)
         order.reload()
         rebot = order.get_lock_rebot()
 
@@ -469,7 +469,6 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            # r = rebot.http_get(base_url, headers=headers)
             r = requests.get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
@@ -491,25 +490,23 @@ class Flow(BaseFlow):
             #r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
             r = requests.post(base_url, data=urllib.urlencode(params), headers=headers,)
             return {"flag": "html", "content": r.content}
+        return {"flag": "error", "content": "锁票失败,请重试!"}
 
-        if is_login:
-            return {"flag": "error", "content": "锁票失败"}
-
-        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-            cookies = {}
-            login_form = "http://www.96096kp.com/CusLogin.aspx"
-            valid_url = "http://www.96096kp.com/ValidateCode.aspx?_=%s" % random.randint(1, 10000)
-            headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-            r = rebot.http_get(login_form, headers=headers, cookies=cookies)
-            cookies.update(dict(r.cookies))
-            data = {
-                "cookies": cookies,
-                "headers": headers,
-                "valid_url": valid_url,
-            }
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-            session[key] = json.dumps(data)
-            return {"flag": "input_code", "content": ""}
+        # if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+        #     cookies = {}
+        #     login_form = "http://www.96096kp.com/CusLogin.aspx"
+        #     valid_url = "http://www.96096kp.com/ValidateCode.aspx?_=%s" % random.randint(1, 10000)
+        #     headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        #     r = rebot.http_get(login_form, headers=headers, cookies=cookies)
+        #     cookies.update(dict(r.cookies))
+        #     data = {
+        #         "cookies": cookies,
+        #         "headers": headers,
+        #         "valid_url": valid_url,
+        #     }
+        #     key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+        #     session[key] = json.dumps(data)
+        #     return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
         result_info = {
@@ -653,6 +650,3 @@ class Flow(BaseFlow):
                 elif cnt == 1:
                     if qs.first().order_no == order.order_no:
                         return
-        #order.modify(raw_order_no="", pay_order_no="", pay_money=0, status=STATUS_LOCK_RETRY)
-        #order.add_trace(OT_CHECK_RAW_ORDER, "在源站没找到订单")
-        #order.on_lock_retry(reason="在源站没找到订单")
