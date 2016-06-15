@@ -2,7 +2,7 @@ Flask==0.10.1
 Flask-Mail==0.9.1
 Flask-Script==2.0.5
 Jinja2==2.8
-Pillow==2.3.0
+# Pillow==2.3.0
 Scrapy==1.0.3
 pyOpenSSL==0.13
 pymongo==3.1.1
@@ -20,3 +20,4 @@ Flask-Login==0.3.2
 beautifulsoup4==4.4.1
 selenium==2.53.1
 flask_profiler
+html5lib==0.9999999
