@@ -789,7 +789,7 @@ class Hn96520WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
     memid = db.StringField()
-    # ip = db.StringField(default="")
+    ip = db.StringField(default="")
     # indexes索引, 'collections'
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -817,7 +817,7 @@ class Hn96520WebRebot(Rebot):
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
         rider_url = 'http://www.hn96520.com/member/modify.aspx'
-        r = rebot.http_get(rider_url, headers=headers, cookies=cookies)
+        r = self.http_get(rider_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, 'lxml')
         info = soup.find('table', attrs={'class': 'tblp shadow', 'style': True}).find_all('tr', attrs={'id': True})
         for x in info:
@@ -826,7 +826,7 @@ class Hn96520WebRebot(Rebot):
             if uid in riders or not riders:
                 delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid={1}'.format(uid, self.memid)
                 # rebot_log.info(delurl)
-                rebot.http_get(delurl, headers=headers, cookies=cookies)
+                self.http_get(delurl, headers=headers, cookies=cookies)
 
     def add_riders(self, order):
         id_lst = []
@@ -841,7 +841,7 @@ class Hn96520WebRebot(Rebot):
             cardid = rider.get('id_number', '')
             sel = rider.get('telephone', '')
             addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid={0}&name={1}&cardid={2}&sel={3}'.format(self.memid, name, cardid, sel)
-            r = rebot.http_get(addurl, headers=headers, cookies=cookies)
+            r = self.http_get(addurl, headers=headers, cookies=cookies)
             if r.content != '0':
                 id_lst.append(r.content)
             else:
@@ -857,7 +857,7 @@ class Hn96520WebRebot(Rebot):
             cookies = json.loads(self.cookies)
         except:
             cookies = ''
-        r = rebot.http_get(undone_order_url, headers=headers, cookies=cookies)
+        r = self.http_get(undone_order_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
         try:
             memid = soup.find('p', attrs={'id': 'userid'}).get_text()

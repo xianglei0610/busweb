@@ -60,25 +60,20 @@ class Flow(BaseFlow):
             'txtCode': order.extra_info.get('code'),
         }
         url = 'http://www.hn96520.com/putin.aspx?' + urllib.urlencode(param)
-        # rebot_log.info('[do_lock_ticket] ' + url)
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
         # 买票, 添加乘客, 购买班次
-        for x in xrange(5):
-            r = rebot.http_get(url, headers=headers, cookies=cookies,
-                             data=urllib.urlencode(param))
-            # rebot_log.info(r.content)
+        for x in xrange(1):
+            r = rebot.http_get(url, headers=headers, cookies=cookies, data=urllib.urlencode(param))
             soup = bs(r.content, 'html5lib')
             title = soup.title
             try:
-                info = soup.find('table', attrs={
-                    'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+                info = soup.find('table', attrs={'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
                 pay_money = info[-1].find_all('td')[-1].get_text()
                 pay_money = float(re.search(r'\d+', pay_money).group(0))
                 raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
                     'value').split('=')[-1]
                 if '准备付款' in title:
-                    # rebot_log.info('添加订单成功')
                     expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
                     lock_result.update({
                         'result_code': 1,
@@ -97,7 +92,6 @@ class Flow(BaseFlow):
 
         errmsg = soup.find(
             'td', attrs={'class': 'mmainbody'}).get_text().strip().encode('utf-8')
-        # rebot_log.info(errmsg)
         expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
         lock_result.update({
             'result_code': 2,
@@ -118,7 +112,6 @@ class Flow(BaseFlow):
         password = md5(order.source_account_pass)
         url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(
             username, password, sign, time.time())
-        # rebot_log.info(url)
         headers = {
             "User-Agent": rebot.user_agent,
         }
@@ -130,7 +123,6 @@ class Flow(BaseFlow):
             userid, sign, time.time())
         r = rebot.http_get(ourl, headers=headers,
                          cookies=r.cookies, timeout=2048)
-        # rebot_log.info(ourl)
         info = json.loads(r.content[r.content.index(
             "(") + 1: r.content.rindex(")")]).get('OrderList', [])
         for x in info:
@@ -195,7 +187,6 @@ class Flow(BaseFlow):
             result_info.update(result_msg="状态未变化")
             return result_info
         ret = self.send_order_request(order)
-        # rebot_log.info(ret)
         state = ret['state']
         if '已取消' in state:
             result_info.update({
@@ -228,7 +219,6 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
-            # rebot_log.info(result_info)
         return result_info
 
     # 线路刷新, java接口调用
@@ -360,7 +350,6 @@ class Flow(BaseFlow):
                               allow_redirects=False,
                               cookies=cookies)
             cookies.update(dict(r.cookies))
-            # rebot_log.info(r.cookies)
             rebot.modify(cookies=json.dumps(cookies))
         # try:
         #     is_login
