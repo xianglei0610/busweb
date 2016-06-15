@@ -66,25 +66,24 @@ class Flow(BaseFlow):
         r = requests.get(url, headers=headers, cookies=cookies,
                          data=urllib.urlencode(param))
         # rebot_log.info(r.content)
-        soup = bs(r.content, 'lxml')
+        soup = bs(r.content, 'html5lib')
 
         title = soup.title
         try:
             info = soup.find('table', attrs={
                 'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
         except:
-            pass
-            # errmsg = soup.find('div', attrs={'style': 'margin: 100px auto 0px auto; width: 306px; height: 257px; background-image: url(images/404.jpg);'})
-            # rebot_log.info(errmsg)
-            # expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-            # lock_result.update({
-            #     'result_code': 0,
-            #     "result_reason": errmsg,
-            #     "expire_datetime": expire_time,
-            #     "source_account": rebot.telephone,
-            #     'pay_money': 0,
-            # })
-            # return lock_result
+            errmsg = soup.find('td', attrs={'class': 'mmainbody'}).get_text().strip()
+            rebot_log.info(errmsg)
+            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+            lock_result.update({
+                'result_code': 0,
+                "result_reason": errmsg,
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                'pay_money': 0,
+            })
+            return lock_result
         pay_money = info[-1].find_all('td')[-1].get_text()
         pay_money = float(re.search(r'\d+', pay_money).group(0))
         raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
