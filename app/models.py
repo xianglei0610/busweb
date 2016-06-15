@@ -800,14 +800,15 @@ class Hn96520WebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        key = RK_PROXY_IP_HN96520
-        if ipstr and rds.sismember(key, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(key)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ""
+        # rds = get_redis("default")
+        # ipstr = self.ip
+        # key = RK_PROXY_IP_HN96520
+        # if ipstr and rds.sismember(key, ipstr):
+        #     return ipstr
+        # ipstr = rds.srandmember(key)
+        # self.modify(ip=ipstr)
+        # return ipstr
 
     def clear_riders(self, riders={}):
         # 默认的不能删除
