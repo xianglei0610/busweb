@@ -3445,6 +3445,7 @@ class XinTuYunWebRebot(Rebot):
         check_str = self.telephone.replace(self.telephone[3:7], '****')
         if check_str in content:
             return 1
+        self.modify(cookies="{}")
         return 0
 
     def login(self, valid_code="", token='', headers={}, cookies={}):
