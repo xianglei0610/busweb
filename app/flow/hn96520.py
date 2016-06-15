@@ -24,8 +24,21 @@ from time import sleep
 class Flow(BaseFlow):
     name = 'hn96520'
 
+    # 检测是否取到code
+    def check_code_status(self, code, order):
+        rebot = order.get_lock_rebot()
+        cookies = json.loads(rebot.cookies)
+        headers = {'User-Agent': rebot.user_agent}
+        url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(code)
+        r = rebot.http_get(url, headers=headers, cookies=cookies)
+        if 'true' in r.content:
+            order.modify(extra_info={"code": code})
+            return 1
+        else:
+            return 0
+
     # 锁票
-    def do_lock_ticket(self, order):
+    def do_lock_ticket(self, order, valid_code=""):
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
@@ -36,28 +49,27 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
+        if not valid_code or not self.check_code_status(valid_code, order):
+            lock_result.update({
+                'result_code': 2,
+                "lock_info": {"fail_reason": "input_code"}
+            })
+            return lock_result
+
         rebot = order.get_lock_rebot()
-        pk = len(order.riders)
-        for y in xrange(3):
-            # rebot.clear_riders()
-            riders = rebot.add_riders(order)
-            if riders and pk == len(riders):
-                break
-            else:
-                rebot.clear_riders()
-        takeman = ''
-        for rider in riders:
-            takeman += ',' + str(rider)
+        riders = rebot.add_riders(order)
+
         line = order.line
         param = {
             'bc': line.extra_info.get('bc', ''),
             'date': line.extra_info.get('date', ''),
             'global': line.extra_info.get('g', ''),
             'o': '0',
-            'tSum': line.full_price * pk,
-            'takemanIds': takeman,
+            #'tSum': line.full_price*2,
+            'tSum': line.full_price,
+            'takemanIds': ","+",".join(riders),
             'tid': line.extra_info.get('t', ''),
-            'txtCode': order.extra_info.get('code'),
+            'txtCode': valid_code,
         }
         url = 'http://www.hn96520.com/putin.aspx?' + urllib.urlencode(param)
         cookies = json.loads(rebot.cookies)
@@ -65,13 +77,13 @@ class Flow(BaseFlow):
         # 买票, 添加乘客, 购买班次
         for x in xrange(1):
             r = rebot.http_get(url, headers=headers, cookies=cookies, data=urllib.urlencode(param))
-            errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url))
-            errmsg = errlst and errlst[0] or ""
-            if errmsg and "服务器生成订单失败" in errmsg:
+            errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+            errmsg = unicode(errlst and errlst[0] or "")
+            if errmsg:
                 lock_result.update({
                     'result_code': 2,
                     "source_account": rebot.telephone,
-                    "result_msg": errmsg,
+                    "result_reason": errmsg,
                 })
                 return lock_result
 
@@ -288,6 +300,86 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
+        rebot = order.get_lock_rebot()
+        is_login = rebot.test_login_status()
+
+        # 登录验证码
+        if valid_code and not is_login:
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            info = json.loads(session[key])
+            headers = info["headers"]
+            cookies = info["cookies"]
+            params = {
+                "userid": rebot.telephone,
+                "pwd": rebot.password,
+                "vcode": valid_code,
+            }
+            custom_headers = {}
+            custom_headers.update(headers)
+            custom_headers.update(
+                {"X-Requested-With": "XMLHttpRequest"})
+            custom_headers.update(
+                {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'})
+            r = rebot.http_post("http://www.hn96520.com/member/ajax/login.aspx",
+                              data=urllib.urlencode(params),
+                              headers=custom_headers,
+                              allow_redirects=False,
+                              cookies=cookies)
+            cookies.update(dict(r.cookies))
+            rebot.modify(cookies=json.dumps(cookies))
+
+        is_login = is_login or rebot.test_login_status()
+        if is_login:
+            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+                self.lock_ticket(order, valid_code=valid_code)
+                order.reload()
+                fail_msg = order.lock_info.get("fail_reason", "")
+                if fail_msg == "input_code":
+                    data = {
+                        "cookies": json.loads(rebot.cookies),
+                        "headers": {"User-Agent": rebot.user_agent},
+                        "valid_url": "http://www.hn96520.com/verifycode.aspx",
+                    }
+                    key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+                    session[key] = json.dumps(data)
+                    return {"flag": "input_code", "content": ""}
+
+            if order.status == STATUS_WAITING_ISSUE:
+                pay_url = "http://www.hn96520.com/pay.aspx"
+                headers = {
+                    "User-Agent": rebot.user_agent,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                }
+                params = {
+                    'o': '0',
+                    "h_code": order.raw_order_no,
+                    "paymentType": 202,  # alipay参数
+                }
+                cookies = json.loads(rebot.cookies)
+                r = rebot.http_post(pay_url, data=urllib.urlencode(
+                    params), headers=headers, cookies=cookies)
+                data = self.extract_alipay(r.content)
+                pay_money = float(data["total_fee"])
+                trade_no = data["out_trade_no"]
+                if order.pay_money != pay_money or order.pay_order_no != trade_no:
+                    order.modify(pay_money=pay_money, pay_order_no=trade_no)
+                return {"flag": "html", "content": r.content}
+
+        # 未登录
+        if not is_login:
+            valid_url = 'http://www.hn96520.com/membercode.aspx'
+            ua = random.choice(BROWSER_USER_AGENT)
+            headers = {"User-Agent": ua}
+            data = {
+                "cookies": {},
+                "headers": headers,
+                "valid_url": valid_url,
+            }
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            session[key] = json.dumps(data)
+            return {"flag": "input_code", "content": ""}
+
+    def get_pay_page2(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
 
         # 检测是否取到code
