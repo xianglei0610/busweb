@@ -506,6 +506,25 @@ class Bus365ProxyConsumer(ProxyConsumer):
             return False
         return True
 
+class HN96520ProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_HN96520
+    name = "hn96520"
+
+    def valid_proxy(self, ipstr):
+        url = "http://www.hn96520.com/"
+        try:
+            ua = random.choice(BROWSER_USER_AGENT)
+            r = requests.get(url,
+                             headers={"User-Agent": ua},
+                             timeout=4,
+                             proxies={"http": "http://%s" % ipstr})
+            if u"河南省公路客运联网售票网" in r.content:
+                return True
+        except:
+            return False
+        return True
+
+
 proxy_producer = ProxyProducer()
 
 if "proxy_list" not in globals():

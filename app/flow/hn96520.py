@@ -126,8 +126,7 @@ class Flow(BaseFlow):
             "(") + 1: r.content.rindex(")")]).get('UserId', '')
         ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
             userid, sign, time.time())
-        r = rebot.http_get(ourl, headers=headers,
-                         cookies=r.cookies, timeout=2048)
+        r = rebot.http_get(ourl, headers=headers, cookies=r.cookies)
         info = json.loads(r.content[r.content.index(
             "(") + 1: r.content.rindex(")")]).get('OrderList', [])
         for x in info:
