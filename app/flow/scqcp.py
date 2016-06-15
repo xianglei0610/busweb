@@ -467,8 +467,16 @@ class Flow(BaseFlow):
         new_headers = headers
         if new_headers.has_key('Content-Type'):
             del new_headers['Content-Type']
+        is_login = rebot.test_login_status()
+        if not is_login:
+            for i in range(3):
+                if rebot.login() == "OK":
+                    is_login = True
+                    break
+        if not is_login:
+            return {"flag": "error", "content": "账号自动登陆失败，请再次重试!"}
+
         # 验证码处理
-        # is_login = rebot.test_login_status()
         # if not is_login:
         #     if valid_code:
         #         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
