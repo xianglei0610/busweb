@@ -138,7 +138,20 @@ class Flow(BaseFlow):
             })
         else:
             errmsg = ret['msg']
-            for s in ["余票不足","只能预售2小时之后的票","余位不够","车票已售完"]:
+            flag = False
+            for i in [u"参数错误"]:
+                if i in errmsg:
+                    flag = True
+                    break
+            if flag:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": res.get("msg", '') or res,
+                })
+                return lock_result
+
+            for s in ["余票不足", "只能预售2小时之后的票", "余位不够", "车票已售完"]:
                 if s in errmsg:
                     self.close_line(order.line, reason=errmsg)
                     break
