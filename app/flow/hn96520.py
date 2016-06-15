@@ -18,6 +18,7 @@ from app.models import Line
 from app.utils import md5
 from app import rebot_log
 # import cStringIO
+from time import sleep
 
 
 class Flow(BaseFlow):
@@ -63,54 +64,48 @@ class Flow(BaseFlow):
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
         # 买票, 添加乘客, 购买班次
-        r = requests.get(url, headers=headers, cookies=cookies,
-                         data=urllib.urlencode(param))
-        # rebot_log.info(r.content)
-        soup = bs(r.content, 'html5lib')
+        for x in xrange(5):
+            r = requests.get(url, headers=headers, cookies=cookies,
+                             data=urllib.urlencode(param))
+            # rebot_log.info(r.content)
+            soup = bs(r.content, 'html5lib')
+            title = soup.title
+            try:
+                info = soup.find('table', attrs={
+                    'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+                pay_money = info[-1].find_all('td')[-1].get_text()
+                pay_money = float(re.search(r'\d+', pay_money).group(0))
+                raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
+                    'value').split('=')[-1]
+                if '准备付款' in title:
+                    # rebot_log.info('添加订单成功')
+                    expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+                    lock_result.update({
+                        'result_code': 1,
+                        'raw_order_no': raw_order_no,
+                        "expire_datetime": expire_time,
+                        "source_account": rebot.telephone,
+                        'pay_money': pay_money,
+                    })
+                    # 删除之前乘客
+                    rebot.clear_riders(riders)
+                    return lock_result
+            except:
+                pass
+            finally:
+                sleep(0.25)
 
-        title = soup.title
-        try:
-            info = soup.find('table', attrs={
-                'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
-        except:
-            errmsg = soup.find('td', attrs={'class': 'mmainbody'}).get_text().strip()
-            rebot_log.info(errmsg)
-            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-            lock_result.update({
-                'result_code': 0,
-                "result_reason": errmsg,
-                "expire_datetime": expire_time,
-                "source_account": rebot.telephone,
-                'pay_money': 0,
-            })
-            return lock_result
-        pay_money = info[-1].find_all('td')[-1].get_text()
-        pay_money = float(re.search(r'\d+', pay_money).group(0))
-        raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
-            'value').split('=')[-1]
-
-        if '准备付款' in title:
-            # rebot_log.info('添加订单成功')
-            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-            lock_result.update({
-                'result_code': 1,
-                'raw_order_no': raw_order_no,
-                "expire_datetime": expire_time,
-                "source_account": rebot.telephone,
-                'pay_money': pay_money,
-            })
-            # rebot_log.info(lock_result)
-        else:
-            errmsg = title
-            lock_result.update({
-                'result_code': 0,
-                "result_reason": errmsg,
-                "expire_datetime": expire_time,
-                "source_account": rebot.telephone,
-                'pay_money': 0,
-            })
-        # 删除之前乘客
-        rebot.clear_riders(riders)
+        errmsg = soup.find(
+            'td', attrs={'class': 'mmainbody'}).get_text().strip().encode('utf-8')
+        # rebot_log.info(errmsg)
+        expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+        lock_result.update({
+            'result_code': 0,
+            "result_reason": errmsg,
+            "expire_datetime": expire_time,
+            "source_account": rebot.telephone,
+            'pay_money': 0,
+        })
         return lock_result
 
     def send_order_request(self, order):
