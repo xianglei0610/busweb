@@ -59,17 +59,31 @@ class Flow(BaseFlow):
             'txtCode': order.extra_info.get('code'),
         }
         url = 'http://www.hn96520.com/putin.aspx?' + urllib.urlencode(param)
-        rebot_log.info(url)
+        # rebot_log.info('[do_lock_ticket] ' + url)
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
         # 买票, 添加乘客, 购买班次
         r = requests.get(url, headers=headers, cookies=cookies,
                          data=urllib.urlencode(param))
+        # rebot_log.info(r.content)
         soup = bs(r.content, 'lxml')
+
         title = soup.title
-        rebot_log.info(title)
-        info = soup.find('table', attrs={
-                         'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+        try:
+            info = soup.find('table', attrs={
+                'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+        except:
+            errmsg = soup.find('div', attrs={'style': 'margin: 100px auto 0px auto; width: 306px; height: 257px; background-image: url(images/404.jpg);'})
+            rebot_log.info(errmsg)
+            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+            lock_result.update({
+                'result_code': 0,
+                "result_reason": errmsg,
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                'pay_money': 0,
+            })
+            return lock_result
         pay_money = info[-1].find_all('td')[-1].get_text()
         pay_money = float(re.search(r'\d+', pay_money).group(0))
         raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
