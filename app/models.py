@@ -825,7 +825,7 @@ class Hn96520WebRebot(Rebot):
             uid = str(re.search(r'\d+', uid).group(0))
             if uid in riders or not riders:
                 delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid={1}'.format(uid, self.memid)
-                rebot_log.info(delurl)
+                # rebot_log.info(delurl)
                 requests.get(delurl, headers=headers, cookies=cookies)
 
     def add_riders(self, order):
@@ -848,16 +848,6 @@ class Hn96520WebRebot(Rebot):
                 pass
         return id_lst
 
-    # def check_code_status(self, code):
-    #     url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(code)
-    #     headers = {'User-Agent': self.user_agent}
-    #     cookies = json.loads(self.cookies)
-    #     r = requests.get(url, headers=headers, cookies=cookies)
-    #     if 'true' in r.content:
-    #         return 1
-    #     else:
-    #         return 0
-
     def check_login(self):
         # self.is_locked = True
         # self.save()
@@ -870,16 +860,18 @@ class Hn96520WebRebot(Rebot):
         r = requests.get(undone_order_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
         try:
-            memid = soup.find('a', attrs={'id': re.compile(r"\w\d+")}).get('href', '')
-            memid = re.findall(r'\d+', memid)[-1]
+            memid = soup.find('p', attrs={'id': 'userid'}).get_text()
+            tel = soup.find('input', attrs={'id': re.compile(r"takemansel\d+")}).get('value')
         except:
             memid = 0
-        if memid:
+        if memid and tel == self.telephone:
             self.memid = memid
             self.save()
             cookies.update(r.cookies)
             return 1
         else:
+            self.cookies = "{}"
+            self.save()
             return 0
 
     # 初始化帐号
