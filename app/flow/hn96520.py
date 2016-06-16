@@ -128,17 +128,17 @@ class Flow(BaseFlow):
         userid = SOURCE_INFO.get('hn96520').get(
             'accounts').get(order.source_account)[-1]
         # sign = '90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a'
-        # username = order.source_account
-        # password = md5(order.source_account_pass)
-        # url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(
-        #     username, password, sign, time.time())
-        # headers = {
-        #     "User-Agent": rebot.user_agent,
-        # }
-        # r = rebot.http_get(url, headers=headers)
-        # # rebot.http_get(url, headers=headers, cookies=r.cookies)
-        # userid = json.loads(r.content[r.content.index(
-        #     "(") + 1: r.content.rindex(")")]).get('UserId', '')
+        username = order.source_account
+        password = md5(order.source_account_pass)
+        url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(
+            username, password, sign, time.time())
+        headers = {
+            "User-Agent": rebot.user_agent,
+        }
+        r = rebot.http_get(url, headers=headers)
+        # rebot.http_get(url, headers=headers, cookies=r.cookies)
+        userid = json.loads(r.content[r.content.index(
+            "(") + 1: r.content.rindex(")")]).get('UserId', '')
 
         ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
             userid, sign, time.time())
