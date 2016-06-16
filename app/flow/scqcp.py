@@ -467,94 +467,93 @@ class Flow(BaseFlow):
         new_headers = headers
         if new_headers.has_key('Content-Type'):
             del new_headers['Content-Type']
-        # 验证码处理
         is_login = rebot.test_login_status()
         if not is_login:
-            if valid_code:
-                key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-                data = json.loads(session[key])
-                code_url = data["valid_url"]
-                headers = data["headers"]
-                cookies = data["cookies"]
-                token = data["token"]
-            else:
-                login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
-                if new_headers.has_key('Content-Type'):
-                    del new_headers['Content-Type']
-                r = rebot.http_get(login_form_url, headers=new_headers)
-                sel = etree.HTML(r.content)
-                cookies = dict(r.cookies)
-                code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
-                code_url = code_url.split('?')[0]+"?d=0.%s" % random.randint(1, 10000)
-                token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
-                r = rebot.http_get(code_url, headers=new_headers, cookies=cookies)
-                cookies.update(dict(r.cookies))
-                tmpIm = cStringIO.StringIO(r.content)
-                im = Image.open(tmpIm)
-                valid_code = pytesseract.image_to_string(im)
+            for i in range(3):
+                if rebot.login() == "OK":
+                    is_login = True
+                    break
+        if not is_login:
+            return {"flag": "error", "content": "账号自动登陆失败，请再次重试!"}
 
-#             key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-#             if session.get(key, ''):
-#                 info = json.loads(session[key])
-#                 headers = info["headers"]
-#                 cookies = info["cookies"]
-#                 token = info["token"]
-            msg = rebot.login(valid_code=valid_code, token=token, headers=headers, cookies=cookies)
-            if msg == "OK":
-                is_login = True
-                rebot.modify(cookies=json.dumps(cookies))
-        if is_login:
-            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-                self.lock_ticket(order)
-            order.reload()
-            if order.status == STATUS_WAITING_ISSUE:
-                r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
-                r_url = urllib2.urlparse.urlparse(r.url)
-                if r_url.path in ["/error.html", "/error.htm"]:
-                    self.lock_ticket_retry(order)
-#                     order.modify(status=STATUS_ISSUE_FAIL)
-#                     order.on_issue_fail(reason="get error page when pay")
-#                     order_log.info("[issue-refresh-result] %s fail. get error page.", order.order_no)
-#                     issued_callback.delay(order.order_no)
-                    return {"flag": "error", "content": ''}
-                sel = etree.HTML(r.content)
-                plateform = pay_channel
-                data = dict(
-                    payid=sel.xpath("//input[@name='payid']/@value")[0],
-                    bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
-                    plate=sel.xpath("//input[@id='s_plate']/@value")[0],
-                    plateform=plateform,
-                    qr_pay_mode=0,
-                    discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
-                )
-                info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
-                r = rebot.http_post(info_url, data=data, headers=headers, cookies=json.loads(rebot.cookies),timeout=60)
-                sel = etree.HTML(r.content)
-                try:
-                    pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
-                    if order.pay_order_no != pay_order_no:
-                        order.update(pay_order_no=pay_order_no)
-                except:
-                    pass
-                return {"flag": "html", "content": r.content}
-            return {"flag": "error", "content": "锁票失败"}
-        else:
-            cookies = json.loads(rebot.cookies)
-            login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
-            r = rebot.http_get(login_form_url, headers=new_headers)
+        # 验证码处理
+        # if not is_login:
+        #     if valid_code:
+        #         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+        #         data = json.loads(session[key])
+        #         code_url = data["valid_url"]
+        #         headers = data["headers"]
+        #         cookies = data["cookies"]
+        #         token = data["token"]
+        #     else:
+        #         login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
+        #         if new_headers.has_key('Content-Type'):
+        #             del new_headers['Content-Type']
+        #         r = rebot.http_get(login_form_url, headers=new_headers)
+        #         sel = etree.HTML(r.content)
+        #         cookies = dict(r.cookies)
+        #         code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+        #         code_url = code_url.split('?')[0]+"?d=0.%s" % random.randint(1, 10000)
+        #         token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+        #         r = rebot.http_get(code_url, headers=new_headers, cookies=cookies)
+        #         cookies.update(dict(r.cookies))
+        #         tmpIm = cStringIO.StringIO(r.content)
+        #         im = Image.open(tmpIm)
+        #         valid_code = pytesseract.image_to_string(im)
+
+        #     msg = rebot.login(valid_code=valid_code, token=token, headers=headers, cookies=cookies)
+        #     if msg == "OK":
+        #         is_login = True
+        #         rebot.modify(cookies=json.dumps(cookies))
+        # if is_login:
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+            self.lock_ticket(order)
+        order.reload()
+
+        if order.status == STATUS_WAITING_ISSUE:
+            r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
+            r_url = urllib2.urlparse.urlparse(r.url)
+            if r_url.path in ["/error.html", "/error.htm"]:
+                self.lock_ticket_retry(order)
+                return {"flag": "error", "content": ''}
             sel = etree.HTML(r.content)
-            cookies = dict(r.cookies)
-            code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
-            code_url = code_url.split('?')[0]+"?d=0.%s"% random.randint(1, 10000)
-            token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
-            r = rebot.http_get(code_url, headers=new_headers, cookies=cookies)
-            cookies.update(dict(r.cookies))
-            data = {
-                "cookies": cookies,
-                "headers": headers,
-                "valid_url": code_url,
-                "token": token
-            }
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-            session[key] = json.dumps(data)
-            return {"flag": "input_code", "content": ""}
+            plateform = pay_channel
+            data = dict(
+                payid=sel.xpath("//input[@name='payid']/@value")[0],
+                bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
+                plate=sel.xpath("//input[@id='s_plate']/@value")[0],
+                plateform=plateform,
+                qr_pay_mode=0,
+                discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
+            )
+            info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
+            r = rebot.http_post(info_url, data=data, headers=headers, cookies=json.loads(rebot.cookies),timeout=60)
+            sel = etree.HTML(r.content)
+            try:
+                pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
+                if order.pay_order_no != pay_order_no:
+                    order.update(pay_order_no=pay_order_no)
+            except:
+                pass
+            return {"flag": "html", "content": r.content}
+        return {"flag": "error", "content": "锁票失败, 请重试!"}
+        # else:
+        #     cookies = json.loads(rebot.cookies)
+        #     login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
+        #     r = rebot.http_get(login_form_url, headers=new_headers)
+        #     sel = etree.HTML(r.content)
+        #     cookies = dict(r.cookies)
+        #     code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
+        #     code_url = code_url.split('?')[0]+"?d=0.%s"% random.randint(1, 10000)
+        #     token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
+        #     r = rebot.http_get(code_url, headers=new_headers, cookies=cookies)
+        #     cookies.update(dict(r.cookies))
+        #     data = {
+        #         "cookies": cookies,
+        #         "headers": headers,
+        #         "valid_url": code_url,
+        #         "token": token
+        #     }
+        #     key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+        #     session[key] = json.dumps(data)
+        #     return {"flag": "input_code", "content": ""}

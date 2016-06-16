@@ -3024,6 +3024,10 @@ SOURCE_INFO = {
             "17071527232": ("123456", "90e7709954c38af75c7caf4c2712456d746ef744f1ec28d3a781a709ba83a8ed"),
             "17092502883": ("123456", "90e7709954c38af75c7caf4c2712456dc97e156df7501bf4da6b4f59d259e475"),
             "17051322190": ("123456", "90e7709954c38af75c7caf4c2712456dc97e156df7501bf4e8e964cb318c6701"),
+            "17704073094": ("123456", "90e7709954c38af7fe0b473ace947e08df98cee20ea603b6fe9876532c0761a7"),
+            "13267109876": ("123456", "90e7709954c38af7713e1a64bad2012ebc498ceddacd8b0fda6b4f59d259e475"),
+            "13291407375": ("123456", "90e7709954c38af7fe0b473ace947e08bbc6e6aae510399168c4c81981e75959"),
+            "18575593355": ("123456", "90e7709954c38af74f48b18654031e8f1eeb87a3ef948e14"),
         }
     },
     SOURCE_CCW: {
@@ -3184,6 +3188,7 @@ RK_PROXY_IP_WXSZ = "proxy:wxsz"
 RK_PROXY_IP_BJKY = "proxy:cbd"
 RK_PROXY_IP_LNKY = "proxy:lnky"
 RK_PROXY_IP_E8S = "proxy:e8s"
+RK_PROXY_IP_HN96520 = "proxy:hn96520"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"  # 当前使用的
 RK_PROXY_IP_CQKY_BLACK = "proxy:cqky:black:%s"  # 黑名单
 

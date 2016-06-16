@@ -789,7 +789,7 @@ class Hn96520WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
     memid = db.StringField()
-    # ip = db.StringField(default="")
+    ip = db.StringField(default="")
     # indexes索引, 'collections'
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -798,17 +798,18 @@ class Hn96520WebRebot(Rebot):
     crawl_source = SOURCE_HN96520
     is_for_lock = True
 
-    # @property
-    # def proxy_ip(self):
-    #     return ''
-    #     rds = get_redis("default")
-    #     ipstr = self.ip
-    #     key = RK_PROXY_IP_WXSZ
-    #     if ipstr and rds.sismember(key, ipstr):
-    #         return ipstr
-    #     ipstr = rds.srandmember(key)
-    #     self.modify(ip=ipstr)
-    #     return ipstr
+    @property
+    def proxy_ip(self):
+        return ""
+        # rds = get_redis("default")
+        # ipstr = self.ip
+        # key = RK_PROXY_IP_HN96520
+        # if ipstr and rds.sismember(key, ipstr):
+        #     return ipstr
+        # ipstr = rds.srandmember(key)
+        # self.modify(ip=ipstr)
+        # return ipstr
+
     def clear_riders(self, riders={}):
         # 默认的不能删除
         is_login = self.test_login_status()
@@ -817,7 +818,7 @@ class Hn96520WebRebot(Rebot):
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
         rider_url = 'http://www.hn96520.com/member/modify.aspx'
-        r = requests.get(rider_url, headers=headers, cookies=cookies)
+        r = self.http_get(rider_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, 'lxml')
         info = soup.find('table', attrs={'class': 'tblp shadow', 'style': True}).find_all('tr', attrs={'id': True})
         for x in info:
@@ -826,7 +827,7 @@ class Hn96520WebRebot(Rebot):
             if uid in riders or not riders:
                 delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid={1}'.format(uid, self.memid)
                 # rebot_log.info(delurl)
-                requests.get(delurl, headers=headers, cookies=cookies)
+                self.http_get(delurl, headers=headers, cookies=cookies)
 
     def add_riders(self, order):
         id_lst = []
@@ -841,7 +842,7 @@ class Hn96520WebRebot(Rebot):
             cardid = rider.get('id_number', '')
             sel = rider.get('telephone', '')
             addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid={0}&name={1}&cardid={2}&sel={3}'.format(self.memid, name, cardid, sel)
-            r = requests.get(addurl, headers=headers, cookies=cookies)
+            r = self.http_get(addurl, headers=headers, cookies=cookies)
             if r.content != '0':
                 id_lst.append(r.content)
             else:
@@ -857,7 +858,7 @@ class Hn96520WebRebot(Rebot):
             cookies = json.loads(self.cookies)
         except:
             cookies = ''
-        r = requests.get(undone_order_url, headers=headers, cookies=cookies)
+        r = self.http_get(undone_order_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
         try:
             memid = soup.find('p', attrs={'id': 'userid'}).get_text()
@@ -1521,7 +1522,7 @@ class ScqcpWebRebot(Rebot):
             self.is_active = True
             self.cookies = "{}"
             self.save()
-        return "OK"
+            return "fail"
 
     def check_login(self):
         try:
@@ -2090,8 +2091,10 @@ class CqkyWebRebot(Rebot):
             if success:     # 登陆成功
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
-                if res["Code"] == self.telephone:
+                if self.test_login_status():
                     ret = "OK"
+                else:
+                    ret = "check_fail"
             else:
                 msg = res["msg"]
                 if u"用户名或密码错误" in msg:
