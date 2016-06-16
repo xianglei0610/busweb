@@ -45,6 +45,7 @@
             <thead>
                 <tr>
                     <th>账号</th>
+                    <th>名字</th>
                     <th>支付宝网银类型</th>
                     <th>接单类型</th>
                     <th>允许/禁止接单</th>
@@ -56,6 +57,7 @@
                 {% for d in page["items"] %}
                 <tr>
                     <td>{{d.username}}</td>
+                    <td>{{d.realname}}</td>
                     <td>
                         <a href="#" data-value="{{d.yh_type}}" class="sel-yhtype user-config-edit" id="yh_type" data-type="select" data-pk="{{d.username}}" data-url="/users/config" data-title="选择银行">{{yh_names[d.yh_type]}}</a>
                     </td>

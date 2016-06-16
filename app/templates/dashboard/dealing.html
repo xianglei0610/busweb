@@ -75,7 +75,7 @@
         $('.sel-change').editable({
             source: [
             {% for u in all_user %}
-                {value: '{{u.username}}', text: '{{u.username}}'},
+                {value: '{{u.username}}', text: '{{u.realname}}'},
             {% endfor %}
             ]
         });

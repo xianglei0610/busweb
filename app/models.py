@@ -25,6 +25,7 @@ class AdminUser(db.Document):
     后台管理员/客服
     """
     username = db.StringField(max_length=30)
+    realname = db.StringField(max_length=10)
     password = db.StringField(max_length=50)
     create_datetime = db.DateTimeField(default=dte.now)
     is_switch = db.IntField()
