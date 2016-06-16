@@ -147,7 +147,7 @@ class Flow(BaseFlow):
                 lock_result.update({
                     "result_code": 2,
                     "source_account": rebot.telephone,
-                    "result_reason": res.get("msg", '') or res,
+                    "result_reason": ret.get("msg", '') or ret,
                 })
                 return lock_result
 
