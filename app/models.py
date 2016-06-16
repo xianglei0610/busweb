@@ -832,11 +832,8 @@ class Hn96520WebRebot(Rebot):
                 # rebot_log.info(delurl)
                 self.http_get(delurl, headers=headers, cookies=cookies)
 
-    def add_riders(self, order):
+    def add_riders2(self, order):
         id_lst = []
-        is_login = self.test_login_status()
-        if not is_login:
-            pass
         riders = order.riders
         headers = {'User-Agent': self.user_agent}
         cookies = json.loads(self.cookies)
@@ -852,10 +849,50 @@ class Hn96520WebRebot(Rebot):
                 pass
         return id_lst
 
+    def add_riders(self, order):
+        url = "http://www.hn96520.com/member/modify.aspx"
+        headers = {
+            'User-Agent': self.user_agent,
+            "Referer": "http://www.hn96520.com/member/modify.aspx",
+        }
+        cookies = json.loads(self.cookies)
+        r = self.http_get(url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        userid = soup.select_one("#userid").text
+
+        id_lst = []
+        for rider in order.riders:
+            dom = soup.find("input", attrs={"value": rider["id_number"]})
+            if dom:
+                id_lst.append(dom.get("id").lstrip("takemancardid"))
+            else:
+                name = rider.get('name', '')
+                cardid = rider.get('id_number', '')
+                sel = rider.get('telephone', '')
+                url = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid={0}&name={1}&cardid={2}&sel={3}'.format(userid, name, cardid, sel)
+                r = self.http_get(url, headers=headers, cookies=cookies)
+                id_lst.append(r.content)
+        return id_lst
+
     def check_login(self):
         # self.is_locked = True
         # self.save()
         undone_order_url = "http://www.hn96520.com/member/changeselfinfo.aspx"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        r = self.http_get(undone_order_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        tel = soup.select_one("#txtHandset")
+        if tel:
+            tel = tel.get("value")
+        if tel == self.telephone:
+            return 1
+        return 0
+
+    def check_login2(self):
+        # self.is_locked = True
+        # self.save()
+        undone_order_url = "http://www.hn96520.com/member/modify.aspx"
         headers = {"User-Agent": self.user_agent}
         try:
             cookies = json.loads(self.cookies)
