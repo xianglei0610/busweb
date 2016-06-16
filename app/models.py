@@ -789,6 +789,8 @@ class Hn96520WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
     memid = db.StringField()
+    userid = db.StringField()
+    sign = db.StringField()
     ip = db.StringField(default="")
     # indexes索引, 'collections'
     meta = {
@@ -852,7 +854,7 @@ class Hn96520WebRebot(Rebot):
     def check_login(self):
         # self.is_locked = True
         # self.save()
-        undone_order_url = "http://www.hn96520.com/member/modify.aspx"
+        undone_order_url = "http://www.hn96520.com/member/changeselfinfo.aspx"
         headers = {"User-Agent": self.user_agent}
         try:
             cookies = json.loads(self.cookies)
@@ -861,13 +863,10 @@ class Hn96520WebRebot(Rebot):
         r = self.http_get(undone_order_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
         try:
-            memid = soup.find('p', attrs={'id': 'userid'}).get_text()
-            tel = soup.find('input', attrs={'id': re.compile(r"takemansel\d+")}).get('value')
+            tel = soup.find('input', attrs={'id': 'txtHandset', 'name': 'txtHandset'}).get('value').strip()
         except:
-            memid = 0
-        if memid and tel == self.telephone:
-            self.memid = memid
-            self.save()
+            tel = 0
+        if tel == self.telephone:
             cookies.update(r.cookies)
             return 1
         else:
@@ -884,6 +883,33 @@ class Hn96520WebRebot(Rebot):
         self.cookies = "{}"
         self.save()
         return "OK"
+
+    @classmethod
+    def login_all(cls):
+        # 登陆所有预设账号
+        has_checked = {}
+        accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd = accounts[bot.telephone]
+            bot.modify(password=pwd[0])
+            bot.login()
+
+        for tele, (pwd, sign, userid) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,
+                      sign=sign,
+                      userid=userid,
+                      )
+            bot.save()
+            bot.login()
 
 
 class CcwWebRebot(Rebot):
