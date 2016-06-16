@@ -37,16 +37,17 @@ class Flow(BaseFlow):
             "pay_money": 0,
         }
         rebot = order.get_lock_rebot()
-        pk = len(order.riders)
-        for y in xrange(3):
-            # rebot.clear_riders()
-            riders = rebot.add_riders(order)
-            if riders and pk == len(riders):
-                break
-            else:
-                rebot.clear_riders()
+        # pk = len(order.riders)
+        # for y in xrange(3):
+        #     # rebot.clear_riders()
+        #     riders = rebot.add_riders(order)
+        #     if riders and pk == len(riders):
+        #         break
+        #     else:
+        #         rebot.clear_riders()
         takeman = ''
-        for rider in riders:
+        pk = len(order.riders)
+        for rider in order.riders:
             takeman += ',' + str(rider)
         line = order.line
         param = {
@@ -64,7 +65,8 @@ class Flow(BaseFlow):
         headers = {'User-Agent': rebot.user_agent}
         # 买票, 添加乘客, 购买班次
         for x in xrange(1):
-            r = rebot.http_get(url, headers=headers, cookies=cookies, data=urllib.urlencode(param))
+            r = rebot.http_get(url, headers=headers,
+                               cookies=cookies, data=urllib.urlencode(param))
             errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url))
             errmsg = errlst and errlst[0] or ""
             if errmsg and "服务器生成订单失败" in errmsg:
@@ -77,7 +79,8 @@ class Flow(BaseFlow):
 
             soup = bs(r.content, 'lxml')
             title = soup.title
-            info = soup.find('table', attrs={'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+            info = soup.find('table', attrs={
+                             'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
             pay_money = info[-1].find_all('td')[-1].get_text()
             pay_money = float(re.search(r'\d+', pay_money).group(0))
             raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
@@ -92,7 +95,7 @@ class Flow(BaseFlow):
                     'pay_money': pay_money,
                 })
                 # 删除之前乘客
-                rebot.clear_riders(riders)
+                # rebot.clear_riders(riders)
                 return lock_result
 
         errmsg = soup.find(
@@ -111,19 +114,22 @@ class Flow(BaseFlow):
         rebot = order.get_lock_rebot()
         sn = order.pay_order_no
         sign = SOURCE_INFO.get('hn96520').get(
+            'accounts').get(order.source_account)[-2]
+        userid = SOURCE_INFO.get('hn96520').get(
             'accounts').get(order.source_account)[-1]
         # sign = '90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a'
-        username = order.source_account
-        password = md5(order.source_account_pass)
-        url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(
-            username, password, sign, time.time())
-        headers = {
-            "User-Agent": rebot.user_agent,
-        }
-        r = rebot.http_get(url, headers=headers)
-        # rebot.http_get(url, headers=headers, cookies=r.cookies)
-        userid = json.loads(r.content[r.content.index(
-            "(") + 1: r.content.rindex(")")]).get('UserId', '')
+        # username = order.source_account
+        # password = md5(order.source_account_pass)
+        # url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(
+        #     username, password, sign, time.time())
+        # headers = {
+        #     "User-Agent": rebot.user_agent,
+        # }
+        # r = rebot.http_get(url, headers=headers)
+        # # rebot.http_get(url, headers=headers, cookies=r.cookies)
+        # userid = json.loads(r.content[r.content.index(
+        #     "(") + 1: r.content.rindex(")")]).get('UserId', '')
+
         ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
             userid, sign, time.time())
         r = rebot.http_get(ourl, headers=headers, cookies=r.cookies)
@@ -132,7 +138,7 @@ class Flow(BaseFlow):
         for x in info:
             ocode = x['OrderCode']
             if sn == ocode:
-                pcode = x['Password']
+                pcode = x.get('Password', '')
                 state = x['OrderStatus']
 
         return {
@@ -192,17 +198,18 @@ class Flow(BaseFlow):
             return result_info
         ret = self.send_order_request(order)
         state = ret['state']
+        code = ret['pick_code']
         if '已取消' in state:
             result_info.update({
                 "result_code": 5,
                 "result_msg": state,
             })
-        # elif '待付款' in state:
-        #     result_info.update({
-        #         "result_code": 2,
-        #         "result_msg": state,
-        #     })
-        elif '已付款确认' in state:
+        elif '失败' in state:
+            result_info.update({
+                "result_code": 5,
+                "result_msg": state,
+            })
+        elif '已付款确认' in state and code:
             no, code, site, raw_order = ret['pick_no'], ret[
                 'pick_code'], ret['pick_site'], ret['raw_order']
             dx_info = {
@@ -293,7 +300,8 @@ class Flow(BaseFlow):
         # 检测是否取到code
         def check_code_status(code, order):
             try:
-                key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+                key = "pay_login_info_%s_%s" % (
+                    order.order_no, order.source_account)
                 info = json.loads(session[key])
                 headers = info['headers']
                 cookies = info['cookies']
@@ -333,7 +341,9 @@ class Flow(BaseFlow):
                 return {"flag": "html", "content": r.content}
         # 登录验证码
         if valid_code:
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            key = "pay_login_info_%s_%s" % (
+                order.order_no, order.source_account)
+            # rebot_log.info('233333' + key)
             info = json.loads(session[key])
             headers = info["headers"]
             cookies = info["cookies"]
@@ -349,10 +359,10 @@ class Flow(BaseFlow):
             custom_headers.update(
                 {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'})
             r = rebot.http_post("http://www.hn96520.com/member/ajax/login.aspx",
-                              data=urllib.urlencode(params),
-                              headers=custom_headers,
-                              allow_redirects=False,
-                              cookies=cookies)
+                                data=urllib.urlencode(params),
+                                headers=custom_headers,
+                                allow_redirects=False,
+                                cookies=cookies)
             cookies.update(dict(r.cookies))
             rebot.modify(cookies=json.dumps(cookies))
         # try:
@@ -366,7 +376,8 @@ class Flow(BaseFlow):
         # rebot.save()
 
         # 检查vcode, 更新到extra_info
-        check_code_status(valid_code, order)
+        if valid_code:
+            check_code_status(valid_code, order)
 
         # 已经登录, 而且取到code
         if is_login and order.extra_info.get('code', ''):
@@ -387,12 +398,14 @@ class Flow(BaseFlow):
                 "headers": headers,
                 "valid_url": valid_url,
             }
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            key = "pay_login_info_%s_%s" % (
+                order.order_no, order.source_account)
             session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
         # 未取到code
         elif not order.extra_info.get('code', ''):
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            key = "pay_login_info_%s_%s" % (
+                order.order_no, order.source_account)
             try:
                 info = json.loads(session[key])
                 headers = info["headers"]
