@@ -29,7 +29,8 @@ class Flow(BaseFlow):
         rebot = order.get_lock_rebot()
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
-        url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(code)
+        url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(
+            code)
         r = rebot.http_get(url, headers=headers, cookies=cookies)
         if 'true' in r.content:
             order.modify(extra_info={"code": code})
@@ -67,17 +68,20 @@ class Flow(BaseFlow):
             'o': '0',
             #'tSum': line.full_price*2,
             'tSum': line.full_price,
-            'takemanIds': ","+",".join(riders),
+            'takemanIds': "," + ",".join(riders),
             'tid': line.extra_info.get('t', ''),
             'txtCode': valid_code,
         }
         url = 'http://www.hn96520.com/putin.aspx?' + urllib.urlencode(param)
+        rebot_log.info(url)
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
         # 买票, 添加乘客, 购买班次
         for x in xrange(1):
-            r = rebot.http_get(url, headers=headers, cookies=cookies, data=urllib.urlencode(param))
-            errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+            r = rebot.http_get(url, headers=headers,
+                               cookies=cookies, data=urllib.urlencode(param))
+            errlst = re.findall(
+                r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
             errmsg = unicode(errlst and errlst[0] or "")
             if errmsg:
                 lock_result.update({
@@ -220,8 +224,8 @@ class Flow(BaseFlow):
                 "result_msg": state,
             })
         elif '已付款确认' in state and code:
-            no, code, site, raw_order = ret['pick_no'], ret[
-                'pick_code'], ret['pick_site'], ret['raw_order']
+            no, site, raw_order = ret['pick_no'], ret[
+                'pick_site'], ret['raw_order']
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
@@ -310,7 +314,8 @@ class Flow(BaseFlow):
 
         # 登录验证码
         if valid_code and not is_login:
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            key = "pay_login_info_%s_%s" % (
+                order.order_no, order.source_account)
             info = json.loads(session[key])
             headers = info["headers"]
             cookies = info["cookies"]
@@ -326,10 +331,10 @@ class Flow(BaseFlow):
             custom_headers.update(
                 {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'})
             r = rebot.http_post("http://www.hn96520.com/member/ajax/login.aspx",
-                              data=urllib.urlencode(params),
-                              headers=custom_headers,
-                              allow_redirects=False,
-                              cookies=cookies)
+                                data=urllib.urlencode(params),
+                                headers=custom_headers,
+                                allow_redirects=False,
+                                cookies=cookies)
             cookies.update(dict(r.cookies))
             rebot.modify(cookies=json.dumps(cookies))
 
@@ -345,7 +350,8 @@ class Flow(BaseFlow):
                         "headers": {"User-Agent": rebot.user_agent},
                         "valid_url": "http://www.hn96520.com/verifycode.aspx",
                     }
-                    key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+                    key = "pay_login_info_%s_%s" % (
+                        order.order_no, order.source_account)
                     session[key] = json.dumps(data)
                     return {"flag": "input_code", "content": ""}
 
@@ -380,7 +386,8 @@ class Flow(BaseFlow):
                 "headers": headers,
                 "valid_url": valid_url,
             }
-            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
+            key = "pay_login_info_%s_%s" % (
+                order.order_no, order.source_account)
             session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
 
