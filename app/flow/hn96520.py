@@ -80,6 +80,14 @@ class Flow(BaseFlow):
         for x in xrange(1):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param))
+            if '调用异常' in r.url.decode('gbk').encode('utf8'):
+                errmsg = '调用异常'
+                lock_result.update({
+                       'result_code': 5,
+                       "source_account": rebot.telephone,
+                       "result_reason": errmsg,
+                   })
+                return lock_result
             errlst = re.findall(
                 r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
             errmsg = unicode(errlst and errlst[0] or "")
