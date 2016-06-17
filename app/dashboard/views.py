@@ -507,10 +507,16 @@ def dealing_order():
         if o.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK, STATUS_WAITING_ISSUE]:
             continue
         o.complete_by(current_user)
+    total = assign.waiting_lock_size()
+    if total > 15:
+        kf_order_cnt = 5
+    else:
+        kf_order_cnt = 3
+
     if current_user.is_switch and not current_user.is_close:
         for i in range(2):
             order_ct = assign.dealing_size(current_user)
-            if order_ct >= KF_ORDER_CT:
+            if order_ct >= kf_order_cnt:
                 break
             order = assign.dequeue_wating_lock(current_user)
             if not order:
