@@ -220,7 +220,7 @@ class Flow(BaseFlow):
             })
         elif '失败' in state:
             result_info.update({
-                "result_code": 5,
+                "result_code": 2,
                 "result_msg": state,
             })
         elif '已付款确认' in state and code:
