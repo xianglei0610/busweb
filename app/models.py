@@ -2220,7 +2220,12 @@ class CqkyWebRebot(Rebot):
         cookies = json.loads(self.cookies)
         r = self.http_get(user_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
-        tel = soup.select_one("#ctl00_FartherMain_txt_Mobile").get("value")
+        tel_dom = soup.select_one("#ctl00_FartherMain_txt_Mobile")
+        if not tel_dom:
+            self.modify(ip="")
+            return 0
+
+        tel = tel_dom.get("value")
         if tel != self.telephone:
             if tel: # 问题代理ip嫌疑
                 get_proxy("cqky").set_black(self.proxy_ip)
