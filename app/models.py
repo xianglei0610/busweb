@@ -208,7 +208,6 @@ class Line(db.Document):
         """
         传给客户端的格式和数据，不能轻易修改！
         """
-        delta = self.drv_datetime - dte.now()
         left_tickets = self.left_tickets
         return {
             "line_id": self.line_id,

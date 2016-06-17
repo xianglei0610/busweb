@@ -82,6 +82,60 @@ class LoginInView(MethodView):
             return redirect(url_for('dashboard.login'))
 
 
+class SubmitOrder(MethodView):
+    @login_required
+    def get(self, line_id):
+        line = Line.objects.get_or_404(line_id=line_id)
+        return render_template('dashboard/line-submit.html',
+                               line=line,
+                               api_url="http://localhost:8000")
+
+    @login_required
+    def post(self, line_id):
+        line = Line.objects.get_or_404(line_id=line_id)
+        fd = request.form
+        data = {
+            "line_id": line_id,
+            "out_order_no": str(int(time.time()*1000)),
+            "rider_info": [
+                {                                                       # 乘客信息
+                    "name": fd.get("rider1_name"),                      # 名字
+                    "telephone": fd.get("rider1_phone"),                # 手机
+                    "id_type": 1,                                       # 证件类型
+                    "id_number": fd.get("rider1_idcard"),               # 证件号
+                    "age_level": 1,                                     # 大人 or 小孩
+                },
+                {                                                       # 乘客信息
+                    "name": fd.get("rider2_name"),                      # 名字
+                    "telephone": fd.get("rider2_phone"),                # 手机
+                    "id_type": 1,                                       # 证件类型
+                    "id_number": fd.get("rider2_idcard"),               # 证件号
+                    "age_level": 1,                                     # 大人 or 小孩
+                },
+                {                                                       # 乘客信息
+                    "name": fd.get("rider3_name"),                      # 名字
+                    "telephone": fd.get("rider3_phone"),                # 手机
+                    "id_type": 1,                                       # 证件类型
+                    "id_number": fd.get("rider3_idcard"),               # 证件号
+                    "age_level": 1,                                     # 大人 or 小孩
+                },
+            ],
+            "locked_return_url": fd.get("lock_url"),
+            "issued_return_url": fd.get("issue_url"),
+        }
+
+        for d in copy.copy(data["rider_info"]):
+            if not d["name"]:
+                data["rider_info"].remove(d)
+        data["contact_info"] = data["rider_info"][0]
+        data["order_price"] = line.real_price()*len(data["rider_info"])
+
+        api_url = urllib2.urlparse.urljoin(fd.get("api_url"), "/orders/submit")
+        r = requests.post(api_url, data=json.dumps(data))
+        ret = r.json()
+        return redirect(url_for('admin.order_list'))
+
+
 class YiChangeOP(MethodView):
     @login_required
     def get(self, order_no):
@@ -632,6 +686,7 @@ def fangbian_callback():
 
 dashboard.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 dashboard.add_url_rule("/orders/<order_no>/yichang", view_func=YiChangeOP.as_view('yichang'))
+dashboard.add_url_rule("/lines/<line_id>/submit", view_func=SubmitOrder.as_view('submit_order'))
 
 
 @dashboard.route('/users/config', methods=["POST"])
