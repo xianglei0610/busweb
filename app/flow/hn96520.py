@@ -83,7 +83,7 @@ class Flow(BaseFlow):
             if '调用异常' in r.url.decode('gbk').encode('utf8'):
                 errmsg = '调用异常'
                 lock_result.update({
-                       'result_code': 5,
+                       'result_code': 0,
                        "source_account": rebot.telephone,
                        "result_reason": errmsg,
                    })
