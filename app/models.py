@@ -792,6 +792,7 @@ class Hn96520WebRebot(Rebot):
     userid = db.StringField()
     sign = db.StringField()
     ip = db.StringField(default="")
+
     # indexes索引, 'collections'
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -863,23 +864,6 @@ class Hn96520WebRebot(Rebot):
                 # rebot_log.info(delurl)
                 self.http_get(delurl, headers=headers, cookies=cookies)
 
-    def add_riders2(self, order):
-        id_lst = []
-        riders = order.riders
-        headers = {'User-Agent': self.user_agent}
-        cookies = json.loads(self.cookies)
-        for rider in riders:
-            name = rider.get('name', '')
-            cardid = rider.get('id_number', '')
-            sel = rider.get('telephone', '')
-            addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid={0}&name={1}&cardid={2}&sel={3}'.format(self.memid, name, cardid, sel)
-            r = self.http_get(addurl, headers=headers, cookies=cookies)
-            if r.content != '0':
-                id_lst.append(r.content)
-            else:
-                pass
-        return id_lst
-
     def add_riders(self, order):
         url = "http://www.hn96520.com/member/modify.aspx"
         headers = {
@@ -919,29 +903,6 @@ class Hn96520WebRebot(Rebot):
         if tel == self.telephone:
             return 1
         return 0
-
-    def check_login2(self):
-        # self.is_locked = True
-        # self.save()
-        undone_order_url = "http://www.hn96520.com/member/modify.aspx"
-        headers = {"User-Agent": self.user_agent}
-        try:
-            cookies = json.loads(self.cookies)
-        except:
-            cookies = ''
-        r = self.http_get(undone_order_url, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, "lxml")
-        try:
-            tel = soup.find('input', attrs={'id': 'txtHandset', 'name': 'txtHandset'}).get('value').strip()
-        except:
-            tel = 0
-        if tel == self.telephone:
-            cookies.update(r.cookies)
-            return 1
-        else:
-            self.cookies = "{}"
-            self.save()
-            return 0
 
     # 初始化帐号
     def login(self):
