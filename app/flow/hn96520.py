@@ -82,6 +82,8 @@ class Flow(BaseFlow):
                                cookies=cookies, data=urllib.urlencode(param))
             errlst = re.findall(
                 r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+            print r.url
+            print urllib.unquote(r.url.decode("gbk").encode("utf8"))
             errmsg = unicode(errlst and errlst[0] or "")
             if errmsg:
                 lock_result.update({
