@@ -80,7 +80,7 @@ class Flow(BaseFlow):
         for x in xrange(1):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param))
-            urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8')
+            urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
             if '调用异常' in urlstr or '可售票额不足' in urlstr:
                 lock_result.update({
                     'result_code': 0,
