@@ -10,6 +10,8 @@ import assign
 import traceback
 import csv
 import StringIO
+import copy
+import urllib2
 
 from datetime import datetime as dte, timedelta
 from app.utils import md5, create_validate_code
@@ -133,7 +135,8 @@ class SubmitOrder(MethodView):
         api_url = urllib2.urlparse.urljoin(fd.get("api_url"), "/orders/submit")
         r = requests.post(api_url, data=json.dumps(data))
         ret = r.json()
-        return redirect(url_for('admin.order_list'))
+        flash(ret["message"])
+        return redirect(url_for('dashboard.my_order'))
 
 
 class YiChangeOP(MethodView):
