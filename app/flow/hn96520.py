@@ -82,15 +82,15 @@ class Flow(BaseFlow):
                                cookies=cookies, data=urllib.urlencode(param))
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8')
             if '调用异常' in urlstr or '可售票额不足' in urlstr:
-                errmsg = '调用异常'
                 lock_result.update({
-                       'result_code': 5,
-                       "source_account": rebot.telephone,
-                       "result_reason": errmsg,
-                   })
+                    'result_code': 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": urlstr,
+                })
                 return lock_result
             errlst = re.findall(
                 r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+
             errmsg = unicode(errlst and errlst[0] or "")
             if errmsg:
                 lock_result.update({
