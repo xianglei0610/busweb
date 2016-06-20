@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title></title>
+		<style>
+			.container {
+				width: 90%;
+			}
+		</style>
+    </head>
+<body>
+    <div class="container" style="padding-bottom: 10px;">
+        <form class="form-horizontal" action="/lines/{{line.line_id}}/submit" method="POST">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-xs-3">
+                            <label>乘车人姓名</label>
+                        </div>
+                        <div class="col-xs-4">
+                            <label>手机号码</label>
+                        </div>
+                        <div class="col-xs-5">
+                            <label>身份证</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-3">
+                            <input name="rider1_name" type="text" class="form-control" placeholder="姓名">
+                        </div>
+                        <div class="col-xs-4">
+                            <input name="rider1_phone" type="text" class="form-control" placeholder="手机">
+                        </div>
+                        <div class="col-xs-5">
+                            <input name="rider1_idcard" type="text" class="form-control" placeholder="身份证">
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top: 5px;">
+                        <div class="col-xs-3">
+                            <input name="rider2_name" type="text" class="form-control" placeholder="姓名">
+                        </div>
+                        <div class="col-xs-4">
+                            <input name="rider2_phone" type="text" class="form-control" placeholder="手机">
+                        </div>
+                        <div class="col-xs-5">
+                            <input name="rider2_idcard" type="text" class="form-control" placeholder="身份证">
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top: 5px;">
+                        <div class="col-xs-3">
+                            <input name="rider3_name" type="text" class="form-control" placeholder="姓名">
+                        </div>
+                        <div class="col-xs-4">
+                            <input name="rider3_phone" type="text" class="form-control" placeholder="手机">
+                        </div>
+                        <div class="col-xs-5">
+                            <input name="rider3_idcard" type="text" class="form-control" placeholder="身份证">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-default" style="margin: 5px 0px;">
+                <div class="panel-body">
+                    <div class="row" >
+                        <div class="col-xs-6">
+                            <input name="lock_url" type="text" class="form-control" placeholder="锁票回调地址">
+                        </div>
+                        <div class="col-xs-6">
+                            <input name="issue_url" type="text" class="form-control" placeholder="出票回调地址">
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top:5px">
+                        <div class="col-xs-6">
+                            <input name="api_url" value="{{api_url}}" type="text" class="form-control" placeholder="API地址">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <input class="btn btn-default col-xs-offset-5" type="submit" value="提交订单">
+        </form>
+        </div>
+    </body>
+</html>

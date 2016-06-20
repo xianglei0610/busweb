@@ -81,16 +81,25 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param))
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
+<<<<<<< HEAD
             if '调用异常' in urlstr or '可售票额不足' in urlstr or '不存在' in urlstr or '停班' in urlstr:
                 errmsg = '可售票额不足'
                 lock_result.update({
                     'result_code': 0,
                     "source_account": rebot.telephone,
                     "result_reason": errmsg,
+=======
+            if '调用异常' in urlstr or '可售票额不足' in urlstr:
+                lock_result.update({
+                    'result_code': 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": urlstr,
+>>>>>>> e342599cd8cf7d382ec4af74799c8872c16a36ef
                 })
                 return lock_result
             errlst = re.findall(
                 r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+
             errmsg = unicode(errlst and errlst[0] or "")
             if errmsg:
                 lock_result.update({
@@ -399,140 +408,3 @@ class Flow(BaseFlow):
                 order.order_no, order.source_account)
             session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
-
-    def get_pay_page2(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
-        rebot = order.get_lock_rebot()
-
-        # 检测是否取到code
-        def check_code_status(code, order):
-            try:
-                key = "pay_login_info_%s_%s" % (
-                    order.order_no, order.source_account)
-                info = json.loads(session[key])
-                headers = info['headers']
-                cookies = info['cookies']
-            except:
-                cookies = ''
-                headers = ''
-            url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(
-                code)
-            r = rebot.http_get(url, headers=headers, cookies=cookies)
-            if 'true' in r.content:
-                order.modify(extra_info={"code": code})
-                return 1
-            else:
-                return 0
-
-        # 获取alipay付款界面
-        def _get_page(rebot):
-            if order.status == STATUS_WAITING_ISSUE:
-                pay_url = "http://www.hn96520.com/pay.aspx"
-                headers = {
-                    "User-Agent": rebot.user_agent,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                }
-                params = {
-                    'o': '0',
-                    "h_code": order.raw_order_no,
-                    "paymentType": 202,  # alipay参数
-                }
-                cookies = json.loads(rebot.cookies)
-                r = rebot.http_post(pay_url, data=urllib.urlencode(
-                    params), headers=headers, cookies=cookies)
-                data = self.extract_alipay(r.content)
-                pay_money = float(data["total_fee"])
-                trade_no = data["out_trade_no"]
-                if order.pay_money != pay_money or order.pay_order_no != trade_no:
-                    order.modify(pay_money=pay_money, pay_order_no=trade_no)
-                return {"flag": "html", "content": r.content}
-        # 登录验证码
-        if valid_code:
-            key = "pay_login_info_%s_%s" % (
-                order.order_no, order.source_account)
-            # rebot_log.info('233333' + key)
-            info = json.loads(session[key])
-            headers = info["headers"]
-            cookies = info["cookies"]
-            params = {
-                "userid": rebot.telephone,
-                "pwd": rebot.password,
-                "vcode": valid_code,
-            }
-            custom_headers = {}
-            custom_headers.update(headers)
-            custom_headers.update(
-                {"X-Requested-With": "XMLHttpRequest"})
-            custom_headers.update(
-                {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'})
-            r = rebot.http_post("http://www.hn96520.com/member/ajax/login.aspx",
-                                data=urllib.urlencode(params),
-                                headers=custom_headers,
-                                allow_redirects=False,
-                                cookies=cookies)
-            cookies.update(dict(r.cookies))
-            rebot.modify(cookies=json.dumps(cookies))
-        # try:
-        #     is_login
-        # except:
-        #     is_login = 0
-        # if rebot.is_locked and not is_login:
-        #     rebot.change_lock_rebot()
-        is_login = rebot.test_login_status()
-        # rebot.is_locked = True
-        # rebot.save()
-
-        # 检查vcode, 更新到extra_info
-        if valid_code:
-            check_code_status(valid_code, order)
-
-        # 已经登录, 而且取到code
-        if is_login and order.extra_info.get('code', ''):
-            # 锁票
-            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-                self.lock_ticket(order)
-            # rebot.is_locked = False
-            # rebot.save()
-            return _get_page(rebot)
-        # 未登录
-        elif not is_login:
-            valid_url = 'http://www.hn96520.com/membercode.aspx'
-            ua = random.choice(BROWSER_USER_AGENT)
-            headers = {"User-Agent": ua}
-            r = rebot.http_get(valid_url, headers=headers)
-            data = {
-                "cookies": dict(r.cookies),
-                "headers": headers,
-                "valid_url": valid_url,
-            }
-            key = "pay_login_info_%s_%s" % (
-                order.order_no, order.source_account)
-            session[key] = json.dumps(data)
-            return {"flag": "input_code", "content": ""}
-        # 未取到code
-        elif not order.extra_info.get('code', ''):
-            key = "pay_login_info_%s_%s" % (
-                order.order_no, order.source_account)
-            try:
-                info = json.loads(session[key])
-                headers = info["headers"]
-                cookies = info["cookies"]
-                valid_url = 'http://www.hn96520.com/verifycode.aspx'
-                data = {
-                    "cookies": cookies,
-                    "headers": headers,
-                    "valid_url": valid_url,
-                }
-                session[key] = json.dumps(data)
-                return {"flag": "input_code", "content": ""}
-            except:
-                valid_url = 'http://www.hn96520.com/verifycode.aspx'
-                ua = random.choice(BROWSER_USER_AGENT)
-                headers = {"User-Agent": ua}
-                r = rebot.http_get(valid_url, headers=headers)
-                data = {
-                    "cookies": dict(r.cookies),
-                    "headers": headers,
-                    "valid_url": valid_url,
-                }
-                session[key] = json.dumps(data)
-                return {"flag": "input_code", "content": ""}
