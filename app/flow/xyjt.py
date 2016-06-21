@@ -339,34 +339,41 @@ class Flow(BaseFlow):
         soup = bs(r.content, 'lxml')
         info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GVBccx'}).find_all(
             'tr', attrs={'class': True})
-        crawl_source = "xyjt"
         now = dte.now()
         update_attrs = {}
         ft = Line.objects.filter(s_city_name=line.s_city_name,
                                  d_city_name=line.d_city_name, drv_date=line.drv_date)
         t = {x.line_id: x for x in ft}
-        s_city_name = line.s_city_name
         update_attrs = {}
         for x in info[1:]:
             try:
                 y = x.find_all('td')
                 drv_date = y[0].get_text().strip()
-                bus_num = y[2].get_text().strip()
+                s_sta_name = y[1].get_text().strip()
                 d_city_name = y[3].get_text().strip()
                 drv_time = y[5].get_text().strip()
                 left_tickets = int(y[8].get_text().strip())
                 drv_datetime = dte.strptime("%s %s" % (
                     drv_date, drv_time), "%Y-%m-%d %H:%M")
 
+                #line_id_args = {
+                #    's_city_name': s_city_name,
+                #    'd_city_name': d_city_name,
+                #    'bus_num': bus_num,
+                #    'crawl_source': crawl_source,
+                #    'drv_datetime': drv_datetime,
+                #}
+                #line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+
                 line_id_args = {
-                    's_city_name': s_city_name,
-                    'd_city_name': d_city_name,
-                    'bus_num': bus_num,
-                    'crawl_source': crawl_source,
-                    'drv_datetime': drv_datetime,
+                    "s_city_name": line.s_city_name,
+                    "d_city_name": line.d_city_name,
+                    "s_sta_name": s_sta_name,
+                    "d_sta_name": d_city_name,
+                    "crawl_source": line.crawl_source,
+                    "drv_datetime": drv_datetime,
                 }
-                line_id = md5(
-                    "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
                     t[line_id].update(
                         **{"left_tickets": left_tickets, "refresh_datetime": now})
