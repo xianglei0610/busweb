@@ -31,6 +31,8 @@ SOURCE_XINTUYUN = 'xintuyun'
 SOURCE_HN96520 = 'hn96520'
 SOURCE_CCW = 'ccw'
 SOURCE_XYJT = 'xyjt'
+SOURCE_GDSW = "gdsw"    # 广东省网
+
 
 PAY_TYPE_SOURCE = {
     "zfb": [SOURCE_BUS100,
@@ -51,6 +53,13 @@ PAY_TYPE_SOURCE = {
 }
 
 SOURCE_INFO = {
+    SOURCE_GDSW: {
+        "name": "广东省网",
+        "website": "http://ticket.gdcd.gov.cn/",
+        "accounts": {
+            "15575101324": ("12346", "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI4OTllNjk2YS0xNzE4LTQ5ZDYtYmI0ZS01Y2U5OTYyNDJjNzQiLCJpYXQiOjE0NjY0MDcxODksImp0aSI6IjkyNTM2ZThmLWVlMjItNDgzMi05YzM5LTE5OTA3NTBlZGJhMCIsIm5hbWUiOiIxNTU3NTEwMTMyNCIsImNoYW5uZWwiOiIyIiwic2hhcmVka2V5IjoiMTIzNGFiY2QifQ.uvvLSIYCfdqrfTnBLpiaW0LcCBk7KunzigY71Le43sY")
+        },
+    },
     SOURCE_TZKY: {
         "name": "泰州客运",
         "website": "www.tzfeilu.com",
