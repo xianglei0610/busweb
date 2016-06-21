@@ -9,7 +9,7 @@ import urllib
 import datetime
 import random
 from bs4 import BeautifulSoup as bs
-from PIL import Image
+# from PIL import Image
 
 from app.constants import *
 from datetime import datetime as dte
@@ -17,7 +17,10 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5
 from app import rebot_log
-import cStringIO
+# import cStringIO
+from selenium import webdriver
+# from cchardet import detect
+# import ipdb
 
 
 class Flow(BaseFlow):
@@ -36,91 +39,223 @@ class Flow(BaseFlow):
             "pay_money": 0,
         }
         rebot = order.get_lock_rebot()
-        riders = rebot.add_riders(order)
-        takeman = ''
-        for rider in riders.values():
-            takeman += ',' + str(rider)
         line = order.line
-        param = {
-            'bc': line.extra_info.get('bc', ''),
-            'date': line.extra_info.get('date', ''),
-            'global': line.extra_info.get('g', ''),
-            'o': '0',
-            'tSum': line.full_price,
-            'takemanIds': takeman,
-            'tid': line.extra_info.get('t', ''),
-            'txtCode': order.extra_info.get('code'),
-        }
-        rebot_log.info(param)
-        url = 'http://www.hn96520.com/putin.aspx?' + urllib.urlencode(param)
-        cookies = json.loads(rebot.cookies)
+        pk = len(order.riders)
         headers = {'User-Agent': rebot.user_agent}
-        # 买票, 添加乘客, 购买班次
-        r = requests.get(url, headers=headers, cookies=cookies)
+        headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        headers['Host'] = 'order.xuyunjt.com'
+        data = line.extra_info
+        for x, y in data.items():
+            data[x] = y.encode('utf-8')
+        url = 'http://order.xuyunjt.com/wsdgnetorder.aspx?' + \
+            urllib.urlencode(data)
+        r = requests.get(url, headers=headers, data=urllib.urlencode(data))
         soup = bs(r.content, 'lxml')
+        state = soup.find(
+            'input', attrs={'name': '__VIEWSTATE', 'id': '__VIEWSTATE'}).get('value', '')
+        validation = soup.find('input', attrs={
+            'name': '__EVENTVALIDATION', 'id': '__EVENTVALIDATION'}).get('value', '')
+        data = {}
+        data = {
+            '__EVENTTARGET': '',
+            '__EVENTARGUMENT': '',
+            '__VIEWSTATE': state,
+            '__EVENTVALIDATION': validation,
+            'ctl00$ContentPlaceHolder1$txtjp_price': line.half_price,
+            'ctl00$ContentPlaceHolder1$txttp_price': line.half_price,
+            'ctl00$ContentPlaceHolder1$txtqp_price': line.full_price * pk,
+            'ctl00$ContentPlaceHolder1$txtoffer_price': '0',
+            'ctl00$ContentPlaceHolder1$ddlqp': pk,
+            'ctl00$ContentPlaceHolder1$ddljp': '0',
+            'ctl00$ContentPlaceHolder1$ddltp': '0',
+            'ctl00$ContentPlaceHolder1$txttotal': pk,
+            'ctl00$ContentPlaceHolder1$txttotalprice': line.full_price * pk,
+            'ctl00$ContentPlaceHolder1$txtcardno': order.contact_info.get('id_number'),
+            'ctl00$ContentPlaceHolder1$Imgbtnsubmit.x': '48',
+            'ctl00$ContentPlaceHolder1$Imgbtnsubmit.y': '7',
+        }
+        r = requests.post(url, headers=headers,
+                          cookies=r.cookies, data=urllib.urlencode(data))
+        soup = bs(r.content, 'lxml')
+        cardno = soup.find('input', attrs={'name': 'cardno'}).get(
+            'value').strip()
+        selectedseat = soup.find(
+            'input', attrs={'name': 'selectedseat'}).get('value').strip()
+        # print cardno, selectedseat
+        # rebot_log.info(cardno + selectedseat)
+        url = 'http://order.xuyunjt.com/wsdgnetcheck.aspx'
+        data = {
+            'buscode': line.extra_info.get('buscode'),
+            'drivedate': line.extra_info.get('drivedate'),
+            'plantime': line.extra_info.get('ccz').encode('utf-8') + ' ' + line.extra_info.get('time').encode('utf-8'),
+            'selectedseat': selectedseat,
+            'dstname': line.extra_info.get('dstname').encode('utf-8'),
+            'incountry': line.extra_info.get('incountry'),
+            'qp': pk,
+            'jp': '0',
+            'tp': '0',
+            'total': pk,
+            'cardno': cardno,
+            'totalprice': line.full_price * pk,
+        }
+        data = urllib.urlencode(data)
+        r = requests.post(url, headers=headers, cookies=r.cookies, data=data)
+        soup = bs(r.content, 'lxml')
+        state = soup.find(
+            'input', attrs={'name': '__VIEWSTATE', 'id': '__VIEWSTATE'}).get('value', '')
+        validation = soup.find('input', attrs={
+            'name': '__EVENTVALIDATION', 'id': '__EVENTVALIDATION'}).get('value', '')
+        data = {
+            '__VIEWSTATE': state,
+            '__EVENTVALIDATION': validation,
+            'ctl00$ContentPlaceHolder1$hdfincountry': line.extra_info.get('incountry'),
+            'ctl00$ContentPlaceHolder1$hdfselectedseat': selectedseat,
+            'ctl00$ContentPlaceHolder1$alipaygroup': 'RBtnAlipay',
+            'ctl00$ContentPlaceHolder1$Imgbtnsubmit.x': '55',
+            'ctl00$ContentPlaceHolder1$Imgbtnsubmit.y': '19',
+            'ctl00$ContentPlaceHolder1$TxtSubject': '徐运集团--长途汽车票',
+            'ctl00$ContentPlaceHolder1$TxtBody': '',
+        }
+        cks = r.cookies
+        # rebot_log.info(cks)
+        r = requests.post(url, headers=headers, cookies=cks,
+                          data=urllib.urlencode(data))
+        soup = bs(r.content, 'lxml')
+        no = soup.find(
+            'span', attrs={'id': 'ctl00_ContentPlaceHolder1_lblout_trade_no'}).get_text()
+        # ticketmessage = soup.find(
+        #     'input', attrs={'name': 'ticketmessage'}).get('value').strip()
+        # strconfirm = soup.find(
+        #     'input', attrs={'name': 'strconfirm'}).get('value').strip()
+        # rebot_log.info(no)
+        # rebot_log.info(ticketmessage)
+        # rebot_log.info(strconfirm)
+        # print soup.form
+        # lurl = 'http://order.xuyunjt.com/lastsubmit.aspx'
+        # data = {}
+        # data = {
+        #     'sel': '0',
+        #     'bespoke_id': no,
+        #     'cardno': cardno,
+        #     'number': '1',
+        #     'money': line.full_price * pk,
+        #     'ticketmessage': ticketmessage.encode('utf-8'),
+        #     'strconfirm': strconfirm.encode('utf-8'),
+        # }
+        # headers['Referer'] = 'http://order.xuyunjt.com/wsdgnetcheck.aspx'
+        # headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        # r = requests.post(lurl, headers=headers, cookies=cks,
+        #                   data=urllib.urlencode(data))
+        # soup = bs(r.content, 'lxml')
+        # # rebot_log.info(soup)
+        # state = soup.find(
+        #     'input', attrs={'name': '__VIEWSTATE', 'id': '__VIEWSTATE'}).get('value', '')
+        # validation = soup.find('input', attrs={
+        #     'name': '__EVENTVALIDATION', 'id': '__EVENTVALIDATION'}).get('value', '')
+        # data = {}
+        # data = {
+        #     '__VIEWSTATE': state,
+        #     '__EVENTVALIDATION': validation,
+        #     'ctl00$ContentPlaceHolder1$Imgbtnsubmit2.x': '124',
+        #     'ctl00$ContentPlaceHolder1$Imgbtnsubmit2.y': '19',
+        #     'ctl00$ContentPlaceHolder1$HDFcardno': cardno,
+        #     'ctl00$ContentPlaceHolder1$HDFbespoke_id': no,
+        #     'ctl00$ContentPlaceHolder1$hdfalipay_url': '',
+        # }
+        # r = requests.post(lurl, headers=headers, cookies=cks,
+        #                   data=urllib.urlencode(data))
+        # soup = bs(r.content, 'lxml')
+        lurl = 'http://order.xuyunjt.com/lastsubmit.aspx'
+        dr = webdriver.PhantomJS()
+        tmp = {u'domain': u'xuyunjt.com',
+               u'name': '',
+               u'httpOnly': False,
+               u'path': u'/',
+               u'secure': False,
+               u'value': ''}
+        for k, v in cks.items():
+            tmp['name'] = k
+            tmp['value'] = v
         try:
-            title = soup.title
-            info = soup.find('table', attrs={
-                             'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
-            pay_money = info[-1].find_all('td')[-1].get_text()
-            pay_money = float(re.search(r'\d+', pay_money).group(0))
-            raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
-                'value').split('=')[-1]
-
-            if '准备付款' in title:
-                # rebot_log.info('添加订单成功')
-                expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-                lock_result.update({
-                    'result_code': 1,
-                    'raw_order_no': raw_order_no,
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                    'pay_money': pay_money,
-                })
-                # rebot_log.info(lock_result)
-            else:
-                errmsg = title
-                lock_result.update({
-                    'result_code': 0,
-                    "result_reason": errmsg,
-                    "expire_datetime": expire_time,
-                    "source_account": rebot.telephone,
-                    'pay_money': 0,
-                })
-            # 删除之前乘客
-            rebot.clear_riders(riders)
-            return lock_result
+            dr.add_cookie(tmp)
         except:
-            rebot.clear_riders(riders)
+            pass
+        dr.get(lurl)
+        try:
+            dr.find_element_by_id(
+                "ctl00_ContentPlaceHolder1_Imgbtnsubmit2").click()
+        except:
+            pass
+        soup = bs(dr.page_source, 'lxml')
+        pay_url = soup.find_all('script')[-1].get_text()
+        pay_url = pay_url.split("'")[1].strip()
+        # dr.get(pay_url)
+        # rebot_log.info(pay_url)
+        # r = requests.get(lurl, headers=headers, cookies=cks)
+        # soup = bs(r.content, 'lxml')
+        if '在线支付确认' in soup.title.get_text() and pay_url:
+            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+            cookies = {}
+            for x, y in cks.items():
+                cookies[x] = y
+            order.modify(extra_info={'cookies': json.dumps(
+                cookies), 'pay_url': pay_url})
+            lock_result.update({
+                'result_code': 1,
+                'raw_order_no': no,
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                'pay_money': 0,
+            })
+            return lock_result
+        else:
+            lock_result.update({
+                'result_code': 2,
+                "lock_info": {"fail_reason": soup.title.get_text()}
+            })
+            return lock_result
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
         sn = order.pay_order_no
-        sign = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-1]
-        # sign = '90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a'
-        username = order.source_account
-        password = md5(order.source_account_pass)
-        url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(
-            username, password, sign, time.time())
-        # rebot_log.info(url)
+        url = 'http://order.xuyunjt.com/wsdgalipayddcx.aspx'
         headers = {
             "User-Agent": rebot.user_agent,
         }
+        headers['Content-Type'] = 'application/x-www-form-urlencoded'
         r = requests.get(url, headers=headers)
-        # requests.get(url, headers=headers, cookies=r.cookies)
-        userid = json.loads(r.content[r.content.index(
-            "(") + 1: r.content.rindex(")")]).get('UserId', '')
-        ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
-            userid, sign, time.time())
-        r = requests.get(ourl, headers=headers, cookies=r.cookies, timeout=2048)
-        # rebot_log.info(ourl)
-        info = json.loads(r.content[r.content.index(
-            "(") + 1: r.content.rindex(")")]).get('OrderList', [])
-        for x in info:
-            ocode = x['OrderCode']
-            if sn == ocode:
-                pcode = x['Password']
-                state = x['OrderStatus']
+        soup = bs(r.content, 'lxml')
+        state = soup.find(
+            'input', attrs={'name': '__VIEWSTATE', 'id': '__VIEWSTATE'}).get('value', '')
+        validation = soup.find('input', attrs={
+            'name': '__EVENTVALIDATION', 'id': '__EVENTVALIDATION'}).get('value', '')
+        data = {
+            '__EVENTTARGET': '',
+            '__EVENTARGUMENT': '',
+            '__LASTFOCUS': '',
+            '__VIEWSTATE': state,
+            '__EVENTVALIDATION': validation,
+            'ctl00$ContentPlaceHolder1$txtbespoke_id': order.raw_order_no,
+            'ctl00$ContentPlaceHolder1$txtcardno': order.contact_info.get('id_number'),
+            'ctl00$ContentPlaceHolder1$ddlcond': '全部',
+            'ctl00$ContentPlaceHolder1$ImageButton1.x': '23',
+            'ctl00$ContentPlaceHolder1$ImageButton1.y': '18',
+        }
+        r = requests.post(url, headers=headers,
+                          cookies=r.cookies, data=urllib.urlencode(data))
+        soup = bs(r.content, 'lxml')
+        try:
+            info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1'}).find_all('tr', attrs={'class': 'GridViewRowStyle'})
+            for x in info:
+                sn1 = x.find('input', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_hdfbespoke_id'}).get('value', '').strip()
+                rebot_log.info(sn1)
+                if sn == sn1:
+                    state = x.find('span', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblticketstatus'}).get_text()
+                    pcode = x.find('span', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblget_ticket_passwd'}).get_text().strip()
+
+        except:
+            state = ''
+            pcode = ''
 
         return {
             "state": state,
@@ -130,41 +265,6 @@ class Flow(BaseFlow):
             'raw_order': sn,
             "pay_money": 0.0,
         }
-
-        # ocr方式取票码
-        # rebot = order.get_lock_rebot()
-        # sn = order.pay_order_no
-        # detail_url = 'http://www.hn96520.com/pick.aspx?p={0}'.format(sn)
-        # headers = {
-        #     "User-Agent": rebot.user_agent,
-        # }
-        # cookies = json.loads(rebot.cookies)
-        # r = requests.get(detail_url, headers=headers, cookies=cookies)
-        # soup = bs(r.content, "lxml")
-        # info = soup.find(
-        #     'table', attrs={'class': 'tblOrder shadow'}).find_all('tr')
-        # raw_order = info[1].find('td', attrs={'class': 'c2'}).get_text()
-        # state = info[2].find('td', attrs={'class': 'c2'}).get_text()
-        # pick_site = info[
-        #     4].find('td', attrs={'class': 'c2'}).get_text().split('[')[0]
-        # url = 'http://www.hn96520.com/text.aspx?p={0}'.format(sn)
-        # from pytesseract import image_to_string
-        # from app.utils import ecp
-        # r = requests.get(url, headers=headers, cookies=cookies)
-        # tmpIm = cStringIO.StringIO(r.content)
-        # im = Image.open(tmpIm)
-        # im = im.crop((140, 70, 225, 90)).convert(
-        #     'L').point(lambda x: 255 if x > 160 else 0)
-        # im = ecp(im, 8)
-        # code = image_to_string(im, config='-psm 7')
-        # return {
-        #     "state": state,
-        #     "pick_no": code,
-        #     "pick_code": code,
-        #     "pick_site": pick_site,
-        #     'raw_order': raw_order,
-        #     "pay_money": 0.0,
-        # }
 
     # 刷新出票
     def do_refresh_issue(self, order):
@@ -178,8 +278,8 @@ class Flow(BaseFlow):
             result_info.update(result_msg="状态未变化")
             return result_info
         ret = self.send_order_request(order)
-        # rebot_log.info(ret)
         state = ret['state']
+        code = ret['pick_code']
         if '已取消' in state:
             result_info.update({
                 "result_code": 5,
@@ -190,9 +290,8 @@ class Flow(BaseFlow):
         #         "result_code": 2,
         #         "result_msg": state,
         #     })
-        elif '已付款确认' in state:
-            no, code, site, raw_order = ret['pick_no'], ret[
-                'pick_code'], ret['pick_site'], ret['raw_order']
+        elif '已购' in state:
+            no, site, raw_order = ret['pick_no'], ret['pick_site'], ret['raw_order']
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
@@ -202,7 +301,7 @@ class Flow(BaseFlow):
                 "site": site,
                 'raw_order': raw_order,
             }
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HN96520]
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_XYJT]
             code_list = ["%s" % (code)]
             msg_list = [dx_tmpl % dx_info]
             result_info.update({
@@ -216,39 +315,39 @@ class Flow(BaseFlow):
 
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
-        pre = 'http://www.hn96520.com/placeorder.aspx?'
-        params = {
-            "start": line.s_city_name,
-            "end": line.d_city_name,
-            "global": line.extra_info["g"],
-            "date": line.extra_info["date"],
-        }
+        url = 'http://order.xuyunjt.com/wsdgbccx.aspx'
+        ste = line.extra_info.get('drivedate')
+        start_code = line.extra_info.get('incountry')
+        end = line.extra_info.get('dstname')
+        data = '''
+            ctl00$ContentPlaceHolder1$ScriptManager1=ctl00$ContentPlaceHolder1$ScriptManager1|ctl00$ContentPlaceHolder1$BtnBccx&__EVENTTARGET=&__EVENTARGUMENT=&__LASTFOCUS=&__VIEWSTATE=%2FwEPDwUKLTUzNTg5Njk5OA9kFgJmD2QWAgIDD2QWAgIHD2QWBgIFDxBkZBYBZmQCCQ8QDxYGHg1EYXRhVGV4dEZpZWxkBQlzYWxlX2RhdGUeDkRhdGFWYWx1ZUZpZWxkBQlzYWxlX2RhdGUeC18hRGF0YUJvdW5kZ2QQFRIIMjAxNjA2MTMIMjAxNjA2MTQIMjAxNjA2MTUIMjAxNjA2MTYIMjAxNjA2MTcIMjAxNjA2MTgIMjAxNjA2MTkIMjAxNjA2MjAIMjAxNjA2MjEIMjAxNjA2MjIIMjAxNjA2MjMIMjAxNjA2MjQIMjAxNjA2MjUIMjAxNjA2MjYIMjAxNjA2MjcIMjAxNjA2MjgIMjAxNjA2MjkIMjAxNjA2MzAVEggyMDE2MDYxMwgyMDE2MDYxNAgyMDE2MDYxNQgyMDE2MDYxNggyMDE2MDYxNwgyMDE2MDYxOAgyMDE2MDYxOQgyMDE2MDYyMAgyMDE2MDYyMQgyMDE2MDYyMggyMDE2MDYyMwgyMDE2MDYyNAgyMDE2MDYyNQgyMDE2MDYyNggyMDE2MDYyNwgyMDE2MDYyOAgyMDE2MDYyOQgyMDE2MDYzMBQrAxJnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dkZAIVD2QWAmYPZBYCAgEPPCsADQBkGAEFIGN0bDAwJENvbnRlbnRQbGFjZUhvbGRlcjEkR1ZCY2N4D2dkkseqxdZHcjzmn1bUQclXbCaNhlk%3D&ctl00$ContentPlaceHolder1$ddlincounty={0}&ctl00$ContentPlaceHolder1$ddlsaledate={1}&ctl00$ContentPlaceHolder1$txtstop={2}&radio={3}&ctl00$ContentPlaceHolder1$BtnBccx=%E7%8F%AD%E6%AC%A1%E6%9F%A5%E8%AF%A2
+        '''.format(start_code, ste.replace('-', ''), end, end)
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {"User-Agent": ua,
                    "Content-Type": "application/x-www-form-urlencoded"}
-        url = pre + urllib.urlencode(params)
-        r = requests.get(url, headers=headers, data=params)
+        r = requests.post(url, headers=headers, data=data.strip())
         soup = bs(r.content, 'lxml')
-        info = soup.find('table', attrs={'class': 'resulttb'}).find_all(
-            'tbody', attrs={'class': 'rebody'})
-        crawl_source = "hn96520"
+        info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GVBccx'}).find_all(
+            'tr', attrs={'class': True})
+        crawl_source = "xyjt"
         now = dte.now()
         update_attrs = {}
         ft = Line.objects.filter(s_city_name=line.s_city_name,
                                  d_city_name=line.d_city_name, drv_date=line.drv_date)
-        t = {x.line_id:x for x in ft}
+        t = {x.line_id: x for x in ft}
         s_city_name = line.s_city_name
         update_attrs = {}
-        for x in info:
+        for x in info[1:]:
             try:
-                bus_num = x.find(
-                    'td', attrs={'align': 'center'}).get_text().strip()
-                d_city_name = x.find_all('td')[1].get_text().split()[1]
-                drv_date = x.find_all('td')[2].get_text().strip()
-                drv_time = x.find_all('td')[3].get_text().strip()
+                y = x.find_all('td')
+                drv_date = y[0].get_text().strip()
+                bus_num = y[2].get_text().strip()
+                d_city_name = y[3].get_text().strip()
+                drv_time = y[5].get_text().strip()
+                left_tickets = int(y[8].get_text().strip())
                 drv_datetime = dte.strptime("%s %s" % (
                     drv_date, drv_time), "%Y-%m-%d %H:%M")
-                left_tickets = int(x.find_all('td')[8].get_text().strip())
+
                 line_id_args = {
                     's_city_name': s_city_name,
                     'd_city_name': d_city_name,
@@ -256,17 +355,21 @@ class Flow(BaseFlow):
                     'crawl_source': crawl_source,
                     'drv_datetime': drv_datetime,
                 }
-                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                line_id = md5(
+                    "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
-                    t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
+                    t[line_id].update(
+                        **{"left_tickets": left_tickets, "refresh_datetime": now})
                 if line_id == line.line_id:
-                    update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
-            except Exception as e:
-                print(e)
+                    update_attrs = {
+                        "left_tickets": left_tickets, "refresh_datetime": now}
+            except:
+                pass
 
         result_info = {}
         if not update_attrs:
-            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="no line info", update_attrs={
+                               "left_tickets": 0, "refresh_datetime": now})
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
@@ -277,113 +380,55 @@ class Flow(BaseFlow):
         # 获取alipay付款界面
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
-                pay_url = "http://www.hn96520.com/pay.aspx"
+                pay_url = order.extra_info.get('pay_url')
+                cks = json.loads(order.extra_info.get('cookies'))
                 headers = {
                     "User-Agent": rebot.user_agent,
-                    "Content-Type": "application/x-www-form-urlencoded",
+                    # "Content-Type": "application/x-www-form-urlencoded",
                 }
-                params = {
-                    'o': '0',
-                    "h_code": order.raw_order_no,
-                    "paymentType": 202,  # alipay参数
-                }
-                cookies = json.loads(rebot.cookies)
-                r = requests.post(pay_url, data=urllib.urlencode(
-                    params), headers=headers, cookies=cookies)
-                data = self.extract_alipay(r.content)
-                pay_money = float(data["total_fee"])
-                trade_no = data["out_trade_no"]
+                # dr = webdriver.PhantomJS()
+                # tmp = {u'domain': u'xuyunjt.com',
+                #        u'name': '',
+                #        u'httpOnly': False,
+                #        u'path': u'/',
+                #        u'secure': False,
+                #        u'value': ''}
+                # for k in cks.keys():
+                #     tmp['name'] = k
+                #     tmp['value'] = cks.get(k, '')
+                # try:
+                #     dr.add_cookie(tmp)
+                # except:
+                #     pass
+                # dr.get(pay_url)
+                # try:
+                #     dr.find_element_by_id(
+                #         "ctl00_ContentPlaceHolder1_Imgbtnsubmit2").click()
+                # except:
+                #     pass
+                # soup = bs(dr.page_source, 'lxml')
+                # pay_url = soup.find_all('script')[-1].get_text()
+                # pay_url = pay_url.split("'")[1].strip()
+                # # dr.get(pay_url)
+                # rebot_log.info(pay_url)
+                headers['Accept-Language'] = 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3'
+                headers['Accept-Encoding'] = 'gzip, deflate, br'
+                headers['Host'] = 'kcart.alipay.com'
+                r = requests.get(pay_url, headers=headers, cookies=cks)
+                soup = bs(r.content, 'lxml')
+                info = soup.find(
+                    'li', attrs={'class': 'order-item'}).find_all('tr')
+                trade_no = info[1].get_text()
+                trade_no = re.findall(r'\d+', trade_no)[0]
+                pay_money = info[-1].get_text()
+                pay_money = float(re.findall(r'\d+\.\d+', pay_money)[0])
+                # rebot_log.info(pay_money)
                 if order.pay_money != pay_money or order.pay_order_no != trade_no:
                     order.modify(pay_money=pay_money, pay_order_no=trade_no)
-                return {"flag": "html", "content": r.content}
-        # 登录验证码
-        if not valid_code:
-            try:
-                info = json.loads(session["pay_login_info"])
-                headers = info["headers"]
-                cookies = info["cookies"]
-            except:
-                ua = random.choice(BROWSER_USER_AGENT)
-                headers = {"User-Agent": ua}
-                cookies = {}
-            params = {
-                "userid": rebot.telephone,
-                "pwd": rebot.password,
-                "vcode": valid_code,
-            }
-            custom_headers = {}
-            custom_headers.update(headers)
-            custom_headers.update(
-                {"X-Requested-With": "XMLHttpRequest"})
-            custom_headers.update(
-                {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'})
-            r = requests.post("http://www.hn96520.com/member/ajax/login.aspx",
-                              data=urllib.urlencode(params),
-                              headers=custom_headers,
-                              allow_redirects=False,
-                              cookies=cookies)
-            cookies.update(dict(r.cookies))
-            # rebot_log.info(r.cookies)
-            rebot.modify(cookies=json.dumps(cookies))
-        if rebot.is_locked:
-            rebot.change_lock_rebot()
-        is_login = rebot.test_login_status()
-        rebot.is_locked = True
-        # 更换rebot
-        # if not rebot.is_locked:
-        #     is_login = rebot.test_login_status()
-        # else:
-        #     pass
+                return {"flag": "url", "content": pay_url}
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+            self.lock_ticket(order)
+            order.reload()
 
-        # 检查vcode, 更新到extra_info
-
-        check_code_status(valid_code, order)
-
-        # 已经登录, 而且取到code
-        if is_login and order.extra_info.get('code', ''):
-            # 锁票
-            if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-                self.lock_ticket(order)
-            # rebot.clear_riders()
-            rebot.is_locked = False
-            rebot.save()
+        if order.status == STATUS_WAITING_ISSUE:
             return _get_page(rebot)
-        # 未登录
-        elif not is_login:
-            valid_url = 'http://www.hn96520.com/membercode.aspx'
-            ua = random.choice(BROWSER_USER_AGENT)
-            headers = {"User-Agent": ua}
-            r = requests.get(valid_url, headers=headers)
-            data = {
-                "cookies": dict(r.cookies),
-                "headers": headers,
-                "valid_url": valid_url,
-            }
-            session["pay_login_info"] = json.dumps(data)
-            return {"flag": "input_code", "content": ""}
-        # 未取到code
-        elif not order.extra_info.get('code', ''):
-            try:
-                info = json.loads(session["pay_login_info"])
-                headers = info["headers"]
-                cookies = info["cookies"]
-                valid_url = 'http://www.hn96520.com/verifycode.aspx'
-                data = {
-                    "cookies": cookies,
-                    "headers": headers,
-                    "valid_url": valid_url,
-                }
-                session["pay_login_info"] = json.dumps(data)
-                return {"flag": "input_code", "content": ""}
-            except:
-                valid_url = 'http://www.hn96520.com/verifycode.aspx'
-                ua = random.choice(BROWSER_USER_AGENT)
-                headers = {"User-Agent": ua}
-                r = requests.get(valid_url, headers=headers)
-                data = {
-                    "cookies": dict(r.cookies),
-                    "headers": headers,
-                    "valid_url": valid_url,
-                }
-                session["pay_login_info"] = json.dumps(data)
-                return {"flag": "input_code", "content": ""}

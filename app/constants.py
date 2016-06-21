@@ -3249,6 +3249,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_BUS365: "您已成功购买%(time)s从%(start)s到%(end)s的票%(amount)s张,请提前凭订单号%(order_no)s和手机(尾号%(tele_list)s)或身份证到窗口取票",
     SOURCE_XINTUYUN: "温馨提醒：您有%(amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order)s；%(ticketPassword)s请在发车前两小时内凭乘车人身份证取票。祝您旅途愉快！",
     SOURCE_HN96520: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
+    SOURCE_XYJT: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
 }
 
 CITY_NAME_TRANS = {
