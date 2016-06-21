@@ -97,6 +97,10 @@ def md5(msg):
     return md5
 
 
+def sha1(msg):
+    return hashlib.sha1(msg.encode('utf-8')).hexdigest()
+
+
 def getRedisObj(rdb=0):
     host = current_app.config["REDIS_HOST"]
     port = current_app.config["REDIS_PORT"]
