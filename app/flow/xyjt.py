@@ -19,6 +19,7 @@ from app.utils import md5
 from app import rebot_log
 # import cStringIO
 from selenium import webdriver
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 # from cchardet import detect
 # import ipdb
 
@@ -166,7 +167,11 @@ class Flow(BaseFlow):
         #                   data=urllib.urlencode(data))
         # soup = bs(r.content, 'lxml')
         lurl = 'http://order.xuyunjt.com/lastsubmit.aspx'
-        dr = webdriver.PhantomJS()
+        dcap = dict(DesiredCapabilities.PHANTOMJS)
+        dcap["phantomjs.page.settings.userAgent"] = (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0 "
+        )
+        dr = webdriver.PhantomJS(desired_capabilities=dcap)
         tmp = {u'domain': u'xuyunjt.com',
                u'name': '',
                u'httpOnly': False,
@@ -245,13 +250,17 @@ class Flow(BaseFlow):
                           cookies=r.cookies, data=urllib.urlencode(data))
         soup = bs(r.content, 'lxml')
         try:
-            info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1'}).find_all('tr', attrs={'class': 'GridViewRowStyle'})
+            info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1'}).find_all(
+                'tr', attrs={'class': 'GridViewRowStyle'})
             for x in info:
-                sn1 = x.find('input', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_hdfbespoke_id'}).get('value', '').strip()
+                sn1 = x.find('input', attrs={
+                             'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_hdfbespoke_id'}).get('value', '').strip()
                 rebot_log.info(sn1)
                 if sn == sn1:
-                    state = x.find('span', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblticketstatus'}).get_text()
-                    pcode = x.find('span', attrs={'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblget_ticket_passwd'}).get_text().strip()
+                    state = x.find('span', attrs={
+                                   'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblticketstatus'}).get_text()
+                    pcode = x.find('span', attrs={
+                                   'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblget_ticket_passwd'}).get_text().strip()
 
         except:
             state = ''
@@ -291,7 +300,8 @@ class Flow(BaseFlow):
         #         "result_msg": state,
         #     })
         elif '已购' in state:
-            no, site, raw_order = ret['pick_no'], ret['pick_site'], ret['raw_order']
+            no, site, raw_order = ret['pick_no'], ret[
+                'pick_site'], ret['raw_order']
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
