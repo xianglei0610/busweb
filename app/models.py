@@ -634,6 +634,7 @@ class Rebot(db.Document):
     is_locked = db.BooleanField(default=False)  # 是否被锁
     last_login_time = db.DateTimeField(default=dte.now)  # 最近一次登录时间
     doing_orders = db.DictField()   # 正在处理的订单
+    ip = db.StringField(default="")
 
     meta = {
         "abstract": True,
@@ -1285,6 +1286,100 @@ class WxszRebot(Rebot):
                 id_lst.append(exists_lst[c["id_number"].upper()])
             else:
                 id_lst.append(res["data"]["id"])
+        return id_lst
+
+
+class GdswRebot(Rebot):
+    user_agent = db.StringField()
+    token = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "gdsw_rebot",
+    }
+    crawl_source = SOURCE_GDSW
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def login(self):
+        pwd, token = SOURCE_INFO[SOURCE_GDSW]["accounts"][self.telephone]
+        self.modify(token=token, user_agent=random.choice(MOBILE_USER_AGENG))
+        return "OK"
+
+    def check_login(self):
+        user_url = "http://183.6.161.195:9000/api/Subscriber/Get?token=%s" % self.token
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/json;charset=UTF-8",
+        }
+        r = self.http_post(user_url, headers=headers, data=json.dumps(params))
+        try:
+            res = r.json()
+        except:
+            return 0
+        if not res["success"]:
+            return 0
+        if res["data"]["mobile"] != self.telephone:
+            return 0
+        return 1
+
+    def clear_riders(self):
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/json;charset=UTF-8",
+        }
+        del_url = "http://183.6.161.195:9000/api/Contact/Delete?token=%s" % self.token
+        for pk in self.get_riders().values():
+            try:
+                self.http_post(del_url, headers=headers, data={"id": pk})
+            except:
+                pass
+
+
+    def get_riders(self):
+        if not self.test_login_status():
+            raise Exception("%s账号未登录" % self.telephone)
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/json;charset=UTF-8",
+        }
+        query_url = "http://183.6.161.195:9000/api/Contact/Get?token=%s" % self.token
+        r = self.http_get(query_url, headers=headers)
+        res = r.json()
+        cardtoid = {}
+        if not res["success"]:
+            return {}
+        for d in res["data"]:
+            cardtoid[d["certno"]] = d["id"]
+        return cardtoid
+
+    def add_riders(self, order):
+        add_url = "http://183.6.161.195:9000/api/Contact/Add?token=%s" % self.token
+        headers = {
+            "User-Agent": self.user_agent,
+            "Content-Type": "application/json;charset=UTF-8",
+        }
+        id_lst = []
+        exists_lst = {}
+        for c in order.riders:
+            params = {
+                "certno": c["id_number"],
+                "certtype": "1",
+                "mobile": c["telephone"] or order.contact_info["telephone"],
+                "name": c["name"],
+                "passengertype": "1"
+            }
+            r = self.http_post(add_url, headers=headers, data=urllib.urlencode(params))
+            res = r.json()
+            if "已存在相同证件号的联系人" in res["errorMsg"]:
+                if not exists_lst:
+                    exists_lst = self.get_riders()
+                id_lst.append(exists_lst[c["id_number"].upper()])
+            else:
+                id_lst.append(res["data"])
         return id_lst
 
 
@@ -2209,8 +2304,7 @@ class TCAppRebot(Rebot):
         stime = str(int(time.time() * 1000))
         account_id = "c26b007f-c89e-431a-b8cc-493becbdd8a2"
         version = "20111128102912"
-        s = "AccountID=%s&ReqTime=%s&ServiceName=%s&Version=%s" % (
-            account_id, stime, service_name, version)
+        s = "AccountID=%s&ReqTime=%s&ServiceName=%s&Version=%s" % (account_id, stime, service_name, version)
         digital_sign = md5(s + "8874d8a8b8b391fbbd1a25bda6ecda11")
         params = OrderedDict()
         params["request"] = OrderedDict()
@@ -3344,8 +3438,7 @@ class Bus365AppRebot(Rebot):
                     "crawl_source": line.crawl_source,
                     "drv_datetime": drv_datetime,
                 }
-                line_id = md5(
-                    "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
                 item['line_id'] = line_id
                 item['shift_id'] = d['id']
                 item["refresh_datetime"] = dte.now()
@@ -3876,8 +3969,7 @@ class Bus100Rebot(Rebot):
                 item['bus_num'] = str(banci)
                 item['shift_id'] = str(shiftid)
                 item["refresh_datetime"] = dte.now()
-                line_id = md5("%s-%s-%s-%s-%s" %
-                              (payload['startName'], payload['endName'], drv_datetime, str(banci), 'bus100'))
+                line_id = md5("%s-%s-%s-%s-%s" % (payload['startName'], payload['endName'], drv_datetime, str(banci), 'bus100'))
                 item['line_id'] = line_id
                 try:
                     line_obj = Line.objects.get(line_id=line_id)
