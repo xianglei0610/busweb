@@ -136,7 +136,7 @@ class Flow(BaseFlow):
             })
         else:
             code = 0
-            if u"此线路服务费不可用" in desc:
+            if u"此线路服务费不可用" in desc or u"此线路暂不可预订,请选择其他出发站或线路" in desc or "请重新查询线路后再预订" in desc:
                 code = 2
             lock_result.update({
                 "result_code": code,
@@ -146,105 +146,117 @@ class Flow(BaseFlow):
         return lock_result
 
     def do_lock_ticket(self, order):
-        return self.do_lock_ticket_by_app(order)
-        # lock_result = {
-        #     "lock_info": {},
-        #     "source_account": order.source_account,
-        #     "result_code": 0,
-        #     "result_reason": "",
-        #     "pay_url": "",
-        #     "raw_order_no": "",
-        #     "expire_datetime": "",
-        #     "pay_money": 0,
-        # }
-        # with TCWebRebot.get_and_lock(order) as rebot:
-        #     line = order.line
+        line = order.line
+        if line.s_city_name in ["南通", "镇江"]:
+            return self.do_lock_ticket_by_web(order)
+        else:
+            return self.do_lock_ticket_by_app(order)
 
-        #     is_login = rebot.test_login_status()
-        #     if not is_login:
-        #         if rebot.login() == "OK":
-        #             is_login = 1
-        #     # 未登录
-        #     if not is_login:
-        #         lock_result.update({
-        #             "result_code": 2,
-        #             "source_account": rebot.telephone,
-        #             "result_reason": "账号未登录",
-        #         })
-        #         return lock_result
 
-        #     # 构造表单参数
-        #     riders = []
-        #     for r in order.riders:
-        #         riders.append({
-        #             "name": unicode(r["name"]),
-        #             "IDType": "1",
-        #             "IDCard": r["id_number"],
-        #             "passengersType": "1",
-        #             "IsLinker": False,
-        #         })
-        #     data = {
-        #         "MemberId": rebot.user_id,
-        #         "TotalAmount": line.real_price()*order.ticket_amount,
-        #         "InsuranceId": "",
-        #         "InsuranceAmount": 0,
-        #         "TicketsInfo": [
-        #             {
-        #                 "CoachType": line.vehicle_type,
-        #                 "CoachNo": line.bus_num,
-        #                 "Departure": line.s_city_name,
-        #                 "Destination": line.d_city_name,
-        #                 "dptStation": line.s_sta_name,
-        #                 "ArrStation": line.d_sta_name,
-        #                 "dptDateTime": "%sT%s:00" % (line.drv_date, line.drv_time),
-        #                 "DptDate": line.drv_date,
-        #                 "dptTime": line.drv_time,
-        #                 "ticketPrice": line.full_price,
-        #                 "OptionType": 1,
-        #             }
-        #         ],
-        #         "ContactInfo": {
-        #             "Name": order.contact_info["name"],
-        #             "MobileNo": order.contact_info["telephone"],
-        #             "IDType": 1,
-        #             "IDCard": order.contact_info["id_number"],
-        #         },
-        #         "PassengersInfo": riders,
-        #         "Count": order.ticket_amount,
-        #         "StationCode": line.s_sta_id,
-        #         "ticketFee": 0
-        #     }
-        #     ret = self.send_lock_request(order, rebot, data)
-        #     ret = ret["response"]
-        #     desc = ret["header"]["rspDesc"]
-        #     if ret["header"]["rspCode"] == "0000":
-        #         expire_time = dte.now()+datetime.timedelta(seconds=20*60)
-        #         lock_result.update({
-        #             "result_code": 1,
-        #             "result_reason": desc,
-        #             "pay_url": ret["body"]["PayUrl"],
-        #             "raw_order_no": self.query_order_no(order, rebot),
-        #             "expire_datetime": expire_time,
-        #             "source_account": rebot.telephone,
-        #             "pay_money": float(ret["body"]["TotalFee"]),
-        #         })
-        #     else:
-        #         if u"此线路暂不可预订,请选择其他出发站或线路" in desc:
-        #             lock_result.update({
-        #                 "result_code": 2,
-        #                 "result_reason": desc,
-        #                 "source_account": rebot.telephone,
-        #             })
-        #         else:
-        #             lock_result.update({
-        #                 "result_code": 2,
-        #                 "result_reason": desc,
-        #                 "pay_url": "",
-        #                 "raw_order_no": "",
-        #                 "expire_datetime": None,
-        #                 "source_account": rebot.telephone,
-        #             })
-        #     return lock_result
+    def do_lock_ticket_by_web(self, order):
+        line = order.line
+        lock_result = {
+            "lock_info": {},
+            "source_account": order.source_account,
+            "result_code": 0,
+            "result_reason": "",
+            "pay_url": "",
+            "raw_order_no": "",
+            "expire_datetime": "",
+            "pay_money": 0,
+        }
+        rebot = order.get_lock_rebot()
+
+        is_login = rebot.test_login_status()
+        if not is_login:
+            if rebot.login() == "OK":
+                is_login = 1
+        # 未登录
+        if not is_login:
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": "账号未登录",
+            })
+            return lock_result
+
+        # 构造表单参数
+        riders = []
+        for r in order.riders:
+            riders.append({
+                "name": unicode(r["name"]),
+                "IDType": "1",
+                "IDCard": r["id_number"],
+                "passengersType": "1",
+                "IsLinker": False,
+            })
+        data = {
+            "MemberId": rebot.user_id,
+            # "TotalAmount": line.real_price()*order.ticket_amount,
+            "TotalAmount": line.full_price*order.ticket_amount,
+            "InsuranceId": "",
+            "InsuranceAmount": 0,
+            "TicketsInfo": [
+                {
+                    "CoachType": line.vehicle_type,
+                    "CoachNo": line.bus_num,
+                    "Departure": line.s_city_name,
+                    "Destination": line.d_city_name,
+                    "dptStation": line.s_sta_name,
+                    "ArrStation": line.d_sta_name,
+                    "dptDateTime": "%sT%s:00" % (line.drv_date, line.drv_time),
+                    "DptDate": line.drv_date,
+                    "dptTime": line.drv_time,
+                    "ticketPrice": line.full_price,
+                    "OptionType": 1,
+                }
+            ],
+            "ContactInfo": {
+                "Name": order.contact_info["name"],
+                "MobileNo": order.contact_info["telephone"],
+                "IDType": 1,
+                "IDCard": order.contact_info["id_number"],
+            },
+            "PassengersInfo": riders,
+            "Count": order.ticket_amount,
+            "StationCode": line.s_sta_id,
+            "ticketFee": 0,
+            "serviceChargeId": 90 if line.s_city_name in ["南通", "镇江"] else 0,
+            "serviceChargeType": "1",
+        }
+        ret = self.send_lock_request(order, rebot, data)
+        ret = ret["response"]
+        desc = ret["header"]["rspDesc"]
+        if ret["header"]["rspCode"] == "0000":
+            expire_time = dte.now()+datetime.timedelta(seconds=20*60)
+            order_no, order_id = self.query_order_no(order, rebot)
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": desc,
+                "pay_url": ret["body"]["PayUrl"],
+                "raw_order_no": order_no,
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                "pay_money": float(ret["body"]["TotalFee"]),
+                "lock_info": {"orderId": order_id}
+            })
+        else:
+            if u"此线路暂不可预订,请选择其他出发站或线路" in desc or "请重新查询线路后再预订" in desc:
+                lock_result.update({
+                    "result_code": 2,
+                    "result_reason": desc,
+                    "source_account": rebot.telephone,
+                })
+            else:
+                lock_result.update({
+                    "result_code": 2,
+                    "result_reason": desc,
+                    "pay_url": "",
+                    "raw_order_no": "",
+                    "expire_datetime": None,
+                    "source_account": rebot.telephone,
+                })
+        return lock_result
 
     def send_lock_request(self, order, rebot, data):
         """
@@ -264,58 +276,60 @@ class Flow(BaseFlow):
         ret = resp.json()
         return ret
 
-    # def query_order_no(self, order, rebot):
-    #     """
-    #     去源站拿订单号
-    #     """
-    #     url = "http://member.ly.com/ajaxhandler/OrderListHandler.ashx?OrderFilter=1&ProjectTag=0&DateType=2&PageIndex=1"
-    #     headers = {"User-Agent": rebot.user_agent}
-    #     cookies = json.loads(rebot.cookies)
-    #     r = rebot.http_get(url, headers=headers, cookies=cookies)
-    #     res = r.json()
-    #     line = order.line
-    #     for info in res["ReturnValue"]["OrderDetailList"]:
-    #         order_no = info["SerialId"]
-    #         bus_num = info["CoachNo"]
-    #         if bus_num != line.bus_num:
-    #             continue
+    def query_order_no(self, order, rebot):
+        """
+        去源站拿订单号
+        """
+        url = "http://member.ly.com/ajaxhandler/OrderListHandler.ashx?OrderFilter=1&ProjectTag=0&DateType=2&PageIndex=1"
+        headers = {"User-Agent": rebot.user_agent}
+        cookies = json.loads(rebot.cookies)
+        r = rebot.http_get(url, headers=headers, cookies=cookies)
+        res = r.json()
+        line = order.line
+        for info in res["ReturnValue"]["OrderDetailList"]:
+            order_no = info["SerialId"]
+            bus_num = info["CoachNo"]
+            if bus_num != line.bus_num:
+                continue
 
-    #         # 该订单已经有主了
-    #         if Order.objects.filter(crawl_source=order.crawl_source, raw_order_no=order_no):
-    #             continue
+            # 该订单已经有主了
+            if Order.objects.filter(crawl_source=order.crawl_source, raw_order_no=order_no):
+                continue
 
-    #         detail = self.send_order_request(rebot, order_no)
-    #         if detail["drv_datetime"] != order.drv_datetime:
-    #             continue
-    #         if detail["contact_name"] != order.contact_info["name"]:
-    #             continue
-    #         if detail["contact_phone"] != order.contact_info["telephone"]:
-    #             continue
-    #         return order_no
-    #     return ""
+            detail = self.send_order_request_web(rebot, order_no)
+            if detail["drv_datetime"] != order.drv_datetime:
+                continue
+            if detail["contact_name"] != order.contact_info["name"]:
+                continue
+            if detail["contact_phone"] != order.contact_info["telephone"]:
+                continue
+            return order_no, detail["order_id"]
+        return "", ""
 
 
-    # def send_order_request(self, rebot, raw_order_no):
-    #     detail_url = "http://member.ly.com/bus/order/orderDetail?id=%s" % raw_order_no
-    #     headers = {
-    #         "User-Agent": rebot.user_agent,
-    #     }
-    #     cookies = json.loads(rebot.cookies)
-    #     r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
-    #     soup = BeautifulSoup(r.content, "lxml")
-    #     state = soup.select(".paystate")[0].get_text().strip()
-    #     sdate = soup.select(".list01_info table")[0].findAll("tr")[2].get_text().strip()
-    #     drv_datetime = dte.strptime(sdate, "%Y-%m-%d %H:%M:%S")
-    #     contact_lst = soup.select(".list01_info table")[3].select("td")
-    #     contact_name = contact_lst[0].get_text().lstrip("姓名：").strip()
-    #     contact_phone = contact_lst[1].get_text().lstrip("手机：").strip()
+    def send_order_request_web(self, rebot, raw_order_no):
+        detail_url = "http://member.ly.com/bus/order/orderDetail?id=%s" % raw_order_no
+        headers = {
+            "User-Agent": rebot.user_agent,
+        }
+        cookies = json.loads(rebot.cookies)
+        r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        state = soup.select(".paystate")[0].get_text().strip()
+        sdate = soup.select(".list01_info table")[0].findAll("tr")[2].get_text().strip()
+        drv_datetime = dte.strptime(sdate, "%Y-%m-%d %H:%M:%S")
+        contact_lst = soup.select(".list01_info table")[3].select("td")
+        contact_name = contact_lst[0].get_text().lstrip("姓名：").strip()
+        contact_phone = contact_lst[1].get_text().lstrip("手机：").strip()
+        order_id = soup.select_one("#payArg").get("value").split(",")[0]
 
-    #     return {
-    #         "state": state,
-    #         "drv_datetime": drv_datetime,
-    #         "contact_name": contact_name,
-    #         "contact_phone": contact_phone,
-    #     }
+        return {
+            "state": state,
+            "drv_datetime": drv_datetime,
+            "contact_name": contact_name,
+            "contact_phone": contact_phone,
+            "order_id": order_id,
+        }
 
     def send_order_request_by_app(self, order):
         rebot = TCAppRebot.objects.get(telephone=order.source_account)
@@ -437,7 +451,7 @@ class Flow(BaseFlow):
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
-                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.order_price)
+                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.ticket_price*order.ticket_amount)
                 r = rebot.http_post("http://member.ly.com/bus/Pay/MobileGateway",
                                      data=form_str,
                                      headers=headers,
@@ -628,7 +642,7 @@ class Flow(BaseFlow):
                     "timePeriodType":d[u'timePeriodType'],
                     "serviceChargeID": d["serviceChargeID"],
                     "serviceChargePrice": d["serviceChargePrice"],
-                    "serviceChargeType": d["serviceChargeType"],
+                    "serviceChargeType": d.get("serviceChargeType", 0),
                     "runTime": d["runTime"]},
             }
             if line_id == line.line_id:

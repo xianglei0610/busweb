@@ -2273,7 +2273,7 @@ class TCAppRebot(Rebot):
         "collection": "tcapp_rebot",
     }
     crawl_source = SOURCE_TC
-    is_for_lock = True
+    is_for_lock = False
 
     def http_post(self, url, service_name, data):
         stime = str(int(time.time() * 1000))
@@ -2374,7 +2374,7 @@ class TCWebRebot(Rebot):
         "collection": "tc_rebot",
     }
     crawl_source = SOURCE_TC
-    is_for_lock = False
+    is_for_lock = True
 
     def login(self, headers=None, cookies={}, valid_code=""):
         login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
