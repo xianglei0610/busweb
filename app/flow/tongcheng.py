@@ -146,12 +146,11 @@ class Flow(BaseFlow):
         return lock_result
 
     def do_lock_ticket(self, order):
-        line = order.line
-
-        if line.s_city_name in ["南通", "镇江"]:
-            return self.do_lock_ticket_by_web(order)
-        else:
-            return self.do_lock_ticket_by_app(order)
+        # line = order.line
+        # if line.s_city_name in ["南通", "镇江"]:
+        #     return self.do_lock_ticket_by_web(order)
+        # else:
+        return self.do_lock_ticket_by_app(order)
 
 
     def do_lock_ticket_by_web(self, order):
@@ -452,7 +451,7 @@ class Flow(BaseFlow):
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
-                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.ticket_price*order.ticket_amount)
+                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.order_price)
                 r = rebot.http_post("http://member.ly.com/bus/Pay/MobileGateway",
                                      data=form_str,
                                      headers=headers,

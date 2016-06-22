@@ -25,10 +25,10 @@
 						<div class="col-md-7">
                             <form class="form-horizontal" action="/orders/{{order.order_no}}/pay" method="POST">
 								<div class="form-group">
-									<label for="inputCode" class="col-sm-4 control-label" style="padding-top: 0px;">
-                                        <img onclick="this.setAttribute('src','/orders/{{order.order_no}}/srccodeimg?d='+Math.random());" src="/orders/{{order.order_no}}/srccodeimg" height="35"/>
+									<label for="inputCode" class="col-sm-5 control-label" style="padding-top: 0px;">
+                     <img onclick="this.setAttribute('src','/orders/{{order.order_no}}/srccodeimg?d='+Math.random());" src="/orders/{{order.order_no}}/srccodeimg" height="35"/>
 									</label>
-									<div class="col-sm-8" style="padding-left: 0px;">
+									<div class="col-sm-7" style="padding-left: 0px;">
 										<input type="text" class="form-control" id="inputCode"  name="valid_code" placeholder="验证码">
 									</div>
 								</div>
