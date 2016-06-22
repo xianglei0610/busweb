@@ -628,7 +628,7 @@ class Flow(BaseFlow):
                     "timePeriodType":d[u'timePeriodType'],
                     "serviceChargeID": d["serviceChargeID"],
                     "serviceChargePrice": d["serviceChargePrice"],
-                    "serviceChargeType": d["serviceChargeType"],
+                    "serviceChargeType": d.get("serviceChargeType", 0),
                     "runTime": d["runTime"]},
             }
             if line_id == line.line_id:
