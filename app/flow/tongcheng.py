@@ -31,7 +31,7 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        rebot = order.get_lock_rebot()
+        rebot = order.get_lock_rebot(rebot_cls=TCAppRebot)
         line = order.line
 
         is_login = rebot.test_login_status()
@@ -147,7 +147,6 @@ class Flow(BaseFlow):
 
     def do_lock_ticket(self, order):
         line = order.line
-        return self.do_lock_ticket_by_web(order)
 
         if line.s_city_name in ["南通", "镇江"]:
             return self.do_lock_ticket_by_web(order)
@@ -167,7 +166,7 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        rebot = order.get_lock_rebot()
+        rebot = order.get_lock_rebot(rebot_cls=TCWebRebot)
 
         is_login = rebot.test_login_status()
         if not is_login:

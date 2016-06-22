@@ -401,15 +401,16 @@ class Order(db.Document):
     def log_name(self):
         return "%s %s" % (self.crawl_source, self.order_no)
 
-    def change_lock_rebot(self):
+    def change_lock_rebot(self, rebot_cls=None):
         """
         更换锁票账号
         """
-        rebot_cls = None
-        for cls in get_rebot_class(self.crawl_source):
-            if cls.is_for_lock:
-                rebot_cls = cls
-                break
+        if not rebot_cls:
+            rebot_cls = None
+            for cls in get_rebot_class(self.crawl_source):
+                if cls.is_for_lock:
+                    rebot_cls = cls
+                    break
         try:
             old_rebot = rebot_cls.objects.get(telephone=self.source_account)
         except rebot_cls.DoesNotExist:
@@ -446,20 +447,21 @@ class Order(db.Document):
         accounts = SOURCE_INFO[self.crawl_source]["accounts"]
         return accounts.get(self.source_account, [""])[0]
 
-    def get_lock_rebot(self):
+    def get_lock_rebot(self, rebot_cls=None):
         """
         获取用于锁票的rebot, 如果没有则新申请一个。
         """
-        cls_lst = get_rebot_class(self.crawl_source)
-        rebot_cls = None
-        for cls in cls_lst:
-            if cls.is_for_lock:
-                rebot_cls = cls
-                break
+        if not rebot_cls:
+            cls_lst = get_rebot_class(self.crawl_source)
+            rebot_cls = None
+            for cls in cls_lst:
+                if cls.is_for_lock:
+                    rebot_cls = cls
+                    break
         try:
             return rebot_cls.objects.get(telephone=self.source_account)
         except rebot_cls.DoesNotExist:
-            return self.change_lock_rebot()
+            return self.change_lock_rebot(rebot_cls=rebot_cls)
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
