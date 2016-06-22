@@ -134,8 +134,11 @@ class Flow(BaseFlow):
                 "lock_info": ret["body"],
             })
         else:
+            code = 0
+            if u"此线路服务费不可用" in desc:
+                code = 2
             lock_result.update({
-                "result_code": 0,
+                "result_code": code,
                 "result_reason": desc,
                 "source_account": rebot.telephone,
             })

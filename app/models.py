@@ -239,15 +239,12 @@ class Line(db.Document):
                 tar_source = SOURCE_CQKY
             try:
                 ob = Line.objects.get(crawl_source=tar_source,
-                                      s_city_name=trans.get(
-                                          self.s_city_name, self.s_city_name),
-                                      d_city_name=trans.get(
-                                          self.d_city_name, self.d_city_name),
+                                      s_city_name=trans.get(self.s_city_name, self.s_city_name),
+                                      d_city_name=trans.get(self.d_city_name, self.d_city_name),
                                       s_sta_name=self.s_sta_name,
                                       d_sta_name=self.d_sta_name,
                                       drv_datetime=self.drv_datetime)
-                self.modify(compatible_lines={
-                            self.crawl_source: self.line_id, tar_source: ob.line_id})
+                self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
             return self.compatible_lines
@@ -255,8 +252,7 @@ class Line(db.Document):
             # 方便网，车巴达，江苏省网, 同程
             trans = {}
             qs = Line.objects.filter(s_city_name=trans.get(self.s_city_name, self.s_city_name),
-                                     d_city_name=trans.get(
-                                         self.d_city_name, self.d_city_name),
+                                     d_city_name=trans.get(self.d_city_name, self.d_city_name),
                                      s_sta_name=self.s_sta_name,
                                      d_sta_name=self.d_sta_name,
                                      drv_datetime=self.drv_datetime)
@@ -281,15 +277,12 @@ class Line(db.Document):
             s_sta_name = self.s_sta_name
             if self.crawl_source == SOURCE_CTRIP:
                 if s_sta_name != u'首都机场站':
-                    s_sta_name = self.s_sta_name.decode(
-                        "utf-8").strip().rstrip(u"客运站")
+                    s_sta_name = self.s_sta_name.decode("utf-8").strip().rstrip(u"客运站")
             qs = Line.objects.filter(
                 s_city_name=self.s_city_name,
                 s_sta_name__startswith=unicode(s_sta_name),
                 d_city_name=self.d_city_name,
-                #                                      d_sta_name=self.d_sta_name,
                 full_price=self.full_price,
-                #                                      bus_num=self.bus_num,
                 drv_datetime=self.drv_datetime)
             d_line = {obj.crawl_source: obj.line_id for obj in qs}
             d_line.update({self.crawl_source: self.line_id})
