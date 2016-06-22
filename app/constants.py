@@ -31,6 +31,8 @@ SOURCE_XINTUYUN = 'xintuyun'
 SOURCE_HN96520 = 'hn96520'
 SOURCE_CCW = 'ccw'
 SOURCE_XYJT = 'xyjt'
+SOURCE_GDSW = "gdsw"    # 广东省网
+
 
 PAY_TYPE_SOURCE = {
     "zfb": [SOURCE_BUS100,
@@ -51,6 +53,13 @@ PAY_TYPE_SOURCE = {
 }
 
 SOURCE_INFO = {
+    SOURCE_GDSW: {
+        "name": "广东省网",
+        "website": "http://ticket.gdcd.gov.cn/",
+        "accounts": {
+            "15575101324": ("12346", "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI4OTllNjk2YS0xNzE4LTQ5ZDYtYmI0ZS01Y2U5OTYyNDJjNzQiLCJpYXQiOjE0NjY0MDcxODksImp0aSI6IjkyNTM2ZThmLWVlMjItNDgzMi05YzM5LTE5OTA3NTBlZGJhMCIsIm5hbWUiOiIxNTU3NTEwMTMyNCIsImNoYW5uZWwiOiIyIiwic2hhcmVka2V5IjoiMTIzNGFiY2QifQ.uvvLSIYCfdqrfTnBLpiaW0LcCBk7KunzigY71Le43sY")
+        },
+    },
     SOURCE_TZKY: {
         "name": "泰州客运",
         "website": "www.tzfeilu.com",
@@ -3046,6 +3055,26 @@ SOURCE_INFO = {
             "17051059361": ("123456", "90e7709954c38af7fe0b473ace947e082bee252a9b519de4e8e964cb318c6701", '620013'),
             "17088337670": ("123456", "90e7709954c38af7fe0b473ace947e089643ed2182a38acd3277464d0b129f28", '620020'),
             "17088173420": ("123456", "90e7709954c38af7fe0b473ace947e089643ed2182a38acd6a63f4d0aa06878e", '620025'),
+            "17088174986": ("plm123456", "90e7709954c38af7fe0b473ace947e08e0d1a6026c7029be3277464d0b129f28", '671760'),
+            "17051088946": ("plm123456", "90e7709954c38af7fe0b473ace947e08310a5f0433b72081fe9876532c0761a7", '671757'),
+            "17095467589": ("plm123456", "90e7709954c38af7fe0b473ace947e08310a5f0433b72081da6b4f59d259e475", '671752'),
+            "17088172543": ("plm123456", "90e7709954c38af7fe0b473ace947e08310a5f0433b72081a781a709ba83a8ed", '671751'),
+            "17095049278": ("plm123456", "90e7709954c38af7fe0b473ace947e08172de8614b7fd9063032e2d465dbd14a", '671746'),
+            "17088174869": ("plm123456", "90e7709954c38af7fe0b473ace947e08172de8614b7fd9066a63f4d0aa06878e", '671745'),
+            "17095045507": ("plm123456", "90e7709954c38af7fe0b473ace947e0888723b8efa44787a68c4c81981e75959", '671734'),
+            "17095218670": ("plm123456", "90e7709954c38af7fe0b473ace947e0897ffb9b0f0dc305fa781a709ba83a8ed", '671711'),
+            "17051335629": ("plm123456", "90e7709954c38af7fe0b473ace947e085e4b7b895bafb074861f5ef639adb8ab", '671698'),
+            "17051064595": ("plm123456", "90e7709954c38af7fe0b473ace947e085e4b7b895bafb0743032e2d465dbd14a", '671696'),
+            "17095215438": ("plm123456", "90e7709954c38af7fe0b473ace947e080d6ab120ba819b3e6a63f4d0aa06878e", '671685'),
+            "17088175416": ("plm123456", "90e7709954c38af7fe0b473ace947e0890d130509fd97ba83277464d0b129f28", '671670'),
+            "17095313611": ("plm123456", "90e7709954c38af7fe0b473ace947e08b2113b45921b07a8a781a709ba83a8ed", '671651'),
+            "17095136497": ("plm123456", "90e7709954c38af7fe0b473ace947e081e80a566a961eadce8e964cb318c6701", '671643'),
+            "17095219231": ("plm123456", "90e7709954c38af7fe0b473ace947e08a54c890e16057417861f5ef639adb8ab", '671638'),
+            "17088336136": ("plm123456", "90e7709954c38af7fe0b473ace947e08c37049d2b1b6f0fd0628ecdfc0d9a5d2", '671309'),
+            "17095218433": ("plm123456", "90e7709954c38af7fe0b473ace947e0888f84ab52741e3c6861f5ef639adb8ab", '671298'),
+            "17095215033": ("plm123456", "90e7709954c38af7fe0b473ace947e0888f84ab52741e3c6e8e964cb318c6701", '671293'),
+            "17051197440": ("plm123456", "90e7709954c38af7fe0b473ace947e08c37049d2b1b6f0fdfe9876532c0761a7", '671307'),
+            "17051325979": ("plm123456", "90e7709954c38af7fe0b473ace947e08d446d7ad8cc1fce00628ecdfc0d9a5d2", '671709'),
         }
     },
     SOURCE_CCW: {
@@ -3249,6 +3278,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_BUS365: "您已成功购买%(time)s从%(start)s到%(end)s的票%(amount)s张,请提前凭订单号%(order_no)s和手机(尾号%(tele_list)s)或身份证到窗口取票",
     SOURCE_XINTUYUN: "温馨提醒：您有%(amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order)s；%(ticketPassword)s请在发车前两小时内凭乘车人身份证取票。祝您旅途愉快！",
     SOURCE_HN96520: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
+    SOURCE_XYJT: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
 }
 
 CITY_NAME_TRANS = {

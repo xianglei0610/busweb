@@ -99,6 +99,7 @@
                     <th>票价/服务费</th>
                     <th>来源/余票</th>
                     <th>爬取时间/刷新时间</th>
+                    <th>操作</th>
                 </tr>
             </thead>
 
@@ -130,6 +131,9 @@
                     </td>
                     <td>
                         {{item.crawl_datetime|format_datetime}}<br /><br /> {{item.refresh_datetime|format_datetime}}
+                    </td>
+                    <td>
+                        <a data-trigger="modal" href="/lines/{{item.line_id}}/submit" data-title="测试下单">测试下单</a>
                     </td>
                 </tr>
                 {%endfor%}

@@ -410,6 +410,8 @@ class Flow(BaseFlow):
         def my_trans_js_str(s):
             for k in set(re.findall("([A-Za-z]+):", s)):
                 s= re.sub(r"\b%s\b" % k, '"%s"' % k, s)
+            s = s.replace("\"\'\'\"", "\"\"")
+            s = s.replace("''", "\"\"")
             return s
         cookies = json.loads(rebot.cookies)
         r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)

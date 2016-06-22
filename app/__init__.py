@@ -85,7 +85,6 @@ def init_logging(app, server_type):
 def setup_app():
     servers = {
         "api": setup_api_app,
-        "admin": setup_admin_app,
         "dashboard": setup_dashboard_app,
     }
     server_type = config_name.split("_")[0]
@@ -112,24 +111,6 @@ def setup_api_app():
 
     from api import api as main_blueprint
     app.register_blueprint(main_blueprint)
-    app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
-    flask_profiler.init_app(app)
-    return app
-
-
-def setup_admin_app():
-    app = Flask(__name__)
-    app.config.from_object(config)
-    config.init_app(app)
-    print ">>> run admin server, use", config.__name__
-
-    mail.init_app(app)
-    db.init_app(app)
-    login_manager.init_app(app)
-    init_celery(app)
-
-    from admin import admin as admin_blueprint
-    app.register_blueprint(admin_blueprint)
     app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
     flask_profiler.init_app(app)
     return app

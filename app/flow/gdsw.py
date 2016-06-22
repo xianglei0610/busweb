@@ -81,8 +81,8 @@ class Flow(BaseFlow):
                 "runThrough": "",
                 "AgentType": line.extra_info.get("AgentType", 7),
                 "ExtraSchFlag": 0,
-                "serviceChargeID": line.extra_info.get("serviceChargeID", 0),
-                "serviceChargePrice": line.extra_info.get("serviceChargePrice", 0),
+                "serviceChargeID": 0,
+                "serviceChargePrice":0,
                 "isHomeDelivery":0,
                 # "$$hashKey": "09X",
                 "$$hashKey": "017",
@@ -100,7 +100,7 @@ class Flow(BaseFlow):
             "stationCode": line.s_sta_id,
             "AlternativeFlag":0,
             "isSubscribe":False,
-            "count": order.ticket_amount,
+            "count":1,
             "coachType": line.vehicle_type,
             "activityId":0,
             "reductAmount":0,
@@ -112,10 +112,9 @@ class Flow(BaseFlow):
             "insuranceAmount":0,
             "voucherId":0,
             "voucherSellPrice":0,
-            "serviceChargeId": line.extra_info.get("serviceChargeID", 0),
-            "serviceChargeType": line.extra_info.get("serviceChargeType", 0),
-            "serviceChargeAmount": line.extra_info.get("serviceChargePrice", 0)*order.ticket_amount,
-            "serviceChargeUnitPrice": line.extra_info.get("serviceChargePrice", 0),
+            "serviceChargeId":0,
+            "serviceChargeType":0,
+            "serviceChargeAmount":0,
             "sessionId":"100362285"
         }
         url = "http://tcmobileapi.17usoft.com/bus/OrderHandler.ashx"
@@ -135,11 +134,8 @@ class Flow(BaseFlow):
                 "lock_info": ret["body"],
             })
         else:
-            code = 0
-            if u"此线路服务费不可用" in desc:
-                code = 2
             lock_result.update({
-                "result_code": code,
+                "result_code": 0,
                 "result_reason": desc,
                 "source_account": rebot.telephone,
             })
@@ -620,16 +616,10 @@ class Flow(BaseFlow):
 
             info = {
                 "full_price": float(d["ticketPrice"]),
-                "fee": float(d["serviceChargePrice"]),
+                "fee": 0,
                 "left_tickets": left,
                 "refresh_datetime": now,
-                "extra_info": {
-                    "AgentType":d["AgentType"],
-                    "timePeriodType":d[u'timePeriodType'],
-                    "serviceChargeID": d["serviceChargeID"],
-                    "serviceChargePrice": d["serviceChargePrice"],
-                    "serviceChargeType": d["serviceChargeType"],
-                    "runTime": d["runTime"]},
+                "extra_info": {"AgentType":d["AgentType"], "timePeriodType":d[u'timePeriodType'], "runTime": d["runTime"]},
             }
             if line_id == line.line_id:
                 update_attrs = info
