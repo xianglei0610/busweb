@@ -1281,6 +1281,12 @@ class GdswRebot(Rebot):
     def proxy_ip(self):
         return ""
 
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
+
     def get_signature(self, timestamp, nonce):
         secret = "561768DB-0A89-451B-8F64-69D0A9422F1Da"
         lst = [timestamp, nonce, secret]
