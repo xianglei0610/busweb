@@ -221,8 +221,10 @@ class Flow(BaseFlow):
             "Count": order.ticket_amount,
             "StationCode": line.s_sta_id,
             "ticketFee": 0,
-            "serviceChargeId": 90 if line.s_city_name in ["南通", "镇江"] else 0,
-            "serviceChargeType": "1",
+            #"serviceChargeId": 90 if line.s_city_name in ["南通", "镇江"] else 0,
+            "serviceChargeId": line.extra_info.get("serviceChargeID", 0),
+            "serviceChargeType": line.extra_info.get("serviceChargeType", 0),
+            # "serviceChargeType": "1",
         }
         ret = self.send_lock_request(order, rebot, data)
         ret = ret["response"]
