@@ -310,6 +310,7 @@ class Flow(BaseFlow):
                 "no": no,
                 "site": site,
                 'raw_order': raw_order,
+                'buscode': order.line.bus_num,
             }
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_XYJT]
             code_list = ["%s" % (code)]
@@ -356,11 +357,7 @@ class Flow(BaseFlow):
             'ctl00$ContentPlaceHolder1$ddlsaledate': ste,
             'ctl00$ContentPlaceHolder1$txtstop': end,
             'radio': end,
-
         }
-        # data = '''
-        #     ctl00$ContentPlaceHolder1$ScriptManager1=ctl00$ContentPlaceHolder1$ScriptManager1|ctl00$ContentPlaceHolder1$BtnBccx&__EVENTTARGET=&__EVENTARGUMENT=&__LASTFOCUS=&__VIEWSTATE=%2FwEPDwUKLTUzNTg5Njk5OA9kFgJmD2QWAgIDD2QWAgIHD2QWBgIFDxBkZBYBZmQCCQ8QDxYGHg1EYXRhVGV4dEZpZWxkBQlzYWxlX2RhdGUeDkRhdGFWYWx1ZUZpZWxkBQlzYWxlX2RhdGUeC18hRGF0YUJvdW5kZ2QQFRIIMjAxNjA2MTMIMjAxNjA2MTQIMjAxNjA2MTUIMjAxNjA2MTYIMjAxNjA2MTcIMjAxNjA2MTgIMjAxNjA2MTkIMjAxNjA2MjAIMjAxNjA2MjEIMjAxNjA2MjIIMjAxNjA2MjMIMjAxNjA2MjQIMjAxNjA2MjUIMjAxNjA2MjYIMjAxNjA2MjcIMjAxNjA2MjgIMjAxNjA2MjkIMjAxNjA2MzAVEggyMDE2MDYxMwgyMDE2MDYxNAgyMDE2MDYxNQgyMDE2MDYxNggyMDE2MDYxNwgyMDE2MDYxOAgyMDE2MDYxOQgyMDE2MDYyMAgyMDE2MDYyMQgyMDE2MDYyMggyMDE2MDYyMwgyMDE2MDYyNAgyMDE2MDYyNQgyMDE2MDYyNggyMDE2MDYyNwgyMDE2MDYyOAgyMDE2MDYyOQgyMDE2MDYzMBQrAxJnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dkZAIVD2QWAmYPZBYCAgEPPCsADQBkGAEFIGN0bDAwJENvbnRlbnRQbGFjZUhvbGRlcjEkR1ZCY2N4D2dkkseqxdZHcjzmn1bUQclXbCaNhlk%3D&ctl00$ContentPlaceHolder1$ddlincounty={0}&ctl00$ContentPlaceHolder1$ddlsaledate={1}&ctl00$ContentPlaceHolder1$txtstop={2}&radio={3}&ctl00$ContentPlaceHolder1$BtnBccx=%E7%8F%AD%E6%AC%A1%E6%9F%A5%E8%AF%A2
-        # '''.format(start_code, ste.replace('-', ''), end, end)
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {"User-Agent": ua,
                    "Content-Type": "application/x-www-form-urlencoded"}
@@ -384,16 +381,6 @@ class Flow(BaseFlow):
                 left_tickets = int(y[8].get_text().strip())
                 drv_datetime = dte.strptime("%s %s" % (
                     drv_date, drv_time), "%Y-%m-%d %H:%M")
-
-                #line_id_args = {
-                #    's_city_name': s_city_name,
-                #    'd_city_name': d_city_name,
-                #    'bus_num': bus_num,
-                #    'crawl_source': crawl_source,
-                #    'drv_datetime': drv_datetime,
-                #}
-                #line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
-
                 line_id_args = {
                     "s_city_name": line.s_city_name,
                     "d_city_name": line.d_city_name,
@@ -474,7 +461,6 @@ class Flow(BaseFlow):
                 return {"flag": "url", "content": pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
-            order.reload()
 
         if order.status == STATUS_WAITING_ISSUE:
             return _get_page(rebot)
