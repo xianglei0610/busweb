@@ -345,6 +345,13 @@ def main():
     # 河南
     sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['hn96520'])
 
+    # 广东省网
+    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['gdsw'], kwargs={"crawl_kwargs":{"city": "东莞,惠州,茂名,阳江,梅州,河源,揭阳,珠海,江门"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['gdsw'], kwargs={"crawl_kwargs":{"city": "湛江,汕尾,清远,潮州,肇庆,韶关,佛山,中山,汕头,云浮"}})
+
+    # 徐运集团
+    sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['xyjt'])
+
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=10)
