@@ -15,7 +15,7 @@ from flask import json
 from lxml import etree
 from bs4 import BeautifulSoup
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1
 from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
 
@@ -1281,10 +1281,37 @@ class GdswRebot(Rebot):
     def proxy_ip(self):
         return ""
 
+    def get_signature(self, timestamp, nonce):
+        secret = "561768DB-0A89-451B-8F64-69D0A9422F1Da"
+        lst = [timestamp, nonce, secret]
+        lst.sort()
+        return sha1("".join(lst))
+
     def login(self):
-        pwd, token = SOURCE_INFO[SOURCE_GDSW]["accounts"][self.telephone]
-        self.modify(token=token, user_agent=random.choice(MOBILE_USER_AGENG))
-        return "OK"
+        if self.test_login_status():
+            return "OK"
+        url = "http://183.6.161.195:9000/api/Auth/GetAppToken"
+        ts = str(int(time.time()))
+        rd = str(random.random())
+        params = dict(
+            username=self.telephone,
+            password=self.password,
+            channelid="null",
+            devicetype="android",
+            signature=self.get_signature(ts, rd),
+            timestamp=ts,
+            nonce=rd,
+            appid="andio_95C429257",
+        )
+        ua = random.choice(MOBILE_USER_AGENG)
+        url = "%s?%s" % (url, urllib.urlencode(params))
+        r = self.http_get(url, headers={"User-Agent": ua})
+        res = r.json()
+        token = res["access_token"]
+        if token:
+            self.modify(token=token, user_agent=ua, last_login_time=dte.now())
+            return "OK"
+        return "fail"
 
     def check_login(self):
         user_url = "http://183.6.161.195:9000/api/Subscriber/Get?token=%s" % self.token
@@ -1292,7 +1319,7 @@ class GdswRebot(Rebot):
             "User-Agent": self.user_agent,
             "Content-Type": "application/json;charset=UTF-8",
         }
-        r = self.http_post(user_url, headers=headers, data=json.dumps(params))
+        r = self.http_get(user_url, headers=headers)
         try:
             res = r.json()
         except:

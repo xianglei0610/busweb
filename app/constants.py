@@ -57,7 +57,7 @@ SOURCE_INFO = {
         "name": "广东省网",
         "website": "http://ticket.gdcd.gov.cn/",
         "accounts": {
-            "15575101324": ("12346", "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI4OTllNjk2YS0xNzE4LTQ5ZDYtYmI0ZS01Y2U5OTYyNDJjNzQiLCJpYXQiOjE0NjY0MDcxODksImp0aSI6IjkyNTM2ZThmLWVlMjItNDgzMi05YzM5LTE5OTA3NTBlZGJhMCIsIm5hbWUiOiIxNTU3NTEwMTMyNCIsImNoYW5uZWwiOiIyIiwic2hhcmVka2V5IjoiMTIzNGFiY2QifQ.uvvLSIYCfdqrfTnBLpiaW0LcCBk7KunzigY71Le43sY")
+            "15575101324": ("12346", ""),
         },
     },
     SOURCE_TZKY: {
