@@ -180,19 +180,15 @@ class Flow(BaseFlow):
     def request_lock(self, order, rebot, sta_mode=1):
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/TicketMain.aspx",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://124.172.118.225/User/CommitGoods.aspx",
         }
         cookies = json.loads(rebot.cookies)
         if sta_mode == 1:
-            base_url = "http://www.96096kp.com/CommitGoods.aspx"
+            base_url = "http://124.172.118.225/User/CommitGoods.aspx"
             r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
-            if "@" in rebot.telephone:
-                mail = rebot.telephone
-            else:
-                mail = "%s@qq.com" % rebot.telephone
+            mail = ''
             params ={
                 "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
                 "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),

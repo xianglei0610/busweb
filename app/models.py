@@ -3776,6 +3776,171 @@ class XinTuYunWebRebot(Rebot):
             pass
 
 
+class SzkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    username = db.StringField(default="")
+    user_id = db.StringField(default="")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked", "ip"],
+        "collection": "szkyweb_rebot",
+    }
+    crawl_source = SOURCE_SZKY
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return '192.168.1.33:8888'
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         if ipstr and rds.sismember(RK_PROXY_IP_SZKY, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(RK_PROXY_IP_SZKY)
+#         self.modify(ip=ipstr)
+#         return ipstr
+
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(
+            is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source=SOURCE_SZKY,
+                                      create_date_time__gte=today) \
+                .aggregate({
+                    "$group": {
+                        "_id": {"phone": "$source_account"},
+                        "count": {"$sum": "$ticket_amount"}}
+                }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt >= 7:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts - droped))
+        return cls.objects.get(telephone=tele)
+
+    def on_add_doing_order(self, order):
+        rebot_log.info("[szky] %s locked", self.telephone)
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        rebot_log.info("[szky] %s unlocked", self.telephone)
+        self.modify(is_locked=False)
+
+    @classmethod
+    def login_all(cls):
+        # 登陆所有预设账号
+        has_checked = {}
+        accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd, _ = accounts[bot.telephone]
+            bot.modify(password=pwd)
+            msg = bot.login()
+            rebot_log.info("[login_all] %s %s %s",
+                           cls.crawl_source, bot.telephone, msg)
+
+        for tele, (pwd, username) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,
+                      username=username,
+                      user_agent=random.choice(BROWSER_USER_AGENT))
+            bot.save()
+            msg = bot.login()
+            rebot_log.info("[login_all] %s %s %s",
+                           cls.crawl_source, bot.telephone, msg)
+
+    def login(self, valid_code="", headers=None, cookies=None):
+        if not headers:
+            headers = {}
+        if not cookies:
+            cookies = {}
+        vcode_flag = False
+        if not valid_code:
+            login_form = "http://124.172.118.225/UserData/UserCmd.aspx"
+            valid_url = "http://124.172.118.225/ValidateCode.aspx"
+            headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+            r = self.http_get(login_form, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            for i in range(3):
+                r = self.http_get(valid_url, headers=headers, cookies=cookies)
+                if "image" not in r.headers.get('content-type'):
+                    self.modify(ip="")
+                else:
+                    break
+            cookies.update(dict(r.cookies))
+            valid_code = vcode_cqky(r.content)
+            vcode_flag = True
+
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", "") or self.user_agent,
+                "Referer": "http://124.172.118.225/User/Default.aspx",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+            params = {
+                "loginID": self.telephone,
+                "loginPwd": self.password,
+                "getInfo": 1,
+                "loginValid": valid_code,
+                "cmd": "login",
+            }
+            login_url = "http://124.172.118.225/UserData/UserCmd.aspx"
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            res = json.loads(trans_js_str(r.content))
+            success = res.get("success", True)
+            if success:     # 登陆成功
+                cookies.update(dict(r.cookies))
+                if res["F_Code"] != self.telephone:
+                    return "fail"
+                self.modify(cookies=json.dumps(cookies), is_active=True, user_id=res['F_Guid'])
+                rebot_log.info("[szky]登陆成功, %s vcode_flag:%s cookeis:%s", self.telephone, vcode_flag, cookies)
+                return "OK"
+            else:
+                msg = res["msg"]
+                rebot_log.info("[szky]%s %s vcode_flag:%s",
+                               self.telephone, msg, vcode_flag)
+                if u"用户名或密码错误" in msg:
+                    return "invalid_pwd"
+                elif u"请正确输入验证码" in msg or u"验证码已过期" in msg:
+                    return "invalid_code"
+                return msg
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active = True
+            self.cookies = "{}"
+            self.save()
+            return "fail"
+
+    def check_login(self):
+        user_url = "http://124.172.118.225/User/Default.aspx"
+        headers = {
+            "User-Agent": self.user_agent,
+        }
+        cookies = json.loads(self.cookies)
+        r = self.http_get(user_url, headers=headers, cookies=cookies)
+        content = r.content
+        if not isinstance(content, unicode):
+            content = content.decode("utf8")
+        if self.username in content:
+            return 1
+        self.modify(cookies="{}")
+        return 0
+
+
 class Bus100Rebot(Rebot):
     is_encrypt = db.IntField(choices=(0, 1))
     user_agent = db.StringField()
