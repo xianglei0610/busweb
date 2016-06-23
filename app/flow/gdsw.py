@@ -244,7 +244,7 @@ class Flow(BaseFlow):
         for s, e in lst:
             if s<=t<e:
                 return s, e
-        return "0600" , "2400"
+        return "", ""
 
     def do_refresh_line(self, line):
         result_info = {"result_msg": "","update_attrs": {},}
@@ -269,7 +269,7 @@ class Flow(BaseFlow):
             return result_info
 
         if not res.get("success", False):
-            result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="error response %s" % res.get("errmsg", ""), update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
         update_attrs = {}
