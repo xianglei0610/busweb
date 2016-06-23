@@ -15,7 +15,7 @@ from flask import json
 from lxml import etree
 from bs4 import BeautifulSoup
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1
 from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
 
@@ -401,15 +401,16 @@ class Order(db.Document):
     def log_name(self):
         return "%s %s" % (self.crawl_source, self.order_no)
 
-    def change_lock_rebot(self):
+    def change_lock_rebot(self, rebot_cls=None):
         """
         更换锁票账号
         """
-        rebot_cls = None
-        for cls in get_rebot_class(self.crawl_source):
-            if cls.is_for_lock:
-                rebot_cls = cls
-                break
+        if not rebot_cls:
+            rebot_cls = None
+            for cls in get_rebot_class(self.crawl_source):
+                if cls.is_for_lock:
+                    rebot_cls = cls
+                    break
         try:
             old_rebot = rebot_cls.objects.get(telephone=self.source_account)
         except rebot_cls.DoesNotExist:
@@ -420,7 +421,7 @@ class Order(db.Document):
             return old_rebot
 
         # 检查释放被锁的账号
-        for rebot in cls.objects.filter(is_locked=True, is_active=True):
+        for rebot in rebot_cls.objects.filter(is_locked=True, is_active=True):
             for no in rebot.doing_orders.keys():
                 try:
                     tmp_order = Order.objects.get(order_no=no)
@@ -446,20 +447,21 @@ class Order(db.Document):
         accounts = SOURCE_INFO[self.crawl_source]["accounts"]
         return accounts.get(self.source_account, [""])[0]
 
-    def get_lock_rebot(self):
+    def get_lock_rebot(self, rebot_cls=None):
         """
         获取用于锁票的rebot, 如果没有则新申请一个。
         """
-        cls_lst = get_rebot_class(self.crawl_source)
-        rebot_cls = None
-        for cls in cls_lst:
-            if cls.is_for_lock:
-                rebot_cls = cls
-                break
+        if not rebot_cls:
+            cls_lst = get_rebot_class(self.crawl_source)
+            rebot_cls = None
+            for cls in cls_lst:
+                if cls.is_for_lock:
+                    rebot_cls = cls
+                    break
         try:
             return rebot_cls.objects.get(telephone=self.source_account)
         except rebot_cls.DoesNotExist:
-            return self.change_lock_rebot()
+            return self.change_lock_rebot(rebot_cls=rebot_cls)
 
     def complete_by(self, user_obj):
         self.kefu_order_status = 1
@@ -1279,10 +1281,37 @@ class GdswRebot(Rebot):
     def proxy_ip(self):
         return ""
 
+    def get_signature(self, timestamp, nonce):
+        secret = "561768DB-0A89-451B-8F64-69D0A9422F1Da"
+        lst = [timestamp, nonce, secret]
+        lst.sort()
+        return sha1("".join(lst))
+
     def login(self):
-        pwd, token = SOURCE_INFO[SOURCE_GDSW]["accounts"][self.telephone]
-        self.modify(token=token, user_agent=random.choice(MOBILE_USER_AGENG))
-        return "OK"
+        if self.test_login_status():
+            return "OK"
+        url = "http://183.6.161.195:9000/api/Auth/GetAppToken"
+        ts = str(int(time.time()))
+        rd = str(random.random())
+        params = dict(
+            username=self.telephone,
+            password=self.password,
+            channelid="null",
+            devicetype="android",
+            signature=self.get_signature(ts, rd),
+            timestamp=ts,
+            nonce=rd,
+            appid="andio_95C429257",
+        )
+        ua = random.choice(MOBILE_USER_AGENG)
+        url = "%s?%s" % (url, urllib.urlencode(params))
+        r = self.http_get(url, headers={"User-Agent": ua})
+        res = r.json()
+        token = res["access_token"]
+        if token:
+            self.modify(token=token, user_agent=ua, last_login_time=dte.now())
+            return "OK"
+        return "fail"
 
     def check_login(self):
         user_url = "http://183.6.161.195:9000/api/Subscriber/Get?token=%s" % self.token
@@ -1290,7 +1319,7 @@ class GdswRebot(Rebot):
             "User-Agent": self.user_agent,
             "Content-Type": "application/json;charset=UTF-8",
         }
-        r = self.http_post(user_url, headers=headers, data=json.dumps(params))
+        r = self.http_get(user_url, headers=headers)
         try:
             res = r.json()
         except:
@@ -2273,7 +2302,7 @@ class TCAppRebot(Rebot):
         "collection": "tcapp_rebot",
     }
     crawl_source = SOURCE_TC
-    is_for_lock = True
+    is_for_lock = False
 
     def http_post(self, url, service_name, data):
         stime = str(int(time.time() * 1000))
@@ -2374,7 +2403,7 @@ class TCWebRebot(Rebot):
         "collection": "tc_rebot",
     }
     crawl_source = SOURCE_TC
-    is_for_lock = False
+    is_for_lock = True
 
     def login(self, headers=None, cookies={}, valid_code=""):
         login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
