@@ -192,7 +192,7 @@ class Flow(BaseFlow):
             params ={
                 "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
                 "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
-                "ctl00$FartherMain$NavigationControl1$CustRBList": "",
+                "ctl00$FartherMain$NavigationControl1$CustRBList": rebot.user_info,
                 "ctl00$FartherMain$NavigationControl1$o_CustomerName": order.contact_info["name"],
                 "ctl00$FartherMain$NavigationControl1$o_Mobele": order.contact_info["telephone"],
                 "ctl00$FartherMain$NavigationControl1$o_IdType": 1,

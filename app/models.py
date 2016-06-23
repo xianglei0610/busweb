@@ -2163,6 +2163,7 @@ class CqkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
     ip = db.StringField(default="")
+    user_info = db.DictField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked", "ip"],
@@ -2253,6 +2254,7 @@ class CqkyWebRebot(Rebot):
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
                 if self.test_login_status():
+                    self.modify(user_info=res)
                     ret = "OK"
                 else:
                     ret = "check_fail"
