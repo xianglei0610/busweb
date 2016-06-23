@@ -421,7 +421,7 @@ class Order(db.Document):
             return old_rebot
 
         # 检查释放被锁的账号
-        for rebot in cls.objects.filter(is_locked=True, is_active=True):
+        for rebot in rebot_cls.objects.filter(is_locked=True, is_active=True):
             for no in rebot.doing_orders.keys():
                 try:
                     tmp_order = Order.objects.get(order_no=no)
