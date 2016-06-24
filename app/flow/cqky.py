@@ -180,8 +180,7 @@ class Flow(BaseFlow):
     def request_lock(self, order, rebot, sta_mode=1):
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/TicketMain.aspx",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://www.96096kp.com/User/CommitGoods.aspx",
         }
         cookies = json.loads(rebot.cookies)
         if sta_mode == 1:
@@ -189,14 +188,17 @@ class Flow(BaseFlow):
             r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
-            if "@" in rebot.telephone:
-                mail = rebot.telephone
-            else:
-                mail = "%s@qq.com" % rebot.telephone
+            mail = "%s@qq.com" % rebot.telephone
+            info = {}
+            for attr in ["Moblie", "ID", "Email", "Name", "CerType", "CerNo", "Addr", "Notes"]:
+                key = attr
+                if attr == "Moblie":
+                    key = "Mobile"
+                info[attr] = rebot.user_info[key]
             params ={
                 "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
                 "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
-                "ctl00$FartherMain$NavigationControl1$CustRBList": "",
+                "ctl00$FartherMain$NavigationControl1$CustRBList": info,
                 "ctl00$FartherMain$NavigationControl1$o_CustomerName": order.contact_info["name"],
                 "ctl00$FartherMain$NavigationControl1$o_Mobele": order.contact_info["telephone"],
                 "ctl00$FartherMain$NavigationControl1$o_IdType": 1,
