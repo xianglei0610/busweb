@@ -118,7 +118,7 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
                 "lock_info": ret,
             })
-        elif u"班次不在预售期" in errmsg:
+        elif u"班次不在预售期" in errmsg or u"没有余票" in errmsg:
             self.close_line(order.line, reason=errmsg)
             lock_result.update({
                 "result_code": 0,
