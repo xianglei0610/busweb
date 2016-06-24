@@ -35,7 +35,8 @@ class Flow(BaseFlow):
             "nonce": rd,
             "orderno": "",
             "paytype": "alipay",
-            "price": str(line.real_price()*order.ticket_amount),
+            # "price": str(line.real_price()*order.ticket_amount),
+            "price": str(line.real_price()),
             "psw": rebot.password,
             "schcode": line.bus_num,
             "schdate": line.drv_datetime.strftime("%Y%m%d"),
@@ -50,16 +51,23 @@ class Flow(BaseFlow):
             "tocity": line.d_city_name
         }
 
-        riders = []
-        for d in order.riders:
-            riders.append({
-                "certno": d["id_number"],
-                "certtype": "1",
-                "mobile": d["telephone"],
-                "name": d["name"],
-                "passengertype": "1"
-            })
+        # riders = []
+        # for d in order.riders:
+        #     riders.append({
+        #         "certno": d["id_number"],
+        #         "certtype": "1",
+        #         "mobile": d["telephone"],
+        #         "name": d["name"],
+        #         "passengertype": "1"
+        #     })
 
+        rider_info = {
+            "certno": order.contact_info["id_number"],
+            "certtype": "1",
+            "mobile": order.contact_info["telephone"],
+            "name": order.contact_info["name"],
+            "passengertype": "1"
+        }
         # 锁票提交的参数
         lock_params = {}
         lock_params.update(base)
@@ -72,7 +80,7 @@ class Flow(BaseFlow):
                 "name": order.contact_info["name"],
                 "passengertype": "1"
             },
-            "passengerlist": riders,
+            "passengerlist": [rider_info],
         })
 
         # url带的参数
@@ -239,7 +247,7 @@ class Flow(BaseFlow):
             ("0600", "1200"),
             ("1200", "1400"),
             ("1400", "1800"),
-            ("1800", "2400"),
+            ("1800", "2359"),
         ]
         for s, e in lst:
             if s<=t<e:
