@@ -13,6 +13,7 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from datetime import datetime as dte
 from app.utils import md5
+from bs4 import BeautifulSoup
 
 
 class Flow(BaseFlow):
@@ -202,6 +203,56 @@ class Flow(BaseFlow):
 
     def do_refresh_issue(self, order):
         return self.do_refresh_issue_by_app(order)
+
+    def do_refresh_issue_by_web(self, order):
+        result_info = {
+            "result_code": 0,
+            "result_msg": "",
+            "pick_code_list": [],
+            "pick_msg_list": [],
+        }
+        if not self.need_refresh_issue(order):
+            result_info.update(result_msg="状态未变化")
+            return result_info
+        if not order.lock_info.get("data", {}):
+            result_info.update(result_msg="lock_info没内容")
+            return result_info
+        detail = order.lock_info["data"][0]
+        key, orderno = detail["transid"], detail["orderno"]
+        if orderno != order.raw_order_no:
+            result_info.update(result_msg="lock_info内容异常,订单号不一致")
+            return result_info
+        url = "http://ticket.gdcd.gov.cn/OrderDetail.aspx?OrderNo=%s&Key=%s" % (orderno, key)
+        rebot = order.get_lock_rebot()
+        r = rebot.http_get(url, headers={"User-Agent": random.choice(BROWSER_USER_AGENT)})
+        if r.status_code != 200:
+            result_info.update(result_msg="请求异常,返回%s" % r.status_code)
+            return result_info
+        soup = BeautifulSoup(r.content, "lxml")
+        try:
+            status_msg = soup.select_one("#MainContent_lblOrderPayResult").text.encode("utf-8")
+            pick_text = soup.select_one("#lblOrderMessage").text.encode("utf-8")
+            pick_code = re.findall(r"取票密码：(\d+)", pick_text)[0]
+            if u"已出票" in status_msg:
+                dx_info = {
+                    "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                    "start": order.line.s_sta_name,
+                    "end": order.line.d_sta_name,
+                    "code": pick_code,
+                    'raw_order': order.raw_order_no,
+                }
+                dx_tmpl = DUAN_XIN_TEMPL[SOURCE_GDSW]
+                pick_msg = dx_tmpl % dx_info
+                result_info.update({
+                    "result_code": 1,
+                    "result_msg": status_msg,
+                    "pick_code_list": [pick_code],
+                    "pick_msg_list": [pick_msg],
+                })
+        except:
+            pass
+        return result_info
+
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
