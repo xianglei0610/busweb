@@ -15,9 +15,11 @@ from flask import json
 from lxml import etree
 from bs4 import BeautifulSoup
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter
 from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
+from pymongo import MongoClient
+
 
 
 class AdminUser(db.Document):
@@ -124,6 +126,24 @@ class OpenCity(db.Document):
                       (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
         self.modify(dest_list=old.union(new))
 
+    def update_sale_line(self, city, q='', extra='', crawl=''):
+        client = MongoClient('mongodb://db:27017/')
+        db = client['web12308']
+        res = db.line.find({'s_city_name': city, 'crawl_source': crawl})
+        sale = {}
+        for x in res:
+            s, e, c, eta = x['s_sta_name'], x['d_sta_name'], x.get(q, ''), x.get(extra, {})
+            start = '{0}|{1}|{2}'.format(s, get_pinyin_first_litter(s), c)
+            end = {'{0}|{1}'.format(e, get_pinyin_first_litter(e)): eta}
+            v = sale.get(start, [])
+            if v:
+                if end not in v:
+                    v.append(end)
+                sale[start] = v
+            else:
+                sale[start] = [end, ]
+        db.open_city.update({'city_name': city}, {'$set': {'sale_line': sale}})
+        client.close()
 
 class Line(db.Document):
     """线路表"""
