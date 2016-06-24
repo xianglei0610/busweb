@@ -98,6 +98,7 @@ class OpenCity(db.Document):
     source_weight = db.DictField()          # 源站分配权重
     source_order_limit = db.DictField()     # 源站分配单数限制
     dest_list = db.ListField()              # 目的地列表  ["成都|cd", "重庆|cq"]
+    sale_line = db.DictField()              # 在售线路 {'徐州总站|xzzz|01320300001': [{'苏州|sz': {}}, ], '徐州南站|xznz|01320300002': [{'南通|nt': {}, ]}]
 
     meta = {
         "indexes": [
