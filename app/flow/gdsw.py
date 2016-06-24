@@ -29,7 +29,7 @@ class Flow(BaseFlow):
         base = {
             "appid": "andio_95C429257",
             "dstnode": line.d_sta_id,
-            "endcity": line.d_city_name,
+            "endcity": line.extra_info["endcity"],
             "endnode": line.extra_info["endnodename"],
             "fromcity": line.s_city_name,
             "mobile": rebot.telephone,
@@ -301,8 +301,8 @@ class Flow(BaseFlow):
             "schdate": line.drv_datetime.strftime("%Y%m%d"),
             "schtimeend": etime,
             "schtimestart": stime,
-            #"tocity": line.d_city_name,
-            "tocity": line.d_sta_name,
+            "tocity": line.d_city_name,
+            # "tocity": line.d_sta_name,
         }
         headers={"Content-Type": "application/json; charset=UTF-8", "User-Agent": random.choice(MOBILE_USER_AGENG)}
         try:
@@ -323,7 +323,7 @@ class Flow(BaseFlow):
             drv_datetime = dte.strptime("%s %s" % (d["schdate"], d["sendtime"]), "%Y%m%d %H%M")
             line_id_args = {
                 "s_city_name": res["startcity"],
-                "d_city_name": d["endcity"],
+                "d_city_name": line.d_city_name,
                 "s_sta_name": d["startstationname"],
                 "d_sta_name": d["endstationname"],
                 "crawl_source": line.crawl_source,
@@ -340,7 +340,7 @@ class Flow(BaseFlow):
                 "fee": 0,
                 "left_tickets": int(d["lefttickets"]),
                 "refresh_datetime": now,
-                "extra_info": {"endnodename": d["endnodename"], "endnodecode": d["endnodecode"]},
+                "extra_info": {"endnodename": d["endnodename"], "endnodecode": d["endnodecode"], "endcity": d["endcity"]},
             }
             if line_id == line.line_id:
                 update_attrs = info

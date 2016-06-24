@@ -122,8 +122,7 @@ class OpenCity(db.Document):
                              }
                          })
         old = set(self.dest_list)
-        new = set(map(lambda x: "%s|%s" %
-                      (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
+        new = set(map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
         self.modify(dest_list=old.union(new))
 
     def update_sale_line(self, city='', q='', extra='', crawl=''):
