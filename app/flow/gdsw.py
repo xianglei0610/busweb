@@ -31,11 +31,10 @@ class Flow(BaseFlow):
             "endcity": line.d_city_name,
             "endnode": line.extra_info["endnodename"],
             "fromcity": line.s_city_name,
-            "mobile": rebot.telephone,      # 不确定这个是不是注册人电话
+            "mobile": rebot.telephone,
             "nonce": rd,
             "orderno": "",
             "paytype": "alipay",
-            # "price": str(line.real_price()*order.ticket_amount),
             "price": str(line.real_price()),
             "psw": rebot.password,
             "schcode": line.bus_num,
@@ -51,16 +50,6 @@ class Flow(BaseFlow):
             "tocity": line.d_city_name
         }
 
-        # riders = []
-        # for d in order.riders:
-        #     riders.append({
-        #         "certno": d["id_number"],
-        #         "certtype": "1",
-        #         "mobile": d["telephone"],
-        #         "name": d["name"],
-        #         "passengertype": "1"
-        #     })
-
         rider_info = {
             "certno": order.contact_info["id_number"],
             "certtype": "1",
@@ -73,21 +62,12 @@ class Flow(BaseFlow):
         lock_params.update(base)
         lock_params.update({
             "createtime": ts,
-            "cust": {
-                "certno": order.contact_info["id_number"],
-                "certtype": "1",
-                "mobile": order.contact_info["telephone"],
-                "name": order.contact_info["name"],
-                "passengertype": "1"
-            },
+            "cust": rider_info,
             "passengerlist": [rider_info],
         })
 
         # url带的参数
         url_pramas = {"token": rebot.token}
-        # for s in ["signature", "timestamp", "nonce", "appid", "paytype", "subject", "fromcity", "tocity", "mobile", "psw", "startstation", "endcity", "sendtime", "price", "endnode", "startcity", "startstationname"]:
-        #     if s in lock_params:
-        #         url_pramas[s] = lock_params[s]
         url_pramas.update(base)
         url = "http://www.gdnyt.cn/api/ticketorder/lockticket/?"+urllib.urlencode(url_pramas)
         return url, lock_params
@@ -138,6 +118,13 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
                 "lock_info": ret,
             })
+        elif u"班次不在预售期" in errmsg:
+            self.close_line(order.line, reason=errmsg)
+            lock_result.update({
+                "result_code": 0,
+                "result_reason": errmsg,
+                "source_account": rebot.telephone,
+            })
         else:
             lock_result.update({
                 "result_code": 2,
@@ -151,7 +138,6 @@ class Flow(BaseFlow):
 
     def send_order_request_by_app(self, order):
         rebot = order.get_lock_rebot()
-        # url = "http://183.6.161.195:9000/api/TicketOrder/QueryLock?token=%s" % rebot.token    # 未付款
         url = "http://183.6.161.195:9000/api/TicketOrder/QueryOrder?token=%s" % rebot.token     # 已完成
         data = {}
         headers = {
@@ -208,7 +194,6 @@ class Flow(BaseFlow):
                 "result_msg": state,
             })
         elif state=="出票失败":
-            self.close_line(order.line, "出票失败")
             result_info.update({
                 "result_code": 2,
                 "result_msg": state,
