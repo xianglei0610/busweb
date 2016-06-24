@@ -126,13 +126,13 @@ class OpenCity(db.Document):
                       (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
         self.modify(dest_list=old.union(new))
 
-    def update_sale_line(self, city='', q='', extra=''):
+    def update_sale_line(self, city='', q='', extra='', crawl=''):
         '''
-        徐州初始化, update_sale_line('徐州市', q='s_sta_id')
+        徐州初始化, update_sale_line('徐州', q='s_sta_id', crawl='xyjt')
         '''
         client = MongoClient('mongodb://db:27017/')
         db = client['web12308']
-        res = db.line.find({'s_city_name': city})
+        res = db.line.find({'s_city_name': city, 'crawl_source': crawl})
         sale = {}
         for x in res:
             s, e, c, eta = x['s_sta_name'], x['d_sta_name'], x.get(q, ''), x.get(extra, {})
