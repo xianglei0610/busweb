@@ -327,7 +327,7 @@ class Flow(BaseFlow):
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
         url = 'http://order.xuyunjt.com/wsdgbccx.aspx'
-        ste = line.extra_info.get('drivedate')
+        ste = line.extra_info.get('drivedate').replace('-', '')
         start_code = line.extra_info.get('incountry')
         end = line.extra_info.get('dstname')
         states = {
@@ -360,7 +360,9 @@ class Flow(BaseFlow):
         }
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {"User-Agent": ua,
-                   "Content-Type": "application/x-www-form-urlencoded"}
+                   "Content-Type": "application/x-www-form-urlencoded",
+                   'X-MicrosoftAjax': 'Delta=true',
+                   }
         r = requests.post(url, headers=headers, data=urllib.urlencode(data))
         soup = bs(r.content, 'lxml')
         info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GVBccx'}).find_all(
