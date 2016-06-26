@@ -78,6 +78,7 @@ class Flow(BaseFlow):
             if not del_success:
                 rebot.modify(cookies="{}")
                 rebot = order.change_lock_rebot()
+            rebot.modify(ip="")
             lock_result.update({
                 "result_code": 2,
                 "result_reason": u"购物车数量不对:%s, %s" % (msg, del_success),
