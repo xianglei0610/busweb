@@ -163,9 +163,8 @@ class Flow(object):
             3: STATUS_GIVE_BACK,
             4: STATUS_ISSUE_ING,
         }
-        if code_status_mapping.get(code, "") == old_status:
-            return
-        if code == 0:
+        if code_status_mapping.get(code, "") == old_status or code == 0:
+            order_log.info("[issue-refresh-result] keeping order:%s, msg:%s", order.order_no, ret["result_msg"])
             return
         elif code == 1:         # 出票成功
             msg_list = ret["pick_msg_list"] or order.pick_msg_list

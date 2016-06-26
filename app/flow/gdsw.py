@@ -7,6 +7,7 @@ import urllib
 import datetime
 import requests
 import time
+import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -202,7 +203,7 @@ class Flow(BaseFlow):
         return result_info
 
     def do_refresh_issue(self, order):
-        return self.do_refresh_issue_by_app(order)
+        return self.do_refresh_issue_by_web(order)
 
     def do_refresh_issue_by_web(self, order):
         result_info = {
@@ -249,7 +250,7 @@ class Flow(BaseFlow):
                     "pick_code_list": [pick_code],
                     "pick_msg_list": [pick_msg],
                 })
-        except:
+        except Exception, e:
             pass
         return result_info
 
