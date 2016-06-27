@@ -33,6 +33,7 @@ SOURCE_CCW = 'ccw'
 SOURCE_SZKY = 'szky'
 SOURCE_XYJT = 'xyjt'
 SOURCE_GDSW = "gdsw"    # 广东省网
+SOURCE_DGKY = "dgky"    # 东莞客运
 
 
 PAY_TYPE_SOURCE = {
@@ -54,6 +55,11 @@ PAY_TYPE_SOURCE = {
 }
 
 SOURCE_INFO = {
+    SOURCE_DGKY: {
+        "name": "东莞客运",
+        "website": "http://www.mp0769.com/",
+        "accounts": {}
+    },
     SOURCE_GDSW: {
         "name": "广东省网",
         "website": "http://ticket.gdcd.gov.cn/",
