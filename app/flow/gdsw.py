@@ -106,7 +106,7 @@ class Flow(BaseFlow):
             "User-Agent": rebot.user_agent,
             "Content-Type": "application/json;charset=utf-8",
         }
-        r = rebot.http_post(url, data=json.dumps(data), headers=headers)
+        r = rebot.http_post(url, data=json.dumps(data), headers=headers, timeout=45)
         ret = r.json()
         errmsg = ret["errmsg"]
         if ret.get("success", False):
