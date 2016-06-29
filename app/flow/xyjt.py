@@ -262,7 +262,7 @@ class Flow(BaseFlow):
                     pcode = x.find('span', attrs={
                                    'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblget_ticket_passwd'}).get_text().strip()
 
-        except:
+        except Exception,e:
             state = ''
             pcode = ''
 
@@ -465,8 +465,8 @@ class Flow(BaseFlow):
                         no = v
                     elif k == "total_fee":
                         pay = float(v)
-                if no and order.pay_order_no != v:
-                    order.modify(pay_order_no=v, pay_money=pay)
+                if no and order.pay_order_no != no:
+                    order.modify(pay_order_no=no, pay_money=pay)
                 return {"flag": "url", "content": pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
