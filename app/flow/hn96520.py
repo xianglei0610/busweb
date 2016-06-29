@@ -92,8 +92,9 @@ class Flow(BaseFlow):
             tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
             tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
             if '订票结束时间' in urlstr and tpk >= order.line.drv_datetime:
+                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+                errmsg = unicode(errlst and errlst[0] or "")
                 #rebot_log.info(2333333)
-                errmsg = urlstr
                 lock_result.update({
                     'result_code': 0,
                     "source_account": rebot.telephone,
