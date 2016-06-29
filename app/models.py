@@ -61,7 +61,7 @@ class AdminUser(db.Document):
 
     @property
     def is_superuser(self):
-        if self.username in ["luojunping", "xiangleilei", "liuquan", "luocky", "august"]:
+        if self.username in ["luojunping", "xiangleilei", "liuquan", "luocky", "august", 'chengxiaokang']:
             return True
         return False
 
@@ -3971,7 +3971,7 @@ class SzkyWebRebot(Rebot):
             return 1
         self.modify(cookies="{}")
         return 0
-    
+
     def query_code(self, headers):
         cookies = {}
         valid_code = ''
