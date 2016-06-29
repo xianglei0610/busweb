@@ -327,7 +327,7 @@ class Flow(BaseFlow):
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
         url = 'http://order.xuyunjt.com/wsdgbccx.aspx'
-        ste = line.extra_info.get('drivedate')
+        ste = line.extra_info.get('drivedate').replace('-', '')
         start_code = line.extra_info.get('incountry')
         end = line.extra_info.get('dstname')
         states = {
@@ -360,7 +360,9 @@ class Flow(BaseFlow):
         }
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {"User-Agent": ua,
-                   "Content-Type": "application/x-www-form-urlencoded"}
+                   "Content-Type": "application/x-www-form-urlencoded",
+                   'X-MicrosoftAjax': 'Delta=true',
+                   }
         r = requests.post(url, headers=headers, data=urllib.urlencode(data))
         soup = bs(r.content, 'lxml')
         info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GVBccx'}).find_all(
@@ -414,11 +416,11 @@ class Flow(BaseFlow):
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
                 pay_url = order.extra_info.get('pay_url')
-                cks = json.loads(order.extra_info.get('cookies'))
-                headers = {
-                    "User-Agent": rebot.user_agent,
-                    # "Content-Type": "application/x-www-form-urlencoded",
-                }
+                # cks = json.loads(order.extra_info.get('cookies'))
+                # headers = {
+                #     "User-Agent": rebot.user_agent,
+                #     # "Content-Type": "application/x-www-form-urlencoded",
+                # }
                 # dr = webdriver.PhantomJS()
                 # tmp = {u'domain': u'xuyunjt.com',
                 #        u'name': '',
@@ -444,20 +446,27 @@ class Flow(BaseFlow):
                 # pay_url = pay_url.split("'")[1].strip()
                 # # dr.get(pay_url)
                 # rebot_log.info(pay_url)
-                headers['Accept-Language'] = 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3'
-                headers['Accept-Encoding'] = 'gzip, deflate, br'
-                headers['Host'] = 'kcart.alipay.com'
-                r = requests.get(pay_url, headers=headers, cookies=cks)
-                soup = bs(r.content, 'lxml')
-                info = soup.find(
-                    'li', attrs={'class': 'order-item'}).find_all('tr')
-                trade_no = info[1].get_text()
-                trade_no = re.findall(r'\d+', trade_no)[0]
-                pay_money = info[-1].get_text()
-                pay_money = float(re.findall(r'\d+\.\d+', pay_money)[0])
-                # rebot_log.info(pay_money)
-                if order.pay_money != pay_money or order.pay_order_no != trade_no:
-                    order.modify(pay_money=pay_money, pay_order_no=trade_no)
+                # headers['Accept-Language'] = 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3'
+                # headers['Accept-Encoding'] = 'gzip, deflate, br'
+                # headers['Host'] = 'kcart.alipay.com'
+                # r = requests.get(pay_url, headers=headers, cookies=cks)
+                # soup = bs(r.content, 'lxml')
+                # info = soup.find(
+                #     'li', attrs={'class': 'order-item'}).find_all('tr')
+                # trade_no = info[1].get_text()
+                # trade_no = re.findall(r'\d+', trade_no)[0]
+                # pay_money = info[-1].get_text()
+                # pay_money = float(re.findall(r'\d+\.\d+', pay_money)[0])
+                # # rebot_log.info(pay_money)
+                no, pay = "", 0
+                for s in pay_url.split("?")[1].split("&"):
+                    k, v = s.split("=")
+                    if k == "out_trade_no":
+                        no = v
+                    elif k == "total_fee":
+                        pay = float(v)
+                if no and order.pay_order_no != v:
+                    order.modify(pay_order_no=v, pay_money=pay)
                 return {"flag": "url", "content": pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)

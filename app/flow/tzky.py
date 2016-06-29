@@ -251,7 +251,11 @@ class Flow(BaseFlow):
             "User-Agent": random.choice(BROWSER_USER_AGENT),
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
-        r = rebot.http_post(line_url, headers=headers, data=urllib.urlencode(params))
+        try:
+            r = rebot.http_post(line_url, headers=headers, data=urllib.urlencode(params))
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
+            return result_info
         soup = BeautifulSoup(r.content.replace("<!--", "").replace("-->", ""), "lxml")
         update_attrs = {}
         for e in soup.findAll("tr"):

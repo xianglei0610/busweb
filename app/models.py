@@ -15,9 +15,11 @@ from flask import json
 from lxml import etree
 from bs4 import BeautifulSoup
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter
 from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
+from pymongo import MongoClient
+
 
 
 class AdminUser(db.Document):
@@ -120,10 +122,30 @@ class OpenCity(db.Document):
                              }
                          })
         old = set(self.dest_list)
-        new = set(map(lambda x: "%s|%s" %
-                      (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
+        new = set(map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
         self.modify(dest_list=old.union(new))
 
+    def update_sale_line(self, city='', q='', extra='', crawl=''):
+        '''
+        徐州初始化, update_sale_line('徐州', q='s_sta_id', crawl='xyjt')
+        '''
+        client = MongoClient('mongodb://db:27017/')
+        db = client['web12308']
+        res = db.line.find({'s_city_name': city, 'crawl_source': crawl})
+        sale = {}
+        for x in res:
+            s, e, c, eta = x['s_sta_name'], x['d_sta_name'], x.get(q, ''), x.get(extra, {})
+            start = '{0}|{1}|{2}'.format(s, get_pinyin_first_litter(s), c)
+            end = {'{0}|{1}'.format(e, get_pinyin_first_litter(e)): eta}
+            v = sale.get(start, [])
+            if v:
+                if end not in v:
+                    v.append(end)
+                sale[start] = v
+            else:
+                sale[start] = [end, ]
+        db.open_city.update({'city_name': city}, {'$set': {'sale_line': sale}})
+        client.close()
 
 class Line(db.Document):
     """线路表"""
@@ -3816,18 +3838,19 @@ class SzkyWebRebot(Rebot):
         all_accounts = set(cls.objects.filter(
             is_active=True, is_locked=False).distinct("telephone"))
         droped = set()
-        for d in Order.objects.filter(status=14,
-                                      crawl_source=SOURCE_SZKY,
-                                      create_date_time__gte=today) \
-                .aggregate({
-                    "$group": {
-                        "_id": {"phone": "$source_account"},
-                        "count": {"$sum": "$ticket_amount"}}
-                }):
-            cnt = d["count"]
-            phone = d["_id"]["phone"]
-            if cnt >= 7:
-                droped.add(phone)
+        if order:
+            for d in Order.objects.filter(status=14,
+                                          crawl_source=SOURCE_SZKY,
+                                          create_date_time__gte=today) \
+                    .aggregate({
+                        "$group": {
+                            "_id": {"phone": "$source_account"},
+                            "count": {"$sum": "$ticket_amount"}}
+                    }):
+                cnt = d["count"]
+                phone = d["_id"]["phone"]
+                if cnt >= 7:
+                    droped.add(phone)
         tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
 
@@ -3948,6 +3971,53 @@ class SzkyWebRebot(Rebot):
             return 1
         self.modify(cookies="{}")
         return 0
+    
+    def query_code(self, headers):
+        cookies = {}
+        valid_code = ''
+        if not valid_code:
+            login_form = "http://124.172.118.225/UserData/UserCmd.aspx"
+            valid_url = "http://124.172.118.225/ValidateCode.aspx"
+            r = self.http_get(login_form, headers=headers, cookies=cookies)
+            cookies.update(dict(r.cookies))
+            for i in range(3):
+                r = self.http_get(valid_url, headers=headers, cookies=cookies)
+                if "image" not in r.headers.get('content-type'):
+                    self.modify(ip="")
+                else:
+                    break
+            cookies.update(dict(r.cookies))
+            valid_code = vcode_cqky(r.content)
+
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", ""),
+                "Referer": "http://124.172.118.225/User/Default.aspx",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+            params = {
+                "loginID": self.telephone,
+                "loginPwd": self.password,
+                "getInfo": 1,
+                "loginValid": valid_code,
+                "cmd": "login",
+            }
+            login_url = "http://124.172.118.225/UserData/UserCmd.aspx"
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            ret = json.loads(trans_js_str(r.content))
+            success = ret.get("success", True)
+            res = {}
+            if success:     # 登陆成功
+                cookies.update(dict(r.cookies))
+                if ret["F_Code"] != self.telephone:
+                    res.update({'status': 1})
+                    return res
+                res.update({'status': 0, 'cookies': cookies, 'valid_code':valid_code})
+                return res
+            else:
+                res.update({'status': 1})
+                return res
 
 
 class Bus100Rebot(Rebot):

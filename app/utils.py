@@ -5,6 +5,9 @@ import redis
 import random
 import re
 import cStringIO
+from pypinyin import pinyin
+import pypinyin
+
 
 try:
     import Image
@@ -99,6 +102,14 @@ def md5(msg):
 
 def sha1(msg):
     return hashlib.sha1(msg.encode('utf-8')).hexdigest()
+
+
+def get_pinyin_first_litter(hanzi):
+    pinyin_list = pinyin(hanzi, style=pypinyin.FIRST_LETTER)
+    pinyin_st = ''
+    for i in pinyin_list:
+        pinyin_st += i[0]
+    return pinyin_st
 
 
 def getRedisObj(rdb=0):

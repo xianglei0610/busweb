@@ -114,7 +114,7 @@ def registe(nickname, name, idcard, phone):
     if msg_lst:
         msg = msg_lst[0]
     if not msg:
-        return '"%s": ("123456", "%s"),' % (nickname,name)
+        print  '"%s": ("123456", "%s"),' % (nickname,name)
 #     return "nickName: %s name:%s idcard: %s phone: %s %s" % (nickname, name, idcard, phone, msg)
 
 
@@ -151,6 +151,5 @@ def start():
         idcard = ident_generator()
         name = random.choice(list(set(name_list)))
         s = registe(tele, name, idcard, tele)
-        print s
 #         kefu_log.info("[registe_cqky] %s", s)
 start()

@@ -494,6 +494,86 @@ class Flow(BaseFlow):
             return {"flag": "input_code", "content": ""}
 
     def do_refresh_line(self, line):
+        rebot = SzkyWebRebot.get_one()
+        headers = {"User-Agent": rebot.user_agent}
+        for i in range(50):
+            res = rebot.query_code(headers)
+            if res.get('status', '') == 0:
+                cookies = res.get('cookies')
+                valid_code = res.get('valid_code')
+                break
+        result_info = {
+            "result_msg": "",
+            "update_attrs": {},
+        }
+        now = dte.now()
+        if cookies:
+            data = {
+                    "DstNode": line.d_sta_name,
+                    "OpAddress": "-1",
+                    "OpStation":  "-1",
+                    "OperMode": '',
+                    "SchCode": '',
+                    "SchDate": line.drv_date,
+                    "SchTime": '',
+                    'SeatType': '',
+                    'StartStation':  line.s_sta_id,
+                    'WaitStationCode': line.extra_info['raw_info']['SchWaitStCode'],
+                    'cmd': "MQCenterGetClass",
+                    'txtImgCode': valid_code,
+                    }
+            line_url = 'http://124.172.118.225/UserData/MQCenterSale.aspx'
+            headers.update({
+                        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        "Referer": "http://124.172.118.225/User/Default.aspx",
+                        "X-Requested-With": "XMLHttpRequest",
+                    })
+            try:
+                r = rebot.http_post(line_url,
+                                    data=urllib.urlencode(data),
+                                    headers=headers,
+                                    cookies=cookies)
+                res = json.loads(trans_js_str(r.content))
+            except:
+                result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+                return result_info
+
+        update_attrs = {}
+        for d in res["data"]:
+            if d['SchStat'] == '1':
+                drv_datetime = dte.strptime("%s %s" % (d["SchDate"], d["orderbytime"]), "%Y-%m-%d %H:%M")
+                line_id_args = {
+                    "s_city_name": line.s_city_name,
+                    "d_city_name": line.d_city_name,
+                    "s_sta_name": d["SchWaitStName"],
+                    "d_sta_name": d["SchNodeName"],
+                    "crawl_source": line.crawl_source,
+                    "drv_datetime": drv_datetime,
+                }
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+                try:
+                    obj = Line.objects.get(line_id=line_id)
+                except Line.DoesNotExist:
+                    continue
+                info = {
+                    "full_price": float(d["SchStdPrice"]),
+                    "fee": 0,
+                    "left_tickets": int(d["SchTicketCount"]),
+                    "refresh_datetime": now,
+                    "extra_info": {"raw_info": d},
+                }
+                if line_id == line.line_id:
+                    update_attrs = info
+                else:
+                    obj.update(**info)
+        if not update_attrs:
+            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        else:
+            result_info.update(result_msg="ok", update_attrs=update_attrs)
+        return result_info
+
+    def do_refresh_line_by_app(self, line):
         result_info = {
             "result_msg": "",
             "update_attrs": {},

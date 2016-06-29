@@ -7,6 +7,7 @@ import urllib
 import datetime
 import requests
 import time
+import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -29,7 +30,7 @@ class Flow(BaseFlow):
         base = {
             "appid": "andio_95C429257",
             "dstnode": line.d_sta_id,
-            "endcity": line.d_city_name,
+            "endcity": line.extra_info["endcity"],
             "endnode": line.extra_info["endnodename"],
             "fromcity": line.s_city_name,
             "mobile": rebot.telephone,
@@ -105,7 +106,7 @@ class Flow(BaseFlow):
             "User-Agent": rebot.user_agent,
             "Content-Type": "application/json;charset=utf-8",
         }
-        r = rebot.http_post(url, data=json.dumps(data), headers=headers)
+        r = rebot.http_post(url, data=json.dumps(data), headers=headers, timeout=45)
         ret = r.json()
         errmsg = ret["errmsg"]
         if ret.get("success", False):
@@ -119,7 +120,7 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
                 "lock_info": ret,
             })
-        elif u"班次不在预售期" in errmsg or u"没有余票" in errmsg:
+        elif u"班次不在预售期" in errmsg or u"没有余票" in errmsg or u"该班次在客运站发生了变动" in errmsg or u"锁票失败了 ╮囧╭ 请您再试一次" in errmsg or u"客运站网络异常" in errmsg:
             self.close_line(order.line, reason=errmsg)
             lock_result.update({
                 "result_code": 0,
@@ -202,7 +203,7 @@ class Flow(BaseFlow):
         return result_info
 
     def do_refresh_issue(self, order):
-        return self.do_refresh_issue_by_app(order)
+        return self.do_refresh_issue_by_web(order)
 
     def do_refresh_issue_by_web(self, order):
         result_info = {
@@ -249,7 +250,7 @@ class Flow(BaseFlow):
                     "pick_code_list": [pick_code],
                     "pick_msg_list": [pick_msg],
                 })
-        except:
+        except Exception, e:
             pass
         return result_info
 
@@ -301,8 +302,8 @@ class Flow(BaseFlow):
             "schdate": line.drv_datetime.strftime("%Y%m%d"),
             "schtimeend": etime,
             "schtimestart": stime,
-            #"tocity": line.d_city_name,
-            "tocity": line.d_sta_name,
+            "tocity": line.d_city_name,
+            # "tocity": line.d_sta_name,
         }
         headers={"Content-Type": "application/json; charset=UTF-8", "User-Agent": random.choice(MOBILE_USER_AGENG)}
         try:
@@ -323,7 +324,7 @@ class Flow(BaseFlow):
             drv_datetime = dte.strptime("%s %s" % (d["schdate"], d["sendtime"]), "%Y%m%d %H%M")
             line_id_args = {
                 "s_city_name": res["startcity"],
-                "d_city_name": d["endcity"],
+                "d_city_name": line.d_city_name,
                 "s_sta_name": d["startstationname"],
                 "d_sta_name": d["endstationname"],
                 "crawl_source": line.crawl_source,
@@ -340,7 +341,7 @@ class Flow(BaseFlow):
                 "fee": 0,
                 "left_tickets": int(d["lefttickets"]),
                 "refresh_datetime": now,
-                "extra_info": {"endnodename": d["endnodename"], "endnodecode": d["endnodecode"]},
+                "extra_info": {"endnodename": d["endnodename"], "endnodecode": d["endnodecode"], "endcity": d["endcity"]},
             }
             if line_id == line.line_id:
                 update_attrs = info

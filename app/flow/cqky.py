@@ -78,6 +78,7 @@ class Flow(BaseFlow):
             if not del_success:
                 rebot.modify(cookies="{}")
                 rebot = order.change_lock_rebot()
+            rebot.modify(ip="")
             lock_result.update({
                 "result_code": 2,
                 "result_reason": u"购物车数量不对:%s, %s" % (msg, del_success),
@@ -143,7 +144,7 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                     "result_reason": "%s sta_mode:%s" % (res["msg"], mode),
                 })
-            elif u"例行维护" in res["msg"] or u"暂停网上购票业务" in res["msg"]:
+            elif u"例行维护" in res["msg"] or u"暂停网上购票业务" in res["msg"] or u"维护时间" in res["msg"]:
                 lock_result.update({
                     "result_code": 2,
                     "source_account": rebot.telephone,
