@@ -33,6 +33,7 @@ SOURCE_CCW = 'ccw'
 SOURCE_SZKY = 'szky'
 SOURCE_XYJT = 'xyjt'
 SOURCE_GDSW = "gdsw"    # 广东省网
+SOURCE_ZHW = "zhw"
 
 
 PAY_TYPE_SOURCE = {
@@ -3147,6 +3148,13 @@ SOURCE_INFO = {
             "15338702029": ("123456", ""),
         }
     },
+    SOURCE_ZHW: {
+        "name": "珠海汽车购票",
+        "website": "http://www.zhwsbs.gov.cn:9013/shfw/zaotsTicket/pageLists.xhtml",
+        "accounts": {
+            "15338702029": ("123456", ""),
+        }
+    },
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
@@ -3337,6 +3345,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_SZKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭%(person)s身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_XYJT: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
     SOURCE_GDSW: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭身份证、订单号或取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
+    SOURCE_SZKY: "车站订单号：%(pcode)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭%(person)s身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
 }
 
 CITY_NAME_TRANS = {

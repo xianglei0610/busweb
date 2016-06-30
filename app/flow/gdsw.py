@@ -272,8 +272,8 @@ class Flow(BaseFlow):
                         no = v
                     elif k == "total_fee":
                         pay = float(v)
-                if no and order.pay_order_no != v:
-                    order.modify(pay_order_no=v, pay_money=pay)
+                if no and order.pay_order_no != no:
+                    order.modify(pay_order_no=no, pay_money=pay)
                 return {"flag": "url", "content": order.pay_url}
         else:
             return {"flag": "error", "content": u"账号登录失败"}
