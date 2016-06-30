@@ -81,8 +81,20 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param))
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
-            if '调用异常' in urlstr or '可售票额不足' in urlstr or '不存在' in urlstr or '停班' in urlstr:
+            if '调用异常' in urlstr or '可售票额不足' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
                 errmsg = '可售票额不足'
+                lock_result.update({
+                    'result_code': 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": errmsg,
+                })
+                return lock_result
+            tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
+            tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
+            if '订票结束时间' in urlstr and tpk >= order.line.drv_datetime:
+                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+                errmsg = unicode(errlst and errlst[0] or "")
+                #rebot_log.info(2333333)
                 lock_result.update({
                     'result_code': 0,
                     "source_account": rebot.telephone,
@@ -291,6 +303,7 @@ class Flow(BaseFlow):
                 drv_time = x.find_all('td')[3].get_text().strip()
                 drv_datetime = dte.strptime("%s %s" % (
                     drv_date, drv_time), "%Y-%m-%d %H:%M")
+                full_price = float(x.find_all('td')[7].get_text().strip())
                 left_tickets = int(x.find_all('td')[8].get_text().strip())
                 line_id_args = {
                     's_city_name': s_city_name,
@@ -302,11 +315,9 @@ class Flow(BaseFlow):
                 line_id = md5(
                     "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
-                    t[line_id].update(
-                        **{"left_tickets": left_tickets, "refresh_datetime": now})
+                    t[line_id].update(**{"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now})
                 if line_id == line.line_id:
-                    update_attrs = {
-                        "left_tickets": left_tickets, "refresh_datetime": now}
+                    update_attrs = {"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now}
             except Exception as e:
                 print(e)
 
