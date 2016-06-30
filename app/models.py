@@ -147,6 +147,15 @@ class OpenCity(db.Document):
         db.open_city.update({'city_name': city}, {'$set': {'sale_line': sale}})
         client.close()
 
+
+class OpenStation(db.Document):
+    """
+    车站
+    """
+    city = db.ReferenceField(OpenCity)
+    dest_info = db.ListField()
+
+
 class Line(db.Document):
     """线路表"""
     line_id = db.StringField(unique=True)           # 路线id, 必须唯一
