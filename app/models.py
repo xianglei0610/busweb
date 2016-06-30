@@ -154,6 +154,20 @@ class OpenStation(db.Document):
     """
     city = db.ReferenceField(OpenCity)
     dest_info = db.ListField()
+    sta_name = db.StringField()             # 车站名字
+    sta_code = db.StringField()             # 车站简拼
+    open_time = db.StringField()            # 开售时间
+    end_time = db.StringField()             # 停售时间
+    advance_minutes = db.IntField()         # 分钟, 需要提前xx分钟购票
+    source_weight = db.DictField()          # 源站分配权重
+    close_status = db.IntField(default=0)   # 关闭状态: 0-不关闭 1-关闭查余票 2-关闭查班次列表 3-关闭1和2
+
+    meta = {
+        "indexes": [
+            "sta_name",
+            "close_status",
+        ],
+    }
 
 
 class Line(db.Document):
