@@ -224,9 +224,9 @@ class Flow(object):
         last_refresh = (now-line.refresh_datetime).total_seconds()
         if line.left_tickets<=0:    # 余票为0， 不刷新
             return False
-        elif line.left_tickets<10 and last_refresh < 60:    # 20s之前刷新过了，不刷新
+        elif line.left_tickets<10 and last_refresh < 10:    # 10s之前刷新过了，不刷新
             return False
-        elif last_refresh < 5*60:
+        elif last_refresh < 2*60:
             return False
         return True
 
