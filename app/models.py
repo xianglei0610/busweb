@@ -61,7 +61,7 @@ class AdminUser(db.Document):
 
     @property
     def is_superuser(self):
-        if self.username in ["luojunping", "xiangleilei", "liuquan", "luocky", "august"]:
+        if self.username in ["luojunping", "xiangleilei", "liuquan", "luocky", "august", 'chengxiaokang']:
             return True
         return False
 

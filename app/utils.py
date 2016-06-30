@@ -220,7 +220,7 @@ def create_validate_code(size=(90, 30),
     return img, strs
 
 
-def ecp(im):
+def ecp(im, n=6):
     frame = im.load()
     (w, h) = im.size
     for i in xrange(w):
@@ -267,6 +267,6 @@ def ecp(im):
                         count += 1
                 except IndexError:
                     pass
-                if count >= 6:
+                if count >= n:
                     frame[i, j] = 255
     return im

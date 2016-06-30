@@ -223,7 +223,7 @@ class Flow(BaseFlow):
                     drv_date = y[0].get_text().strip()
                     drv_time = y[1].get_text().strip()
                     s_sta_name = y[2].get_text().strip()
-                    # d_sta_name = y[3].get_text().strip()
+                    d_sta_name = y[3].get_text().strip()
                     left_tickets = y[5].get_text().strip()
                     # vehicle_type = y[6].get_text().strip()
                     drv_datetime = dte.strptime("%s %s" % (
@@ -232,7 +232,7 @@ class Flow(BaseFlow):
                         "s_city_name": line.s_city_name,
                         "d_city_name": line.d_city_name,
                         "s_sta_name": s_sta_name,
-                        "d_sta_name": line.d_city_name,
+                        "d_sta_name": d_sta_name,
                         "crawl_source": line.crawl_source,
                         "drv_datetime": drv_datetime,
                     }
