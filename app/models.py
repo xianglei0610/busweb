@@ -311,6 +311,61 @@ class Line(db.Document):
             d_line.update({self.crawl_source: self.line_id})
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
+        
+        elif self.s_province == "广东" and self.s_city_name == "东莞":
+            # 广东省网，东莞客运
+            if self.crawl_source == SOURCE_DGKY:
+                trans = {
+                        u"市客运北站":u"汽车北站",
+                        u"市客运东站":u"东莞汽车东站",
+                        u"东城汽车客运站":u"东城汽车站",
+                        u"松山湖汽车客运站":u"松山湖汽车站",
+                        u"长安客运站":u"长安汽车站",
+                        u"虎门客运站":u"虎门汽车站",
+                        u"沙田汽车客运站":u"沙田汽车站",
+                        u"石龙客运站":u"石龙车站",
+                        u"桥头车站":u"桥头汽车站",
+                        u"东坑车站":u"东坑汽车站",
+                        u"石排客运站":u"石排客运站",
+                        u"樟木头振通车站":u"振通客运站",
+                        u"大朗汽车客运站":u"大朗汽车客运",
+                        u"清溪客运站":u"清溪车站",
+                        u"塘厦车站":u"塘厦客运站",
+                        u"上沙汽车客运站":u"上沙汽车站",
+                        u"凤岗客运站":u"凤岗车站",
+                         }
+                tar_source = SOURCE_GDSW
+            elif self.crawl_source == SOURCE_GDSW:
+                trans = {
+                        u"汽车北站":u"市客运北站",
+                        u"东莞汽车东站":u"市客运东站",
+                        u"东城汽车站":u"东城汽车客运站",
+                        u"松山湖汽车站":u"松山湖汽车客运站",
+                        u"长安汽车站":u"长安客运站",
+                        u"虎门汽车站":u"虎门客运站",
+                        u"沙田汽车站":u"沙田汽车客运站",
+                        u"石龙车站":u"石龙客运站",
+                        u"桥头汽车站":u"桥头车站",
+                        u"东坑汽车站":u"东坑车站",
+                        u"石排客运站":u"石排客运站",
+                        u"振通客运站":u"樟木头振通车站",
+                        u"大朗汽车客运":u"大朗汽车客运站",
+                        u"清溪车站":u"清溪客运站",
+                        u"塘厦客运站":u"塘厦车站",
+                        u"上沙汽车站":u"上沙汽车客运站",
+                        u"凤岗车站":u"凤岗客运站",
+                         }
+                tar_source = SOURCE_DGKY
+            try:
+                ob = Line.objects.get(crawl_source=tar_source,
+                                      s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
+                                      d_sta_name=self.d_sta_name,
+                                      drv_datetime=self.drv_datetime,
+                                      bus_num=self.bus_num)
+                self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
+            except Line.DoesNotExist:
+                self.modify(compatible_lines={self.crawl_source: self.line_id})
+            return self.compatible_lines
         else:
             qs = Line.objects.filter(s_sta_name=self.s_sta_name,
                                      s_city_name=self.s_city_name,

@@ -51,20 +51,31 @@ class Flow(BaseFlow):
         code = ''
         line = order.line
         num = len(order.riders)
-        query_url = line.extra_info['query_url']
-        query_url = query_url.replace('num=1', 'num=%s' % num)
+        href = line.extra_info['query_url']
+        href = href.replace('num=1', 'num=%s' % num)
+        msg = ''
         for i in range(50):
+            param = {}
+            for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
+                k, v = s.split("=")
+                param[k] = v.encode('gb2312')
+            query_url = "%s%s" % ('http://www.mp0769.com/orderlist.asp?', urllib.urlencode(param))
             req = urllib2.Request(query_url, headers=headers)
             result = urllib2.urlopen(req)
             content = result.read()
-            res = content
+            res = content.decode('gbk')
+            if '非法操作' in res:
+                query_url = "http://www.mp0769.com/" + href.split(";")[0][15:-1]
+                req = urllib2.Request(query_url, headers=headers)
+                result = urllib2.urlopen(req)
+                content = result.read()
+                res = content.decode('gbk')
             check_url = re.findall("window.location.href=(.*);", res)[0][1:-1]
             check_url = "http://www.mp0769.com/" + check_url
             param = {}
             for s in check_url.split("?")[1].split("&"):
                 k, v = s.split("=")
-                param[k] = v
-            print param
+                param[k] = v.encode('gb2312')
             trade_no = param['trade_no']
             order_url = "http://www.mp0769.com/orderlist.asp?"
             order_url = "%s%s" % (order_url, urllib.urlencode(param))
@@ -126,20 +137,18 @@ class Flow(BaseFlow):
                     "T_Price": T_Price,
                     "T_Qamt": T_Qamt,
                     "T_TrueName": order.contact_info["name"].decode('utf8').encode('gb2312'),
-                    "T_Usercard": "429006198906100034",#order.contact_info["id_number"],
-                    "T_Usercard1": "429006198906100034",#order.contact_info["id_number"],
+                    "T_Usercard": order.contact_info["id_number"],
+                    "T_Usercard1": order.contact_info["id_number"],
                     "T_Zamt": T_Zamt,
                     "T_Zjname": '1',  #取票凭证 身份证 1
                     "submit":  u'提交[在线支付票款]'.encode('gb2312')
                     }
             send_url = sel.xpath("//form[@name='form8']/@action")[0]      #url
             send_url = "http://www.mp0769.com/"+send_url
-            print send_url
             data = urllib.urlencode(params) 
             req = urllib2.Request(send_url, data, headers=headers)
             result = urllib2.urlopen(req)
             content = result.read()
-            print content.decode('gbk')
             pay_url = re.findall('window.open \((.*),', content)[0][1:-1]
             pay_url = "http://www.mp0769.com/" + pay_url
             print pay_url
@@ -159,7 +168,9 @@ class Flow(BaseFlow):
 #             content = result.read().decode('gbk')
 #             print content
 #             order.modify(extra_info={'pay_content':content})
-        msg = ''
+        else:
+            msg = u"未获取到线路的金额和余票"
+        
         if pay_url:
             expire_time = dte.now()+datetime.timedelta(seconds=15*60)
             lock_result.update({
@@ -206,7 +217,6 @@ class Flow(BaseFlow):
         }
         order_url = "http://www.mp0769.com/orderdisp.asp?"
         order_url = "%s%s" % (order_url, urllib.urlencode(param))
-        print order_url
         req = urllib2.Request(order_url, headers=headers)
         content = urllib2.urlopen(req).read()
         content = content.decode('gbk')
@@ -216,7 +226,6 @@ class Flow(BaseFlow):
         if order_list:
             for i in order_list[1:]:
                 order_no = i.xpath('td')[0].xpath('text()')[0]
-                print order_no
                 status = i.xpath('td')[7].xpath('font/text()')[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
                 if order_no == order.raw_order_no:
                     res.update({"status": status})
@@ -239,11 +248,11 @@ class Flow(BaseFlow):
         code_list, msg_list = [], []
         status = ret.get("status", None)
         order_status_mapping = {
-                u"购票成功": "购票成功",
+                u"订票成功": "订票成功",
                 u"订票失败": "订单失效",
                 u'正在出票': "正在出票",
                 }
-        if status in (u"购票成功",):
+        if status in (u"订票成功",):
             dx_templ = DUAN_XIN_TEMPL[SOURCE_DGKY]
             ticketPassword = order.extra_info.get("ticketPassword", '')
             dx_info = {
@@ -302,21 +311,25 @@ class Flow(BaseFlow):
              "action": "queryclick",
              "Depot": line.s_sta_id,
              "date": line.drv_date,
-             "Times": line.drv_date.split('-')[1],
+             "Times": line.drv_time.split(':')[0],
              "num": "1",
              "Verifycode": code,
              "tanchu": 1
              }
         init_url_param = "%s%s" % (init_url, urllib.urlencode(params))
         station_url = init_url_param + '&station=%s' % json.dumps(line.d_sta_name).replace('\u','%u')[1:-1]
-        req = urllib2.Request(station_url, headers=headers)
-        result = urllib2.urlopen(req)
-        content = result.read()
-        content = content.decode('gbk')
-        print content
-        sel = etree.HTML(content) 
+        form, sel = self.is_end_station(urllib2,headers,station_url)
+        if not form:
+            station = sel.xpath('//a')
+            for i in station:
+                td = i.xpath('font/text()')
+                href = i.xpath('@href')[0]
+                print href
+                station_name = td[0].replace('\r\n','').replace('\t','').replace(' ',  '')
+                if station_name == line.d_sta_name:
+                    station_url = "http://www.mp0769.com/cbprjdisp8.asp?"+href
+                    form, sel = self.is_end_station(urllib2,headers,station_url)
         update_attrs = {}
-        form = sel.xpath('//form[@method="Post"]/@action')
         if form:
             sch = sel.xpath('//table[@width="600"]/tr')
             for i in sch[1:]:
@@ -329,26 +342,38 @@ class Flow(BaseFlow):
                 drv_time = i.xpath('td[3]/div/text()')[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
                 start_station = i.xpath('td[4]/div/text()')[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
                 end_station = i.xpath('td[5]/div/text()')[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
-                href = i.xpath('td[9]/div/a/@onclick')[0].split(";")
-                query_url = "http://www.mp0769.com/" + href[0][15:-1]
+                href = i.xpath('td[9]/div/a/@onclick')[0]
+                if 'javascript:alert' in href:
+                    continue
                 full_price = 0
                 left_tickets = 0
-                for i in range(10):
+                for i in range(15):
+                    param = {}
+                    for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
+                        k, v = s.split("=")
+                        param[k] = v.encode('gb2312')
+                    query_url = "%s%s" % ('http://www.mp0769.com/orderlist.asp?', urllib.urlencode(param))
                     req = urllib2.Request(query_url, headers=headers)
                     result = urllib2.urlopen(req)
                     content = result.read()
-                    res = content
+                    res = content.decode('gbk')
+                    if '非法操作' in res:
+                        query_url = "http://www.mp0769.com/" + href.split(";")[0][15:-1]
+                        req = urllib2.Request(query_url, headers=headers)
+                        result = urllib2.urlopen(req)
+                        content = result.read()
+                        res = content.decode('gbk')
                     check_url = re.findall("window.location.href=(.*);", res)[0][1:-1]
                     check_url = "http://www.mp0769.com/" + check_url
                     param = {}
                     for s in check_url.split("?")[1].split("&"):
                         k, v = s.split("=")
-                        param[k] = v
+                        param[k] = v.encode('gb2312')
                     order_url = "http://www.mp0769.com/orderlist.asp?"
                     order_url = "%s%s" % (order_url, urllib.urlencode(param))
                     req = urllib2.Request(order_url, headers=headers)
                     result = urllib2.urlopen(req)
-                    content = result.read()
+                    content = result.read().decode('gbk')
                     sel = etree.HTML(content)
                     params = {}
                     for s in sel.xpath("//form[@id='Form1']//input"):
@@ -363,6 +388,8 @@ class Flow(BaseFlow):
                         left_tickets = params['ct_accnum']
                         end_station = params['ct_stname'].decode('gbk')
                         break
+                if full_price == 0:
+                    continue
 
                 drv_datetime = dte.strptime("%s %s" % (drv_date, drv_time), "%Y-%m-%d %H:%M")
                 line_id_args = {
@@ -395,6 +422,15 @@ class Flow(BaseFlow):
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
+
+    def is_end_station(self, urllib2, headers, station_url):
+        req = urllib2.Request(station_url, headers=headers)
+        result = urllib2.urlopen(req)
+        content = result.read()
+        content = content.decode('gbk')
+        sel = etree.HTML(content) 
+        form = sel.xpath('//form[@method="Post"]/@action')
+        return form, sel
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         
