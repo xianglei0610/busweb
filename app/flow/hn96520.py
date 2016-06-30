@@ -303,6 +303,7 @@ class Flow(BaseFlow):
                 drv_time = x.find_all('td')[3].get_text().strip()
                 drv_datetime = dte.strptime("%s %s" % (
                     drv_date, drv_time), "%Y-%m-%d %H:%M")
+                full_price = float(x.find_all('td')[7].get_text().strip())
                 left_tickets = int(x.find_all('td')[8].get_text().strip())
                 line_id_args = {
                     's_city_name': s_city_name,
@@ -314,11 +315,9 @@ class Flow(BaseFlow):
                 line_id = md5(
                     "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
-                    t[line_id].update(
-                        **{"left_tickets": left_tickets, "refresh_datetime": now})
+                    t[line_id].update(**{"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now})
                 if line_id == line.line_id:
-                    update_attrs = {
-                        "left_tickets": left_tickets, "refresh_datetime": now}
+                    update_attrs = {"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now}
             except Exception as e:
                 print(e)
 
