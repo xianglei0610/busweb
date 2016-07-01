@@ -354,7 +354,10 @@ def main():
 
     # 徐运集团
     sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['xyjt'])
-    
+
+    # 珠海汽车购票
+    sched.add_cron_job(bus_crawl, hour=18, minute=0, args=['zhw'])
+
     # 深圳客运
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['szky'])
 
