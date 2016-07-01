@@ -358,6 +358,17 @@ def main():
     # 深圳客运
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['szky'])
 
+    #东莞客运
+    sched.add_cron_job(bus_crawl, hour=12, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "东莞总站"}})
+    sched.add_cron_job(bus_crawl, hour=13, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "市客运北站,市客运东站"}})
+    sched.add_cron_job(bus_crawl, hour=13, minute=20, args=['dgky'], kwargs={"crawl_kwargs":{"city": "东城汽车客运站,松山湖汽车客运站"}})
+    sched.add_cron_job(bus_crawl, hour=13, minute=40, args=['dgky'], kwargs={"crawl_kwargs":{"city": "长安客运站,虎门客运站,厚街专线车站,沙田汽车客运站"}})
+    sched.add_cron_job(bus_crawl, hour=14, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "石龙客运站,石龙千里客运站,桥头车站,东坑车站"}})
+    sched.add_cron_job(bus_crawl, hour=14, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "石排客运站,樟木头振通车站"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "大朗汽车客运站"}})
+    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "清溪客运站,塘厦车站"}})
+    sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "上沙汽车客运站,凤岗客运站"}})
+
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=10)
