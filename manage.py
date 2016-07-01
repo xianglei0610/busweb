@@ -183,28 +183,30 @@ def make_success(order_no):
     if order.status !=  STATUS_WAITING_ISSUE:
         print "状态不对"
         return
-    code1 = raw_input("请输入取票密码:")
-    code = raw_input("请再次输入取票密码:")
-    if code1 != code:
-        print "两次输入密码不一致"
-        return
-    dx_info = {
-        "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-        "start": order.line.s_sta_name,
-        "end": order.line.d_sta_name,
-        "code": code,
-        'raw_order': order.raw_order_no,
-    }
-    dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HN96520]
-    code_list = ["%s" % (code)]
-    msg_list = [dx_tmpl % dx_info]
-    print msg_list[0]
-    order.modify(status=STATUS_ISSUE_SUCC,
-                    pick_code_list=code_list,
-                    pick_msg_list=msg_list)
-    order.on_issue_success()
-    from tasks import issued_callback
-    issued_callback.delay(order.order_no)
+    if order.crawl_source == "hn96520":
+        print "源站订单号:", order.raw_order_no
+        code1 = raw_input("请输入取票密码:")
+        code = raw_input("请再次输入取票密码:")
+        if code1 != code:
+            print "两次输入密码不一致"
+            return
+        dx_info = {
+            "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+            "start": order.line.s_sta_name,
+            "end": order.line.d_sta_name,
+            "code": code,
+            'raw_order': order.raw_order_no,
+        }
+        dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HN96520]
+        code_list = ["%s" % (code)]
+        msg_list = [dx_tmpl % dx_info]
+        print msg_list[0]
+        order.modify(status=STATUS_ISSUE_SUCC,
+                        pick_code_list=code_list,
+                        pick_msg_list=msg_list)
+        order.on_issue_success()
+        from tasks import issued_callback
+        issued_callback.delay(order.order_no)
 
 
 if __name__ == '__main__':
