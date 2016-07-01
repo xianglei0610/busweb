@@ -351,7 +351,7 @@ class Flow(BaseFlow):
                     continue
                 full_price = 0
                 left_tickets = 0
-                for i in range(15):
+                for i in range(25):
                     param = {}
                     for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
                         k, v = s.split("=")
@@ -447,6 +447,8 @@ class Flow(BaseFlow):
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()
+        if order.status == STATUS_WAITING_ISSUE:
+            return {"flag": "error", "content": '重新打开'}
 
 
 
