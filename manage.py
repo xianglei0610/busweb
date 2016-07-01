@@ -180,6 +180,9 @@ def sync_open_city(site, province_name):
 def make_success(order_no):
     from app.models import Order
     order = Order.objects.get(order_no=order_no)
+    if order.status !=  STATUS_WAITING_ISSUE:
+        print "状态不对"
+        return
     code = raw_input("请输入取票密码:")
     dx_info = {
         "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
