@@ -574,10 +574,13 @@ class Flow(BaseFlow):
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:
                 continue
+            left = int(d["SchTicketCount"])
+            if left <= 1:
+                left = 0
             info = {
                 "full_price": float(d["SchPrice"]),
                 "fee": 0,
-                "left_tickets": int(d["SchTicketCount"]),
+                "left_tickets": left,
                 "refresh_datetime": now,
                 "extra_info": {"raw_info": d},
             }
