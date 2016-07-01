@@ -209,5 +209,23 @@ def make_success(order_no):
         issued_callback.delay(order.order_no)
 
 
+@manager.command
+def kefu_issued_stat():
+    alipay_data = {}
+    yh_source = ["scqcp", "bus365", "bjky", "hebky", "szky"]
+    from app.models import Order, AdminUser
+    qs = Order.objects.filter(create_date_time__gt="2016-06-01", create_date_time__lt="2016-07-01", status=14)
+    for d in qs.filter(crawl_source__nin=yh_source).aggregate({"$group":{"_id":{"kefu":"$kefu_username"}, "total":{"$sum":"$ticket_amount"}}}):
+        alipay_data[d["_id"]["kefu"]] = d["total"]
+
+    yh_data = {}
+    for d in qs.filter(crawl_source__in=yh_source).aggregate({"$group":{"_id":{"kefu":"$kefu_username"}, "total":{"$sum":"$ticket_amount"}}}):
+        yh_data[d["_id"]["kefu"]] = d["total"]
+
+    for k in set(yh_data.keys()+alipay_data.keys()):
+        u = AdminUser.objects.get(username=k)
+        print "%s: %s+%s*2=%s" % (u.realname, alipay_data.get(k, 0), yh_data.get(k, 0), alipay_data.get(k, 0)+2*yh_data.get(k, 0))
+
+
 if __name__ == '__main__':
     manager.run()
