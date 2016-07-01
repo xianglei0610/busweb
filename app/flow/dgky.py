@@ -153,12 +153,10 @@ class Flow(BaseFlow):
             pay_url = "http://www.mp0769.com/" + pay_url
             print pay_url
             order.modify(extra_info={"ticketPassword": ticketPassword})
-            
 #             r = requests.get(pay_url)
 #             content = r.content.decode('gbk')
 #             print content
 #             order.modify(extra_info={'pay_content':content})
-            
 #             ua = random.choice(BROWSER_USER_AGENT)
 #             headers = {
 #                    "User-Agent": ua,
@@ -170,6 +168,12 @@ class Flow(BaseFlow):
 #             order.modify(extra_info={'pay_content':content})
         else:
             msg = u"未获取到线路的金额和余票"
+            lock_result.update({
+                "result_code": 2,
+                "source_account": '',
+                "result_reason":  msg
+            })
+            return lock_result
         
         if pay_url:
             expire_time = dte.now()+datetime.timedelta(seconds=15*60)
@@ -347,7 +351,7 @@ class Flow(BaseFlow):
                     continue
                 full_price = 0
                 left_tickets = 0
-                for i in range(15):
+                for i in range(25):
                     param = {}
                     for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
                         k, v = s.split("=")
@@ -443,6 +447,8 @@ class Flow(BaseFlow):
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()
+        if order.status == STATUS_WAITING_ISSUE:
+            return {"flag": "error", "content": '重新打开'}
 
 
 
