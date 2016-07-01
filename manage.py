@@ -6,6 +6,8 @@ import zipfile
 from app import setup_app, db
 from flask.ext.script import Manager, Shell
 from datetime import datetime as dte
+from app.constants import *
+
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app = setup_app()
@@ -173,6 +175,30 @@ def sync_open_city(site, province_name):
         except:
             print '%s already existed'%city_name
             pass
+
+@manager.command
+def make_success(order_no):
+    from app.models import Order
+    order = Order.objects.get(order_no=order_no)
+    code = raw_input("请输入取票密码:")
+    dx_info = {
+        "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+        "start": order.line.s_sta_name,
+        "end": order.line.d_sta_name,
+        "code": code,
+        'raw_order': order.raw_order_no,
+    }
+    dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HN96520]
+    code_list = ["%s" % (code)]
+    msg_list = [dx_tmpl % dx_info]
+    print msg_list[0]
+    order.modify(status=STATUS_ISSUE_SUCC,
+                    pick_code_list=code_list,
+                    pick_msg_list=msg_list)
+    order.on_issue_success()
+    from tasks import issued_callback
+    issued_callback.delay(order.order_no)
+
 
 if __name__ == '__main__':
     manager.run()
