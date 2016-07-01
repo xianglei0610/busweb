@@ -354,6 +354,9 @@ def main():
 
     # 徐运集团
     sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['xyjt'])
+    
+    # 深圳客运
+    sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['szky'])
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)

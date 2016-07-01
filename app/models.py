@@ -311,6 +311,61 @@ class Line(db.Document):
             d_line.update({self.crawl_source: self.line_id})
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
+        
+        elif self.s_province == "广东" and self.s_city_name == "东莞":
+            # 广东省网，东莞客运
+            if self.crawl_source == SOURCE_DGKY:
+                trans = {
+                        u"市客运北站":u"汽车北站",
+                        u"市客运东站":u"东莞汽车东站",
+                        u"东城汽车客运站":u"东城汽车站",
+                        u"松山湖汽车客运站":u"松山湖汽车站",
+                        u"长安客运站":u"长安汽车站",
+                        u"虎门客运站":u"虎门汽车站",
+                        u"沙田汽车客运站":u"沙田汽车站",
+                        u"石龙客运站":u"石龙车站",
+                        u"桥头车站":u"桥头汽车站",
+                        u"东坑车站":u"东坑汽车站",
+                        u"石排客运站":u"石排客运站",
+                        u"樟木头振通车站":u"振通客运站",
+                        u"大朗汽车客运站":u"大朗汽车客运",
+                        u"清溪客运站":u"清溪车站",
+                        u"塘厦车站":u"塘厦客运站",
+                        u"上沙汽车客运站":u"上沙汽车站",
+                        u"凤岗客运站":u"凤岗车站",
+                         }
+                tar_source = SOURCE_GDSW
+            elif self.crawl_source == SOURCE_GDSW:
+                trans = {
+                        u"汽车北站":u"市客运北站",
+                        u"东莞汽车东站":u"市客运东站",
+                        u"东城汽车站":u"东城汽车客运站",
+                        u"松山湖汽车站":u"松山湖汽车客运站",
+                        u"长安汽车站":u"长安客运站",
+                        u"虎门汽车站":u"虎门客运站",
+                        u"沙田汽车站":u"沙田汽车客运站",
+                        u"石龙车站":u"石龙客运站",
+                        u"桥头汽车站":u"桥头车站",
+                        u"东坑汽车站":u"东坑车站",
+                        u"石排客运站":u"石排客运站",
+                        u"振通客运站":u"樟木头振通车站",
+                        u"大朗汽车客运":u"大朗汽车客运站",
+                        u"清溪车站":u"清溪客运站",
+                        u"塘厦客运站":u"塘厦车站",
+                        u"上沙汽车站":u"上沙汽车客运站",
+                        u"凤岗车站":u"凤岗客运站",
+                         }
+                tar_source = SOURCE_DGKY
+            try:
+                ob = Line.objects.get(crawl_source=tar_source,
+                                      s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
+                                      d_sta_name=self.d_sta_name,
+                                      drv_datetime=self.drv_datetime,
+                                      bus_num=self.bus_num)
+                self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
+            except Line.DoesNotExist:
+                self.modify(compatible_lines={self.crawl_source: self.line_id})
+            return self.compatible_lines
         else:
             qs = Line.objects.filter(s_sta_name=self.s_sta_name,
                                      s_city_name=self.s_city_name,
@@ -973,87 +1028,6 @@ class CcwWebRebot(Rebot):
     crawl_source = SOURCE_CCW
     is_for_lock = True
 
-    # @property
-    # def proxy_ip(self):
-    #     return ''
-    #     rds = get_redis("default")
-    #     ipstr = self.ip
-    #     key = RK_PROXY_IP_WXSZ
-    #     if ipstr and rds.sismember(key, ipstr):
-    #         return ipstr
-    #     ipstr = rds.srandmember(key)
-    #     self.modify(ip=ipstr)
-    #     return ipstr
-    def clear_riders(self, riders={}):
-        # 默认的不能删除
-        is_login = self.test_login_status()
-        if not is_login:
-            return
-        headers = {"User-Agent": self.user_agent}
-        cookies = json.loads(self.cookies)
-        rider_url = 'http://www.hn96520.com/member/modify.aspx'
-        r = requests.get(rider_url, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, 'lxml')
-        info = soup.find('table', attrs={'class': 'tblp shadow', 'style': True}).find_all('tr', attrs={'id': True})
-        for x in info:
-            uid = x.get('id').strip()
-            uid = str(re.search(r'\d+', uid).group(0))
-            if uid in riders.values() or not riders:
-                delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid=449606'.format(uid)
-                requests.get(delurl, headers=headers, cookies=cookies)
-
-    def add_riders(self, order):
-        id_lst = {}
-        is_login = self.test_login_status()
-        if not is_login:
-            pass
-        riders = order.riders
-        headers = {'User-Agent': self.user_agent}
-        cookies = json.loads(self.cookies)
-        for rider in riders:
-            name = rider.get('name', '')
-            cardid = rider.get('id_number', '')
-            sel = rider.get('telephone', '')
-            addurl = 'http://www.hn96520.com/member/takeman.ashx?action=AppendTakeman&memberid=449606&name={0}&cardid={1}&sel={2}'.format(name, cardid, sel)
-            r = requests.get(addurl, headers=headers, cookies=cookies)
-            if r.content != '0':
-                id_lst['cardid'] = r.content
-            else:
-                pass
-        return id_lst
-
-    # def check_code_status(self, code):
-    #     url = 'http://www.hn96520.com/member/ajax/checkcode.aspx?code={0}'.format(code)
-    #     headers = {'User-Agent': self.user_agent}
-    #     cookies = json.loads(self.cookies)
-    #     r = requests.get(url, headers=headers, cookies=cookies)
-    #     if 'true' in r.content:
-    #         return 1
-    #     else:
-    #         return 0
-
-    def check_login(self):
-        # self.is_locked = True
-        # self.save()
-        undone_order_url = "http://www.chechuw.com/UserCenter/userDataEdit"
-        headers = {"User-Agent": self.user_agent}
-        try:
-            cookies = json.loads(self.cookies)
-        except:
-            cookies = ''
-        r = requests.get(undone_order_url, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, "lxml")
-        try:
-            tel = soup.find(
-                'input', attrs={'id': 'telphone', 'class': 'text'}).get('value')
-        except:
-            tel = 0
-        if tel:
-            cookies.update(r.cookies)
-            return 1
-        else:
-            return 0
-
     # 初始化帐号
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
@@ -1083,6 +1057,26 @@ class XyjtWebRebot(Rebot):
 
     def test_login_status(self):
         pass
+
+    # 初始化帐号
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
+class ZhwWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "zhwweb_rebot",
+    }
+    crawl_source = SOURCE_ZHW
+    is_for_lock = True
 
     # 初始化帐号
     def login(self):

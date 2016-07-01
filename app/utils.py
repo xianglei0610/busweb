@@ -7,6 +7,8 @@ import re
 import cStringIO
 from pypinyin import pinyin
 import pypinyin
+import requests
+from time import sleep
 
 
 try:
@@ -47,6 +49,24 @@ def vcode_scqcp(img_content):
     im = ecp(im)
     code = image_to_string(im, lang='scqcp', config='-psm 8')
     return code
+
+
+def vcode_zhw():
+    url = 'http://www.zhwsbs.gov.cn:9013/jsps/shfw/checkCode.jsp'
+    for x in xrange(5):
+        r = requests.get(url)
+        im = cStringIO.StringIO(r.content)
+        im = Image.open(im)
+        im = im.convert('L')
+        im = im.point(lambda x: 255 if x > 130 else 0)
+        im = ecp(im, 7)
+        code = image_to_string(im, lang='zhw2', config='-psm 8')
+        code = re.findall(r'[0-9a-zA-Z]', str(code))
+        code = ''.join(code)
+        if len(code) == 4:
+            # im.save(code + '.png')
+            return (code, r.cookies)
+        sleep(0.25)
 
 
 def trans_js_str(s):
@@ -200,7 +220,7 @@ def create_validate_code(size=(90, 30),
     return img, strs
 
 
-def ecp(im):
+def ecp(im, n=6):
     frame = im.load()
     (w, h) = im.size
     for i in xrange(w):
@@ -247,6 +267,6 @@ def ecp(im):
                         count += 1
                 except IndexError:
                     pass
-                if count >= 6:
+                if count >= n:
                     frame[i, j] = 255
     return im
