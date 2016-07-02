@@ -565,7 +565,7 @@ def dealing_order():
             continue
         o.complete_by(current_user)
     total = assign.waiting_lock_size()
-    if total > 15:
+    if total > 8:
         kf_order_cnt = 5
     else:
         kf_order_cnt = 3
