@@ -161,11 +161,6 @@ class Flow(BaseFlow):
                 "result_code": 2,
                 "result_msg": state,
             })
-        elif '未付款' in state:
-            result_info.update({
-                "result_code": 5,
-                "result_msg": state,
-            })
         elif '交易成功' in state and pcode:
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
