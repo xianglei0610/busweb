@@ -252,6 +252,8 @@ class Flow(object):
             limit_datetime = dte.strptime(now.strftime("%Y-%m-%d")+" 07:30", "%Y-%m-%d %H:%M")
         if limit_datetime and line.drv_datetime < limit_datetime+timedelta(minutes=max(60, adv_minus)):
             return False
+        if line.s_sta_name == u"无锡华东城":
+            return False
         return True
 
     def refresh_line(self, line, force=False):

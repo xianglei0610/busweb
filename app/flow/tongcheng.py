@@ -645,7 +645,8 @@ class Flow(BaseFlow):
                     "serviceChargeID": d["serviceChargeID"],
                     "serviceChargePrice": d["serviceChargePrice"],
                     "serviceChargeType": d.get("serviceChargeType", 0),
-                    "runTime": d["runTime"]},
+                    "runTime": d["runTime"]
+                },
             }
             if line_id == line.line_id:
                 update_attrs = info
