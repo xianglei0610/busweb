@@ -6,8 +6,8 @@ from app.constants import *
 from flask import request, jsonify
 from assign import enqueue_wating_lock
 from app.api import api
-from app.models import Line, Order, OpenCity
-from app.flow import get_compatible_flow, get_flow
+from app.models import Line, Order, OpenCity, OpenStation
+from app.flow import get_compatible_flow
 from app import order_log, access_log, line_log
 from tasks import async_lock_ticket
 from app import db

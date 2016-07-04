@@ -125,6 +125,28 @@ class OpenCity(db.Document):
         new = set(map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs))
         self.modify(dest_list=old.union(new))
 
+    def init_station(self):
+        qs = Line.objects.filter(s_province=self.province, s_city_name__startswith=self.city_name) \
+                         .aggregate({
+                             "$group": {
+                                 "_id": {
+                                     "s_sta_name": "$s_sta_name",
+                                     "s_sta_id": "$s_sta_id",
+                                 }
+                             }
+                         })
+        for d in qs:
+            d = d["_id"]
+            name, sid = d["s_sta_name"], d["s_sta_id"]
+            try:
+                sta_obj = OpenStation.objects.get(city=self, sta_name=name)
+            except:
+                sta_obj = OpenStation(city=self, sta_name=name, sta_id=sid)
+                sta_obj.save()
+                line_log.info("[init_station] 增加OpenStation %s %s" % (self.city_name, name))
+                sta_obj.init_dest()
+
+
     def update_sale_line(self, city='', q='', extra='', crawl=''):
         '''
         徐州初始化, update_sale_line('徐州', q='s_sta_id', crawl='xyjt')
@@ -153,21 +175,46 @@ class OpenStation(db.Document):
     车站
     """
     city = db.ReferenceField(OpenCity)
-    dest_info = db.ListField()
-    sta_name = db.StringField()             # 车站名字
-    sta_code = db.StringField()             # 车站简拼
-    open_time = db.StringField()            # 开售时间
-    end_time = db.StringField()             # 停售时间
-    advance_minutes = db.IntField()         # 分钟, 需要提前xx分钟购票
+    dest_info = db.ListField()              # 目的地信息 [{"name": "", "code": "", "dest_id": "", "extra_info": {自定义数据}}]
+    sta_name = db.StringField(unique_with="city")             # 车站名字
+    sta_id = db.StringField()
+    open_time = db.StringField(default="00:00")            # 开售时间
+    end_time = db.StringField(default="24:00")             # 停售时间
+    advance_minutes = db.IntField(default=60)         # 分钟, 需要提前xx分钟购票
     source_weight = db.DictField()          # 源站分配权重
     close_status = db.IntField(default=0)   # 关闭状态: 0-不关闭 1-关闭查余票 2-关闭查班次列表 3-关闭1和2
+    extra_info = db.DictField()             # 自定义数据
+    create_datetime = db.DateTimeField(default=dte.now)
 
     meta = {
         "indexes": [
+            "city",
             "sta_name",
             "close_status",
         ],
     }
+
+    def init_dest(self):
+        """
+        初始化目的地
+        """
+        city = self.city
+        qs = Line.objects.filter(s_province=city.province, s_city_name__startswith=city.city_name, s_sta_name=self.sta_name) \
+                         .aggregate({
+                             "$group": {
+                                 "_id": {
+                                     "city_name": "$d_city_name",
+                                     "city_code": "$d_city_code",
+                                     "city_id": "$d_city_id",
+                                 }
+                             }
+                         })
+        lst = []
+        for d in qs:
+            d = d["_id"]
+            lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
+        self.modify(dest_info=lst)
+        line_log.info("[init_station_dest] %s %s, %s个目的地" % (city.city_name, self.sta_name, len(lst)))
 
 
 class Line(db.Document):
