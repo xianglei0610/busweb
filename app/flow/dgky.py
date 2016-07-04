@@ -442,6 +442,7 @@ class Flow(BaseFlow):
 #             content = r.content.decode('gbk')
 #             
 #             order.modify(extra_info={'pay_content': content})
+            order.update(pay_channel='alipay')
             return {"flag": "url", "content": order.pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)

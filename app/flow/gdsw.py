@@ -273,7 +273,7 @@ class Flow(BaseFlow):
                     elif k == "total_fee":
                         pay = float(v)
                 if no and order.pay_order_no != no:
-                    order.modify(pay_order_no=no, pay_money=pay)
+                    order.modify(pay_order_no=no, pay_money=pay, pay_channel='alipay')
                 return {"flag": "url", "content": order.pay_url}
         else:
             return {"flag": "error", "content": u"账号登录失败"}

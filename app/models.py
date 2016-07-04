@@ -527,7 +527,7 @@ class Order(db.Document):
     pay_money = db.FloatField()     # 实际支付的金额
     pay_url = db.StringField()      # 支付链接
     pay_status = db.IntField(default=PAY_STATUS_NONE)   # 支付状态
-    pay_channel = db.StringField()  # 支付渠道, wy-网银 wx-微信 alipay-支付宝
+    pay_channel = db.StringField()  # 支付渠道, yh-银行 wx-微信 alipay-支付宝
     pay_account = db.StringField()  # 支付账号
     refund_money = db.FloatField()   # 退款金额
 

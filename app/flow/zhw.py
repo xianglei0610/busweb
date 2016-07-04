@@ -270,7 +270,7 @@ class Flow(BaseFlow):
                 OrderUUID = data['OrderUUID']
                 pay_money = data['SchPrice']
                 if order.pay_money != pay_money or order.pay_order_no != OrderUUID:
-                    order.modify(pay_money=pay_money, pay_order_no=OrderUUID)
+                    order.modify(pay_money=pay_money, pay_order_no=OrderUUID,pay_channel='yh')
                 return {"flag": "html", "content": r.content}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)

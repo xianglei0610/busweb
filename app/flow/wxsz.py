@@ -203,6 +203,7 @@ class Flow(BaseFlow):
                 res = r.json()
                 if res["errorCode"] != 0:
                     return {"flag": "error", "content": json.dumps(res, ensure_ascii=False)}
+                order.update(pay_channel='alipay')
                 return {"flag": "url", "content": res["data"]["url"]}
         else:
             return {"flag": "error", "content": u"账号登录失败"}

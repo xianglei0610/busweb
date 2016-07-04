@@ -260,6 +260,7 @@ class Flow(BaseFlow):
                     "payAmount": payAmount
                     }
                 r = requests.post(pay_url, data=params, headers=headers, cookies=cookies)
+                order.update(pay_channel='yh')
                 return {"flag": "html", "content": r.content}
 
         if valid_code:

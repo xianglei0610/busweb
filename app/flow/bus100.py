@@ -381,6 +381,7 @@ class Flow(BaseFlow):
                 r = requests.post(url, headers=headers, cookies=rebot.cookies, data=urllib.urlencode(params))
                 sel = etree.HTML(r.content)
                 pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
+                order.update(pay_channel='alipay')
                 if order.pay_order_no != pay_order_no:
                     order.update(pay_order_no=pay_order_no)
                 return {"flag": "html", "content": r.content}

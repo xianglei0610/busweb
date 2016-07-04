@@ -465,6 +465,7 @@ class Flow(BaseFlow):
                                    headers=headers,
                                    cookies=cookies,
                                    )
+                order.update(pay_channel='yh')
                 return {"flag": "html", "content": r.content}
             else:
                 soup = BeautifulSoup(r.content, "lxml")

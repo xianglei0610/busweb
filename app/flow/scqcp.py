@@ -532,7 +532,7 @@ class Flow(BaseFlow):
             try:
                 pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
                 if order.pay_order_no != pay_order_no:
-                    order.update(pay_order_no=pay_order_no)
+                    order.update(pay_order_no=pay_order_no, pay_channel='yh')
             except:
                 pass
             return {"flag": "html", "content": r.content}
