@@ -355,6 +355,7 @@ def order_detail(order_no):
                             status_msg=STATUS_MSG,
                             source_info=SOURCE_INFO,
                             pay_status_msg=PAY_STATUS_MSG,
+                            pay_channel=PAY_CHANNEL,
                            )
 
 @dashboard.route('/orders/<order_no>/traces', methods=['GET'])

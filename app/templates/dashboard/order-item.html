@@ -136,7 +136,7 @@
 					</thead>
 					<tbody>
 						<tr>
-                            <td>{{order.pay_channel}}</td>
+                            <td>{{pay_channel.get(order.pay_channel,'')}}</td>
                             <td>{{pay_status_msg[order.pay_status]}}</td>
 							<td>None</td>
                             <td>{{order.pay_account}}</td>
