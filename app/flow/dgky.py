@@ -328,7 +328,6 @@ class Flow(BaseFlow):
             for i in station:
                 td = i.xpath('font/text()')
                 href = i.xpath('@href')[0]
-                print href
                 station_name = td[0].replace('\r\n','').replace('\t','').replace(' ',  '')
                 if station_name == line.d_sta_name:
                     station_url = "http://www.mp0769.com/cbprjdisp8.asp?"+href
@@ -409,7 +408,7 @@ class Flow(BaseFlow):
                     obj = Line.objects.get(line_id=line_id)
                 except Line.DoesNotExist:
                     continue
-                extra_info = {"query_url": query_url}
+                extra_info = {"query_url": href}
                 info = {
                     "full_price": float(full_price),
                     "fee": 0,
