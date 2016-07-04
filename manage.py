@@ -6,6 +6,8 @@ import zipfile
 from app import setup_app, db
 from flask.ext.script import Manager, Shell
 from datetime import datetime as dte
+from app.constants import *
+
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app = setup_app()
@@ -173,6 +175,57 @@ def sync_open_city(site, province_name):
         except:
             print '%s already existed'%city_name
             pass
+
+@manager.command
+def make_success(order_no):
+    from app.models import Order
+    order = Order.objects.get(order_no=order_no)
+    if order.status !=  STATUS_WAITING_ISSUE:
+        print "状态不对"
+        return
+    if order.crawl_source == "hn96520":
+        print "源站订单号:", order.raw_order_no
+        code1 = raw_input("请输入取票密码:")
+        code = raw_input("请再次输入取票密码:")
+        if code1 != code:
+            print "两次输入密码不一致"
+            return
+        dx_info = {
+            "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+            "start": order.line.s_sta_name,
+            "end": order.line.d_sta_name,
+            "code": code,
+            'raw_order': order.raw_order_no,
+        }
+        dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HN96520]
+        code_list = ["%s" % (code)]
+        msg_list = [dx_tmpl % dx_info]
+        print msg_list[0]
+        order.modify(status=STATUS_ISSUE_SUCC,
+                        pick_code_list=code_list,
+                        pick_msg_list=msg_list)
+        order.on_issue_success()
+        from tasks import issued_callback
+        issued_callback.delay(order.order_no)
+
+
+@manager.command
+def kefu_issued_stat():
+    alipay_data = {}
+    yh_source = ["scqcp", "bus365", "bjky", "hebky", "szky"]
+    from app.models import Order, AdminUser
+    qs = Order.objects.filter(create_date_time__gt="2016-06-01", create_date_time__lt="2016-07-01", status=14)
+    for d in qs.filter(crawl_source__nin=yh_source).aggregate({"$group":{"_id":{"kefu":"$kefu_username"}, "total":{"$sum":"$ticket_amount"}}}):
+        alipay_data[d["_id"]["kefu"]] = d["total"]
+
+    yh_data = {}
+    for d in qs.filter(crawl_source__in=yh_source).aggregate({"$group":{"_id":{"kefu":"$kefu_username"}, "total":{"$sum":"$ticket_amount"}}}):
+        yh_data[d["_id"]["kefu"]] = d["total"]
+
+    for k in set(yh_data.keys()+alipay_data.keys()):
+        u = AdminUser.objects.get(username=k)
+        print "%s: %s+%s*2=%s" % (u.realname, alipay_data.get(k, 0), yh_data.get(k, 0), alipay_data.get(k, 0)+2*yh_data.get(k, 0))
+
 
 if __name__ == '__main__':
     manager.run()

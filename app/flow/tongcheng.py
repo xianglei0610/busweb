@@ -147,7 +147,7 @@ class Flow(BaseFlow):
 
     def do_lock_ticket(self, order):
         line = order.line
-        if line.s_city_name in ["南通", "镇江"]:
+        if line.s_city_name in ["南通", "镇江", "无锡", "苏州"]:
             return self.do_lock_ticket_by_web(order)
         else:
             return self.do_lock_ticket_by_app(order)

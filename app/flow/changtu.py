@@ -369,7 +369,8 @@ class Flow(BaseFlow):
                     if name in ["None", "none", '']:
                         continue
                     raw_form[name] = val
-                pay_url = "http://nps.trip8080.com/pay.action"
+                #pay_url = "http://nps.trip8080.com/pay.action"
+                pay_url='http://www.changtu.com/pay/pay.htm'
                 r = rebot.http_post(pay_url, data=urllib.urlencode(raw_form), headers=headers, cookies=cookies)
                 data = self.extract_alipay(r.content)
                 pay_money = float(data["total_fee"])

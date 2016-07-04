@@ -69,7 +69,7 @@ class Flow(BaseFlow):
                                     source_account=rebot.telephone,
                                     result_reason='add_shopcart1'+errmsg[0],
                                     lock_info={'result_reason': errmsg[0]})
-            return lock_result
+                return lock_result
         shopcartct = self.request_query_shopcart(rebot)
         if shopcartct == '0':
             errmsg = self.request_add_shopcart(order, rebot)
