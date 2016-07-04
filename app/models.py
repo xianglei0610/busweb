@@ -401,15 +401,15 @@ class Line(db.Document):
                             u"珠海南水汽车客运站":u"南水站",
                            }
                     tar_source = SOURCE_ZHW
-            try:
-                ob = Line.objects.get(crawl_source=tar_source,
-                                      s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
-                                      d_sta_name=self.d_sta_name,
-                                      drv_datetime=self.drv_datetime)
-                self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
-            except Line.DoesNotExist:
-                self.modify(compatible_lines={self.crawl_source: self.line_id})
-            return self.compatible_lines
+                try:
+                    ob = Line.objects.get(crawl_source=tar_source,
+                                          s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
+                                          d_sta_name=self.d_sta_name,
+                                          drv_datetime=self.drv_datetime)
+                    self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
+                except Line.DoesNotExist:
+                    self.modify(compatible_lines={self.crawl_source: self.line_id})
+                return self.compatible_lines
         else:
             qs = Line.objects.filter(s_sta_name=self.s_sta_name,
                                      s_city_name=self.s_city_name,
