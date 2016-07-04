@@ -312,7 +312,7 @@ class Line(db.Document):
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
 
-        elif self.s_province == "广东" and self.s_city_name == "东莞":
+        elif self.s_province == "广东":
             if self.s_city_name == "东莞":
                 # 广东省网，东莞客运
                 if self.crawl_source == SOURCE_DGKY:
