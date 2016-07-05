@@ -81,7 +81,7 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param))
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
-            if '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
+            if '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
                 errmsg = '可售票额不足'
                 lock_result.update({
                     'result_code': 0,
