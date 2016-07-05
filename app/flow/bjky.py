@@ -364,6 +364,7 @@ class Flow(BaseFlow):
                 if order.status == STATUS_WAITING_ISSUE:
                     pay_url = "http://e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                     r = rebot.http_get(pay_url, headers={"User-Agent": rebot.user_agent}, cookies=cookies)
+                    order.modify(pay_channel='yh')
                     return {"flag": "html", "content": r.content}
                 else:
                     return {"flag": "false", "content": order.lock_info.get('result_reason','')}
