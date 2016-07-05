@@ -430,6 +430,7 @@ class Line(db.Document):
                 try:
                     ob = Line.objects.get(crawl_source=tar_source,
                                           s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
+                                          d_city_name=self.d_city_name,
                                           d_sta_name=self.d_sta_name,
                                           drv_datetime=self.drv_datetime,
                                           bus_num=self.bus_num)
