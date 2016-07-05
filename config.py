@@ -129,6 +129,11 @@ class ApiProdConfig(Config):
             "port": REDIS_PORT,
             "db": 1,
         },
+        "line": {
+            "host": REDIS_HOST,
+            "port": REDIS_PORT,
+            "db": 2,
+        },
         "default": {
             "host": REDIS_HOST,
             "port": REDIS_PORT,
