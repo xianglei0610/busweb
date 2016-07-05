@@ -39,7 +39,7 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        rebot = order.get_lock_rebot(order)
+        rebot = order.get_lock_rebot()
         line = order.line
         params = {
             "startPlace":line.s_city_name,
@@ -212,7 +212,7 @@ class Flow(BaseFlow):
                 site = s.lstrip("取票地点:")
         pay_money = float(re.findall(r"(\d+.\d)",soup.select_one(".order_Aprice").text)[0])
         return {
-            "state": soup.select(".pay_success")[0].get_text().split(u"：")[1].strip(),
+            "state": soup.select(".pay_success_left")[0].get_text().split(u"：")[1].strip(),
             "pick_no": no,
             "pick_code": code,
             "pick_site": site,
