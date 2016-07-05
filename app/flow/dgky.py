@@ -344,7 +344,7 @@ class Flow(BaseFlow):
                 drv_date = dte.strftime(dte.strptime(drv_date, '%Y-%m-%d'),'%Y-%m-%d')
                 drv_time = i.xpath('td[3]/div/text()')[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
                 start_station = i.xpath('td[4]/div/text()')[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
-                end_station = i.xpath('td[5]/div/text()')[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
+                #end_station = i.xpath('td[5]/div/text()')[0].replace('\r\n', '').replace('\t',  '').replace(' ',  '')
                 href = i.xpath('td[9]/div/a/@onclick')[0]
                 if 'javascript:alert' in href:
                     continue
@@ -392,6 +392,7 @@ class Flow(BaseFlow):
                         end_station = params['ct_stname'].decode('gbk')
                         break
                 if full_price == 0:
+                    end_station = line.d_sta_name
                     left_tickets = 5
 
                 drv_datetime = dte.strptime("%s %s" % (drv_date, drv_time), "%Y-%m-%d %H:%M")
