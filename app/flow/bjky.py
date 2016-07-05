@@ -276,7 +276,7 @@ class Flow(BaseFlow):
             })
         return result_info
 
-    def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
+    def get_pay_page(self, order, valid_code="", session=None, pay_channel="yh" ,**kwargs):
         if order.source_account:
             rebot = BjkyWebRebot.objects.get(telephone=order.source_account)
         else:
@@ -291,7 +291,7 @@ class Flow(BaseFlow):
                 pay_url = "http://e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                 headers = rebot.http_header()
                 r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
-                order.update(pay_channel='yh')
+                order.modify(pay_channel='yh')
 #                 content = r.content
 #                 if isinstance(content, unicode):
 #                     pass
