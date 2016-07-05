@@ -268,7 +268,7 @@ class Flow(BaseFlow):
                 for x in info:
                     data[x['name']] = x['value']
                 OrderUUID = data['OrderUUID']
-                pay_money = data['SchPrice']
+                pay_money = float(data['SchPrice'])*int(data["Number"])
                 if order.pay_money != pay_money or order.pay_order_no != OrderUUID:
                     order.modify(pay_money=pay_money, pay_order_no=OrderUUID,pay_channel='yh')
                 return {"flag": "html", "content": r.content}
