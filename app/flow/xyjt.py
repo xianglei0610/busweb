@@ -261,19 +261,16 @@ class Flow(BaseFlow):
                                    'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblticketstatus'}).get_text()
                     pcode = x.find('span', attrs={
                                    'id': 'ctl00_ContentPlaceHolder1_GridView1_ctl02_lblget_ticket_passwd'}).get_text().strip()
-
-        except Exception,e:
-            state = ''
-            pcode = ''
-
-        return {
-            "state": state,
-            "pick_no": pcode,
-            "pick_code": pcode,
-            "pick_site": '',
-            'raw_order': sn,
-            "pay_money": 0.0,
-        }
+                    return {
+                        "state": state,
+                        "pick_no": pcode,
+                        "pick_code": pcode,
+                        "pick_site": '',
+                        'raw_order': sn,
+                        "pay_money": 0.0,
+                    }
+        except:
+            pass
 
     # 刷新出票
     def do_refresh_issue(self, order):
