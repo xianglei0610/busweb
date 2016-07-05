@@ -3135,8 +3135,7 @@ class LnkyWebRebot(Rebot):
 
 
 class E8sAppRebot(Rebot):
-    user_agent = db.StringField(
-        default="Apache-HttpClient/UNAVAILABLE (java 1.4)")
+    user_agent = db.StringField(default="Apache-HttpClient/UNAVAILABLE (java 1.4)")
     user_id = db.StringField()
     ip = db.StringField(default="")
 
@@ -3155,13 +3154,14 @@ class E8sAppRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_E8S, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_E8S)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         if ipstr and rds.sismember(RK_PROXY_IP_E8S, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(RK_PROXY_IP_E8S)
+#         self.modify(ip=ipstr)
+#         return ipstr
 
     def http_header(self, ua=""):
         return {
