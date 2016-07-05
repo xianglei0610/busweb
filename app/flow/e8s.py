@@ -198,7 +198,7 @@ class Flow(BaseFlow):
                         if location_url:
                             return {"flag": "url", "content": location_url}
             return {"flag": "error", "content": "订单已支付成功或者失效"}
-        if order.status == STATUS_LOCK_RETRY:
+        if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
             self.lock_ticket(order)
         return _get_page(rebot)
 
