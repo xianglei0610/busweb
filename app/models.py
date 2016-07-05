@@ -111,6 +111,27 @@ class OpenCity(db.Document):
         ],
     }
 
+    def get_open_station(self, sta_name):
+        """
+        获取OpenStation对象
+        需要注意: 从缓存获取的内容并不一定是最新的数据
+        """
+        rds = get_redis("line")
+        key = RK_OPEN_STATION % (self.city_name, sta_name)
+        cached = rds.get(key)
+        if cached:
+            obj = OpenStation.from_json(cached)
+        else:
+            try:
+                obj = OpenStation.objects.get(city=self, sta_name=sta_name)
+            except:
+                self.init_station()
+                obj = OpenStation.objects.get(city=self, sta_name=sta_name)
+            obj.add_to_cache()
+        return obj
+
+
+
     def check_new_dest(self):
         qs = Line.objects.filter(s_province=self.province, s_city_name__startswith=self.city_name) \
                          .aggregate({
@@ -182,7 +203,7 @@ class OpenStation(db.Document):
     end_time = db.StringField(default="24:00")             # 停售时间
     advance_minutes = db.IntField(default=60)         # 分钟, 需要提前xx分钟购票
     source_weight = db.DictField()          # 源站分配权重
-    close_status = db.IntField(default=0)   # 关闭状态: 0-不关闭 1-关闭查余票 2-关闭查班次列表 3-关闭1和2
+    close_status = db.IntField(default=0)   # 关闭状态: 0-不关闭 1<<0-关闭查余票 1<<1-关闭查班次列表 1<<2-关闭1和2
     extra_info = db.DictField()             # 自定义数据
     create_datetime = db.DateTimeField(default=dte.now)
 
@@ -191,6 +212,7 @@ class OpenStation(db.Document):
             "city",
             "sta_name",
             "close_status",
+            ("city", "sta_name"),
         ],
     }
 
@@ -215,6 +237,18 @@ class OpenStation(db.Document):
             lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
         self.modify(dest_info=lst)
         line_log.info("[init_station_dest] %s %s, %s个目的地" % (city.city_name, self.sta_name, len(lst)))
+        self.clear_cache()
+
+    def clear_cache(self):
+        rds = get_redis("line")
+        key = RK_OPEN_STATION % (self.city.city_name, self.sta_name)
+        rds.delete(key)
+
+    def add_to_cache(self):
+        rds = get_redis("line")
+        key = RK_OPEN_STATION % (self.city.city_name, self.sta_name)
+        rds.set(key, self.to_json())
+        rds.expire(key, 60*30)
 
 
 class Line(db.Document):
@@ -381,7 +415,6 @@ class Line(db.Document):
             d_line.update({self.crawl_source: self.line_id})
             self.modify(compatible_lines=d_line)
             return self.compatible_lines
-
         elif self.s_city_name == "东莞":
             # 广东省网，东莞客运
             if self.crawl_source == SOURCE_DGKY:
@@ -428,10 +461,11 @@ class Line(db.Document):
                 tar_source = SOURCE_DGKY
             try:
                 ob = Line.objects.get(crawl_source=tar_source,
-                                        s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
-                                        d_sta_name=self.d_sta_name,
-                                        drv_datetime=self.drv_datetime,
-                                        bus_num=self.bus_num)
+                                      s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
+                                      d_city_name=self.d_city_name,
+                                      d_sta_name=self.d_sta_name,
+                                      drv_datetime=self.drv_datetime,
+                                      bus_num=self.bus_num)
                 self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
@@ -472,9 +506,9 @@ class Line(db.Document):
                 tar_source = SOURCE_ZHW
             try:
                 ob = Line.objects.get(crawl_source=tar_source,
-                                        s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
-                                        d_sta_name=self.d_sta_name,
-                                        drv_datetime=self.drv_datetime)
+                                      s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
+                                      d_sta_name=self.d_sta_name,
+                                      drv_datetime=self.drv_datetime)
                 self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
