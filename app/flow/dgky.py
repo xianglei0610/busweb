@@ -392,7 +392,7 @@ class Flow(BaseFlow):
                         end_station = params['ct_stname'].decode('gbk')
                         break
                 if full_price == 0:
-                    continue
+                    left_tickets = 5
 
                 drv_datetime = dte.strptime("%s %s" % (drv_date, drv_time), "%Y-%m-%d %H:%M")
                 line_id_args = {
@@ -410,7 +410,6 @@ class Flow(BaseFlow):
                     continue
                 extra_info = {"query_url": href}
                 info = {
-                    "full_price": float(full_price),
                     "fee": 0,
                     "left_tickets": int(left_tickets or 0),
                     "refresh_datetime": now,
