@@ -305,6 +305,7 @@ class Flow(BaseFlow):
                     drv_date, drv_time), "%Y-%m-%d %H:%M")
                 full_price = float(x.find_all('td')[7].get_text().strip())
                 left_tickets = int(x.find_all('td')[8].get_text().strip())
+                sts = x.find_all('td')[9].img.get('src', '')
                 line_id_args = {
                     's_city_name': s_city_name,
                     'd_city_name': d_city_name,
@@ -316,7 +317,7 @@ class Flow(BaseFlow):
                     "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
                     t[line_id].update(**{"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now})
-                if line_id == line.line_id:
+                if line_id == line.line_id and 'images/bt_yd1.png' != sts:
                     update_attrs = {"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now}
             except Exception as e:
                 print(e)
