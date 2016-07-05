@@ -466,7 +466,7 @@ class Flow(BaseFlow):
                     elif k == "total_fee":
                         pay = float(v)
                 if no and order.pay_order_no != no:
-                    order.modify(pay_order_no=no, pay_money=pay)
+                    order.modify(pay_order_no=no, pay_money=pay,pay_channel='alipay')
                 return {"flag": "url", "content": pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)

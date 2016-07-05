@@ -3250,6 +3250,12 @@ PAY_STATUS_MSG = {
     PAY_STATUS_REFUND: "已退款",
 }
 
+PAY_CHANNEL = {
+    'yh': "银行",
+    'wx': "微信",
+    'alipay': "支付宝",
+}
+
 # 证件类型
 IDTYPE_IDCARD = 1  # 身份证
 

@@ -419,7 +419,7 @@ class Flow(BaseFlow):
                     pay_content = r.content
                     sel = etree.HTML(pay_content)
                     pay_order_no = sel.xpath("//input[@id='out_trade_no']/@value")[0].strip()
-                    order.update(pay_order_no=pay_order_no, extra_info={'pay_content': pay_content})
+                    order.update(pay_order_no=pay_order_no, extra_info={'pay_content': pay_content},pay_channel='alipay')
                 return {"flag": "html", "content": pay_content}
             return {"flag": "error", "content": "锁票失败"}
 

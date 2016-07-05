@@ -230,6 +230,7 @@ class Flow(BaseFlow):
             }
             cookies = json.loads(rebot.cookies)
             r = rebot.http_post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            order.update(pay_channel='alipay')
             return {"flag": "html", "content": r.content}
 
     def do_refresh_line(self, line):

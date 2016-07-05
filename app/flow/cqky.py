@@ -494,6 +494,7 @@ class Flow(BaseFlow):
             }
             #r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
             r = requests.post(base_url, data=urllib.urlencode(params), headers=headers,)
+            order.update(pay_channel='alipay')
             return {"flag": "html", "content": r.content}
         return {"flag": "error", "content": "锁票失败,请重试!"}
 

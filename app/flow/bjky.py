@@ -291,6 +291,7 @@ class Flow(BaseFlow):
                 pay_url = "http://e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                 headers = rebot.http_header()
                 r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+                order.update(pay_channel='yh')
 #                 content = r.content
 #                 if isinstance(content, unicode):
 #                     pass

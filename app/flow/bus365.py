@@ -274,6 +274,10 @@ class Flow(BaseFlow):
             unpay_url = url + '?'+urllib.urlencode(param)
             r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
             gatewayid = 65
+            if gatewayid == 142:
+                order.update(pay_channel='yh')
+            else:
+                order.update(pay_channel='alipay')
             content = r.content
             if not isinstance(content, unicode):
                 content = content.decode('utf-8')

@@ -224,6 +224,9 @@ def order_list():
     yc_status = params.get("yc_status", "")
     if yc_status:
         query.update(yc_status=int(yc_status))
+    pay_channel = params.get("pay_channel", "")
+    if pay_channel:
+        query.update(pay_channel=pay_channel)
     q_key = params.get("q_key", "")
     q_value = params.get("q_value", "").strip()
 
@@ -339,6 +342,7 @@ def order_list():
                                 site_count=site_count,
                                 account_count=account_count,
                                 all_user=AdminUser.objects.filter(is_removed=0),
+                                pay_channel=PAY_CHANNEL,
                                 )
 
 
@@ -351,6 +355,7 @@ def order_detail(order_no):
                             status_msg=STATUS_MSG,
                             source_info=SOURCE_INFO,
                             pay_status_msg=PAY_STATUS_MSG,
+                            pay_channel=PAY_CHANNEL,
                            )
 
 @dashboard.route('/orders/<order_no>/traces', methods=['GET'])
