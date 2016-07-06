@@ -498,8 +498,11 @@ class Flow(BaseFlow):
     def do_refresh_line(self, line):
         rebot = SzkyWebRebot.get_one()
         headers = {"User-Agent": rebot.user_agent}
-        for i in range(50):
-            res = rebot.query_code(headers)
+        for i in range(20):
+            try:
+                res = rebot.query_code(headers)
+            except:
+                continue
             if res.get('status', '') == 0:
                 cookies = res.get('cookies')
                 valid_code = res.get('valid_code')

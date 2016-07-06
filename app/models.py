@@ -506,8 +506,10 @@ class Line(db.Document):
                 tar_source = SOURCE_ZHW
             try:
                 ob = Line.objects.get(crawl_source=tar_source,
+                                      s_city_name=self.s_city_name,
                                       s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
                                       d_sta_name=self.d_sta_name,
+                                      d_city_name=self.d_city_name,
                                       drv_datetime=self.drv_datetime)
                 self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
             except Line.DoesNotExist:

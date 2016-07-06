@@ -190,13 +190,29 @@ class Flow(BaseFlow):
             "Content-Type": "application/x-www-form-urlencoded",
             'Referer': 'http://www.zhwsbs.gov.cn:9013/shfw/zaotsTicket/pageLists.xhtml',
         }
+        d = {
+            u'香洲长途站': 'C1K001-102017',
+            u'上冲站': 'C1K027-102018',
+            u'南溪站': 'C1K013-102019',
+            u'拱北通大站': 'C1K030-102023',
+            u'斗门站': 'C2K003-102027',
+            u'井岸站': 'C2K001-102028',
+            u'红旗站': 'C1K006-102030',
+            u'三灶站': 'C1K004-102031',
+            u'平沙站': 'C1K007-102032',
+            u'南水站': 'C1K008-102033',
+            u'唐家站': 'TJZ001-102020',
+            u'金鼎站': 'JDZ001-102021',
+            u'拱北票务中心': 'GBPW01-102024',
+            u'西埔站': 'XPZ001-102029',
+        }
         for x in xrange(5):
             code, cookies = vcode_zhw()
             data = {
                 'SchDate': line['drv_date'],
                 'SchTime': '',
                 'checkCode': code,
-                'StartStation': '"-"',
+                'StartStation': d.get(line['s_sta_name'], ''),
                 'SchDstNodeName': line['d_city_name'],
             }
             r = requests.post(url, headers=headers, cookies=cookies, data=urllib.urlencode(data))
