@@ -25,6 +25,9 @@ COMPANY_TO_SOURCE = {
     "南京晨之义软件科技有限公司": lambda name: SOURCE_NMGHY if u"内蒙古网站售票" in name else SOURCE_TZKY,
     "北京盛威时代科技有限公司": SOURCE_BUS365,
     "辽宁新途网络科技有限公司": SOURCE_XINTUYUN,
+    "河南金象客运信息服务有限公司": SOURCE_HN96520,
+    "广东南粤通客运联网中心有限公司": SOURCE_GDSW,
+    "徐州公路运输集团有限责任公司": SOURCE_XYJT,
 }
 
 def parse_alipay_record(f):
