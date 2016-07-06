@@ -285,18 +285,25 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        line_url = "http://58.213.132.27:8082/nj_weixinService/2.0/queryBus"
-        params = {
+        # line_url = "http://58.213.132.27:8082/nj_weixinService/2.0/queryBus"
+        # params = {
+        #     "drive_date": line.drv_datetime.strftime("%Y%m%d"),
+        #     "rst_name": line.s_sta_name,
+        #     "dst_name": line.d_city_name,
+        #     "v_source": "a",
+        #     "v_version": "v2.2",
+        #     "v_reg_id": ""
+        # }
+        # req_data = {
+        #     "param_key": json.dumps(params),
+        #     "secret_key": md5("&".join(map(lambda a:"%s=%s" % (a[0], a[1]), sorted(params.items(), key=lambda i: i[0])))),
+        # }
+        line_url = "http://58.213.132.28/weixin/proxy/queryBus"
+        req_data = {
+            "ewx": "FSclq1vvBHkQRfFqCaVal5+g6aovi02md1tfoQkuFUjwpwMPj4cjwu0EEWzvYfwohaqwrerSReE3zaLOAa1g85WWGXWruPxN2bD04NjmfV8=",
             "drive_date": line.drv_datetime.strftime("%Y%m%d"),
             "rst_name": line.s_sta_name,
             "dst_name": line.d_city_name,
-            "v_source": "a",
-            "v_version": "v2.2",
-            "v_reg_id": ""
-        }
-        req_data = {
-            "param_key": json.dumps(params),
-            "secret_key": md5("&".join(map(lambda a:"%s=%s" % (a[0], a[1]), sorted(params.items(), key=lambda i: i[0])))),
         }
         now = dte.now()
         rebot = JsdlkyWebRebot.get_one()
