@@ -79,8 +79,9 @@ class Flow(BaseFlow):
         # 买票, 添加乘客, 购买班次
         for x in xrange(1):
             r = rebot.http_get(url, headers=headers,
-                               cookies=cookies, data=urllib.urlencode(param))
+                               cookies=cookies, data=urllib.urlencode(param), timeout=2048)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
+            rebot_log.info(urlstr)
             if '333' in urlstr or  '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
                 errmsg = '可售票额不足'
                 lock_result.update({
