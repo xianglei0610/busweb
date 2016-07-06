@@ -282,11 +282,11 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": order_status_mapping[status],
             })
-        elif status in (u"订票失败",):
-            result_info.update({
-                "result_code": 2,
-                "result_msg": order_status_mapping[status],
-            })
+#         elif status in (u"订票失败",):
+#             result_info.update({
+#                 "result_code": 2,
+#                 "result_msg": order_status_mapping[status],
+#             })
         return result_info
 
     def do_refresh_line(self, line):
