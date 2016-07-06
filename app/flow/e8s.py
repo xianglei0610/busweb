@@ -139,18 +139,18 @@ class Flow(BaseFlow):
         state = ''
         if pay_status == '1' and order_status in ('7','8','9'):
             state = '失败订单'
-        if (pay_status == '7','3') and order_status == '1':
+        if pay_status in ('7', '3') and order_status == '1':
             state = "已购票"
 
         order_status_mapping = {
                 "失败订单": "失败订单",
                 "已购票": "购票成功",
                 }
-        if state in ("已购票"): #"出票成功":
+        if state in ["已购票"]: #"出票成功":
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "site": order.line.s_sta_name,
+                "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "code": pick_code,
                 "no": pick_no,
@@ -165,7 +165,7 @@ class Flow(BaseFlow):
                 "pick_msg_list": msg_list,
             })
 
-        elif state in ("失败订单"):#取消购票,购票失败,退票成功
+        elif state in ["失败订单"]:#取消购票,购票失败,退票成功
             result_info.update({
                 "result_code": 2,
                 "result_msg": order_status_mapping[state],
@@ -186,14 +186,14 @@ class Flow(BaseFlow):
 
                 if order_status in ('1', '3', '4', '5', '16') and pay_status == '1':
                     now = time.time()*1000
-                    print now-order_date
                     if now-order_date < 600000:
                         data = {
                             "payModel": "205",
                             "bwfUserId": rebot.user_id,
                             "orderId": order.lock_info['detail']['orderId'],
                             }
-                        r = requests.post(pay_url, data=data, headers=headers, allow_redirects=False)
+                        r = rebot.http_post(pay_url, data=data, headers=headers,allow_redirects=False)
+#                         return {"flag": "html", "content": r.content}
                         location_url = r.headers.get('location', '')
                         if location_url:
                             return {"flag": "url", "content": location_url}
