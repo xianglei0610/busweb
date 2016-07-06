@@ -400,9 +400,9 @@ class Flow(BaseFlow):
         headers = {"User-Agent": ua}
         try:
             r = requests.post(line_url, data=json.dumps(params), headers=headers)
+            res = r.json()
         except:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
-            res = r.json()
             return result_info
         if res["returnNo"] != "0000":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
