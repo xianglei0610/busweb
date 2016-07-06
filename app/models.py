@@ -475,7 +475,7 @@ class Line(db.Document):
             if self.crawl_source == SOURCE_ZHW:
                 trans = {
                         # u"上冲站":u"上冲站",
-                        u"拱北通大站":u"拱北汽车站",
+                        # u"拱北通大站":u"拱北汽车站",
                         # u"香洲长途站":u"香洲长途站",
                         # u"斗门站":u"斗门站",
                         # u"":u"岐关口岸站",
@@ -491,7 +491,7 @@ class Line(db.Document):
             elif self.crawl_source == SOURCE_GDSW:
                 trans = {
                         # u"上冲站":u"上冲站",
-                        u"拱北汽车站":u"拱北通大站",
+                        # u"拱北汽车站":u"拱北通大站",
                         # u"香洲长途站":u"香洲长途站",
                         # u"斗门站":u"斗门站",
                         # u"":u"岐关口岸站",
