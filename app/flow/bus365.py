@@ -273,7 +273,7 @@ class Flow(BaseFlow):
             url = "http://%s/applyorder/payunfinishorder/0"%order.line.extra_info['start_info']['netname']
             unpay_url = url + '?'+urllib.urlencode(param)
             r = rebot.http_get(unpay_url, headers=headers, cookies=cookies)
-            gatewayid = 65
+            gatewayid = 142#65
             if gatewayid == 142:
                 order.update(pay_channel='yh')
             else:
