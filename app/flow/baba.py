@@ -363,10 +363,12 @@ class Flow(BaseFlow):
         }
         check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
         ua = random.choice(BROWSER_USER_AGENT)
-        r = requests.post(check_url,
-                            data=urllib.urlencode(params),
-                            headers={"User-Agent": ua, "Content-Type": "application/x-www-form-urlencoded"})
-        res = r.json()
+        try:
+            r = requests.post(check_url, data=urllib.urlencode(params), headers={"User-Agent": ua, "Content-Type": "application/x-www-form-urlencoded"}, timeout=10)
+            res = r.json()
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
         if not res["success"]:
             if res["msg"] != "查询失败":
                 result_info.update(result_msg=res["msg"], update_attrs={"left_tickets": 0, "refresh_datetime": now})
