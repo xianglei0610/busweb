@@ -326,10 +326,10 @@ class Flow(BaseFlow):
         }
         try:
             r = requests.post(line_url, data=data, headers=headers)
+            res = r.json()
         except:
             result_info.update(result_msg="timeout default 10", update_attrs={"left_tickets": 10, "refresh_datetime": now})
             return result_info
-        res = r.json()
         if res["akfAjaxResult"] != "0":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
