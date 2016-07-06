@@ -349,51 +349,52 @@ class Flow(BaseFlow):
                 if 'javascript:alert' in href:
                     continue
                 full_price = 0
-                left_tickets = 0
-                for i in range(25):
-                    param = {}
-                    for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
-                        k, v = s.split("=")
-                        param[k] = v.encode('gb2312')
-                    query_url = "%s%s" % ('http://www.mp0769.com/orderlist.asp?', urllib.urlencode(param))
-                    req = urllib2.Request(query_url, headers=headers)
-                    result = urllib2.urlopen(req)
-                    content = result.read()
-                    res = content.decode('gbk')
-                    if '非法操作' in res:
-                        query_url = "http://www.mp0769.com/" + href.split(";")[0][15:-1]
+                left_tickets = 5
+                end_station = line.d_sta_name
+                try:
+                    for i in range(15):
+                        param = {}
+                        for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
+                            k, v = s.split("=")
+                            param[k] = v.encode('gb2312')
+                        query_url = "%s%s" % ('http://www.mp0769.com/orderlist.asp?', urllib.urlencode(param))
                         req = urllib2.Request(query_url, headers=headers)
                         result = urllib2.urlopen(req)
                         content = result.read()
                         res = content.decode('gbk')
-                    check_url = re.findall("window.location.href=(.*);", res)[0][1:-1]
-                    check_url = "http://www.mp0769.com/" + check_url
-                    param = {}
-                    for s in check_url.split("?")[1].split("&"):
-                        k, v = s.split("=")
-                        param[k] = v.encode('gb2312')
-                    order_url = "http://www.mp0769.com/orderlist.asp?"
-                    order_url = "%s%s" % (order_url, urllib.urlencode(param))
-                    req = urllib2.Request(order_url, headers=headers)
-                    result = urllib2.urlopen(req)
-                    content = result.read().decode('gbk')
-                    sel = etree.HTML(content)
-                    params = {}
-                    for s in sel.xpath("//form[@id='Form1']//input"):
-                        k, v = s.xpath("@name"), s.xpath("@value")
-                        if k:
-                            k, v = k[0], v[0] if k else ""
-                            params[k] = v.encode('gb2312')
-                    if not params or int(params.get('ct_price', 0)) == 0:
-                        continue
-                    else:
-                        full_price = params['ct_price']
-                        left_tickets = params['ct_accnum']
-                        end_station = params['ct_stname'].decode('gbk')
-                        break
-                if full_price == 0:
+                        if '非法操作' in res:
+                            query_url = "http://www.mp0769.com/" + href.split(";")[0][15:-1]
+                            req = urllib2.Request(query_url, headers=headers)
+                            result = urllib2.urlopen(req)
+                            content = result.read()
+                            res = content.decode('gbk')
+                        check_url = re.findall("window.location.href=(.*);", res)[0][1:-1]
+                        check_url = "http://www.mp0769.com/" + check_url
+                        param = {}
+                        for s in check_url.split("?")[1].split("&"):
+                            k, v = s.split("=")
+                            param[k] = v.encode('gb2312')
+                        order_url = "http://www.mp0769.com/orderlist.asp?"
+                        order_url = "%s%s" % (order_url, urllib.urlencode(param))
+                        req = urllib2.Request(order_url, headers=headers)
+                        result = urllib2.urlopen(req)
+                        content = result.read().decode('gbk')
+                        sel = etree.HTML(content)
+                        params = {}
+                        for s in sel.xpath("//form[@id='Form1']//input"):
+                            k, v = s.xpath("@name"), s.xpath("@value")
+                            if k:
+                                k, v = k[0], v[0] if k else ""
+                                params[k] = v.encode('gb2312')
+                        if not params or int(params.get('ct_price', 0)) == 0:
+                            continue
+                        else:
+                            full_price = params['ct_price']
+                            left_tickets = params['ct_accnum']
+                            end_station = params['ct_stname'].decode('gbk')
+                            break
+                except:
                     end_station = line.d_sta_name
-                    left_tickets = 5
 
                 drv_datetime = dte.strptime("%s %s" % (drv_date, drv_time), "%Y-%m-%d %H:%M")
                 line_id_args = {
@@ -416,6 +417,8 @@ class Flow(BaseFlow):
                     "refresh_datetime": now,
                     "extra_info": extra_info,
                 }
+                if full_price > 0:
+                    info.update({"full_price": full_price})
                 if line_id == line.line_id:
                     update_attrs = info
                 else:
