@@ -498,7 +498,7 @@ class Flow(BaseFlow):
     def do_refresh_line(self, line):
         rebot = SzkyWebRebot.get_one()
         headers = {"User-Agent": rebot.user_agent}
-        for i in range(50):
+        for i in range(20):
             try:
                 res = rebot.query_code(headers)
             except:
