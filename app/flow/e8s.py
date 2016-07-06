@@ -139,13 +139,14 @@ class Flow(BaseFlow):
         state = ''
         if pay_status == '1' and order_status in ('7','8','9'):
             state = '失败订单'
-        if pay_status in ('7', '3') and order_status == '1':
+        if pay_status in ('7', '3', '2') and order_status == '1':
             state = "已购票"
 
         order_status_mapping = {
                 "失败订单": "失败订单",
                 "已购票": "购票成功",
                 }
+
         if state in ["已购票"]: #"出票成功":
             pick_no, pick_code = ret["pick_no"], ret["pick_code"]
             dx_info = {
