@@ -79,7 +79,7 @@ class Flow(BaseFlow):
         # 买票, 添加乘客, 购买班次
         for x in xrange(1):
             r = rebot.http_get(url, headers=headers,
-                               cookies=cookies, data=urllib.urlencode(param), timeout=2048)
+                               cookies=cookies, data=urllib.urlencode(param), timeout=512)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
             rebot_log.info(urlstr)
             if '333' in urlstr or  '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
@@ -162,14 +162,14 @@ class Flow(BaseFlow):
         headers = {
             "User-Agent": rebot.user_agent,
         }
-        r = rebot.http_get(url, headers=headers)
+        r = rebot.http_get(url, headers=headers, timeout=256)
         # rebot.http_get(url, headers=headers, cookies=r.cookies)
         userid = json.loads(r.content[r.content.index(
             "(") + 1: r.content.rindex(")")]).get('UserId', '')
 
         ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
             userid, sign, time.time())
-        r = rebot.http_get(ourl, headers=headers, cookies=r.cookies)
+        r = rebot.http_get(ourl, headers=headers, cookies=r.cookies, timeout=256)
         info = json.loads(r.content[r.content.index(
             "(") + 1: r.content.rindex(")")]).get('OrderList', [])
         for x in info:
