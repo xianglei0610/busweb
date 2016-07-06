@@ -350,6 +350,7 @@ class Flow(BaseFlow):
                     continue
                 full_price = 0
                 left_tickets = 5
+                end_station = line.d_sta_name
                 try:
                     for i in range(15):
                         param = {}
