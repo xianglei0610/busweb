@@ -3247,7 +3247,6 @@ class E8sWebRebot(Rebot):
         ret = r.json()
         if ret["flag"] == 'true' and ret['userCode'] == self.telephone:
             # 登陆成功
-            self.user_id = ret["userId"]
             self.is_active = True
             self.last_login_time = dte.now()
             self.cookies = json.dumps(cookies)

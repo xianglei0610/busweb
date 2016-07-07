@@ -187,8 +187,8 @@ class Flow(BaseFlow):
         
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
-#                 pay_url = "http://www.bawangfen.cn/site/bwf/order_surePay.action?"
-                pay_url = "http://www.bawangfen.cn/site/bwf/aliWapPay_doPay.action"
+#                 pay_url = "http://www.bawangfen.cn/site/bwf/aliWapPay_doPay.action"
+                jump_url = 'http://www.bawangfen.cn/site/bwf/ticket/jump_pay.jsp'
                 headers = rebot.http_header()
                 ret = self.send_orderDetail_request(rebot, order=order)
                 order_status = ret["order_status"]
@@ -198,27 +198,33 @@ class Flow(BaseFlow):
                 if order_status in ('1', '3', '4', '5', '16') and pay_status == '1':
                     now = time.time()*1000
                     if now-order_date < 600000:
-                        data = {
-                            "payModel": "205",
-                            "bwfUserId": rebot.user_id,
-                            "orderId": order.lock_info['detail']['orderId'],
-                            }
-#                         params = {
-#                                 "orderCode": order.raw_order_no,
-#                                 "orderId": order.lock_info['detail']['orderId'],
-#                                 "payModel": "33",
-#                                 "returnUrl": "http://www.bawangfen.cn/bwf/payReturn.htm"
-#                                  }
-#                         pay_url = "%s%s" % (pay_url, urllib.urlencode(params))
-#                         print pay_url
-#                         web_rebot = E8sWebRebot.objects.get(telephone=order.source_account)
-#                         headers = web_rebot.http_header()
-#                         print web_rebot.login()
-#                         web_rebot.reload()
-#                         cookies = json.loads(web_rebot.cookies)
-#                         r = web_rebot.http_get(pay_url, headers=headers, cookies=cookies)
-#                         print r.content
-                        r = rebot.http_post(pay_url, data=data, headers=headers,allow_redirects=False)
+#                         data = {
+#                             "payModel": "205",
+#                             "bwfUserId": rebot.user_id,
+#                             "orderId": order.lock_info['detail']['orderId'],
+#                             }
+                        web_rebot = E8sWebRebot.objects.get(telephone=order.source_account)
+                        web_rebot.login()
+                        web_rebot.reload()
+                        params = {
+                                "orderCode": order.raw_order_no,
+                                "orderId": order.lock_info['detail']['orderId'],
+                                "payModel": "33",
+                                "returnUrl": "http://www.bawangfen.cn/bwf/payReturn.htm",
+                                "userId": rebot.user_id
+                                 }
+                        headers = web_rebot.http_header()
+                        headers.update({
+                                "Referer":  "http://www.bawangfen.cn/bwf/submitOrderPay.htm?orderId=%s&orderCode=%s&payModel=33"%(order.lock_info['detail']['orderId'],order.raw_order_no),
+                                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        })
+                        cookies = json.loads(web_rebot.cookies)
+                        r = web_rebot.http_post(jump_url, data=params, headers=headers, cookies=cookies)
+                        sel = etree.HTML(r.content)
+                        pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
+                        order.update(pay_order_no=pay_order_no, pay_channel='alipay')
+                        return {"flag": "html", "content": r.content}
+#                         r = rebot.http_post(pay_url, data=data, headers=headers,allow_redirects=False)
 #                         return {"flag": "html", "content": r.content}
                         location_url = r.headers.get('location', '')
                         if location_url:
