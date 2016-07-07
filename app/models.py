@@ -162,7 +162,7 @@ class OpenCity(db.Document):
             try:
                 sta_obj = OpenStation.objects.get(city=self, sta_name=name)
             except:
-                sta_obj = OpenStation(city=self, sta_name=name, sta_id=sid)
+                sta_obj = OpenStation(city=self, sta_name=name, sta_id=sid, extra_info={})
                 sta_obj.save()
                 line_log.info("[init_station] 增加OpenStation %s %s" % (self.city_name, name))
                 sta_obj.init_dest()
@@ -203,7 +203,8 @@ class OpenStation(db.Document):
     end_time = db.StringField(default="24:00")             # 停售时间
     advance_minutes = db.IntField(default=60)         # 分钟, 需要提前xx分钟购票
     source_weight = db.DictField()          # 源站分配权重
-    close_status = db.IntField(default=0)   # 关闭状态: 0-不关闭 1<<0-关闭查余票 1<<1-关闭查班次列表 1<<2-关闭1和2
+    crawl_source = db.StringField()         # 数据显示源
+    close_status = db.IntField(default=STATION_CLOSE_NONE)   # 关闭状态: 定义见constants.py
     extra_info = db.DictField()             # 自定义数据
     create_datetime = db.DateTimeField(default=dte.now)
 

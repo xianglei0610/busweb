@@ -3451,3 +3451,16 @@ YC_STAUTS_MSG = {
     YC_STATUS_ING: "异常未结束",
     YC_STATUS_DONE: "异常已解除",
 }
+
+# 出发站关闭状态
+STATION_CLOSE_NONE = 0          # 不关闭
+STATION_CLOSE_YZCX = 1 << 0     # 关闭余票查询
+STATION_CLOSE_BCCX = 1 << 1     # 关闭班次查询
+STATION_CLOSE_ALL = STATION_CLOSE_BCCX | STATION_CLOSE_YZCX   # 关闭所有
+
+STATION_CLOSE_MSG = {
+    STATION_CLOSE_NONE: "不关闭",
+    STATION_CLOSE_YZCX: "关余座查询",
+    STATION_CLOSE_BCCX: "关班次查询",
+    STATION_CLOSE_ALL: "全部关闭",
+}

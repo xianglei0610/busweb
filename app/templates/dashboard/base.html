@@ -10,6 +10,7 @@
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/scojs.css')}}" />
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/sco.message.css')}}" />
         <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/bootstrap-editable.css')}}" />
+        <link rel="stylesheet" href="{{url_for('static', filename='dashboard/css/jquery.jsonview.min.css')}}" />
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/jquery-2.2.3.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap-datetimepicker.min.js')}}"></script>
@@ -19,6 +20,7 @@
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/sco.modal.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/bootstrap-editable.min.js')}}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/layer.js')}}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='dashboard/js/jquery.jsonview.min.js')}}"></script>
 		<style type="text/css">
 			.navbar-brand img{
 				height: 48px;
@@ -64,7 +66,17 @@
                         <li class="{%if request.path=="/orders/my"%}active{%endif%}"><a href="/orders/my">我的订单</a></li>
                         <li class="{%if request.path=="/orders"%}active{%endif%}"><a href="{{url_for("dashboard.order_list")}}">所有订单</a></li>
                         {%if current_user.is_superuser%}
+                        <!--
                         <li class="{%if request.path=="/lines"%}active{%endif%}"><a href="/lines">所有线路</a></li>
+                        -->
+						<li class="dropdown {%if request.path in ["/lines","/startings"]%}active{%endif%}">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">线路管理<span class="caret"></span></a>
+							<ul class="dropdown-menu">
+								<li><a href="/lines">所有线路</a></li>
+								<li class="divider"></li>
+								<li><a href="/startings">出发车站</a></li>
+							</ul>
+						</li>
                         {%endif%}
                         <li class="{%if request.path=="/users"%}active{%endif%}"><a href="/users">系统用户</a></li>
                         <!--

@@ -27,6 +27,11 @@ def cut_str(context, value, size=20):
     return value[:size]+"..."
 
 
+@jinja2.contextfilter
+@dashboard.app_template_filter()
+def bitor(context, value, target):
+    return value&target
+
 
 @dashboard.after_request
 def log_response(response):
