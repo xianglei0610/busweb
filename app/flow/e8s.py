@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import E8sAppRebot, Line
+from app.models import E8sAppRebot, Line, E8sWebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from app import order_log, line_log
@@ -63,7 +63,7 @@ class Flow(BaseFlow):
             "source_account": rebot.telephone,
             "pay_money": line.real_price()*order.ticket_amount,
         }
-        if res['detail']:
+        if res.get('detail', []):
             order_no = res["detail"]['orderCode']
             expire_time = dte.now()+datetime.timedelta(seconds=10*60)
             lock_result.update({
@@ -75,9 +75,18 @@ class Flow(BaseFlow):
                 "lock_info": res
             })
         else:
+            errmsg = res.get('failReason', '')
+            if "一张身份证一天只能订一张票" in errmsg:
+                new_rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": new_rebot.telephone,
+                    "result_reason": str(rebot.telephone) + errmsg,
+                })
+                return lock_result
             lock_result.update({
                 "result_code": 0,
-                "result_reason": res,
+                "result_reason": res.get('failReason', '') or res,
                 "pay_url": "",
                 "raw_order_no": "",
                 "expire_datetime": None,
@@ -178,6 +187,7 @@ class Flow(BaseFlow):
         
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
+#                 pay_url = "http://www.bawangfen.cn/site/bwf/order_surePay.action?"
                 pay_url = "http://www.bawangfen.cn/site/bwf/aliWapPay_doPay.action"
                 headers = rebot.http_header()
                 ret = self.send_orderDetail_request(rebot, order=order)
@@ -193,6 +203,21 @@ class Flow(BaseFlow):
                             "bwfUserId": rebot.user_id,
                             "orderId": order.lock_info['detail']['orderId'],
                             }
+#                         params = {
+#                                 "orderCode": order.raw_order_no,
+#                                 "orderId": order.lock_info['detail']['orderId'],
+#                                 "payModel": "33",
+#                                 "returnUrl": "http://www.bawangfen.cn/bwf/payReturn.htm"
+#                                  }
+#                         pay_url = "%s%s" % (pay_url, urllib.urlencode(params))
+#                         print pay_url
+#                         web_rebot = E8sWebRebot.objects.get(telephone=order.source_account)
+#                         headers = web_rebot.http_header()
+#                         print web_rebot.login()
+#                         web_rebot.reload()
+#                         cookies = json.loads(web_rebot.cookies)
+#                         r = web_rebot.http_get(pay_url, headers=headers, cookies=cookies)
+#                         print r.content
                         r = rebot.http_post(pay_url, data=data, headers=headers,allow_redirects=False)
 #                         return {"flag": "html", "content": r.content}
                         location_url = r.headers.get('location', '')
