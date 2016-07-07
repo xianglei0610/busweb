@@ -418,6 +418,9 @@ class Flow(BaseFlow):
             return s
         cookies = json.loads(rebot.cookies)
         r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+        if r.status_code == 403:
+            rebot.modify(ip="")
+            return {}
         try:
             res = json.loads(trans_js_str(r.content))
         except:

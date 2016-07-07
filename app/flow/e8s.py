@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import E8sAppRebot, Line
+from app.models import E8sAppRebot, Line, E8sWebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from app import order_log, line_log
@@ -63,7 +63,7 @@ class Flow(BaseFlow):
             "source_account": rebot.telephone,
             "pay_money": line.real_price()*order.ticket_amount,
         }
-        if res['detail']:
+        if res.get('detail', []):
             order_no = res["detail"]['orderCode']
             expire_time = dte.now()+datetime.timedelta(seconds=10*60)
             lock_result.update({
@@ -75,9 +75,18 @@ class Flow(BaseFlow):
                 "lock_info": res
             })
         else:
+            errmsg = res.get('failReason', '')
+            if "一张身份证一天只能订一张票" in errmsg:
+                new_rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": new_rebot.telephone,
+                    "result_reason": str(rebot.telephone) + errmsg,
+                })
+                return lock_result
             lock_result.update({
                 "result_code": 0,
-                "result_reason": res,
+                "result_reason": res.get('failReason', '') or res,
                 "pay_url": "",
                 "raw_order_no": "",
                 "expire_datetime": None,
@@ -178,7 +187,8 @@ class Flow(BaseFlow):
         
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
-                pay_url = "http://www.bawangfen.cn/site/bwf/aliWapPay_doPay.action"
+#                 pay_url = "http://www.bawangfen.cn/site/bwf/aliWapPay_doPay.action"
+                jump_url = 'http://www.bawangfen.cn/site/bwf/ticket/jump_pay.jsp'
                 headers = rebot.http_header()
                 ret = self.send_orderDetail_request(rebot, order=order)
                 order_status = ret["order_status"]
@@ -188,16 +198,38 @@ class Flow(BaseFlow):
                 if order_status in ('1', '3', '4', '5', '16') and pay_status == '1':
                     now = time.time()*1000
                     if now-order_date < 600000:
-                        data = {
-                            "payModel": "205",
-                            "bwfUserId": rebot.user_id,
-                            "orderId": order.lock_info['detail']['orderId'],
-                            }
-                        r = rebot.http_post(pay_url, data=data, headers=headers,allow_redirects=False)
+#                         data = {
+#                             "payModel": "205",
+#                             "bwfUserId": rebot.user_id,
+#                             "orderId": order.lock_info['detail']['orderId'],
+#                             }
+                        web_rebot = E8sWebRebot.objects.get(telephone=order.source_account)
+                        if not web_rebot.check_login:
+                            web_rebot.login()
+                            web_rebot.reload()
+                        params = {
+                                "orderCode": order.raw_order_no,
+                                "orderId": order.lock_info['detail']['orderId'],
+                                "payModel": "33",
+                                "returnUrl": "http://www.bawangfen.cn/bwf/payReturn.htm",
+                                "userId": rebot.user_id
+                                 }
+                        headers = web_rebot.http_header()
+                        headers.update({
+                                "Referer":  "http://www.bawangfen.cn/bwf/submitOrderPay.htm?orderId=%s&orderCode=%s&payModel=33"%(order.lock_info['detail']['orderId'],order.raw_order_no),
+                                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        })
+                        cookies = json.loads(web_rebot.cookies)
+                        r = web_rebot.http_post(jump_url, data=params, headers=headers, cookies=cookies)
+                        sel = etree.HTML(r.content)
+                        pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
+                        order.update(pay_order_no=pay_order_no, pay_channel='alipay')
+                        return {"flag": "html", "content": r.content}
+#                         r = rebot.http_post(pay_url, data=data, headers=headers,allow_redirects=False)
 #                         return {"flag": "html", "content": r.content}
-                        location_url = r.headers.get('location', '')
-                        if location_url:
-                            return {"flag": "url", "content": location_url}
+#                         location_url = r.headers.get('location', '')
+#                         if location_url:
+#                             return {"flag": "url", "content": location_url}
             return {"flag": "error", "content": "订单已支付成功或者失效"}
         if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
             self.lock_ticket(order)
