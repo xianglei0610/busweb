@@ -63,7 +63,7 @@ class Flow(BaseFlow):
             "source_account": rebot.telephone,
             "pay_money": line.real_price()*order.ticket_amount,
         }
-        if res['detail']:
+        if res.get('detail', []):
             order_no = res["detail"]['orderCode']
             expire_time = dte.now()+datetime.timedelta(seconds=10*60)
             lock_result.update({
@@ -77,7 +77,7 @@ class Flow(BaseFlow):
         else:
             lock_result.update({
                 "result_code": 0,
-                "result_reason": res,
+                "result_reason": res.get('failReason', '') or res,
                 "pay_url": "",
                 "raw_order_no": "",
                 "expire_datetime": None,
