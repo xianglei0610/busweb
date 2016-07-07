@@ -3196,6 +3196,73 @@ class E8sAppRebot(Rebot):
             return "OK"
 
 
+class E8sWebRebot(Rebot):
+    user_agent = db.StringField()
+    user_id = db.StringField()
+    ip = db.StringField(default="")
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "e8sweb_rebot",
+    }
+    crawl_source = SOURCE_E8S
+    is_for_lock = False
+
+    @property
+    def proxy_ip(self):
+        return ''
+#         return '192.168.1.53:8888'
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         if ipstr and rds.sismember(RK_PROXY_IP_E8S, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(RK_PROXY_IP_E8S)
+#         self.modify(ip=ipstr)
+#         return ipstr
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "User-Agent": self.user_agent or ua,
+        }
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        headers = self.http_header(ua)
+        data = {
+            "pwd": self.password,
+            "userName": self.telephone
+        }
+
+        url = "http://www.bawangfen.cn/bwf/doLogin.htm"
+        cookies = {}
+
+        headers.update({"X-Requested-With": "XMLHttpRequest",
+                        "Referer": "http://www.bawangfen.cn/bwf/login.htm",
+                        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        })
+        r = self.http_post(url, data=urllib.urlencode(data), cookies=cookies, headers=headers)
+        cookies.update(dict(r.cookies))
+        ret = r.json()
+        if ret["flag"] == 'true' and ret['userCode'] == self.telephone:
+            # 登陆成功
+            self.user_id = ret["userId"]
+            self.is_active = True
+            self.last_login_time = dte.now()
+            self.cookies = json.dumps(cookies)
+            self.user_agent = self.user_agent or ua
+            self.save()
+            return "OK"
+        else:
+            # 登陆失败
+            self.is_active = False
+            self.last_login_time = dte.now()
+            self.cookies = '{}'
+            self.save()
+            return ret.get("msg", "fail")
+
+
 class HebkyAppRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()

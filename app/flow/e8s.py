@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import E8sAppRebot, Line
+from app.models import E8sAppRebot, Line, E8sWebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from app import order_log, line_log
@@ -187,6 +187,7 @@ class Flow(BaseFlow):
         
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
+#                 pay_url = "http://www.bawangfen.cn/site/bwf/order_surePay.action?"
                 pay_url = "http://www.bawangfen.cn/site/bwf/aliWapPay_doPay.action"
                 headers = rebot.http_header()
                 ret = self.send_orderDetail_request(rebot, order=order)
@@ -202,6 +203,21 @@ class Flow(BaseFlow):
                             "bwfUserId": rebot.user_id,
                             "orderId": order.lock_info['detail']['orderId'],
                             }
+#                         params = {
+#                                 "orderCode": order.raw_order_no,
+#                                 "orderId": order.lock_info['detail']['orderId'],
+#                                 "payModel": "33",
+#                                 "returnUrl": "http://www.bawangfen.cn/bwf/payReturn.htm"
+#                                  }
+#                         pay_url = "%s%s" % (pay_url, urllib.urlencode(params))
+#                         print pay_url
+#                         web_rebot = E8sWebRebot.objects.get(telephone=order.source_account)
+#                         headers = web_rebot.http_header()
+#                         print web_rebot.login()
+#                         web_rebot.reload()
+#                         cookies = json.loads(web_rebot.cookies)
+#                         r = web_rebot.http_get(pay_url, headers=headers, cookies=cookies)
+#                         print r.content
                         r = rebot.http_post(pay_url, data=data, headers=headers,allow_redirects=False)
 #                         return {"flag": "html", "content": r.content}
                         location_url = r.headers.get('location', '')
