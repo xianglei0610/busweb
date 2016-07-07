@@ -204,8 +204,9 @@ class Flow(BaseFlow):
 #                             "orderId": order.lock_info['detail']['orderId'],
 #                             }
                         web_rebot = E8sWebRebot.objects.get(telephone=order.source_account)
-                        web_rebot.login()
-                        web_rebot.reload()
+                        if not web_rebot.check_login:
+                            web_rebot.login()
+                            web_rebot.reload()
                         params = {
                                 "orderCode": order.raw_order_no,
                                 "orderId": order.lock_info['detail']['orderId'],
@@ -226,9 +227,9 @@ class Flow(BaseFlow):
                         return {"flag": "html", "content": r.content}
 #                         r = rebot.http_post(pay_url, data=data, headers=headers,allow_redirects=False)
 #                         return {"flag": "html", "content": r.content}
-                        location_url = r.headers.get('location', '')
-                        if location_url:
-                            return {"flag": "url", "content": location_url}
+#                         location_url = r.headers.get('location', '')
+#                         if location_url:
+#                             return {"flag": "url", "content": location_url}
             return {"flag": "error", "content": "订单已支付成功或者失效"}
         if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
             self.lock_ticket(order)

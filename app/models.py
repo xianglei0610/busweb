@@ -3261,6 +3261,25 @@ class E8sWebRebot(Rebot):
             self.save()
             return ret.get("msg", "fail")
 
+    def check_login(self):
+        try:
+            check_url = "http://www.bawangfen.cn/bwf/verifyLogin.htm"
+            headers = self.http_header()
+            headers.update({"X-Requested-With": "XMLHttpRequest",
+                            "Referer": "http://www.bawangfen.cn/bwf/",
+                            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                            })
+            cookies = json.loads(self.cookies)
+            data = {}
+            res = self.http_post(check_url, data=data, headers=headers, cookies=cookies)
+            res = res.json()
+            if self.telephone == res.get('userName', ''):
+                return 1
+            else:
+                return 0
+        except:
+            return 0
+
 
 class HebkyAppRebot(Rebot):
     user_agent = db.StringField()
