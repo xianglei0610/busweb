@@ -75,6 +75,15 @@ class Flow(BaseFlow):
                 "lock_info": res
             })
         else:
+            errmsg = res.get('failReason', '')
+            if "一张身份证一天只能订一张票" in errmsg:
+                new_rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": new_rebot.telephone,
+                    "result_reason": str(rebot.telephone) + errmsg,
+                })
+                return lock_result
             lock_result.update({
                 "result_code": 0,
                 "result_reason": res.get('failReason', '') or res,
