@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+{% extends 'dashboard/base.html'%}
+{% block style %}
+<style type="text/css">
+    .query-form .col-md-1, .query-form .col-md-4, .query-form .col-md-3{
+        padding-left: 2px;
+        padding-right: 6px;
+    }
+    table caption .pull-right span{
+        padding-right: 20px;
+    }
+    .panel{
+        margin-top: 0px;
+        margin-bottom:0px;
+    }
+    .price{
+        color: #f60;
+        font-size:16px;
+        font-family: Verdana,Geneva,sans-serif;
+    }
+    .table{
+        margin-bottom: 0px;
+    }
+</style>
+{%endblock%}
+
+{%block body%}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="breadcrumb">
+                    <li><a href="/">首页</a></li>
+                    <li class="active">出发车站</li>
+                </ul>
+            </div>
+        </div>
+
+        <!--
+        <ul class="nav nav-tabs">
+            <li role="presentation" class="active"><a href="#">所有线路</a></li>
+        </ul>
+        -->
+
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <form class="query-form" class="form-horizontal" action="/startings" method="POST">
+                    <input type="hidden" name="page" id="id-page" value="1"/>
+                    <div class="row">
+                        <div class="form-group col-md-2">
+                            <label for="sourceSite" class="sr-only">省份</label>
+                            <input type="text" class="form-control" id="" placeholder="省份" name="province" value="{{condition.province}}">
+                        </div>
+                        <div class="form-group col-md-2">
+                            <label for="sourceSite" class="sr-only">出发城市</label>
+                            <input type="text" class="form-control" id="" placeholder="出发城市" name="s_city" value="{{condition.s_city}}">
+                        </div>
+                        <div class="col-md-offset-1 col-md-1">
+                            <button type="submit" class="btn btn-primary">查&nbsp;&nbsp;询</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <table class="table table-hover table-bordered" style="margin-bottom: 0px;">
+            <caption>
+                <div class="pull-right">
+                    <span>记录数：<label class="text-danger">{{page["total"]}}条</label></span>
+                </div>
+            </caption>
+            <thead>
+                <tr>
+                    <th>省份</th>
+                    <th>城市</th>
+                    <th>站名</th>
+                    <th>数据源</th>
+                    <th>下单权重</th>
+                    <th>卖票起止时间</th>
+                    <th>查余票</th>
+                    <th>查班次</th>
+                    <th>目的地</th>
+                    <th>线路数量</th>
+                    <th>今日出票数/率</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {%for item in page["items"]%}
+                <tr>
+                    <td>
+                        {{item.city.province}}<br />
+                    </td>
+                    <td>
+                        {{item.city.city_name}}
+                    </td>
+                    <td>
+                        {{item.sta_name}}
+                    </td>
+                    <td>
+                        待开发
+                    </td>
+                    <td>
+                        待开发
+                    </td>
+                    <td>
+                        <a href="#" data-value="{{item.open_time}}" id="opentime" class="sel-opentime user-config-edit" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="起始时间">{{item.open_time}}</a>
+                        --
+                        <a href="#" data-value="{{item.end_time}}" id="endtime" class="sel-endtime user-config-edit" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="结束时间">{{item.end_time}}</a>
+                    </td>
+                    <td>
+                        <div class="switch switch-mini close-state" id="id-switch-yz" data-station="{{item.id}}" data-action="open_yzcx">
+                            <input type="checkbox" {%if not item.close_status|bitor(1) %}checked{%endif%} name="switch">
+                        </div>
+                    </td>
+                    <td>
+                        <div class="switch switch-mini close-state" id="id-switch-bc" data-station="{{item.id}}" data-action="open_bccx">
+                            <input type="checkbox" {%if not item.close_status|bitor(2) %}checked{%endif%} name="switch">
+                        </div>
+                    </td>
+                    <td>
+                        <a data-trigger="modal" href="/startings/{{item.id}}/destination" data-title="目的地列表" class="btn" style="padding:0px;">{{item.dest_info|length}}</a><br/>
+                    </td>
+                    <td>
+                        待开发
+                    </td>
+                    <td>
+                        待开发
+                    </td>
+                </tr>
+                {%endfor%}
+            </tbody>
+        </table>
+
+        <nav style="text-align: center">
+            <ul class="pagination">
+                <li>
+                    <a href="javascript:search('{{page.previous}}')" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {%if page.range and page.range[0] > 1%}
+                <li><a href="javascript:search('1')">1</a></li>
+                <li><a href="javascript:;">...</a></li>
+                {%endif%}
+                {%for i in page.range %}
+                <li class="{%if page.cur_page==i %}active{%endif%}"><a href="javascript:search('{{i}}')">{{i}}</a></li>
+                {%endfor%}
+                {%if page.range and page.range[-1] < page.page_count %}
+                    <li><a href="javascript:;">...</a></li>
+                    <li><a href="javascript:search('{{page.page_count}}')">{{page.page_count}}</a></li>
+                {%endif%}
+                <li>
+                    <a href="javascript:search('{{page.next}}')" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+<script type="text/javascript">
+    $(".form_datetime").datetimepicker({
+        format: "yyyy-mm-dd",
+        autoclose: true,
+        todayBtn: true,
+        pickerPosition: "bottom-left",
+        language: "zh-CN",
+        minView: 2,
+    });
+    function search(page){
+        $("#id-page").val(page);
+        $(".query-form").submit();
+    };
+
+    $('.sel-opentime').editable({
+        source: [
+            "00:00","01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
+            "20:00", "21:00", "22:00", "23:00", "24:00"
+        ]
+    });
+    $('.sel-endtime').editable({
+        source: [
+            "00:00","01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
+            "20:00", "21:00", "22:00", "23:00", "24:00"
+        ]
+    });
+
+    $('.switch')['bootstrapSwitch']();
+    $('.close-state').on('switch-change', function (e, data) {
+		$.ajax({
+			url : '/startings/set',
+			type : 'post',
+			data : {
+                action: $(this).attr("data-action"),
+				pk: $(this).attr("data-station"),
+                flag: data.value,
+			},
+			success : function(data){
+				if(data.code==1){
+                    $.scojs_message(data.msg, $.scojs_message.TYPE_OK);
+			    }else{
+                    $.scojs_message(data.msg, $.scojs_message.TYPE_ERROR);
+                }
+		    }
+		});
+    });
+</script>
+{%endblock%}

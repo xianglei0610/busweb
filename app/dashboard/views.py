@@ -22,7 +22,7 @@ from flask.ext.login import login_required, current_user
 from app.dashboard import dashboard
 from app.utils import get_redis
 from app.decorators import superuser_required
-from app.models import Order, Line, AdminUser
+from app.models import Order, Line, AdminUser, OpenStation, OpenCity
 from app.flow import get_flow
 from tasks import async_lock_ticket, issued_callback
 from app import order_log, db, access_log
@@ -411,6 +411,71 @@ def line_list():
                            crawl_source=crawl_source,
                            drv_date=drv_date,
                            condition=params,
+                           )
+
+
+@dashboard.route('/startings', methods=['POST', 'GET'])
+@superuser_required
+def starting_list():
+    params = request.values.to_dict()
+    province = params.get("province", "")
+    s_city = params.get("s_city", "")
+
+    city_query = {}
+    if province:
+        city_query.update(province=province)
+    if s_city:
+        city_query.update(city_name=s_city)
+    cqs = OpenCity.objects.filter(**city_query)
+
+    qs = OpenStation.objects.filter(city__in=cqs)
+    return render_template('dashboard/startings.html',
+                           page=parse_page_data(qs),
+                           source_info=SOURCE_INFO,
+                           condition=params,
+                           )
+
+
+@dashboard.route('/startings/set', methods=["POST"])
+@superuser_required
+def starting_config():
+    params = request.values.to_dict()
+    action = params.get("name", "") or params.get("action", "")
+    if action == "opentime":
+        obj= OpenStation.objects.get(id=params["pk"])
+        obj.modify(open_time=params["value"])
+        return jsonify({"code": 1, "msg": "修改售票时间成功" })
+    elif action == "endtime":
+        obj= OpenStation.objects.get(id=params["pk"])
+        obj.modify(end_time=params["value"])
+        return jsonify({"code": 1, "msg": "修改售票时间成功" })
+    elif action == "open_yzcx":
+        obj= OpenStation.objects.get(id=params["pk"])
+        flag = params["flag"]
+        if flag == "true":
+            obj.modify(close_status=obj.close_status^STATION_CLOSE_YZCX)
+            return jsonify({"code": 1, "msg": "打开余票查询"})
+        else:
+            obj.modify(close_status=obj.close_status|STATION_CLOSE_YZCX)
+            return jsonify({"code": 1, "msg": "关闭余票查询"})
+    elif action == "open_bccx":
+        obj= OpenStation.objects.get(id=params["pk"])
+        flag = params["flag"]
+        if flag == "true":
+            obj.modify(close_status=obj.close_status^STATION_CLOSE_BCCX)
+            return jsonify({"code": 1, "msg": "打开班次查询"})
+        else:
+            obj.modify(close_status=obj.close_status|STATION_CLOSE_BCCX)
+            return jsonify({"code": 1, "msg": "关闭班次查询"})
+    return jsonify({"code": 0, "msg": "执行失败"})
+
+
+@dashboard.route('/startings/<station_id>/destination', methods=['POST', 'GET'])
+@superuser_required
+def destionation_list(station_id):
+    sta_obj = OpenStation.objects.get_or_404(id=station_id)
+    return render_template('dashboard/starting-destination.html',
+                           open_station=sta_obj,
                            )
 
 

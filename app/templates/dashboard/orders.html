@@ -218,11 +218,9 @@
                     {%if item.status == 3%}
                     <a  href="/orders/{{item.order_no}}/refresh" >刷新</a>
                     {%endif%}
-                    
                     {%if current_user.is_superuser and item.status in (7,) %}
                     	<a href="javascript:;" class="make-fail" pk="{{item.order_no}}">确认失败</a><br/>
                 	{%endif%}
-                    
             </tr>
             {%endfor%}
         </tbody>
