@@ -80,7 +80,7 @@
                     <th>查班次</th>
                     <th>目的地</th>
                     <th>线路数量</th>
-                    <th>今日出票数/率</th>
+                    <th>今日订单数/成功率</th>
                 </tr>
             </thead>
 
@@ -121,7 +121,7 @@
                         <a data-trigger="modal" href="/startings/{{item.id}}/destination" data-title="目的地列表" class="btn" style="padding:0px;">{{item.dest_info|length}}</a><br/>
                     </td>
                     <td>
-                        待开发
+                        {{line_count[item.sta_name] or 0}}
                     </td>
                     <td>
                         待开发

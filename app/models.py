@@ -207,6 +207,9 @@ class OpenStation(db.Document):
     close_status = db.IntField(default=STATION_CLOSE_NONE)   # 关闭状态: 定义见constants.py
     extra_info = db.DictField()             # 自定义数据
     create_datetime = db.DateTimeField(default=dte.now)
+    line_count = db.IntField()              # 线路数, 由定时任务间隔时间刷新这个值
+    day_order_count = db.DictField()        # 每天订单数和成功率, {"2016-07-08": {"count": 0, "succ_count":0}}, 由定时任务间隔时间刷新这个值
+
 
     meta = {
         "indexes": [
