@@ -437,7 +437,9 @@ class Line(db.Document):
                         u"塘厦车站":u"塘厦客运站",
                         u"上沙汽车客运站":u"上沙汽车站",
                         u"凤岗客运站":u"凤岗车站",
-                            }
+                        u"东莞市黄江汽车客运站":u"黄江车站",
+                        u"东莞市南城汽车客运站":u"南城车站",
+                        }
                 tar_source = SOURCE_GDSW
             elif self.crawl_source == SOURCE_GDSW:
                 trans = {
@@ -458,7 +460,9 @@ class Line(db.Document):
                         u"塘厦客运站":u"塘厦车站",
                         u"上沙汽车站":u"上沙汽车客运站",
                         u"凤岗车站":u"凤岗客运站",
-                            }
+                        u"黄江车站":u"东莞市黄江汽车客运站",
+                        u"南城车站":u"东莞市南城汽车客运站",
+                        }
                 tar_source = SOURCE_DGKY
             try:
                 ob = Line.objects.get(crawl_source=tar_source,
