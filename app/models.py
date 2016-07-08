@@ -2092,6 +2092,30 @@ class JsdlkyWebRebot(Rebot):
             return 0
 
 
+class Lvtu100App(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "lvtu100web_rebot",
+    }
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
+    def check_login(self):
+        undone_order_url = "http://www.bababus.com/order/list.htm?billStatus=0&currentLeft=11"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = requests.get(undone_order_url, headers=headers, cookies=cookies)
+        return self.check_login_by_resp(resp)
+
 class BabaWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
