@@ -81,8 +81,10 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param), timeout=512)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
-            tpk = int(datetime.datetime.now().strftime('%H'))
-            if ('333' in urlstr and tpk < 17) or  '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
+            tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
+            tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
+            tpk1 = int(datetime.datetime.now().strftime('%H'))
+            if ('333' in urlstr and tpk1 < 17 and tpk >= order.line.drv_datetime) or  '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
                 self.close_line(line)
                 errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
                 errmsg = unicode(errlst and errlst[0] or "")
@@ -92,8 +94,6 @@ class Flow(BaseFlow):
                     "result_reason": errmsg,
                 })
                 return lock_result
-            tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
-            tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
             if '订票结束时间' in urlstr and tpk >= order.line.drv_datetime:
                 errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
                 errmsg = unicode(errlst and errlst[0] or "")
