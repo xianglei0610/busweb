@@ -81,7 +81,8 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param), timeout=512)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
-            if '333' in urlstr or  '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
+            tpk = int(datetime.datetime.now().strftime('%H'))
+            if ('333' in urlstr and tpk < 17) or  '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
                 self.close_line(line)
                 errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
                 errmsg = unicode(errlst and errlst[0] or "")
