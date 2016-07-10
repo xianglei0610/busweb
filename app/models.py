@@ -1087,7 +1087,7 @@ class Hn96520WebRebot(Rebot):
             phone = d["_id"]["phone"]
             if cnt >= 7:
                 droped.add(phone)
-        tele = list(all_accounts - droped)[0]
+        tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
 
     def add_doing_order(self, order):
