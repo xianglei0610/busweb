@@ -1068,7 +1068,7 @@ class Hn96520WebRebot(Rebot):
         d = self.doing_orders
         if order.order_no in d:
             return
-        d[order.order_no] = 1
+        d[order.order_no] = dte.now().strftime('%Y-%m-%d')
         self.modify(last_login_time=dte.now())
         self.modify(doing_orders=d)
         self.on_add_doing_order(order)
