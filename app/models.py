@@ -1082,7 +1082,7 @@ class Hn96520WebRebot(Rebot):
                     "$group": {
                         "_id": {"phone": "$source_account"},
                         "count": {"$sum": "$ticket_amount"}}
-                }).order_by('+last_login_time'):
+                }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
             if cnt >= 7:
