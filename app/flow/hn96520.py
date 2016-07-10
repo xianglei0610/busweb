@@ -94,7 +94,7 @@ class Flow(BaseFlow):
                     "result_reason": errmsg,
                 })
                 return lock_result
-            if '订票结束时间' in urlstr and tpk >= order.line.drv_datetime:
+            if '订票结束时间' in urlstr and tpk >= order.line.drv_datetime and tpk1 < 23:
                 errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
                 errmsg = unicode(errlst and errlst[0] or "")
                 #rebot_log.info(2333333)
