@@ -1054,6 +1054,12 @@ class Hn96520WebRebot(Rebot):
             s_city_name = order.starting_name.split(";")[0]
             if s_city_name in city_bind:
                 query.update(telephone__in=city_bind[s_city_name])
+        # t = cls.objects._collection.find({'is_locked': True})
+        # if t.count():
+        #     v = dte.now().strftime('%Y-%m-%d')
+        #     for x in t:
+        #         if x['doing_orders'].values().count(v) == 0:
+        #             cls.objects._collection.update({'_id': x['_id'], {'$set': {'is_locked': False}})
 
         qs = cls.objects.filter(is_active=True, is_locked=False).order_by('+last_login_time')
         if not qs:
@@ -1066,9 +1072,10 @@ class Hn96520WebRebot(Rebot):
     def add_doing_order(self, order):
         order.modify(source_account=self.telephone)
         d = self.doing_orders
+        v = dte.now().strftime('%Y-%m-%d')
         if order.order_no in d:
             return
-        d[order.order_no] = dte.now().strftime('%Y-%m-%d')
+        d[order.order_no] = v
         self.modify(last_login_time=dte.now())
         self.modify(doing_orders=d)
         self.on_add_doing_order(order)
