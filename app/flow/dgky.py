@@ -56,7 +56,7 @@ class Flow(BaseFlow):
         href = href.replace('num=1', 'num=%s' % num)
         msg = ''
         full_price = 0
-        for i in range(30):
+        for i in range(50):
             param = {}
             for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
                 k, v = s.split("=")
