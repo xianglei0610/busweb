@@ -36,6 +36,7 @@ SOURCE_GDSW = "gdsw"    # 广东省网
 SOURCE_DGKY = "dgky"    # 东莞客运
 SOURCE_ZHW = "zhw"      # 珠海汽车票
 SOURCE_SD365 = "sd365"  # 山东365汽车票
+SOURCE_LVTU100 = "lvtu100"
 
 
 PAY_TYPE_SOURCE = {
@@ -57,6 +58,13 @@ PAY_TYPE_SOURCE = {
 }
 
 SOURCE_INFO = {
+    SOURCE_LVTU100: {
+        "name": "旅途100",
+        "website": "http://www.lvtu100.com/",
+        "accounts": {
+            "15575101324": ("123456", ""),
+        },
+    },
     SOURCE_DGKY: {
         "name": "东莞客运",
         "website": "http://www.mp0769.com/",
