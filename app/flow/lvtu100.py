@@ -123,23 +123,24 @@ class Flow(BaseFlow):
             order.modify(pay_order_no=pay_no, pay_money=pay_money)
         state = int(ret["data"]["status"])
         if state== 2:   # 出票成功
-            order_detail = ret["data"]["lstorderdetail"][0]
-            pick_code = ",".join([d["etccert"] for d in order_detail["listordertickets"]])
-            dx_info = {
-                "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "start": order.line.s_sta_name,
-                "end": order.line.d_sta_name,
-                "code": pick_code,
-            }
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_LVTU100]
-            code_list = [pick_code]
-            msg_list = [dx_tmpl % dx_info]
-            result_info.update({
-                "result_code": 1,
-                "result_msg": state,
-                "pick_code_list": code_list,
-                "pick_msg_list": msg_list,
-            })
+            if order.line.s_province == "江西":
+                order_detail = ret["data"]["lstorderdetail"][0]
+                pick_code = ",".join([d["etccert"] for d in order_detail["listordertickets"]])
+                dx_info = {
+                    "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                    "start": order.line.s_sta_name,
+                    "end": order.line.d_sta_name,
+                    "code": pick_code,
+                }
+                dx_tmpl = DUAN_XIN_TEMPL[SOURCE_LVTU100]
+                code_list = [pick_code]
+                msg_list = [dx_tmpl % dx_info]
+                result_info.update({
+                    "result_code": 1,
+                    "result_msg": state,
+                    "pick_code_list": code_list,
+                    "pick_msg_list": msg_list,
+                })
         elif state=="出票中":
             result_info.update({
                 "result_code": 4,
