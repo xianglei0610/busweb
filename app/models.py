@@ -162,7 +162,7 @@ class OpenCity(db.Document):
             try:
                 sta_obj = OpenStation.objects.get(city=self, sta_name=name)
             except:
-                sta_obj = OpenStation(city=self, sta_name=name, sta_id=sid, extra_info={})
+                sta_obj = OpenStation(city=self, sta_name=name, sta_id=str(sid), extra_info={})
                 sta_obj.save()
                 line_log.info("[init_station] 增加OpenStation %s %s" % (self.city_name, name))
                 sta_obj.init_dest()
