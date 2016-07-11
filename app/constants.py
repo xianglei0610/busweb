@@ -3388,6 +3388,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_ZHW: "车站订单号：%(pcode)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭%(person)s身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_E8S: "您已成功购买发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭取票号%(code)s或取票密码%(no)s取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_WMCX: "购票成功,取票号:%(no)s,密码:%(code)s,取票点:%(site)s,(%(start)s-%(end)s %(time)s),请旅客尽早到车站取票.",
+    SOURCE_LVTU100: "购票成功，验证码：%(code)s。%(start)s-%(end)s，发车时间：%(time)s，建议提前1小时至始发站出示本信息兑取纸质票，如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_SD365: "【365汽车票】您的%(amount)s张%(time)s %(start)s至%(end)s车票订购成功！请凭购票身份证和密码%(pcode)s取票",
 }
 
