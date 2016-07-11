@@ -1041,27 +1041,54 @@ class Hn96520WebRebot(Rebot):
         # self.modify(ip=ipstr)
         # return ipstr
 
+   #  @classmethod
+   #  def get_one(cls, order=None):
+   #      sta_bind = SOURCE_INFO[cls.crawl_source].get("station_bind", {})
+   #      city_bind = SOURCE_INFO[cls.crawl_source].get("city_bind", {})
+   #      query = {}
+   #      if order and sta_bind:
+   #          s_sta_name = order.starting_name.split(";")[1]
+   #          if s_sta_name in sta_bind:
+   #              query.update(telephone__in=sta_bind[s_sta_name])
+   #      elif order and city_bind:
+   #          s_city_name = order.starting_name.split(";")[0]
+   #          if s_city_name in city_bind:
+   #              query.update(telephone__in=city_bind[s_city_name])
+   #      t = cls.objects._collection.find({'is_locked': True})
+   #      if t.count():
+   #          v = dte.now().strftime('%Y-%m-%d')
+   #          for x in t:
+   #              if x['doing_orders'].values().count(v) == 0:
+   #                  cls.objects._collection.update({'_id': x['_id'], {'$set': {'is_locked': False}})
+
+   #      qs = cls.objects.filter(is_active=True, is_locked=False).order_by('+last_login_time')
+   #      if not qs:
+   #          return
+   #      sub_qs = qs.filter(**query)
+   #      if sub_qs:
+   #          qs = sub_qs
+   #      return qs[0]
+
     @classmethod
     def get_one(cls, order=None):
-        sta_bind = SOURCE_INFO[cls.crawl_source].get("station_bind", {})
-        city_bind = SOURCE_INFO[cls.crawl_source].get("city_bind", {})
-        query = {}
-        if order and sta_bind:
-            s_sta_name = order.starting_name.split(";")[1]
-            if s_sta_name in sta_bind:
-                query.update(telephone__in=sta_bind[s_sta_name])
-        elif order and city_bind:
-            s_city_name = order.starting_name.split(";")[0]
-            if s_city_name in city_bind:
-                query.update(telephone__in=city_bind[s_city_name])
-
-        qs = cls.objects.filter(is_active=True, is_locked=False).order_by('+last_login_time')
-        if not qs:
-            return
-        sub_qs = qs.filter(**query)
-        if sub_qs:
-            qs = sub_qs
-        return qs[0]
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(
+            is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source=SOURCE_HN96520,
+                                      create_date_time__gte=today) \
+                .aggregate({
+                    "$group": {
+                        "_id": {"phone": "$source_account"},
+                        "count": {"$sum": "$ticket_amount"}}
+                }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt >= 7:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts - droped))
+        return cls.objects.get(telephone=tele)
 
     def add_doing_order(self, order):
         order.modify(source_account=self.telephone)
