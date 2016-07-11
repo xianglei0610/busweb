@@ -190,6 +190,12 @@ class Flow(BaseFlow):
             "update_attrs": {},
         }
         now = dte.now()
+
+        # 临时修复
+        if "startProvince" not in line.extra_info:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
+
         line_url = "http://api.lvtu100.com/products/getgoods"
         rebot = Lvtu100AppRebot.get_one()
         params = {
