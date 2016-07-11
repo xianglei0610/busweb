@@ -448,9 +448,13 @@ class Flow(BaseFlow):
             content = r.content.decode('gbk')
             res = re.findall(r"alert\('(.*?)'\);", content)
             if res:
-                order.modify(status=STATUS_LOCK_FAIL)
-                order.on_lock_fail(reason=res[0])
-                issued_callback.delay(order.order_no)
+                if u"您的订单已过有效期" in res[0]:
+                    order.modify(status=STATUS_LOCK_RETRY)
+                    order.on_lock_retry(reason=res[0])
+                else:
+                    order.modify(status=STATUS_LOCK_FAIL)
+                    order.on_lock_fail(reason=res[0])
+                    issued_callback.delay(order.order_no)
             else:
                 order.update(pay_channel='alipay')
             return {"flag": "url", "content": order.pay_url}
