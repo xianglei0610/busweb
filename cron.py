@@ -199,6 +199,7 @@ def check_consumer_proxy(name):
         check_remove_proxy_ip.delay(name, ipstr)
     return consumer.proxy_size()
 
+
 def main():
     sched = Scheduler(daemonic=False)
 
@@ -372,10 +373,14 @@ def main():
     sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "大朗汽车客运站"}})
     sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "清溪客运站,塘厦车站"}})
     sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "上沙汽车客运站,凤岗客运站"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "东莞市南城汽车客运站,东莞市黄江汽车客运站"}})
+
+    #e8s
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['e8s'])
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
-    # sched.add_interval_job(crawl_proxy_samair, minutes=10)
+    sched.add_interval_job(crawl_proxy_samair, minutes=10)
     # sched.add_interval_job(crawl_proxy_66ip, minutes=10)
     # sched.add_interval_job(crawl_proxy_xici, minutes=10)
     sched.add_interval_job(crawl_proxy_zdaye, minutes=3)
