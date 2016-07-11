@@ -34,8 +34,10 @@ SOURCE_SZKY = 'szky'
 SOURCE_XYJT = 'xyjt'
 SOURCE_GDSW = "gdsw"    # 广东省网
 SOURCE_DGKY = "dgky"    # 东莞客运
-SOURCE_ZHW = "zhw"
-SOURCE_WMCX = "wmcx"
+SOURCE_WMCX = "wmcx"    # 皖美出行
+SOURCE_ZHW = "zhw"      # 珠海汽车票
+SOURCE_SD365 = "sd365"  # 山东365汽车票
+SOURCE_LVTU100 = "lvtu100"
 
 
 PAY_TYPE_SOURCE = {
@@ -57,6 +59,13 @@ PAY_TYPE_SOURCE = {
 }
 
 SOURCE_INFO = {
+    SOURCE_LVTU100: {
+        "name": "旅途100",
+        "website": "http://www.lvtu100.com/",
+        "accounts": {
+            "15575101324": ("123456", ""),
+        },
+    },
     SOURCE_DGKY: {
         "name": "东莞客运",
         "website": "http://www.mp0769.com/",
@@ -3170,8 +3179,12 @@ SOURCE_INFO = {
             "18575593355": ("123456", ""),
             "13291407375": ("123456", ""),
             "13087921341": ("123456", ""),
-
-        },
+            }
+    },
+    SOURCE_SD365: {
+        "name": "山东365汽车票",
+        "website": "http://www.36565.cn/",
+        "accounts": {}
     },
 }
 
@@ -3375,6 +3388,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_ZHW: "车站订单号：%(pcode)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭%(person)s身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_E8S: "您已成功购买发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭取票号%(code)s或取票密码%(no)s取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_WMCX: "购票成功,取票号:%(no)s,密码:%(code)s,取票点:%(site)s,(%(start)s-%(end)s %(time)s),请旅客尽早到车站取票.",
+    SOURCE_SD365: "【365汽车票】您的%(amount)s张%(time)s %(start)s至%(end)s车票订购成功！请凭购票身份证和密码%(pcode)s取票",
 }
 
 CITY_NAME_TRANS = {
