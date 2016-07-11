@@ -967,7 +967,6 @@ class Rebot(db.Document):
         rebot_log.info("[check_login] %s, result: %s" % (self.log_name, msg_dict[is_login]))
         return is_login
 
-
     def check_login(self):
         return 1
 
@@ -1010,6 +1009,51 @@ class Rebot(db.Document):
                     raise e
                 continue
             return r
+
+
+class WmcxWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField(default='')
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "wmcxweb_rebot",
+    }
+    crawl_source = SOURCE_WMCX
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
+    def check_login_by_resp(self, resp):
+        result = urlparse.urlparse(resp.url)
+        if "login" in result.path:
+            return 0
+        return 1
+
+    def check_login(self):
+        undone_order_url = "http://www.wanmeibus.com/order/list.htm?billStatus=0&currentLeft=11"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = self.http_get(undone_order_url, headers=headers, cookies=cookies)
+        return self.check_login_by_resp(resp)
 
 
 # 代理ip, is_locked

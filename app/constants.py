@@ -35,6 +35,7 @@ SOURCE_XYJT = 'xyjt'
 SOURCE_GDSW = "gdsw"    # 广东省网
 SOURCE_DGKY = "dgky"    # 东莞客运
 SOURCE_ZHW = "zhw"
+SOURCE_WMCX = "wmcx"
 
 
 PAY_TYPE_SOURCE = {
@@ -3144,8 +3145,6 @@ SOURCE_INFO = {
             "a13184433016": ("123456", "王诗涵"),
             "a15817967309": ("123456", "张丙芳"),
             "a18633479451": ("123456", "苏珈萱"),
-
-
         }
     },
     SOURCE_XYJT: {
@@ -3161,6 +3160,18 @@ SOURCE_INFO = {
         "accounts": {
             "15338702029": ("123456", ""),
         }
+    },
+    SOURCE_WMCX: {
+        "name": "皖美出行",
+        "limit_payct": 100,
+        "website": "http://www.wanmeibus.com/",
+        "accounts": {
+#             "13267109876": ("123456", ""),
+            "18575593355": ("123456", ""),
+            "13291407375": ("123456", ""),
+            "13087921341": ("123456", ""),
+
+        },
     },
 }
 
@@ -3363,6 +3374,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_DGKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭身份证、订单号或取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
     SOURCE_ZHW: "车站订单号：%(pcode)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭%(person)s身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_E8S: "您已成功购买发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭取票号%(code)s或取票密码%(no)s取票,如需改签、退票请前往发车站的客运站按规定办理。",
+    SOURCE_WMCX: "购票成功,取票号:%(no)s,密码:%(code)s,取票点:%(site)s,(%(start)s-%(end)s %(time)s),请旅客尽早到车站取票.",
 }
 
 CITY_NAME_TRANS = {
