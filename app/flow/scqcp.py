@@ -468,12 +468,17 @@ class Flow(BaseFlow):
         if new_headers.has_key('Content-Type'):
             del new_headers['Content-Type']
         is_login = rebot.test_login_status()
+        msg = ''
         if not is_login:
             for i in range(3):
-                if rebot.login() == "OK":
+                msg = rebot.login()
+                if msg == "OK":
                     is_login = True
                     break
         if not is_login:
+            if msg in u'用户名或密码错误':
+                order.change_lock_rebot()
+                order.reload()
             return {"flag": "error", "content": "账号自动登陆失败，请再次重试!"}
 
         # 验证码处理

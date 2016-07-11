@@ -437,7 +437,9 @@ class Line(db.Document):
                         u"塘厦车站":u"塘厦客运站",
                         u"上沙汽车客运站":u"上沙汽车站",
                         u"凤岗客运站":u"凤岗车站",
-                            }
+                        u"东莞市黄江汽车客运站":u"黄江车站",
+                        u"东莞市南城汽车客运站":u"南城车站",
+                        }
                 tar_source = SOURCE_GDSW
             elif self.crawl_source == SOURCE_GDSW:
                 trans = {
@@ -458,7 +460,9 @@ class Line(db.Document):
                         u"塘厦客运站":u"塘厦车站",
                         u"上沙汽车站":u"上沙汽车客运站",
                         u"凤岗车站":u"凤岗客运站",
-                            }
+                        u"黄江车站":u"东莞市黄江汽车客运站",
+                        u"南城车站":u"东莞市南城汽车客运站",
+                        }
                 tar_source = SOURCE_DGKY
             try:
                 ob = Line.objects.get(crawl_source=tar_source,
@@ -1037,27 +1041,54 @@ class Hn96520WebRebot(Rebot):
         # self.modify(ip=ipstr)
         # return ipstr
 
+   #  @classmethod
+   #  def get_one(cls, order=None):
+   #      sta_bind = SOURCE_INFO[cls.crawl_source].get("station_bind", {})
+   #      city_bind = SOURCE_INFO[cls.crawl_source].get("city_bind", {})
+   #      query = {}
+   #      if order and sta_bind:
+   #          s_sta_name = order.starting_name.split(";")[1]
+   #          if s_sta_name in sta_bind:
+   #              query.update(telephone__in=sta_bind[s_sta_name])
+   #      elif order and city_bind:
+   #          s_city_name = order.starting_name.split(";")[0]
+   #          if s_city_name in city_bind:
+   #              query.update(telephone__in=city_bind[s_city_name])
+   #      t = cls.objects._collection.find({'is_locked': True})
+   #      if t.count():
+   #          v = dte.now().strftime('%Y-%m-%d')
+   #          for x in t:
+   #              if x['doing_orders'].values().count(v) == 0:
+   #                  cls.objects._collection.update({'_id': x['_id'], {'$set': {'is_locked': False}})
+
+   #      qs = cls.objects.filter(is_active=True, is_locked=False).order_by('+last_login_time')
+   #      if not qs:
+   #          return
+   #      sub_qs = qs.filter(**query)
+   #      if sub_qs:
+   #          qs = sub_qs
+   #      return qs[0]
+
     @classmethod
     def get_one(cls, order=None):
-        sta_bind = SOURCE_INFO[cls.crawl_source].get("station_bind", {})
-        city_bind = SOURCE_INFO[cls.crawl_source].get("city_bind", {})
-        query = {}
-        if order and sta_bind:
-            s_sta_name = order.starting_name.split(";")[1]
-            if s_sta_name in sta_bind:
-                query.update(telephone__in=sta_bind[s_sta_name])
-        elif order and city_bind:
-            s_city_name = order.starting_name.split(";")[0]
-            if s_city_name in city_bind:
-                query.update(telephone__in=city_bind[s_city_name])
-
-        qs = cls.objects.filter(is_active=True, is_locked=False).order_by('+last_login_time')
-        if not qs:
-            return
-        sub_qs = qs.filter(**query)
-        if sub_qs:
-            qs = sub_qs
-        return qs[0]
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(
+            is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        for d in Order.objects.filter(status=14,
+                                      crawl_source=SOURCE_HN96520,
+                                      create_date_time__gte=today) \
+                .aggregate({
+                    "$group": {
+                        "_id": {"phone": "$source_account"},
+                        "count": {"$sum": "$ticket_amount"}}
+                }):
+            cnt = d["count"]
+            phone = d["_id"]["phone"]
+            if cnt >= 7:
+                droped.add(phone)
+        tele = random.choice(list(all_accounts - droped))
+        return cls.objects.get(telephone=tele)
 
     def add_doing_order(self, order):
         order.modify(source_account=self.telephone)
@@ -2090,6 +2121,125 @@ class JsdlkyWebRebot(Rebot):
         except:
             self.modify(cookies="{}")
             return 0
+
+
+class Lvtu100AppRebot(Rebot):
+    user_agent = db.StringField(default="okhttp/2.5.0")
+    member_id = db.IntField()
+    token = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "lvtu100app_rebot",
+    }
+    crawl_source = SOURCE_LVTU100
+    is_for_lock = True
+
+    def post_data_templ(self, custom):
+        data = {
+            "appid": "lvtu100.andorid",
+            "timestamp": str(int(time.time())),
+            "format": "json",
+            "version": "1.0",
+        }
+        data.update(custom)
+        key_lst = filter(lambda x: data[x], data.keys())
+        key_lst.sort()
+        data["sign"]= md5("".join("%s%s" % (k, data[k]) for k in key_lst) + "0348ba1cbbfa0fa9ca627394e999fea5")
+        return data
+
+    def post_header(self):
+        headers = {
+            "User-Agent": "okhttp/2.5.0",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        return headers
+
+    def login(self):
+        if self.test_login_status():
+            return "OK"
+
+        url = "http://api.lvtu100.com/uc/member/login"
+        params = {
+            "Login_name": self.telephone,
+            "Pw": self.password,
+            "Source":"android"
+        }
+        params = {"logininfo": json.dumps(params)}
+        params = self.post_data_templ(params)
+        r = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+        ret = r.json()
+        if ret["code"] == 0:
+            self.modify(token=ret["data"]["token"], member_id=ret["data"]["member_id"], last_login_time=dte.now())
+            return "OK"
+        return "fail"
+
+    def test_login_status(self):
+        url = "http://api.lvtu100.com/uc/member/getmember"
+        params = {
+            "token": self.token,
+            "member_id": self.member_id,
+        }
+        params = {"data": json.dumps(params)}
+        params = self.post_data_templ(params)
+        r = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+        ret = r.json()
+        if ret["code"] != 0:
+            return 0
+        if ret["data"]["mobile"] == self.telephone:
+            return 1
+        return 0
+
+    def clear_riders(self):
+        is_login = self.test_login_status()
+        if not is_login:
+            return
+        url = "http://api.lvtu100.com/uc/member/deletepurchase"
+        for idx in self.get_riders().values():
+            params = [{
+                "addr_id": idx,
+                "member_id": self.member_id,
+            }]
+        params = {"data": json.dumps(params)}
+        params = self.post_data_templ(params)
+        self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+
+    def get_riders(self):
+        url = "http://api.lvtu100.com/uc/member/getpurchase"
+        params = {
+            "token": self.token,
+            "member_id": self.member_id,
+        }
+        params = {"data": json.dumps(params)}
+        params = self.post_data_templ(params)
+        r = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+        ret = r.json()
+        idcard_to_id = {d["idcard"]: d["addr_id"] for d in ret["data"]}
+        return idcard_to_id
+
+    def add_riders(self, order):
+        url = "http://api.lvtu100.com/uc/member/savepurchase"
+        id_lst = []
+        exists_lst = {}
+        for c in order.riders:
+            params = [{
+                "addr_id":"",
+                "member_id": self.member_id,
+                "mobile": r["telephone"],
+                "idcard": r["id_number"],
+                "name": r["name"],
+            }]
+            params = {"data": json.dumps(params)}
+            params = self.post_data_templ(params)
+            r = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+            ret = r.json()
+            if "已添加过该身份证号" in ret["message"]:
+                if not exists_lst:
+                    exists_lst = self.get_riders()
+                id_lst.append(exists_lst[c["id_number"]])
+            else:
+                id_lst.append(ret["data"])
+        return id_lst
 
 
 class BabaWebRebot(Rebot):

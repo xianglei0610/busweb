@@ -73,10 +73,14 @@
                     <th>省份</th>
                     <th>城市</th>
                     <th>站名</th>
+                    <th>数据源</th>
+                    <th>下单权重</th>
                     <th>卖票起止时间</th>
                     <th>查余票</th>
                     <th>查班次</th>
                     <th>目的地</th>
+                    <th>线路数量</th>
+                    <th>今日出票数/率</th>
                 </tr>
             </thead>
 
@@ -91,6 +95,12 @@
                     </td>
                     <td>
                         {{item.sta_name}}
+                    </td>
+                    <td>
+                        待开发
+                    </td>
+                    <td>
+                        待开发
                     </td>
                     <td>
                         <a href="#" data-value="{{item.open_time}}" id="opentime" class="sel-opentime user-config-edit" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="起始时间">{{item.open_time}}</a>
@@ -109,6 +119,12 @@
                     </td>
                     <td>
                         <a data-trigger="modal" href="/startings/{{item.id}}/destination" data-title="目的地列表" class="btn" style="padding:0px;">{{item.dest_info|length}}</a><br/>
+                    </td>
+                    <td>
+                        待开发
+                    </td>
+                    <td>
+                        待开发
                     </td>
                 </tr>
                 {%endfor%}
