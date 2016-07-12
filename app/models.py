@@ -1725,14 +1725,14 @@ class ScqcpAppRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return ""
-        # rds = get_redis("default")
-        # ipstr = self.ip
-        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-        #     return ipstr
-        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        # self.modify(ip=ipstr)
-        # return ipstr
+#         return ""
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        self.modify(ip=ipstr)
+        return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -1847,14 +1847,14 @@ class ScqcpWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return ""
-        # rds = get_redis("default")
-        # ipstr = self.ip
-        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-        #     return ipstr
-        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        # self.modify(ip=ipstr)
-        # return ipstr
+#         return ""
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        self.modify(ip=ipstr)
+        return ipstr
 
     @classmethod
     def get_one(cls, order=None):

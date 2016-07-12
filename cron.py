@@ -377,6 +377,9 @@ def main():
 
     #e8s
     sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['e8s'])
+    
+    #wmcx
+    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['wmcx'], kwargs={"crawl_kwargs":{"province": "安徽"}})
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
@@ -391,7 +394,7 @@ def main():
     sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["hn96520"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
-    # sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
     #sched.add_interval_job(check_consumer_proxy, args=["lnky"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["e8s"], minutes=1)
