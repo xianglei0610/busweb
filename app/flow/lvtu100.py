@@ -74,6 +74,7 @@ class Flow(BaseFlow):
         headers = rebot.post_header()
         r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
         res = r.json()
+        errmsg = res["message"]
         if res["code"] == 0:
             expire_time = dte.now()+datetime.timedelta(seconds=20*60)
             lock_result.update({
@@ -83,8 +84,12 @@ class Flow(BaseFlow):
                 "source_account": rebot.telephone,
             })
         else:
+            code = 2
+            if u"锁票异常" in errmsg:
+                self.close_line(line, reason=errmsg)
+                code = 0
             lock_result.update({
-                "result_code": 2,
+                "result_code": code,
                 "result_reason": res["message"],
                 "source_account": rebot.telephone,
             })
