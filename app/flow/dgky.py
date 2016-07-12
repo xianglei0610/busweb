@@ -169,7 +169,7 @@ class Flow(BaseFlow):
 #             order.modify(extra_info={'pay_content':content})
         else:
             msg = u"未获取到线路的金额和余票"
-            order.modify(line=Line.objects.get(line_id=order.line.compatible_lines['gdsw']),crawl_source='gdsw')
+            order.modify(line=Line.objects.get(line_id=order.line.compatible_lines.get("gdsw", "")),crawl_source='gdsw')
             lock_result.update({
                 "result_code": 2,
                 "source_account": '',
