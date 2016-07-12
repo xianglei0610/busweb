@@ -169,6 +169,7 @@ class Flow(BaseFlow):
 #             order.modify(extra_info={'pay_content':content})
         else:
             msg = u"未获取到线路的金额和余票"
+            order.modify(line=Line.objects.get(line_id=order.line.compatible_lines.get("gdsw", "")),crawl_source='gdsw')
             lock_result.update({
                 "result_code": 2,
                 "source_account": '',
@@ -290,13 +291,17 @@ class Flow(BaseFlow):
         return result_info
 
     def do_refresh_line(self, line):
+        now = dte.now()
+        result_info = {
+            "result_msg": "",
+            "update_attrs": {},
+        }
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {
                "User-Agent": ua,
                "Referer": "http://www.mp0769.com/",
                "Host": "www.mp0769.com",
                }
-        now = dte.now()
         cj = cookielib.LWPCookieJar()
         cookie_support = urllib2.HTTPCookieProcessor(cj)
         opener = urllib2.build_opener(cookie_support, urllib2.HTTPHandler)
@@ -304,12 +309,12 @@ class Flow(BaseFlow):
         url = "http://www.mp0769.com/checkcode.asp?t="
         url = url+str(int(time.time()))
         req = urllib2.Request(url, headers=headers)
-        result = urllib2.urlopen(req)
+        try:
+            result = urllib2.urlopen(req)
+        except:
+            result_info.update(result_msg="timeout default 1", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
         code = ''
-        result_info = {
-            "result_msg": "",
-            "update_attrs": {},
-        }
         init_url = "http://www.mp0769.com/bccx.asp?"
         params = {
              "action": "queryclick",
