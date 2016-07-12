@@ -261,8 +261,12 @@ class Flow(BaseFlow):
         }
 
         url = "http://m.e8s.com.cn/bwfpublicservice/stationGetSchPlan.action"
-        res = requests.post(url, data=data, headers=headers)
-        res = res.json()
+        try:
+            res = requests.post(url, data=data, headers=headers)
+            res = res.json()
+        except:
+            result_info.update(result_msg="timeout default 10", update_attrs={"left_tickets": 10, "refresh_datetime": now})
+            return result_info
         if res["flag"] != "1":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info

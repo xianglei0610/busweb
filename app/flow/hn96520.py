@@ -81,7 +81,20 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param), timeout=512)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
-            if '333' in urlstr or  '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
+            if '333' in urlstr:
+                rebot = order.change_lock_rebot()
+                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
+                errmsg = unicode(errlst and errlst[0] or "")
+                lock_result.update({
+                    'result_code': 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": errmsg,
+                })
+                return lock_result
+            tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
+            tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
+            tpk1 = int(datetime.datetime.now().strftime('%H'))
+            if '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
                 self.close_line(line)
                 errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
                 errmsg = unicode(errlst and errlst[0] or "")
@@ -91,9 +104,9 @@ class Flow(BaseFlow):
                     "result_reason": errmsg,
                 })
                 return lock_result
-            tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
-            tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
-            if '订票结束时间' in urlstr and tpk >= order.line.drv_datetime:
+            tpk2 = datetime.datetime.now().strftime('%Y-%m-%d') + ' 23:00'
+            tpk2 = datetime.datetime.strptime(tpk2, '%Y-%m-%d %H:%M')
+            if '订票结束时间' in urlstr and tpk >= order.line.drv_datetime and dte.now() < tpk2:
                 errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
                 errmsg = unicode(errlst and errlst[0] or "")
                 #rebot_log.info(2333333)

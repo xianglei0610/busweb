@@ -545,33 +545,38 @@ class Flow(BaseFlow):
                 return result_info
 
         update_attrs = {}
-        for d in res["data"]:
-            if d['SchStat'] == '1':
-                drv_datetime = dte.strptime("%s %s" % (d["SchDate"], d["orderbytime"]), "%Y-%m-%d %H:%M")
-                line_id_args = {
-                    "s_city_name": line.s_city_name,
-                    "d_city_name": line.d_city_name,
-                    "s_sta_name": d["SchWaitStName"],
-                    "d_sta_name": d["SchNodeName"],
-                    "crawl_source": line.crawl_source,
-                    "drv_datetime": drv_datetime,
-                }
-                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
-                try:
-                    obj = Line.objects.get(line_id=line_id)
-                except Line.DoesNotExist:
-                    continue
-                info = {
-                    "full_price": float(d["SchStdPrice"]),
-                    "fee": 0,
-                    "left_tickets": int(d["SchTicketCount"]),
-                    "refresh_datetime": now,
-                    "extra_info": {"raw_info": d},
-                }
-                if line_id == line.line_id:
-                    update_attrs = info
-                else:
-                    obj.update(**info)
+        try:
+            for d in res["data"]:
+                if d['SchStat'] == '1':
+                    drv_datetime = dte.strptime("%s %s" % (d["SchDate"], d["orderbytime"]), "%Y-%m-%d %H:%M")
+                    line_id_args = {
+                        "s_city_name": line.s_city_name,
+                        "d_city_name": line.d_city_name,
+                        "s_sta_name": d["SchWaitStName"],
+                        "d_sta_name": d["SchNodeName"],
+                        "crawl_source": line.crawl_source,
+                        "drv_datetime": drv_datetime,
+                    }
+                    line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+                    try:
+                        obj = Line.objects.get(line_id=line_id)
+                    except Line.DoesNotExist:
+                        continue
+                    info = {
+                        "full_price": float(d["SchStdPrice"]),
+                        "fee": 0,
+                        "left_tickets": int(d["SchTicketCount"]),
+                        "refresh_datetime": now,
+                        "extra_info": {"raw_info": d},
+                    }
+                    if line_id == line.line_id:
+                        update_attrs = info
+                    else:
+                        obj.update(**info)
+        except:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+            return result_info
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:

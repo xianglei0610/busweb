@@ -17,6 +17,7 @@ from app.flow.base import Flow as BaseFlow
 from app.utils import md5
 from datetime import datetime as dte
 from app.models import Line
+from tasks import issued_callback
 
 
 class Flow(BaseFlow):
@@ -54,6 +55,7 @@ class Flow(BaseFlow):
         href = line.extra_info['query_url']
         href = href.replace('num=1', 'num=%s' % num)
         msg = ''
+        full_price = 0
         for i in range(50):
             param = {}
             for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
@@ -151,7 +153,6 @@ class Flow(BaseFlow):
             content = result.read()
             pay_url = re.findall('window.open \((.*),', content)[0][1:-1]
             pay_url = "http://www.mp0769.com/" + pay_url
-            print pay_url
             order.modify(extra_info={"ticketPassword": ticketPassword})
 #             r = requests.get(pay_url)
 #             content = r.content.decode('gbk')
@@ -174,7 +175,6 @@ class Flow(BaseFlow):
                 "result_reason":  msg
             })
             return lock_result
-        
         if pay_url:
             expire_time = dte.now()+datetime.timedelta(seconds=15*60)
             lock_result.update({
@@ -216,7 +216,7 @@ class Flow(BaseFlow):
         param = {
                 "action": 'queryclick',
                 "cardID": order.contact_info["id_number"],
-                "type":'1',
+                "type": '1',
                 "Verifycode": code
         }
         order_url = "http://www.mp0769.com/orderdisp.asp?"
@@ -322,16 +322,20 @@ class Flow(BaseFlow):
              }
         init_url_param = "%s%s" % (init_url, urllib.urlencode(params))
         station_url = init_url_param + '&station=%s' % json.dumps(line.d_sta_name).replace('\u','%u')[1:-1]
-        form, sel = self.is_end_station(urllib2,headers,station_url)
+        try:
+            form, sel = self.is_end_station(urllib2, headers, station_url)
+        except:
+            result_info.update(result_msg="timeout default 5", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
         if not form:
             station = sel.xpath('//a')
             for i in station:
                 td = i.xpath('font/text()')
                 href = i.xpath('@href')[0]
-                station_name = td[0].replace('\r\n','').replace('\t','').replace(' ',  '')
+                station_name = td[0].replace('\r\n', '').replace('\t', '').replace(' ',  '')
                 if station_name == line.d_sta_name:
                     station_url = "http://www.mp0769.com/cbprjdisp8.asp?"+href
-                    form, sel = self.is_end_station(urllib2,headers,station_url)
+                    form, sel = self.is_end_station(urllib2, headers, station_url)
         update_attrs = {}
         if form:
             sch = sel.xpath('//table[@width="600"]/tr')
@@ -352,7 +356,7 @@ class Flow(BaseFlow):
                 left_tickets = 5
                 end_station = line.d_sta_name
                 try:
-                    for i in range(15):
+                    for i in range(5):
                         param = {}
                         for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
                             k, v = s.split("=")
@@ -439,13 +443,20 @@ class Flow(BaseFlow):
         return form, sel
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        
         if order.status == STATUS_WAITING_ISSUE:
-#             r = requests.get(order.pay_url)
-#             content = r.content.decode('gbk')
-#             
-#             order.modify(extra_info={'pay_content': content})
-            order.update(pay_channel='alipay')
+            r = requests.get(order.pay_url)
+            content = r.content.decode('gbk')
+            res = re.findall(r"alert\('(.*?)'\);", content)
+            if res:
+                if u"您的订单已过有效期" in res[0]:
+                    order.modify(status=STATUS_LOCK_RETRY)
+                    order.on_lock_retry(reason=res[0])
+                else:
+                    order.modify(status=STATUS_LOCK_FAIL)
+                    order.on_lock_fail(reason=res[0])
+                    issued_callback.delay(order.order_no)
+            else:
+                order.update(pay_channel='alipay')
             return {"flag": "url", "content": order.pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
