@@ -80,11 +80,13 @@ class Flow(BaseFlow):
                 "result_code": 1,
                 "raw_order_no": res["data"]["orderid"],
                 "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
             })
         else:
             lock_result.update({
                 "result_code": 2,
                 "result_reason": res["message"],
+                "source_account": rebot.telephone,
             })
         return lock_result
 
@@ -123,7 +125,7 @@ class Flow(BaseFlow):
             order.modify(pay_order_no=pay_no, pay_money=pay_money)
         state = int(ret["data"]["status"])
         if state== 2:   # 出票成功
-            if order.line.s_province == "江西":
+            if order.line.s_province in ["江西", "安徽"]:
                 order_detail = ret["data"]["lstorderdetail"][0]
                 pick_code = ",".join([d["etccert"] for d in order_detail["listordertickets"]])
                 dx_info = {

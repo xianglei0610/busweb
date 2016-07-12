@@ -2265,7 +2265,7 @@ class Lvtu100AppRebot(Rebot):
         url = "http://api.lvtu100.com/uc/member/savepurchase"
         id_lst = []
         exists_lst = {}
-        for c in order.riders:
+        for r in order.riders:
             params = [{
                 "addr_id":"",
                 "member_id": self.member_id,
@@ -2275,12 +2275,12 @@ class Lvtu100AppRebot(Rebot):
             }]
             params = {"data": json.dumps(params)}
             params = self.post_data_templ(params)
-            r = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
-            ret = r.json()
+            resp = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+            ret = resp.json()
             if "已添加过该身份证号" in ret["message"]:
                 if not exists_lst:
                     exists_lst = self.get_riders()
-                id_lst.append(exists_lst[c["id_number"]])
+                id_lst.append(exists_lst[r["id_number"]])
             else:
                 id_lst.append(ret["data"])
         return id_lst
