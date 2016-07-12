@@ -80,11 +80,13 @@ class Flow(BaseFlow):
                 "result_code": 1,
                 "raw_order_no": res["data"]["orderid"],
                 "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
             })
         else:
             lock_result.update({
                 "result_code": 2,
                 "result_reason": res["message"],
+                "source_account": rebot.telephone,
             })
         return lock_result
 
