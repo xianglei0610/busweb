@@ -124,7 +124,7 @@ class Flow(BaseFlow):
             params = {}
             T_Amt = sel.xpath("//input[@id='T_Amt']/@value")[0]      #票款
             T_Pnum = sel.xpath("//input[@id='T_Pnum']/@value")[0]    #购买张数
-            T_Price = sel.xpath("//input[@id='T_Price']/@value")[0]  #票价 
+            T_Price = sel.xpath("//input[@id='T_Price']/@value")[0]  #票价
             T_Qamt = sel.xpath("//input[@id='T_Qamt']/@value")[0]    #服务费
             T_Zamt = sel.xpath("//input[@id='T_Zamt']/@value")[0]    #总金额
             ticketPassword = str(random.randint(100000, 999999))
@@ -147,7 +147,7 @@ class Flow(BaseFlow):
                     }
             send_url = sel.xpath("//form[@name='form8']/@action")[0]      #url
             send_url = "http://www.mp0769.com/"+send_url
-            data = urllib.urlencode(params) 
+            data = urllib.urlencode(params)
             req = urllib2.Request(send_url, data, headers=headers)
             result = urllib2.urlopen(req)
             content = result.read()
@@ -169,7 +169,7 @@ class Flow(BaseFlow):
 #             order.modify(extra_info={'pay_content':content})
         else:
             msg = u"未获取到线路的金额和余票"
-            order.modify(line=Line.objects.get(line_id=order.line.compatible_lines.get("gdsw", "")),crawl_source='gdsw')
+            order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
             lock_result.update({
                 "result_code": 2,
                 "source_account": '',
@@ -443,7 +443,7 @@ class Flow(BaseFlow):
         result = urllib2.urlopen(req)
         content = result.read()
         content = content.decode('gbk')
-        sel = etree.HTML(content) 
+        sel = etree.HTML(content)
         form = sel.xpath('//form[@method="Post"]/@action')
         return form, sel
 
