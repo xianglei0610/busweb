@@ -123,7 +123,7 @@ class Flow(BaseFlow):
             order.modify(pay_order_no=pay_no, pay_money=pay_money)
         state = int(ret["data"]["status"])
         if state== 2:   # 出票成功
-            if order.line.s_province == "江西":
+            if order.line.s_province in ["江西", "安徽"]:
                 order_detail = ret["data"]["lstorderdetail"][0]
                 pick_code = ",".join([d["etccert"] for d in order_detail["listordertickets"]])
                 dx_info = {
