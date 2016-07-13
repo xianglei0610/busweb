@@ -8,6 +8,7 @@ import datetime
 import requests
 import time
 import re
+import random
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -203,7 +204,10 @@ class Flow(BaseFlow):
         return result_info
 
     def do_refresh_issue(self, order):
-        return self.do_refresh_issue_by_web(order)
+        if random.random() > 0.5:
+            return self.do_refresh_issue_by_web(order)
+        else:
+            return self.do_refresh_issue_by_app(order)
 
     def do_refresh_issue_by_web(self, order):
         result_info = {
