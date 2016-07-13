@@ -17,6 +17,7 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5
 from app import rebot_log
+import random
 
 
 class Flow(BaseFlow):
@@ -112,10 +113,11 @@ class Flow(BaseFlow):
             state = x.find('div', attrs={'class': 'bstate'}).get_text().strip()
             amount = int(x.find('div', attrs={'class': 'busnum'}).get_text().strip())
             if sn1 == sn:
+                pcode = random.randint(111111, 999999)
                 return {
                     "state": state,
                     "pick_no": '',
-                    "pcode": '200101',
+                    "pcode": pcode,
                     "pick_site": '',
                     'raw_order': order.extra_info.get('orderUUID'),
                     "pay_money": 0.0,
