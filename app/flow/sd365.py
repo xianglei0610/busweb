@@ -74,12 +74,12 @@ class Flow(BaseFlow):
 
         pa = pre + tmp + '&bankname=ZHIFUBAO'
         pa = ''.join(pa.split())
-        # rebot_log.info(pa)
+        rebot_log.info(pa)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
         location = urllib.unquote(r.headers.get('location', ''))
-        # rebot_log.info(location)
+        rebot_log.info(location)
         try:
             sn = location.split(',')[3]
         except:
@@ -94,7 +94,6 @@ class Flow(BaseFlow):
         #     nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         #     r = requests.get(url, headers=headers)
         #     rebot_log.info(r.content)
-        return
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             # cookies = {}
@@ -109,12 +108,12 @@ class Flow(BaseFlow):
                 'pay_money': 0,
             })
             return lock_result
-        # else:
-        #     lock_result.update({
-        #         'result_code': 2,
-        #         "lock_info": {"fail_reason": soup.split(',')[0]}
-        #     })
-        #     return lock_result
+        else:
+            lock_result.update({
+                'result_code': 2,
+                "lock_info": {"fail_reason": location.split('=')[0]}
+            })
+            return lock_result
 
     def send_order_request(self, order):
         ua = random.choice(BROWSER_USER_AGENT)
