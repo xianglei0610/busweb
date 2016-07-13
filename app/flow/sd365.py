@@ -57,7 +57,7 @@ class Flow(BaseFlow):
         port=%s&line=%s&tdate=%s+%s&offer=0&\
         offer2=0&tkttype=0&\
         savefriend[]=1&tktname[]=%s&papertype[]=0&paperno[]=%s&\
-        offertype[]=1&price[]=++%s&' %(uname, tel, tpass, \
+        offertype[]=1&price[]=%s&' %(uname, tel, tpass, \
             shopid, port, lline, line['drv_date'], line['drv_time'], \
             uname, uid, line['full_price'])
         rider = list(order.riders)
