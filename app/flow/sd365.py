@@ -57,7 +57,8 @@ class Flow(BaseFlow):
         port=%s&line=%s&tdate=%s+%s&offer=0&\
         offer2=0&tkttype=0&\
         savefriend[]=1&tktname[]=%s&papertype[]=0&paperno[]=%s&\
-        offertype[]=1&price[]=%s&' %(uname, tel, tpass, \
+        offertype[]=1&price[]=%s\
+            &insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0' %(uname, tel, tpass, \
             shopid, port, lline, line['drv_date'], line['drv_time'], \
             uname, uid, line['full_price'])
         rider = list(order.riders)
@@ -79,7 +80,21 @@ class Flow(BaseFlow):
         r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
         location = urllib.unquote(r.headers.get('location', ''))
         # rebot_log.info(location)
-        sn = location.split(',')[3]
+        try:
+            sn = location.split(',')[3]
+        except:
+            sn = ''
+        # if not sn:
+        #     ndata = {
+        #         'sid': extra['sid'],
+        #         'l': extra['l'],
+        #         'dpid': extra['dpid'],
+        #         't': extra['t'],
+        #     }
+        #     nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
+        #     r = requests.get(url, headers=headers)
+        #     rebot_log.info(r.content)
+        return
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             # cookies = {}
@@ -94,12 +109,12 @@ class Flow(BaseFlow):
                 'pay_money': 0,
             })
             return lock_result
-        else:
-            lock_result.update({
-                'result_code': 2,
-                "lock_info": {"fail_reason": soup.split(',')[0]}
-            })
-            return lock_result
+        # else:
+        #     lock_result.update({
+        #         'result_code': 2,
+        #         "lock_info": {"fail_reason": soup.split(',')[0]}
+        #     })
+        #     return lock_result
 
     def send_order_request(self, order):
         ua = random.choice(BROWSER_USER_AGENT)
