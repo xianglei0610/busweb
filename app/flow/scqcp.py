@@ -17,6 +17,7 @@ from app.models import ScqcpAppRebot, ScqcpWebRebot
 from datetime import datetime as dte
 from PIL import Image
 from lxml import etree
+from app.utils import md5
 
 
 class Flow(BaseFlow):
@@ -424,33 +425,64 @@ class Flow(BaseFlow):
         if (line.drv_datetime-now).total_seconds() <= 150*60:
             result_info.update(result_msg="time in two hours ", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
-        params = dict(
-            carry_sta_id=line.s_sta_id,
-            stop_name=line.d_city_name,
-            drv_date="%s %s" % (line.drv_date, line.drv_time),
-            sign_id=line.extra_info["sign_id"],
-        )
+
+        content = {
+                   "signId": line.extra_info["sign_id"],
+                   "carryStaId": line.s_sta_id,
+                   "stopName": line.d_city_name,
+                   "drvDate": "%s %s" % (line.drv_date, line.drv_time)
+                   }
+        api = 'getTicketInfo'
+        params = {}
+        params.update(content)
+        md5_key = "sdkjfgweysdgfvgvehbfhsdfgvbwjehfsdf"
+        params.update({"key": md5_key})
+
+        def get_md5_sign(params):
+            ks = params.keys()
+            ks.sort()
+            rlt = ''
+            for k in ks:
+                if params[k] == None or len(params[k]) == 0:
+                    continue
+                rlt = rlt+"&%s=%s" % (k, params[k])
+            return md5(rlt[1:]).upper()
+        sign = get_md5_sign(params)
+        url = "http://inner.cdqcp.com/ticket"
+        fp = {"head": {
+                 "sign": sign,
+                 "server": api,
+                 "token": "04b8cef68ef4f2d785150eb671999834",
+                 "ip": "192.168.3.153",
+                 "version":"1.5.1",
+                 "signType":"MD5"
+                 },
+              "body": content
+              }
         rebot = ScqcpAppRebot.get_one()
-        uri = "/scqcp/api/v2/ticket/query_plan_info"
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         headers = {
-            "User-Agent": rebot.user_agent,
-            "Authorization": rebot.token,
+            "User-Agent": 'okhttp/3.2.0',
             "Content-Type": "application/json; charset=UTF-8",
         }
         try:
-            r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers,timeout=20)
+            r = rebot.http_post(url, data=json.dumps(fp), headers=headers, timeout=20)
             ret = r.json()
         except:
             result_info.update(result_msg="scqcp timeout default 15", update_attrs={"left_tickets": 15, "refresh_datetime": now})
             return result_info
-
-        if ret["status"] == 1:
-            if ret["plan_info"]:
-                raw = ret["plan_info"][0]
+        if ret["head"]['statusCode'] == '0000':
+            if ret["body"].get('ticketLines', []):
+                raw = ret["body"].get('ticketLines', [])[0]
+                print raw
+                full_price = float(raw["fullPrice"])
+                print full_price
+                service_price = float(raw["servicePrice"])
+                if service_price > 3:
+                    full_price = full_price + service_price - 3
+                    service_price = 3
                 info = {
-                    "full_price": raw["full_price"],
-                    "fee": raw["service_price"],
+                    "full_price": full_price,
+                    "fee": service_price,
                     "left_tickets": raw["amount"],
                     "refresh_datetime": now,
                 }
