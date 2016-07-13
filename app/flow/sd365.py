@@ -71,11 +71,13 @@ class Flow(BaseFlow):
                 insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0&' %(i, x['name'].encode('utf-8'), x['id_number'], line['full_price'])
 
         pa = pre + tmp + '&bankname=ZHIFUBAO'
+        pa = ''.join(pa.split())
         # rebot_log.info(pa)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
         location = urllib.unquote(r.headers.get('location', ''))
+        # rebot_log.info(location)
         sn = location.split(',')[3]
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
