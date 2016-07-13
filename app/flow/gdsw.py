@@ -142,7 +142,9 @@ class Flow(BaseFlow):
     def send_order_request_by_app(self, order):
         rebot = order.get_lock_rebot()
         url = "http://183.6.161.195:9000/api/TicketOrder/QueryOrder?token=%s" % rebot.token     # 已完成
-        data = {}
+        data = {
+            "orderno": order.raw_order_no,
+        }
         headers = {
             "User-Agent": rebot.user_agent,
             "Content-Type": "application/json;charset=utf-8",
