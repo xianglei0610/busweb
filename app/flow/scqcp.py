@@ -536,8 +536,9 @@ class Flow(BaseFlow):
             sel = etree.HTML(r.content)
             try:
                 pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
-                if order.pay_order_no != pay_order_no:
-                    order.update(pay_order_no=pay_order_no, pay_channel='yh')
+                pay_money = sel.xpath("//input[@name='total_fee']/@value")[0].strip()
+                if order.pay_money != pay_money or order.pay_order_no != pay_order_no:
+                    order.modify(pay_money=pay_money, pay_order_no=pay_order_no, pay_channel='yh')
             except:
                 pass
             return {"flag": "html", "content": r.content}
