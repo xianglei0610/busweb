@@ -8,7 +8,6 @@ import datetime
 import requests
 import time
 import re
-import random
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -16,6 +15,7 @@ from app.models import Line
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
+from app import order_log
 
 
 class Flow(BaseFlow):
@@ -239,7 +239,14 @@ class Flow(BaseFlow):
         try:
             status_msg = soup.select_one("#MainContent_lblOrderPayResult").text.encode("utf-8")
             pick_text = soup.select_one("#lblOrderMessage").text.encode("utf-8")
-            pick_code = re.findall(r"取票密码：(\d+)", pick_text)[0]
+            may_code = order.contact_info["id_number"][-6:]
+            pick_code_lst = re.findall(r"取票密码：(\d+)", pick_text)
+            if pick_code_lst:
+                pick_code = pick_code_lst[0]
+            else:
+                pick_code = may_code
+            if may_code != pick_code: # 用于监测
+                order_log.error("[广东省网] %s 取票密码不一定是身份证后六位, 请检查")
             if u"已出票" in status_msg:
                 dx_info = {
                     "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
