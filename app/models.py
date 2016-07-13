@@ -376,6 +376,17 @@ class Line(db.Document):
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
             return self.compatible_lines
+        elif self.s_province == "山东":
+            # 畅途出发城市不带市, 畅途目的城市与365差距大
+            qs = Line.objects.filter(s_city_name__startswith=self.s_city_name.rstrip(u"市"),
+                                     s_sta_name=self.s_sta_name,
+                                     d_sta_name=self.d_sta_name,
+                                     bus_num=self.bus_num,
+                                     drv_datetime=self.drv_datetime)
+            d_line = {obj.crawl_source: obj.line_id for obj in qs}
+            d_line.update({self.crawl_source: self.line_id})
+            self.modify(compatible_lines=d_line)
+            return self.compatible_lines
         elif self.s_province == "江苏":
             # 方便网，车巴达，江苏省网, 同程
             trans = {}
