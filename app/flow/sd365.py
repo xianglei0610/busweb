@@ -47,7 +47,8 @@ class Flow(BaseFlow):
         uname = order.contact_info['name']
         tel = order.contact_info['telephone']
         uid = order.contact_info['id_number']
-        tpass = '200101'
+        # tpass = '200101'
+        tpass = random.randint(111111, 999999)
         shopid = extra['sid']
         port = extra['dpid']
         lline = extra['l']
@@ -84,7 +85,7 @@ class Flow(BaseFlow):
             # cookies = {}
             # for x, y in cks.items():
             #     cookies[x] = y
-            order.modify(extra_info={'pay_url': location, 'sn': sn})
+            order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': tpass})
             lock_result.update({
                 'result_code': 1,
                 'raw_order_no': sn,
@@ -115,11 +116,10 @@ class Flow(BaseFlow):
             state = x.find('div', attrs={'class': 'bstate'}).get_text().strip()
             amount = int(x.find('div', attrs={'class': 'busnum'}).get_text().strip())
             if sn1 == sn:
-                pcode = random.randint(111111, 999999)
                 return {
                     "state": state,
                     "pick_no": '',
-                    "pcode": pcode,
+                    "pcode": order.extra_info.get('pcode'),
                     "pick_site": '',
                     'raw_order': order.extra_info.get('orderUUID'),
                     "pay_money": 0.0,
