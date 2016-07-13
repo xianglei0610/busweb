@@ -379,6 +379,17 @@ class Line(db.Document):
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
             return self.compatible_lines
+        elif self.s_province == "山东":
+            # 畅途出发城市不带市, 畅途目的城市与365差距大
+            qs = Line.objects.filter(s_city_name__startswith=self.s_city_name.rstrip(u"市"),
+                                     s_sta_name=self.s_sta_name,
+                                     d_sta_name=self.d_sta_name,
+                                     bus_num=self.bus_num,
+                                     drv_datetime=self.drv_datetime)
+            d_line = {obj.crawl_source: obj.line_id for obj in qs}
+            d_line.update({self.crawl_source: self.line_id})
+            self.modify(compatible_lines=d_line)
+            return self.compatible_lines
         elif self.s_province == "江苏":
             # 方便网，车巴达，江苏省网, 同程
             trans = {}
@@ -1728,14 +1739,14 @@ class ScqcpAppRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return ""
-        # rds = get_redis("default")
-        # ipstr = self.ip
-        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-        #     return ipstr
-        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        # self.modify(ip=ipstr)
-        # return ipstr
+#         return ""
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        self.modify(ip=ipstr)
+        return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -1850,14 +1861,14 @@ class ScqcpWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return ""
-        # rds = get_redis("default")
-        # ipstr = self.ip
-        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-        #     return ipstr
-        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        # self.modify(ip=ipstr)
-        # return ipstr
+#         return ""
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        self.modify(ip=ipstr)
+        return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -2268,7 +2279,7 @@ class Lvtu100AppRebot(Rebot):
         url = "http://api.lvtu100.com/uc/member/savepurchase"
         id_lst = []
         exists_lst = {}
-        for c in order.riders:
+        for r in order.riders:
             params = [{
                 "addr_id":"",
                 "member_id": self.member_id,
@@ -2278,12 +2289,12 @@ class Lvtu100AppRebot(Rebot):
             }]
             params = {"data": json.dumps(params)}
             params = self.post_data_templ(params)
-            r = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
-            ret = r.json()
+            resp = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+            ret = resp.json()
             if "已添加过该身份证号" in ret["message"]:
                 if not exists_lst:
                     exists_lst = self.get_riders()
-                id_lst.append(exists_lst[c["id_number"]])
+                id_lst.append(exists_lst[r["id_number"]])
             else:
                 id_lst.append(ret["data"])
         return id_lst

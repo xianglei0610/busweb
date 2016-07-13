@@ -74,17 +74,24 @@ class Flow(BaseFlow):
         headers = rebot.post_header()
         r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
         res = r.json()
+        errmsg = res["message"]
         if res["code"] == 0:
             expire_time = dte.now()+datetime.timedelta(seconds=20*60)
             lock_result.update({
                 "result_code": 1,
                 "raw_order_no": res["data"]["orderid"],
                 "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
             })
         else:
+            code = 2
+            if u"锁票异常" in errmsg:
+                self.close_line(line, reason=errmsg)
+                code = 0
             lock_result.update({
-                "result_code": 2,
+                "result_code": code,
                 "result_reason": res["message"],
+                "source_account": rebot.telephone,
             })
         return lock_result
 
@@ -123,7 +130,7 @@ class Flow(BaseFlow):
             order.modify(pay_order_no=pay_no, pay_money=pay_money)
         state = int(ret["data"]["status"])
         if state== 2:   # 出票成功
-            if order.line.s_province == "江西":
+            if order.line.s_province in ["江西", "安徽"]:
                 order_detail = ret["data"]["lstorderdetail"][0]
                 pick_code = ",".join([d["etccert"] for d in order_detail["listordertickets"]])
                 dx_info = {

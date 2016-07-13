@@ -124,7 +124,7 @@ class Flow(BaseFlow):
             params = {}
             T_Amt = sel.xpath("//input[@id='T_Amt']/@value")[0]      #票款
             T_Pnum = sel.xpath("//input[@id='T_Pnum']/@value")[0]    #购买张数
-            T_Price = sel.xpath("//input[@id='T_Price']/@value")[0]  #票价 
+            T_Price = sel.xpath("//input[@id='T_Price']/@value")[0]  #票价
             T_Qamt = sel.xpath("//input[@id='T_Qamt']/@value")[0]    #服务费
             T_Zamt = sel.xpath("//input[@id='T_Zamt']/@value")[0]    #总金额
             ticketPassword = str(random.randint(100000, 999999))
@@ -147,7 +147,7 @@ class Flow(BaseFlow):
                     }
             send_url = sel.xpath("//form[@name='form8']/@action")[0]      #url
             send_url = "http://www.mp0769.com/"+send_url
-            data = urllib.urlencode(params) 
+            data = urllib.urlencode(params)
             req = urllib2.Request(send_url, data, headers=headers)
             result = urllib2.urlopen(req)
             content = result.read()
@@ -169,6 +169,7 @@ class Flow(BaseFlow):
 #             order.modify(extra_info={'pay_content':content})
         else:
             msg = u"未获取到线路的金额和余票"
+            order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
             lock_result.update({
                 "result_code": 2,
                 "source_account": '',
@@ -290,13 +291,17 @@ class Flow(BaseFlow):
         return result_info
 
     def do_refresh_line(self, line):
+        now = dte.now()
+        result_info = {
+            "result_msg": "",
+            "update_attrs": {},
+        }
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {
                "User-Agent": ua,
                "Referer": "http://www.mp0769.com/",
                "Host": "www.mp0769.com",
                }
-        now = dte.now()
         cj = cookielib.LWPCookieJar()
         cookie_support = urllib2.HTTPCookieProcessor(cj)
         opener = urllib2.build_opener(cookie_support, urllib2.HTTPHandler)
@@ -304,12 +309,12 @@ class Flow(BaseFlow):
         url = "http://www.mp0769.com/checkcode.asp?t="
         url = url+str(int(time.time()))
         req = urllib2.Request(url, headers=headers)
-        result = urllib2.urlopen(req)
+        try:
+            result = urllib2.urlopen(req)
+        except:
+            result_info.update(result_msg="timeout default 1", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
         code = ''
-        result_info = {
-            "result_msg": "",
-            "update_attrs": {},
-        }
         init_url = "http://www.mp0769.com/bccx.asp?"
         params = {
              "action": "queryclick",
@@ -438,7 +443,7 @@ class Flow(BaseFlow):
         result = urllib2.urlopen(req)
         content = result.read()
         content = content.decode('gbk')
-        sel = etree.HTML(content) 
+        sel = etree.HTML(content)
         form = sel.xpath('//form[@method="Post"]/@action')
         return form, sel
 
@@ -448,12 +453,15 @@ class Flow(BaseFlow):
             content = r.content.decode('gbk')
             res = re.findall(r"alert\('(.*?)'\);", content)
             if res:
-                if u"您的订单已过有效期" in res[0]:
+                errmsg = res[0]
+                if u"您的订单已过有效期" in errmsg:
                     order.modify(status=STATUS_LOCK_RETRY)
-                    order.on_lock_retry(reason=res[0])
+                    order.on_lock_retry(reason=errmsg)
                 else:
+                    if u'不可预售' in errmsg:
+                        self.close_line(order.line, reason=errmsg)
                     order.modify(status=STATUS_LOCK_FAIL)
-                    order.on_lock_fail(reason=res[0])
+                    order.on_lock_fail(reason=errmsg)
                     issued_callback.delay(order.order_no)
             else:
                 order.update(pay_channel='alipay')
