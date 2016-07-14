@@ -84,16 +84,19 @@ class Flow(BaseFlow):
             sn = location.split(',')[3]
         except:
             sn = ''
-        # if not sn:
-        #     ndata = {
-        #         'sid': extra['sid'],
-        #         'l': extra['l'],
-        #         'dpid': extra['dpid'],
-        #         't': extra['t'],
-        #     }
-        #     nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
-        #     r = requests.get(url, headers=headers)
-        #     rebot_log.info(r.content)
+        fail_reason = ''
+        if not sn:
+            ndata = {
+                'sid': extra['sid'],
+                'l': extra['l'],
+                'dpid': extra['dpid'],
+                't': extra['t'],
+            }
+            nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
+            r = requests.get(nurl, headers=headers)
+            rebot_log.info(nurl)
+            if not r.content:
+                fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             # cookies = {}
@@ -106,6 +109,12 @@ class Flow(BaseFlow):
                 "expire_datetime": expire_time,
                 "source_account": '',
                 'pay_money': 0,
+            })
+            return lock_result
+        elif fail_reason:
+            lock_result.update({
+                'result_code': 0,
+                "lock_info": {"fail_reason": fail_reason}
             })
             return lock_result
         else:
