@@ -450,28 +450,34 @@ def starting_config():
     if action == "opentime":
         obj= OpenStation.objects.get(id=params["pk"])
         obj.modify(open_time=params["value"])
+        obj.clear_cache()
         return jsonify({"code": 1, "msg": "修改售票时间成功" })
     elif action == "endtime":
         obj= OpenStation.objects.get(id=params["pk"])
         obj.modify(end_time=params["value"])
+        obj.clear_cache()
         return jsonify({"code": 1, "msg": "修改售票时间成功" })
     elif action == "open_yzcx":
         obj= OpenStation.objects.get(id=params["pk"])
         flag = params["flag"]
         if flag == "true":
             obj.modify(close_status=obj.close_status^STATION_CLOSE_YZCX)
+            obj.clear_cache()
             return jsonify({"code": 1, "msg": "打开余票查询"})
         else:
             obj.modify(close_status=obj.close_status|STATION_CLOSE_YZCX)
+            obj.clear_cache()
             return jsonify({"code": 1, "msg": "关闭余票查询"})
     elif action == "open_bccx":
         obj= OpenStation.objects.get(id=params["pk"])
         flag = params["flag"]
         if flag == "true":
             obj.modify(close_status=obj.close_status^STATION_CLOSE_BCCX)
+            obj.clear_cache()
             return jsonify({"code": 1, "msg": "打开班次查询"})
         else:
             obj.modify(close_status=obj.close_status|STATION_CLOSE_BCCX)
+            obj.clear_cache()
             return jsonify({"code": 1, "msg": "关闭班次查询"})
     return jsonify({"code": 0, "msg": "执行失败"})
 

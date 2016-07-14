@@ -103,7 +103,7 @@ def query_destination():
     for sta in sta_qs:
         for d in sta.dest_info:
             lst.add("%s|%s" % (d["name"], d["code"]))
-    return jsonify({"code": RET_OK, "message": "OK", "data": lst})
+    return jsonify({"code": RET_OK, "message": "OK", "data": list(lst)})
 
 
 @api.route('/lines/query', methods=['POST'])
