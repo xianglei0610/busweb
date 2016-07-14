@@ -87,23 +87,23 @@ def query_destination():
         starting_name = unicode(post["starting_name"])
         assert starting_name != ""
     except Exception, e:
-        return jsonify({"code": RET_PARAM_ERROR,
-                        "message": "parameter error",
-                        "data": ""})
+        return jsonify({"code": RET_PARAM_ERROR, "message": "parameter error", "data": ""})
+
     try:
         open_city = OpenCity.objects.get(city_name=starting_name, is_active=True)
     except Exception, e:
-        return jsonify({"code": RET_CITY_NOT_OPEN,
-                        "message": "%s is not open" % starting_name,
-                        "data": ""})
+        return jsonify({"code": RET_CITY_NOT_OPEN, "message": "%s is not open" % starting_name, "data": ""})
 
-    data = open_city.dest_list
-    if not data:
-        crawl_source = open_city.crawl_source
-        qs = Line.objects.filter(crawl_source=crawl_source,
-                                 s_city_name__startswith=starting_name).aggregate({"$group": {"_id": {"city_name": "$d_city_name", "city_code": "$d_city_code"}}})
-        data = map(lambda x: "%s|%s" % (x["_id"]["city_name"], x["_id"]["city_code"]), qs)
-    return jsonify({"code": RET_OK, "message": "OK", "data": data})
+    sta_qs = OpenStation.objects.filter(city=open_city)
+    if not sta_qs:
+        open_city.init_station()
+        sta_qs = OpenStation.objects.filter(city=open_city)
+
+    lst = set()
+    for sta in sta_qs:
+        for d in sta.dest_info:
+            lst.add("%s|%s" % (d["name"], d["code"]))
+    return jsonify({"code": RET_OK, "message": "OK", "data": lst})
 
 
 @api.route('/lines/query', methods=['POST'])
@@ -147,16 +147,13 @@ def query_line():
         assert (starting_name and dest_name and start_date)
         assert now.strftime("%Y-%m-%d") <= start_date
     except:
-        return jsonify({"code": RET_PARAM_ERROR,
-                        "message": "parameter error",
-                        "data": ""})
+        return jsonify({"code": RET_PARAM_ERROR, "message": "parameter error", "data": ""})
 
     try:
         open_city = OpenCity.objects.get(city_name=starting_name)
     except Exception, e:
-        return jsonify({"code": RET_CITY_NOT_OPEN,
-                        "message": "%s is not open" % starting_name,
-                        "data": ""})
+        return jsonify({"code": RET_CITY_NOT_OPEN, "message": "%s is not open" % starting_name, "data": ""})
+
     crawl_source = open_city.crawl_source
     qs_line = Line.objects.filter(s_city_name__startswith=starting_name,
                                   d_city_name__startswith=dest_name,
@@ -164,7 +161,15 @@ def query_line():
                                   crawl_source=crawl_source)
 
     data = []
+    staname_to_objs = {}
     for line in qs_line:
+        if line.s_sta_name not in staname_to_objs:
+            staname_to_objs[line.s_sta_name] = open_city.get_open_station(line.s_sta_name)
+        sta_obj = staname_to_objs[line.s_sta_name]
+        if not sta_obj:
+            continue
+        if sta_obj.close_status & STATION_CLOSE_BCCX:
+            continue
         data.append(line.get_json())
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
@@ -189,15 +194,27 @@ def query_line_detail():
 
     open_city = line.get_open_city()
     if open_city and not open_city.is_active:
-        return jsonify({"code": RET_CITY_NOT_OPEN,
-                        "message": "%s is not open" % open_city.city_name,
-                        "data": ""})
+        return jsonify({"code": RET_CITY_NOT_OPEN, "message": "%s is not open" % open_city.city_name, "data": ""})
+    open_station = open_city.get_open_station(line.s_sta_name)
+    if not open_station:
+        return jsonify({"code": RET_CITY_NOT_OPEN, "message": "%s is not open" % line.s_sta_name, "data": ""})
+
+    if open_station.close_status & STATION_CLOSE_YZCX:
+        data = line.get_json()
+        data["left_tickets"] = 0
+        return jsonify({"code": RET_OK, "message": "%s 余票查询已关闭" % line.s_sta_name, "data": data})
+    now_time = dte.now().strftime("%H:%M")
+    if now_time >= open_station.end_time  or now_time <= open_station.open_time:
+        data = line.get_json()
+        data["left_tickets"] = 0
+        return jsonify({"code": RET_OK, "message": "售票时间是%s~%s" % (open_station.open_time, open_station.end_time), "data": data})
 
     flow, new_line = get_compatible_flow(line)
     if not flow:
         data = line.get_json()
         data["left_tickets"] = 0
-        return jsonify({"code": RET_OK, "message": "OK", "data": data})
+        return jsonify({"code": RET_OK, "message": "没找到对应flow", "data": data})
+
     flow.refresh_line(new_line)
     data = new_line.get_json()
     data["line_id"] = line.line_id
