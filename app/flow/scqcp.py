@@ -185,6 +185,7 @@ class Flow(BaseFlow):
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
         except:
+            rebot.modify(ip='')
             r = rebot.http_get(url, headers=new_headers, timeout=70, allow_redirects=False)
             location_url = r.headers.get('location', '')
             res = {}
