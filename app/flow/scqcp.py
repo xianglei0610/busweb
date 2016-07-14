@@ -586,7 +586,9 @@ class Flow(BaseFlow):
                 if order.pay_money != pay_money or order.pay_order_no != pay_order_no:
                     order.modify(pay_money=pay_money, pay_order_no=pay_order_no, pay_channel='yh')
             except:
-                pass
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                return {"flag": "error", "content": "请重试!"}
             return {"flag": "html", "content": r.content}
         return {"flag": "error", "content": "锁票失败, 请重试!"}
         # else:
