@@ -280,7 +280,7 @@ class Flow(BaseFlow):
                     # rebot_log.info(left_tickets)
                     if line_id in t:
                         t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price})
-                    if line_id == line.line_id and int(left_tickets) and tpk > line.drv_datetime:
+                    if line_id == line.line_id and int(left_tickets) and tpk < line.drv_datetime:
                         update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price}
                 except:
                     pass
