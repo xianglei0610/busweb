@@ -74,7 +74,7 @@ class Flow(BaseFlow):
 
         pa = pre + tmp + '&bankname=ZHIFUBAO'
         pa = ''.join(pa.split())
-        rebot_log.info(pa)
+        # rebot_log.info(pa)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
@@ -94,8 +94,8 @@ class Flow(BaseFlow):
             }
             nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
             r = requests.get(nurl, headers=headers)
-            rebot_log.info(nurl)
-            if not r.content:
+            # rebot_log.info(nurl)
+            if len(r.content) == 0:
                 fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
@@ -215,12 +215,13 @@ class Flow(BaseFlow):
         }
         nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         r = requests.get(nurl, headers=headers)
-        if not r.content:
+        if len(r.content) == 0:
             result_info = {
                 'result_msg' :"no line info",
                 'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
             }
             return result_info
+        rebot_log.info(nurl)
         for x in xrange(1):
             url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)
             r = requests.get(url, headers=headers)
@@ -247,7 +248,7 @@ class Flow(BaseFlow):
                 'to': line.d_city_name,
             }
             lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
-            rebot_log.info(lasturl)
+            # rebot_log.info(lasturl)
             r = requests.get(lasturl, headers=headers)
             soup = r.json()
             tpk = now + datetime.timedelta(hours=-2)
