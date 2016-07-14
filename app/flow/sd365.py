@@ -200,11 +200,27 @@ class Flow(BaseFlow):
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
         ua = random.choice(BROWSER_USER_AGENT)
+        now = dte.now()
         headers = {
             "User-Agent": ua,
             'Content-Type': 'application/x-www-form-urlencoded',
         }
         # rebot_log.info(line['s_city_name'])
+        extra = line.extra_info
+        ndata = {
+            'sid': extra['sid'],
+            'l': extra['l'],
+            'dpid': extra['dpid'],
+            't': extra['t'],
+        }
+        nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
+        r = requests.get(nurl, headers=headers)
+        if not r.content:
+            result_info = {
+                'result_msg' :"no line info",
+                'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
+            }
+            return result_info
         for x in xrange(1):
             url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)
             r = requests.get(url, headers=headers)
@@ -234,8 +250,7 @@ class Flow(BaseFlow):
             rebot_log.info(lasturl)
             r = requests.get(lasturl, headers=headers)
             soup = r.json()
-            now = dte.now()
-            tpk = now +  datetime.timedelta(hours=-2)
+            tpk = now + datetime.timedelta(hours=-2)
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
                                      d_city_name=line.d_city_name, drv_date=line.drv_date)
