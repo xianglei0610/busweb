@@ -17,6 +17,7 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5
 from app import rebot_log
+import random
 
 
 class Flow(BaseFlow):
@@ -46,7 +47,8 @@ class Flow(BaseFlow):
         uname = order.contact_info['name']
         tel = order.contact_info['telephone']
         uid = order.contact_info['id_number']
-        tpass = '200101'
+        # tpass = '200101'
+        tpass = random.randint(111111, 999999)
         shopid = extra['sid']
         port = extra['dpid']
         lline = extra['l']
@@ -55,7 +57,8 @@ class Flow(BaseFlow):
         port=%s&line=%s&tdate=%s+%s&offer=0&\
         offer2=0&tkttype=0&\
         savefriend[]=1&tktname[]=%s&papertype[]=0&paperno[]=%s&\
-        offertype[]=1&price[]=++%s&' %(uname, tel, tpass, \
+        offertype[]=1&price[]=%s\
+            &insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0' %(uname, tel, tpass, \
             shopid, port, lline, line['drv_date'], line['drv_time'], \
             uname, uid, line['full_price'])
         rider = list(order.riders)
@@ -70,18 +73,36 @@ class Flow(BaseFlow):
                 insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0&' %(i, x['name'].encode('utf-8'), x['id_number'], line['full_price'])
 
         pa = pre + tmp + '&bankname=ZHIFUBAO'
-        # rebot_log.info(pa)
+        pa = ''.join(pa.split())
+        rebot_log.info(pa)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
         location = urllib.unquote(r.headers.get('location', ''))
-        sn = location.split(',')[3]
+        rebot_log.info(location)
+        try:
+            sn = location.split(',')[3]
+        except:
+            sn = ''
+        fail_reason = ''
+        if not sn:
+            ndata = {
+                'sid': extra['sid'],
+                'l': extra['l'],
+                'dpid': extra['dpid'],
+                't': extra['t'],
+            }
+            nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
+            r = requests.get(nurl, headers=headers)
+            rebot_log.info(nurl)
+            if not r.content:
+                fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             # cookies = {}
             # for x, y in cks.items():
             #     cookies[x] = y
-            order.modify(extra_info={'pay_url': location, 'sn': sn})
+            order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': tpass})
             lock_result.update({
                 'result_code': 1,
                 'raw_order_no': sn,
@@ -90,10 +111,16 @@ class Flow(BaseFlow):
                 'pay_money': 0,
             })
             return lock_result
+        elif fail_reason:
+            lock_result.update({
+                'result_code': 0,
+                "lock_info": {"fail_reason": fail_reason}
+            })
+            return lock_result
         else:
             lock_result.update({
                 'result_code': 2,
-                "lock_info": {"fail_reason": soup.split(',')[0]}
+                "lock_info": {"fail_reason": location.split('=')[0]}
             })
             return lock_result
 
@@ -115,7 +142,7 @@ class Flow(BaseFlow):
                 return {
                     "state": state,
                     "pick_no": '',
-                    "pcode": '200101',
+                    "pcode": order.extra_info.get('pcode'),
                     "pick_site": '',
                     'raw_order': order.extra_info.get('orderUUID'),
                     "pay_money": 0.0,

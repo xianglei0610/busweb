@@ -366,6 +366,10 @@ def main():
     # 深圳客运
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['szky'])
 
+    # 旅途100
+    sched.add_cron_job(bus_crawl, hour=23, minute=10, args=['lvtu100'], kwargs={"crawl_kwargs":{"province": "江西"}})
+    sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['lvtu100'], kwargs={"crawl_kwargs":{"province": "安徽"}})
+
     #东莞客运
     sched.add_cron_job(bus_crawl, hour=12, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "东莞总站"}})
     sched.add_cron_job(bus_crawl, hour=13, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "市客运北站,市客运东站"}})
