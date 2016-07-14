@@ -200,6 +200,7 @@ class Flow(BaseFlow):
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
         ua = random.choice(BROWSER_USER_AGENT)
+        now = dte.now()
         headers = {
             "User-Agent": ua,
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -249,8 +250,7 @@ class Flow(BaseFlow):
             rebot_log.info(lasturl)
             r = requests.get(lasturl, headers=headers)
             soup = r.json()
-            now = dte.now()
-            tpk = now +  datetime.timedelta(hours=-2)
+            tpk = now + datetime.timedelta(hours=-2)
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
                                      d_city_name=line.d_city_name, drv_date=line.drv_date)
