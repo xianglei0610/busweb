@@ -97,15 +97,16 @@
                         {{item.sta_name}}
                     </td>
                     <td>
-                        待开发
+                        <a href="#" data-value="{{item.open_time}}" id="source" class="sel-source-{{item.id}}" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="数据源">{{item.crawl_source and source_info[item.crawl_source]["name"]}}</a>
+                        <script>$('.sel-source-{{item.id}}').editable({source: "/startings/{{item.id}}/source"});</script>
                     </td>
                     <td>
                         待开发
                     </td>
                     <td>
-                        <a href="#" data-value="{{item.open_time}}" id="opentime" class="sel-opentime user-config-edit" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="起始时间">{{item.open_time}}</a>
+                        <a href="#" data-value="{{item.open_time}}" id="opentime" class="sel-opentime" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="起始时间">{{item.open_time}}</a>
                         --
-                        <a href="#" data-value="{{item.end_time}}" id="endtime" class="sel-endtime user-config-edit" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="结束时间">{{item.end_time}}</a>
+                        <a href="#" data-value="{{item.end_time}}" id="endtime" class="sel-endtime" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="结束时间">{{item.end_time}}</a>
                     </td>
                     <td>
                         <div class="switch switch-mini close-state" id="id-switch-yz" data-station="{{item.id}}" data-action="open_yzcx">
@@ -183,6 +184,13 @@
             "20:00", "21:00", "22:00", "23:00", "24:00"
         ]
     });
+
+    function x(){
+        console.log(this);
+        console.log($(this).attr("name"));
+        return "11";
+    };
+
 
     $('.switch')['bootstrapSwitch']();
     $('.close-state').on('switch-change', function (e, data) {

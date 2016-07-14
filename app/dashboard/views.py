@@ -479,7 +479,24 @@ def starting_config():
             obj.modify(close_status=obj.close_status|STATION_CLOSE_BCCX)
             obj.clear_cache()
             return jsonify({"code": 1, "msg": "关闭班次查询"})
+    elif action == "source":
+        obj= OpenStation.objects.get(id=params["pk"])
+        if params["value"] not in SOURCE_INFO:
+            return jsonify({"code": 0, "msg": "参数错误" })
+        obj.modify(crawl_source=params["value"])
+        obj.clear_cache()
+        return jsonify({"code": 1, "msg": "修改售票时间成功" })
+
     return jsonify({"code": 0, "msg": "执行失败"})
+
+@dashboard.route('/startings/<station_id>/source', methods=["GET"])
+@superuser_required
+def starting_source_list(station_id):
+    sta_obj = OpenStation.objects.get_or_404(id=station_id)
+    data = []
+    for s in Line.objects.filter(s_city_name__startswith=sta_obj.city.city_name, s_sta_name=sta_obj.sta_name).distinct("crawl_source"):
+        data.append({s: SOURCE_INFO[s]["name"]})
+    return json.dumps(data, ensure_ascii=False)
 
 
 @dashboard.route('/startings/<station_id>/destination', methods=['POST', 'GET'])
