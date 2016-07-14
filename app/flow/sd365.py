@@ -117,6 +117,14 @@ class Flow(BaseFlow):
                 "lock_info": {"fail_reason": fail_reason}
             })
             return lock_result
+        elif '不售票' in location:
+            errlst = re.findall(r'message=(\S+)&url', s)
+            errmsg = unicode(errlst and errlst[0] or "")
+            lock_result.update({
+                'result_code': 0,
+                "lock_info": {"fail_reason": errmsg}
+            })
+            return lock_result
         else:
             lock_result.update({
                 'result_code': 2,
@@ -227,6 +235,7 @@ class Flow(BaseFlow):
             r = requests.get(lasturl, headers=headers)
             soup = r.json()
             now = dte.now()
+            tpk = now +  datetime.timedelta(hours=-2)
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
                                      d_city_name=line.d_city_name, drv_date=line.drv_date)
@@ -255,7 +264,7 @@ class Flow(BaseFlow):
                     # rebot_log.info(left_tickets)
                     if line_id in t:
                         t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price})
-                    if line_id == line.line_id and int(left_tickets):
+                    if line_id == line.line_id and int(left_tickets) and tpk > line.drv_datetime:
                         update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price}
                 except:
                     pass
