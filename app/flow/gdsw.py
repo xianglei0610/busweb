@@ -15,6 +15,7 @@ from app.models import Line
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
+from app import order_log
 
 
 class Flow(BaseFlow):
@@ -141,7 +142,9 @@ class Flow(BaseFlow):
     def send_order_request_by_app(self, order):
         rebot = order.get_lock_rebot()
         url = "http://183.6.161.195:9000/api/TicketOrder/QueryOrder?token=%s" % rebot.token     # 已完成
-        data = {}
+        data = {
+            "orderno": order.raw_order_no,
+        }
         headers = {
             "User-Agent": rebot.user_agent,
             "Content-Type": "application/json;charset=utf-8",
@@ -203,7 +206,10 @@ class Flow(BaseFlow):
         return result_info
 
     def do_refresh_issue(self, order):
-        return self.do_refresh_issue_by_web(order)
+        if random.random() > 0.5:
+            return self.do_refresh_issue_by_web(order)
+        else:
+            return self.do_refresh_issue_by_app(order)
 
     def do_refresh_issue_by_web(self, order):
         result_info = {
@@ -233,7 +239,14 @@ class Flow(BaseFlow):
         try:
             status_msg = soup.select_one("#MainContent_lblOrderPayResult").text.encode("utf-8")
             pick_text = soup.select_one("#lblOrderMessage").text.encode("utf-8")
-            pick_code = re.findall(r"取票密码：(\d+)", pick_text)[0]
+            may_code = order.contact_info["id_number"][-6:].replace("X", "0").replace("x", "0")
+            pick_code_lst = re.findall(r"取票密码：(\d+)", pick_text)
+            if pick_code_lst:
+                pick_code = pick_code_lst[0]
+            else:
+                pick_code = may_code
+            if may_code != pick_code: # 用于监测
+                order_log.error("[广东省网] %s 取票密码不一定是身份证后六位, 请检查 order:%s", order.order_no)
             if u"已出票" in status_msg:
                 dx_info = {
                     "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),

@@ -20,13 +20,7 @@ from app import line_log
 
 class Flow(BaseFlow):
 
-    name = "baba"
-
-    #def check_rider_idcard(self, order):
-    #    valid_url = "http://www.bababus.com/order/validateCard.htm"
-    # psgIdCode=350628199012101520&psgIdType=1
-    #    for r in order.riders:
-    #        pass
+    name = "wmcx"
 
     def do_lock_ticket(self, order):
         lock_result = {
@@ -42,7 +36,7 @@ class Flow(BaseFlow):
         rebot = order.get_lock_rebot()
         line = order.line
         params = {
-            "startPlace":line.s_city_name,
+            "startPlace": line.s_city_name,
             "endPlace": line.d_city_name,
             "sbId": line.extra_info["sbId"],
             "stId": line.extra_info["stId"],
@@ -54,8 +48,8 @@ class Flow(BaseFlow):
             "endStationName": line.d_sta_name,
         }
 
-        check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
-        r = requests.post(check_url,
+        check_url = "http://www.wanmeibus.com/ticket/checkBuyTicket.htm"
+        r = rebot.http_post(check_url,
                             data=urllib.urlencode(params),
                             headers={"User-Agent": rebot.user_agent, "Content-Type": "application/x-www-form-urlencoded"})
         res = r.json()
@@ -77,10 +71,10 @@ class Flow(BaseFlow):
                 return lock_result
 
         cookies = json.loads(rebot.cookies)
-        form_url = "http://www.bababus.com/order/writeorder.htm"
-        r = requests.get("%s?%s" %(form_url,urllib.urlencode(params)),
-                            headers={"User-Agent": rebot.user_agent},
-                            cookies=cookies)
+        form_url = "http://www.wanmeibus.com/order/writeorder.htm"
+        r = rebot.http_get("%s?%s" %(form_url,urllib.urlencode(params)),
+                           headers={"User-Agent": rebot.user_agent},
+                           cookies=cookies)
         # 未登录
         if not rebot.check_login_by_resp(r):
             lock_result.update({
@@ -136,7 +130,7 @@ class Flow(BaseFlow):
             "contactPhone": order.contact_info["telephone"],
             "contactEmail": "",
         }
-        encode_list= [urllib.urlencode(submit_data),]
+        encode_list = [urllib.urlencode(submit_data),]
         for r in order.riders:
             d = {
                 "psgName": r["name"],
@@ -168,6 +162,13 @@ class Flow(BaseFlow):
                 "pay_money": pay_money,
             })
         else:
+            if u"您有未完成的订单" in errmsg:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": errmsg,
+                })
+                return lock_result
             #if u"服务器与客运站网络中断" in errmsg:
             #    body = "源站: 巴巴快巴, <br/> 城市: %s, <br/> 车站: %s" % (line.s_city_name, line.s_sta_name)
             #    async_send_email.delay("客运站联网中断", body)
@@ -182,26 +183,26 @@ class Flow(BaseFlow):
         """
         单纯向源站发请求
         """
-        submit_url = "http://www.bababus.com/order/createorder.htm"
+        submit_url = "http://www.wanmeibus.com/order/createorder.htm"
         headers = {
             "User-Agent": rebot.user_agent,
             "Content-Type": "application/x-www-form-urlencoded",
         }
         cookies = json.loads(rebot.cookies)
-        resp = requests.post(submit_url, data=data, headers=headers, cookies=cookies)
+        resp = rebot.http_post(submit_url, data=data, headers=headers, cookies=cookies)
         ret = resp.json()
         return ret
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
-        detail_url = "http://www.bababus.com/order/detail.htm?busOrderNo=%s" % order.raw_order_no
+        detail_url = "http://www.wanmeibus.com/order/detail.htm?busOrderNo=%s" % order.raw_order_no
         headers = {
             "User-Agent": rebot.user_agent,
         }
         cookies = json.loads(rebot.cookies)
-        r = requests.get(detail_url, headers=headers, cookies=cookies)
+        r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
-        no, code ,site = "", "", ""
+        no, code, site = "", "", ""
         for tag in soup.select(".details_taketicket .details_passenger_num"):
             s = tag.get_text().strip()
             if s.startswith("取票号:"):
@@ -210,9 +211,9 @@ class Flow(BaseFlow):
                 code = s.lstrip("取票密码:")
             elif s.startswith("取票地点:"):
                 site = s.lstrip("取票地点:")
-        pay_money = float(re.findall(r"(\d+.\d)",soup.select_one(".order_Aprice").text)[0])
+        pay_money = float(re.findall(r"(\d+.\d)", soup.select_one(".order_Aprice").text)[0])
         return {
-            "state": soup.select(".re_pay_success")[0].get_text().split(u"：")[1].strip(),
+            "state": soup.select(".pay_success")[0].get_text().split(u"：")[1].strip(),
             "pick_no": no,
             "pick_code": code,
             "pick_site": site,
@@ -246,13 +247,13 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif state=="出票异常":
+        elif state == "出票异常":
             self.close_line(order.line, "出票异常")
             result_info.update({
                 "result_code": 2,
                 "result_msg": state,
             })
-        elif state=="购票成功":
+        elif state == "购票成功":
             no, code, site = ret["pick_no"], ret["pick_code"], ret["pick_site"]
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
@@ -278,7 +279,7 @@ class Flow(BaseFlow):
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
-                pay_url = "http://www.bababus.com/order/bankpay.htm"
+                pay_url = "http://www.wanmeibus.com/order/bankpay.htm"
                 headers = {
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
@@ -290,7 +291,7 @@ class Flow(BaseFlow):
                     "busOrderNo":  order.raw_order_no,
                 }
                 cookies = json.loads(rebot.cookies)
-                r = requests.post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+                r = rebot.http_post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
                 data = self.extract_alipay(r.content)
                 pay_money = float(data["total_fee"])
                 trade_no = data["out_trade_no"]
@@ -312,11 +313,11 @@ class Flow(BaseFlow):
             custom_headers = {}
             custom_headers.update(headers)
             custom_headers.update({"Content-Type": "application/x-www-form-urlencoded"})
-            r = requests.post("http://www.bababus.com/login.htm",
-                              data=urllib.urlencode(params),
-                              headers=custom_headers,
-                              allow_redirects=False,
-                              cookies=cookies)
+            r = rebot.http_post("http://www.wanmeibus.com/login.htm",
+                                data=urllib.urlencode(params),
+                                headers=custom_headers,
+                                allow_redirects=False,
+                                cookies=cookies)
             cookies.update(dict(r.cookies))
             rebot.modify(cookies=json.dumps(cookies))
         is_login = rebot.test_login_status()
@@ -326,10 +327,10 @@ class Flow(BaseFlow):
                 self.lock_ticket(order)
             return _get_page(rebot)
         else:
-            login_form = "http://www.bababus.com/login.htm"
+            login_form = "http://www.wanmeibus.com/login.htm"
             ua = random.choice(BROWSER_USER_AGENT)
             headers = {"User-Agent": ua}
-            r = requests.get(login_form, headers=headers)
+            r = rebot.http_get(login_form, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             valid_url = soup.select("#cc")[0].get("src")
             data = {
@@ -350,7 +351,7 @@ class Flow(BaseFlow):
             result_info.update(result_msg="1小时内的票不卖", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
         params = {
-            "startPlace":line.s_city_name,
+            "startPlace": line.s_city_name,
             "endPlace": line.d_city_name,
             "sbId": line.extra_info["sbId"],
             "stId": line.extra_info["stId"],
@@ -361,7 +362,7 @@ class Flow(BaseFlow):
             "endStationId": line.d_sta_id,
             "endStationName": line.d_sta_name,
         }
-        check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
+        check_url = "http://www.wanmeibus.com/ticket/checkBuyTicket.htm"
         ua = random.choice(BROWSER_USER_AGENT)
         try:
             r = requests.post(check_url, data=urllib.urlencode(params), headers={"User-Agent": ua, "Content-Type": "application/x-www-form-urlencoded"}, timeout=10)
@@ -374,7 +375,7 @@ class Flow(BaseFlow):
                 result_info.update(result_msg=res["msg"], update_attrs={"left_tickets": 0, "refresh_datetime": now})
                 return result_info
 
-        line_url = "http://s4mdata.bababus.com:80/app/v3/ticket/busList.htm"
+        line_url = "http://s4mdata.wanmeibus.com:80/app/v3/ticket/busList.htm"
         params = {
             "content":{
                 "pageSize": 1025,
@@ -384,14 +385,14 @@ class Flow(BaseFlow):
                 "leaveDate": line.drv_date,
             },
             "common": {
-                "pushToken": "864895020513527",
-                "channelVer": "BabaBus",
+                "pushToken": "864103026424157",
+                "channelVer": "ahwmguanwang",
                 "usId": "",
-                "appId": "com.hundsun.InternetSaleTicket",
-                "appVer": "1.0.0",
+                "appId": "com.hundsun.InternetSaleTicket.wanmei",
+                "appVer": "1.0.1",
                 "loginStatus": "0",
-                "imei": "864895020513527",
-                "mobileVer": "4.4.4",
+                "imei": "864103026424157",
+                "mobileVer": "4.4.2",
                 "terminalType": "1"
             },
             "key": ""

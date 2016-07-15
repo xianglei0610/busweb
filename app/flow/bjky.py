@@ -498,9 +498,12 @@ class Flow(BaseFlow):
                 base_url = "http://m.ctrip.com/restapi/busphp/app/index.php"
                 url = "%s?%s" % (base_url, urllib.urlencode(params))
                 ua = random.choice(MOBILE_USER_AGENG)
-                r = requests.get(url, headers={"User-Agent": ua})
-                ret = r.json()
-                now = dte.now()
+                try:
+                    r = requests.get(url, headers={"User-Agent": ua})
+                    ret = r.json()
+                except:
+                    result_info.update(result_msg="except_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                    return result_info
                 if ret:
                     if ret["code"] == 1:
                         info = ret["return"]

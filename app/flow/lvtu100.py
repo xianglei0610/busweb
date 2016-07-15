@@ -9,7 +9,7 @@ from app.constants import *
 from app.flow.base import Flow as BaseFlow
 from app.models import Lvtu100AppRebot, Line
 from datetime import datetime as dte
-from app.utils import md5
+from app.utils import md5, get_redis
 
 class Flow(BaseFlow):
 
@@ -25,8 +25,19 @@ class Flow(BaseFlow):
                 "mobile": r["telephone"],
                 "passengername": r["name"],
             })
+
+        rds = get_redis("default")
+        ipstr = rds.srandmember(RK_PROXY_IP_ZJGSM)
+        if ipstr:
+            ip = ipstr.split(":")[0]
+        else:
+            ip = "127.0.0.1"
+        d = order.extra_info
+        d["ip"] = ip
+        order.modify(extra_info=d)
+
         data = {
-            "ip": "192.168.3.67",
+            "ip": order.extra_info["ip"],
             "memberid": rebot.member_id,
             "source": "android",
             "mobile": order.contact_info["telephone"],
@@ -63,17 +74,24 @@ class Flow(BaseFlow):
         headers = rebot.post_header()
         r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
         res = r.json()
+        errmsg = res["message"]
         if res["code"] == 0:
             expire_time = dte.now()+datetime.timedelta(seconds=20*60)
             lock_result.update({
                 "result_code": 1,
                 "raw_order_no": res["data"]["orderid"],
                 "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
             })
         else:
+            code = 2
+            if u"锁票异常" in errmsg:
+                self.close_line(order.line, reason=errmsg)
+                code = 0
             lock_result.update({
-                "result_code": 2,
+                "result_code": code,
                 "result_reason": res["message"],
+                "source_account": rebot.telephone,
             })
         return lock_result
 
@@ -110,14 +128,26 @@ class Flow(BaseFlow):
         pay_no = str(pay_info["payment_id"])
         if order.pay_order_no != pay_no:
             order.modify(pay_order_no=pay_no, pay_money=pay_money)
-        state = ret["data"]["status"]
-        if state== "出票成功":
-            result_info.update({
-                "result_code": 1,
-                "result_msg": state,
-                "pick_code_list": ret["code_list"],
-                "pick_msg_list": ret["msg_list"],
-            })
+        state = int(ret["data"]["status"])
+        if state== 2:   # 出票成功
+            if order.line.s_province in ["江西", "安徽"]:
+                order_detail = ret["data"]["lstorderdetail"][0]
+                pick_code = ",".join([d["etccert"] for d in order_detail["listordertickets"]])
+                dx_info = {
+                    "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                    "start": order.line.s_sta_name,
+                    "end": order.line.d_sta_name,
+                    "code": pick_code,
+                }
+                dx_tmpl = DUAN_XIN_TEMPL[SOURCE_LVTU100]
+                code_list = [pick_code]
+                msg_list = [dx_tmpl % dx_info]
+                result_info.update({
+                    "result_code": 1,
+                    "result_msg": state,
+                    "pick_code_list": code_list,
+                    "pick_msg_list": msg_list,
+                })
         elif state=="出票中":
             result_info.update({
                 "result_code": 4,
@@ -145,13 +175,12 @@ class Flow(BaseFlow):
             self.lock_ticket(order)
 
         if order.status == STATUS_WAITING_ISSUE:
-            self.refresh_issue(order)
             pay_url= "http://api.lvtu100.com/cash/payment/dopay"
             data = {
                 "member_id": rebot.member_id,
                 "amount": 1,
                 "order_id": order.raw_order_no,
-                "ip": "192.168.3.67",
+                "ip": order.extra_info["ip"],
                 "paytype_code": "malipay",
                 "notify_id": 1,
                 "notify_url": "api.lvtu100.com/order"
@@ -160,6 +189,9 @@ class Flow(BaseFlow):
             headers = rebot.post_header()
             r = rebot.http_post(pay_url, data=urllib.urlencode(data), headers=headers)
             ret = r.json()
+            self.refresh_issue(order)
+            if order.pay_channel != "alipay":
+                order.modify(pay_channel="alipay")
             return {"flag": "html", "content": ret["data"]}
 
     def do_refresh_line(self, line):
@@ -168,6 +200,12 @@ class Flow(BaseFlow):
             "update_attrs": {},
         }
         now = dte.now()
+
+        # 临时修复
+        if "startProvince" not in line.extra_info:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
+
         line_url = "http://api.lvtu100.com/products/getgoods"
         rebot = Lvtu100AppRebot.get_one()
         params = {

@@ -498,6 +498,7 @@ class Flow(BaseFlow):
     def do_refresh_line(self, line):
         rebot = SzkyWebRebot.get_one()
         headers = {"User-Agent": rebot.user_agent}
+        cookies = {}
         for i in range(20):
             try:
                 res = rebot.query_code(headers)
@@ -543,7 +544,8 @@ class Flow(BaseFlow):
                 result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
                 line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
                 return result_info
-
+        else:
+            return self.do_refresh_line_by_app(line)
         update_attrs = {}
         try:
             for d in res["data"]:

@@ -17,6 +17,7 @@ from app.models import ScqcpAppRebot, ScqcpWebRebot
 from datetime import datetime as dte
 from PIL import Image
 from lxml import etree
+from app.utils import md5
 
 
 class Flow(BaseFlow):
@@ -91,8 +92,8 @@ class Flow(BaseFlow):
 
         if not is_login:
             lock_result.update(result_code=2,
-                                source_account=rebot.telephone,
-                                result_reason="账号未登陆")
+                               source_account=rebot.telephone,
+                               result_reason="账号未登陆")
             return lock_result
 
         try:
@@ -101,16 +102,23 @@ class Flow(BaseFlow):
             rebot.modify(ip="")
             rebot.modify(cookies="{}")
             lock_result.update(result_code=2,
-                                source_account=rebot.telephone,
-                                result_reason="获取token失败")
+                               source_account=rebot.telephone,
+                               result_reason="获取token失败")
             return lock_result
         if res.get('status', '') == 0:
             token = res.get('token', '')
         elif res.get('status', '') == 1:
             msg = res.get('msg', '')
+            if u'输入参数不对，请参考接口文档' in msg:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="获取token失败2")
+                return lock_result
             lock_result.update(result_code=0,
-                                source_account=rebot.telephone,
-                                result_reason="获取token失败:"+msg)
+                               source_account=rebot.telephone,
+                               result_reason="获取token失败:"+msg)
             return lock_result
         ret = self.send_lock_request_by_web(rebot, order, token)
         if not ret:
@@ -184,6 +192,7 @@ class Flow(BaseFlow):
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
         except:
+            rebot.modify(ip='')
             r = rebot.http_get(url, headers=new_headers, timeout=70, allow_redirects=False)
             location_url = r.headers.get('location', '')
             res = {}
@@ -313,33 +322,23 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
-        rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
-        tickets = self.send_order_request(order, rebot)
-#         if not tickets:
-#             result_info.update(result_code=2, result_msg="已过期")
-#             return result_info
+        res = self.send_order_request_by_web(order)
         if not order.raw_order_no:
-            web_order_list = []
-            for i in tickets:
-                web_order_list.append(i['web_order_id'])
-            order.modify(raw_order_no=','.join(web_order_list))
-        status = tickets[0]["order_status"]
-        if status in ("sell_succeeded", "succeed"):
+            order.modify(raw_order_no=res['order_no'])
+        status = res["order_status"]
+        if status in ("sell_succeeded", "succeed", 'completed'):
             code_list, msg_list = [], []
-            for ticket in tickets:
-                code = ticket["code"]
-                if code in code_list:
-                    continue
-                code_list.append(code)
-                dx_tmpl = DUAN_XIN_TEMPL[SOURCE_SCQCP]
-                dx_info = {
-                    "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                    "start": order.line.s_sta_name,
-                    "end": order.line.d_sta_name,
-                    "amount": order.ticket_amount,
-                    "code": code,
-                }
-                msg_list.append(dx_tmpl % dx_info)
+            code = res["pick_code"]
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_SCQCP]
+            dx_info = {
+                "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                "start": order.line.s_sta_name,
+                "end": order.line.d_sta_name,
+                "amount": order.ticket_amount,
+                "code": code,
+            }
+            code_list = ["%s" % (code)]
+            msg_list = [dx_tmpl % dx_info]
             result_info.update({
                 "result_code": 1,
                 "result_msg": status,
@@ -389,31 +388,57 @@ class Flow(BaseFlow):
             ret_info[tid]["order_status"] = "sell_succeeded"
         return ret_info
 
-    def send_order_request_by_web(self, order, rebot):
-        data = {"open_id": rebot.open_id}
-        uri = "/api/v1/ticket_lines/query_order"
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
+    def send_order_request_by_web(self, order):
+        rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
+        url = "http://inner.cdqcp.com/ticket"
+        content = {"orderNum": "",
+                   "payOrderId": order.lock_info["pay_order_id"],
+                   "openId": rebot.open_id
+                }
+        api = 'getUserOrderTicketInfo'
+        params = {}
+        params.update(content)
+        md5_key = "sdkjfgweysdgfvgvehbfhsdfgvbwjehfsdf"
+        params.update({"key": md5_key})
+
+        def get_md5_sign(params):
+            ks = params.keys()
+            ks.sort()
+            rlt = ''
+            for k in ks:
+                if params[k] == None or len(params[k]) == 0:
+                    continue
+                rlt = rlt+"&%s=%s" % (k, params[k])
+            return md5(rlt[1:]).upper()
+        sign = get_md5_sign(params)
+        fp = {"head": {
+                 "sign": sign,
+                 "server": api,
+                 "token": "04b8cef68ef4f2d785150eb671999834",
+                 "ip": "192.168.3.153",
+                 "version": "1.5.1",
+                 "signType": "MD5"
+                 },
+              "body": content
+              }
         headers = {
-            "User-Agent": rebot.user_agent,
-            "Authorization": rebot.token,
+            "User-Agent": 'okhttp/3.2.0',
             "Content-Type": "application/json; charset=UTF-8",
         }
-        r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
         try:
+            r = rebot.http_post(url, data=json.dumps(fp), headers=headers)
             ret = r.json()
         except:
             rebot.modify(ip='')
-            r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
+            r = rebot.http_post(url, data=json.dumps(fp), headers=headers)
             ret = r.json()
-        pay_order_id = order.lock_info["pay_order_id"]
-        amount = order.ticket_amount
-        data = []
-        for d in ret["ticket_list"]:
-            if str(d["pay_order_id"]) == pay_order_id:
-                data.append(d)
-            if len(data) >= amount:
-                break
-        return data
+        if ret["head"]['statusCode'] == '0000':
+            return {
+                "order_status": ret["body"].get('state', ''),
+                "pick_no": [],
+                "pick_code": ret["body"].get('code', ''),
+                "order_no": ret["body"].get('webOrderId', ''),
+            }
 
     def do_refresh_line(self, line):
         result_info = {
@@ -424,33 +449,62 @@ class Flow(BaseFlow):
         if (line.drv_datetime-now).total_seconds() <= 150*60:
             result_info.update(result_msg="time in two hours ", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
-        params = dict(
-            carry_sta_id=line.s_sta_id,
-            stop_name=line.d_city_name,
-            drv_date="%s %s" % (line.drv_date, line.drv_time),
-            sign_id=line.extra_info["sign_id"],
-        )
+
+        content = {
+                   "signId": line.extra_info["sign_id"],
+                   "carryStaId": line.s_sta_id,
+                   "stopName": line.d_city_name,
+                   "drvDate": "%s %s" % (line.drv_date, line.drv_time)
+                   }
+        api = 'getTicketInfo'
+        params = {}
+        params.update(content)
+        md5_key = "sdkjfgweysdgfvgvehbfhsdfgvbwjehfsdf"
+        params.update({"key": md5_key})
+
+        def get_md5_sign(params):
+            ks = params.keys()
+            ks.sort()
+            rlt = ''
+            for k in ks:
+                if params[k] == None or len(params[k]) == 0:
+                    continue
+                rlt = rlt+"&%s=%s" % (k, params[k])
+            return md5(rlt[1:]).upper()
+        sign = get_md5_sign(params)
+        url = "http://inner.cdqcp.com/ticket"
+        fp = {"head": {
+                 "sign": sign,
+                 "server": api,
+                 "token": "04b8cef68ef4f2d785150eb671999834",
+                 "ip": "192.168.3.153",
+                 "version":"1.5.1",
+                 "signType":"MD5"
+                 },
+              "body": content
+              }
         rebot = ScqcpAppRebot.get_one()
-        uri = "/scqcp/api/v2/ticket/query_plan_info"
-        url = urllib2.urlparse.urljoin(SCQCP_DOMAIN, uri)
         headers = {
-            "User-Agent": rebot.user_agent,
-            "Authorization": rebot.token,
+            "User-Agent": 'okhttp/3.2.0',
             "Content-Type": "application/json; charset=UTF-8",
         }
         try:
-            r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers,timeout=20)
+            r = rebot.http_post(url, data=json.dumps(fp), headers=headers, timeout=20)
             ret = r.json()
         except:
             result_info.update(result_msg="scqcp timeout default 15", update_attrs={"left_tickets": 15, "refresh_datetime": now})
             return result_info
-
-        if ret["status"] == 1:
-            if ret["plan_info"]:
-                raw = ret["plan_info"][0]
+        if ret["head"]['statusCode'] == '0000':
+            if ret["body"].get('ticketLines', []):
+                raw = ret["body"].get('ticketLines', [])[0]
+                full_price = float(raw["fullPrice"])
+                service_price = float(raw["servicePrice"])
+                if service_price != float(3):
+                    full_price = full_price + service_price - 3
+                    service_price = 3
                 info = {
-                    "full_price": raw["full_price"],
-                    "fee": raw["service_price"],
+                    "full_price": full_price,
+                    "fee": service_price,
                     "left_tickets": raw["amount"],
                     "refresh_datetime": now,
                 }
@@ -536,10 +590,13 @@ class Flow(BaseFlow):
             sel = etree.HTML(r.content)
             try:
                 pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
-                if order.pay_order_no != pay_order_no:
-                    order.update(pay_order_no=pay_order_no, pay_channel='yh')
+                pay_money = sel.xpath("//input[@name='total_fee']/@value")[0].strip()
+                if order.pay_money != pay_money or order.pay_order_no != pay_order_no:
+                    order.modify(pay_money=pay_money, pay_order_no=pay_order_no, pay_channel='yh')
             except:
-                pass
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                return {"flag": "error", "content": "请重试!"}
             return {"flag": "html", "content": r.content}
         return {"flag": "error", "content": "锁票失败, 请重试!"}
         # else:

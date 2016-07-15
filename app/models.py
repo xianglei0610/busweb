@@ -130,8 +130,6 @@ class OpenCity(db.Document):
             obj.add_to_cache()
         return obj
 
-
-
     def check_new_dest(self):
         qs = Line.objects.filter(s_province=self.province, s_city_name__startswith=self.city_name) \
                          .aggregate({
@@ -162,7 +160,7 @@ class OpenCity(db.Document):
             try:
                 sta_obj = OpenStation.objects.get(city=self, sta_name=name)
             except:
-                sta_obj = OpenStation(city=self, sta_name=name, sta_id=sid, extra_info={})
+                sta_obj = OpenStation(city=self, sta_name=name, sta_id=str(sid), extra_info={})
                 sta_obj.save()
                 line_log.info("[init_station] 增加OpenStation %s %s" % (self.city_name, name))
                 sta_obj.init_dest()
@@ -207,6 +205,9 @@ class OpenStation(db.Document):
     close_status = db.IntField(default=STATION_CLOSE_NONE)   # 关闭状态: 定义见constants.py
     extra_info = db.DictField()             # 自定义数据
     create_datetime = db.DateTimeField(default=dte.now)
+    line_count = db.IntField()              # 线路数, 由定时任务间隔时间刷新这个值
+    day_order_count = db.DictField()        # 每天订单数和成功率, {"2016-07-08": {"count": 0, "succ_count":0}}, 由定时任务间隔时间刷新这个值
+
 
     meta = {
         "indexes": [
@@ -236,7 +237,9 @@ class OpenStation(db.Document):
         for d in qs:
             d = d["_id"]
             lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
-        self.modify(dest_info=lst)
+
+        site_list = Line.objects.filter(s_city_name__startswith=self.city.city_name, s_sta_name=self.sta_name).distinct("crawl_source")
+        self.modify(dest_info=lst, source_weight={k: 1000/(len(site_list)) for k in site_list})
         line_log.info("[init_station_dest] %s %s, %s个目的地" % (city.city_name, self.sta_name, len(lst)))
         self.clear_cache()
 
@@ -305,6 +308,7 @@ class Line(db.Document):
             "drv_time",
             "drv_datetime",
             ("s_city_name", "d_city_name", "drv_date", "crawl_source"),
+            # ("s_city_name", "d_city_name", "drv_date", "crawl_source"),
             {
                 'fields': ['crawl_datetime'],
                 'expireAfterSeconds': 3600 * 24 * 20,       # 20天
@@ -375,6 +379,17 @@ class Line(db.Document):
                 self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
+            return self.compatible_lines
+        elif self.s_province == "山东":
+            # 畅途出发城市不带市, 畅途目的城市与365差距大
+            qs = Line.objects.filter(s_city_name__startswith=self.s_city_name.rstrip(u"市"),
+                                     s_sta_name=self.s_sta_name,
+                                     d_sta_name=self.d_sta_name,
+                                     bus_num=self.bus_num,
+                                     drv_datetime=self.drv_datetime)
+            d_line = {obj.crawl_source: obj.line_id for obj in qs}
+            d_line.update({self.crawl_source: self.line_id})
+            self.modify(compatible_lines=d_line)
             return self.compatible_lines
         elif self.s_province == "江苏":
             # 方便网，车巴达，江苏省网, 同程
@@ -516,6 +531,38 @@ class Line(db.Document):
                                       d_sta_name=self.d_sta_name,
                                       d_city_name=self.d_city_name,
                                       drv_datetime=self.drv_datetime)
+                self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
+            except Line.DoesNotExist:
+                self.modify(compatible_lines={self.crawl_source: self.line_id})
+            return self.compatible_lines
+        elif self.s_city_name == "深圳":
+            # 广东省网，深圳客货
+            if self.crawl_source == SOURCE_SZKY:
+                trans = {
+                        u"机场汽车站":u'机场客运站',
+                        u"福田站":u"深圳福田汽车客运站",
+                        u"深圳北汽车站":u'深圳北汽车客运站',
+                        u"南山站":u'南山汽车站',
+                        u"东湖汽车站":u'东湖客运站',
+                        }
+                tar_source = SOURCE_GDSW
+            elif self.crawl_source == SOURCE_GDSW:
+                trans = {
+                        u'机场客运站':u"机场汽车站",
+                        u"深圳福田汽车客运站":u"福田站",
+                        u'深圳北汽车客运站':u"深圳北汽车站",
+                        u'南山汽车站':u"南山站",
+                        u'东湖客运站':u"东湖汽车站",
+                        }
+                tar_source = SOURCE_SZKY
+            try:
+                ob = Line.objects.get(crawl_source=tar_source,
+                                      s_city_name=self.s_city_name,
+                                      s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
+                                      d_sta_name=self.d_sta_name,
+                                      d_city_name=self.d_city_name,
+                                      drv_datetime=self.drv_datetime,
+                                      bus_num=self.bus_num)
                 self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
@@ -967,7 +1014,6 @@ class Rebot(db.Document):
         rebot_log.info("[check_login] %s, result: %s" % (self.log_name, msg_dict[is_login]))
         return is_login
 
-
     def check_login(self):
         return 1
 
@@ -1010,6 +1056,51 @@ class Rebot(db.Document):
                     raise e
                 continue
             return r
+
+
+class WmcxWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField(default='')
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "wmcxweb_rebot",
+    }
+    crawl_source = SOURCE_WMCX
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
+    def check_login_by_resp(self, resp):
+        result = urlparse.urlparse(resp.url)
+        if "login" in result.path:
+            return 0
+        return 1
+
+    def check_login(self):
+        undone_order_url = "http://www.wanmeibus.com/order/list.htm?billStatus=0&currentLeft=11"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        resp = self.http_get(undone_order_url, headers=headers, cookies=cookies)
+        return self.check_login_by_resp(resp)
 
 
 # 代理ip, is_locked
@@ -1681,14 +1772,14 @@ class ScqcpAppRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return ""
-        # rds = get_redis("default")
-        # ipstr = self.ip
-        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-        #     return ipstr
-        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        # self.modify(ip=ipstr)
-        # return ipstr
+#         return ""
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        self.modify(ip=ipstr)
+        return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -1803,14 +1894,14 @@ class ScqcpWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return ""
-        # rds = get_redis("default")
-        # ipstr = self.ip
-        # if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
-        #     return ipstr
-        # ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
-        # self.modify(ip=ipstr)
-        # return ipstr
+#         return ""
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SCQCP)
+        self.modify(ip=ipstr)
+        return ipstr
 
     @classmethod
     def get_one(cls, order=None):
@@ -2221,7 +2312,7 @@ class Lvtu100AppRebot(Rebot):
         url = "http://api.lvtu100.com/uc/member/savepurchase"
         id_lst = []
         exists_lst = {}
-        for c in order.riders:
+        for r in order.riders:
             params = [{
                 "addr_id":"",
                 "member_id": self.member_id,
@@ -2231,12 +2322,12 @@ class Lvtu100AppRebot(Rebot):
             }]
             params = {"data": json.dumps(params)}
             params = self.post_data_templ(params)
-            r = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
-            ret = r.json()
+            resp = self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+            ret = resp.json()
             if "已添加过该身份证号" in ret["message"]:
                 if not exists_lst:
                     exists_lst = self.get_riders()
-                id_lst.append(exists_lst[c["id_number"]])
+                id_lst.append(exists_lst[r["id_number"]])
             else:
                 id_lst.append(ret["data"])
         return id_lst
