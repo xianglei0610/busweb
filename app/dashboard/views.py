@@ -420,6 +420,7 @@ def starting_list():
     params = request.values.to_dict()
     province = params.get("province", "")
     s_city = params.get("s_city", "")
+    s_sta = params.get("s_sta", "")
     now = dte.now()
 
     city_query = {}
@@ -427,8 +428,12 @@ def starting_list():
         city_query.update(province=province)
     if s_city:
         city_query.update(city_name=s_city)
+
+    sta_query = {}
+    if s_sta:
+        sta_query.update(sta_name__startswith=s_sta)
     cqs = OpenCity.objects.filter(**city_query)
-    qs = OpenStation.objects.filter(city__in=cqs)
+    qs = OpenStation.objects.filter(city__in=cqs, **sta_query)
 
     line_count = {}
     # for d in Line.objects.filter(drv_datetime__gt=now).aggregate({"$group":{"_id":{"sta_name":"$s_sta_name", "city_name": "$s_city_name"}, "cnt":{"$sum":1}}}):
