@@ -431,8 +431,8 @@ def starting_list():
     qs = OpenStation.objects.filter(city__in=cqs)
 
     line_count = {}
-    for d in Line.objects.filter(drv_datetime__gt=now).aggregate({"$group":{"_id":{"sta_name":"$s_sta_name", "city_name": "$s_city_name"}, "cnt":{"$sum":1}}}):
-        line_count[d["_id"]["sta_name"]] = d["cnt"]
+    # for d in Line.objects.filter(drv_datetime__gt=now).aggregate({"$group":{"_id":{"sta_name":"$s_sta_name", "city_name": "$s_city_name"}, "cnt":{"$sum":1}}}):
+    #     line_count[d["_id"]["sta_name"]] = d["cnt"]
 
     return render_template('dashboard/startings.html',
                            page=parse_page_data(qs),
@@ -498,6 +498,7 @@ def starting_config():
         data = obj.source_weight
         data[site] = int(params["value"])
         obj.modify(source_weight=data)
+        obj.clear_cache()
         return jsonify({"code": 1, "msg": "修改权重成功" })
     return jsonify({"code": 0, "msg": "执行失败"})
 
