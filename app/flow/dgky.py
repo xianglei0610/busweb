@@ -340,7 +340,11 @@ class Flow(BaseFlow):
                 station_name = td[0].replace('\r\n', '').replace('\t', '').replace(' ',  '')
                 if station_name == line.d_sta_name:
                     station_url = "http://www.mp0769.com/cbprjdisp8.asp?"+href
-                    form, sel = self.is_end_station(urllib2, headers, station_url)
+                    try:
+                        form, sel = self.is_end_station(urllib2, headers, station_url)
+                    except:
+                        result_info.update(result_msg="timeout default 5", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                        return result_info
         update_attrs = {}
         if form:
             sch = sel.xpath('//table[@width="600"]/tr')

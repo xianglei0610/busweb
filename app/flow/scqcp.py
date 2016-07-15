@@ -92,8 +92,8 @@ class Flow(BaseFlow):
 
         if not is_login:
             lock_result.update(result_code=2,
-                                source_account=rebot.telephone,
-                                result_reason="账号未登陆")
+                               source_account=rebot.telephone,
+                               result_reason="账号未登陆")
             return lock_result
 
         try:
@@ -102,16 +102,23 @@ class Flow(BaseFlow):
             rebot.modify(ip="")
             rebot.modify(cookies="{}")
             lock_result.update(result_code=2,
-                                source_account=rebot.telephone,
-                                result_reason="获取token失败")
+                               source_account=rebot.telephone,
+                               result_reason="获取token失败")
             return lock_result
         if res.get('status', '') == 0:
             token = res.get('token', '')
         elif res.get('status', '') == 1:
             msg = res.get('msg', '')
+            if u'输入参数不对，请参考接口文档' in msg:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="获取token失败2")
+                return lock_result
             lock_result.update(result_code=0,
-                                source_account=rebot.telephone,
-                                result_reason="获取token失败:"+msg)
+                               source_account=rebot.telephone,
+                               result_reason="获取token失败:"+msg)
             return lock_result
         ret = self.send_lock_request_by_web(rebot, order, token)
         if not ret:
@@ -185,6 +192,7 @@ class Flow(BaseFlow):
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
         except:
+            rebot.modify(ip='')
             r = rebot.http_get(url, headers=new_headers, timeout=70, allow_redirects=False)
             location_url = r.headers.get('location', '')
             res = {}
