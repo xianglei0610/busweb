@@ -94,8 +94,8 @@ class Flow(BaseFlow):
             }
             nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
             r = requests.get(nurl, headers=headers)
-            # rebot_log.info(nurl)
-            if len(r.content) == 0:
+            urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
+            if len(r.content) == 0 or '该班次价格不存在' in urlstr:
                 fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
@@ -117,8 +117,8 @@ class Flow(BaseFlow):
                 "lock_info": {"fail_reason": fail_reason}
             })
             return lock_result
-        elif '不售票' in location:
-            errlst = re.findall(r'message=(\S+)&url', s)
+        elif '不售票' in location or '票务错误：-020' in location:
+            errlst = re.findall(r'message=(\S+)&url', location)
             errmsg = unicode(errlst and errlst[0] or "")
             lock_result.update({
                 'result_code': 0,
@@ -215,7 +215,8 @@ class Flow(BaseFlow):
         }
         nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         r = requests.get(nurl, headers=headers)
-        if len(r.content) == 0:
+        urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
+        if len(r.content) == 0 or '该班次价格不存在' in urlstr:
             result_info = {
                 'result_msg' :"no line info",
                 'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
