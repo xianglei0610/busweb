@@ -74,7 +74,7 @@ class Flow(BaseFlow):
 
         pa = pre + tmp + '&bankname=ZHIFUBAO'
         pa = ''.join(pa.split())
-        rebot_log.info(pa)
+        # rebot_log.info(pa)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
@@ -94,8 +94,8 @@ class Flow(BaseFlow):
             }
             nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
             r = requests.get(nurl, headers=headers)
-            rebot_log.info(nurl)
-            if not r.content:
+            urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
+            if len(r.content) == 0 or '该班次价格不存在' in urlstr:
                 fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
@@ -117,8 +117,8 @@ class Flow(BaseFlow):
                 "lock_info": {"fail_reason": fail_reason}
             })
             return lock_result
-        elif '不售票' in location:
-            errlst = re.findall(r'message=(\S+)&url', s)
+        elif '不售票' in location or '票务错误：-020' in location:
+            errlst = re.findall(r'message=(\S+)&url', location)
             errmsg = unicode(errlst and errlst[0] or "")
             lock_result.update({
                 'result_code': 0,
@@ -215,12 +215,14 @@ class Flow(BaseFlow):
         }
         nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         r = requests.get(nurl, headers=headers)
-        if not r.content:
+        urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
+        if len(r.content) == 0 or '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
             result_info = {
                 'result_msg' :"no line info",
                 'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
             }
             return result_info
+        rebot_log.info(nurl)
         for x in xrange(1):
             url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)
             r = requests.get(url, headers=headers)
@@ -247,10 +249,10 @@ class Flow(BaseFlow):
                 'to': line.d_city_name,
             }
             lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
-            rebot_log.info(lasturl)
+            # rebot_log.info(lasturl)
             r = requests.get(lasturl, headers=headers)
             soup = r.json()
-            tpk = now + datetime.timedelta(hours=-2)
+            tpk = now + datetime.timedelta(hours=2)
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
                                      d_city_name=line.d_city_name, drv_date=line.drv_date)
@@ -279,7 +281,7 @@ class Flow(BaseFlow):
                     # rebot_log.info(left_tickets)
                     if line_id in t:
                         t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price})
-                    if line_id == line.line_id and int(left_tickets) and tpk > line.drv_datetime:
+                    if line_id == line.line_id and int(left_tickets) and tpk < line.drv_datetime:
                         update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price}
                 except:
                     pass
