@@ -303,6 +303,7 @@ class Flow(BaseFlow):
             'tbody', attrs={'class': 'rebody'})
         crawl_source = "hn96520"
         now = dte.now()
+        tpk = now + datetime.timedelta(hours=1)
         update_attrs = {}
         ft = Line.objects.filter(s_city_name=line.s_city_name,
                                  d_city_name=line.d_city_name, drv_date=line.drv_date)
@@ -332,7 +333,7 @@ class Flow(BaseFlow):
                     "%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
                     t[line_id].update(**{"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now})
-                if line_id == line.line_id and 'images/bt_yd1.png' != sts:
+                if line_id == line.line_id and ('images/bt_yd1.png' != sts) and tpk < line.drv_datetime:
                     update_attrs = {"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now}
             except Exception as e:
                 print(e)
