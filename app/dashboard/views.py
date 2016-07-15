@@ -431,7 +431,7 @@ def starting_list():
 
     sta_query = {}
     if s_sta:
-        sta_query.update(sta_name__startswith=s_sta)
+        sta_query.update(sta_name__contains=s_sta)
     cqs = OpenCity.objects.filter(**city_query)
     qs = OpenStation.objects.filter(city__in=cqs, **sta_query)
 
