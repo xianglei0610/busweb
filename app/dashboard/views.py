@@ -486,7 +486,19 @@ def starting_config():
         obj.modify(crawl_source=params["value"])
         obj.clear_cache()
         return jsonify({"code": 1, "msg": "修改售票时间成功" })
-
+    elif action == "weight":
+        pk, site = params["pk"].split("_")
+        obj= OpenStation.objects.get(id=pk)
+        if not site:
+            if obj.source_weight:
+                return jsonify({"code": 0, "msg": "已经初始化过了,请刷新页面" })
+            site_list = Line.objects.filter(s_city_name__startswith=obj.city.city_name, s_sta_name=obj.sta_name).distinct("crawl_source")
+            obj.modify(source_weight={k: 1000/(len(site_list)) for k in site_list})
+            return jsonify({"code": 1, "msg": "初始化源站权重成功" })
+        data = obj.source_weight
+        data[site] = int(params["value"])
+        obj.modify(source_weight=data)
+        return jsonify({"code": 1, "msg": "修改权重成功" })
     return jsonify({"code": 0, "msg": "执行失败"})
 
 @dashboard.route('/startings/<station_id>/source', methods=["GET"])
