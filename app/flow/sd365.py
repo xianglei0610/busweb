@@ -216,7 +216,7 @@ class Flow(BaseFlow):
         nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         r = requests.get(nurl, headers=headers)
         urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-        if len(r.content) == 0 or '该班次价格不存在' in urlstr:
+        if len(r.content) == 0 or '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
             result_info = {
                 'result_msg' :"no line info",
                 'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
@@ -252,7 +252,7 @@ class Flow(BaseFlow):
             # rebot_log.info(lasturl)
             r = requests.get(lasturl, headers=headers)
             soup = r.json()
-            tpk = now + datetime.timedelta(hours=-2)
+            tpk = now + datetime.timedelta(hours=2)
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
                                      d_city_name=line.d_city_name, drv_date=line.drv_date)
