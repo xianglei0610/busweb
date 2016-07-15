@@ -154,23 +154,17 @@ def query_line():
     except Exception, e:
         return jsonify({"code": RET_CITY_NOT_OPEN, "message": "%s is not open" % starting_name, "data": ""})
 
-    crawl_source = open_city.crawl_source
-    qs_line = Line.objects.filter(s_city_name__startswith=starting_name,
-                                  d_city_name__startswith=dest_name,
-                                  drv_date=start_date,
-                                  crawl_source=crawl_source)
-
     data = []
-    staname_to_objs = {}
-    for line in qs_line:
-        if line.s_sta_name not in staname_to_objs:
-            staname_to_objs[line.s_sta_name] = open_city.get_open_station(line.s_sta_name)
-        sta_obj = staname_to_objs[line.s_sta_name]
-        if not sta_obj:
-            continue
-        if sta_obj.close_status & STATION_CLOSE_BCCX:
-            continue
-        data.append(line.get_json())
+    for sta in OpenStation.objects.filter(city=open_city):
+        qs_line = Line.objects.filter(s_city_name__startswith=starting_name,
+                                      s_sta_name=sta.sta_name,
+                                      d_city_name__startswith=dest_name,
+                                      drv_date=start_date,
+                                      crawl_source=sta.crawl_source)
+        for line in qs_line:
+            if sta.close_status & STATION_CLOSE_BCCX:
+                continue
+            data.append(line.get_json())
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 

@@ -130,8 +130,6 @@ class OpenCity(db.Document):
             obj.add_to_cache()
         return obj
 
-
-
     def check_new_dest(self):
         qs = Line.objects.filter(s_province=self.province, s_city_name__startswith=self.city_name) \
                          .aggregate({
@@ -239,7 +237,9 @@ class OpenStation(db.Document):
         for d in qs:
             d = d["_id"]
             lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
-        self.modify(dest_info=lst)
+
+        site_list = Line.objects.filter(s_city_name__startswith=self.city.city_name, s_sta_name=self.sta_name).distinct("crawl_source")
+        self.modify(dest_info=lst, source_weight={k: 1000/(len(site_list)) for k in site_list})
         line_log.info("[init_station_dest] %s %s, %s个目的地" % (city.city_name, self.sta_name, len(lst)))
         self.clear_cache()
 
@@ -308,6 +308,7 @@ class Line(db.Document):
             "drv_time",
             "drv_datetime",
             ("s_city_name", "d_city_name", "drv_date", "crawl_source"),
+            # ("s_city_name", "d_city_name", "drv_date", "crawl_source"),
             {
                 'fields': ['crawl_datetime'],
                 'expireAfterSeconds': 3600 * 24 * 20,       # 20天

@@ -32,7 +32,8 @@ def get_compatible_flow(line):
     weights = dict.fromkeys(line.compatible_lines.keys(), 1000/len(line.compatible_lines))
     open_city = line.get_open_city()
     if open_city:
-        weight_config = open_city.source_weight
+        open_station = open_city.get_open_station(sta_name=line.s_sta_name)
+        weight_config = open_station.source_weight
         for src, w in weight_config.items():
             if src in weights:
                 weights[src] = w
