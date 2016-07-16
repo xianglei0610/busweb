@@ -29,15 +29,15 @@ def get_flow(site):
 def get_compatible_flow(line):
     from app.models import Line
     line.check_compatible_lines()
+    weights = dict.fromkeys(line.compatible_lines.keys(), 0)
 
-    weights = {}
     open_city = line.get_open_city()
     if open_city:
         open_station = open_city.get_open_station(sta_name=line.s_sta_name)
         if not open_station.source_weight:
             site_list = Line.objects.filter(s_city_name__startswith=open_station.city.city_name, s_sta_name=open_station.sta_name).distinct("crawl_source")
             open_station.modify(source_weight={k: 1000/(len(site_list)) for k in site_list})
-        weights = open_station.source_weight
+        weights.update(open_station.source_weight)
 
     choose = weight_choice(weights)
     if not choose:
