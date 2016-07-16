@@ -27,27 +27,20 @@ def get_flow(site):
 
 
 def get_compatible_flow(line):
+    from app.models import Line
     line.check_compatible_lines()
 
-    weights = dict.fromkeys(line.compatible_lines.keys(), 1000/len(line.compatible_lines))
+    weights = {}
     open_city = line.get_open_city()
     if open_city:
         open_station = open_city.get_open_station(sta_name=line.s_sta_name)
-        weight_config = open_station.source_weight
-        for src, w in weight_config.items():
-            if src in weights:
-                weights[src] = w
+        if not open_station.source_weight:
+            site_list = Line.objects.filter(s_city_name__startswith=open_station.city.city_name, s_sta_name=open_station.sta_name).distinct("crawl_source")
+            open_station.modify(source_weight={k: 1000/(len(site_list)) for k in site_list})
+        weights = open_station.source_weight
 
-    from app.models import Line
-    # 同程不卖当天票， 转交给江苏客运
-    if line.crawl_source== "tongcheng" and line.drv_date == dte.now().strftime("%Y-%m-%d"):
-        jsky_lineid = line.compatible_lines.get("jsky", "")
-        if False:
-            return get_flow("jsky"), Line.objects.get(line_id=jsky_lineid)
     choose = weight_choice(weights)
     if not choose:
         return None, None
     new_line = Line.objects.get(line_id=line.compatible_lines[choose])
-#     if new_line.crawl_source =='bjky' and new_line.s_sta_name == u'四惠':
-#         return None, None
     return get_flow(choose), new_line
