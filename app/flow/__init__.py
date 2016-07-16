@@ -38,6 +38,8 @@ def get_compatible_flow(line):
             site_list = Line.objects.filter(s_city_name__startswith=open_station.city.city_name, s_sta_name=open_station.sta_name).distinct("crawl_source")
             open_station.modify(source_weight={k: 1000/(len(site_list)) for k in site_list})
         for k, v in open_station.source_weight.items():
+            if k not in weights:
+                continue
             weights[k] = v
 
     choose = weight_choice(weights)
