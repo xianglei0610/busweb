@@ -163,8 +163,13 @@ class Flow(BaseFlow):
                     order.contact_info['name'] = name
                     order.save()
                     order.reload()
-                if phone_num[0:3] in ['177', '147', '178', '176', '170']:
-                    order.contact_info['telephone'] = rebot.telephone
+                not_support_list = ['177', '147', '178', '176', '170']
+                if phone_num[0:3] in not_support_list:
+                    if rebot.telephone[0:3] not in not_support_list:
+                        telephone = rebot.telephone
+                    else:
+                        telephone = random.choice(["13267109876", "13560750217","18656022990", "15914162537", "13510175093"])
+                    order.contact_info['telephone'] = telephone
                     order.save()
                     order.reload()
                 lock_result.update({
