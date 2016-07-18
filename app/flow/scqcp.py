@@ -10,6 +10,7 @@ import random
 import urlparse
 import datetime
 import time
+import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -146,6 +147,42 @@ class Flow(BaseFlow):
             })
         else:
             errmsg = ret['msg']
+            if u"参数错误" in errmsg:
+                contact_name = order.contact_info['name'].strip()
+                phone_num = order.contact_info['telephone']
+                msg = ''
+                if contact_name.isdigit():
+                    name_list = []
+                    url_list = [
+                            "http://zhao.resgain.net/name_list.html",
+                            "http://shen.resgain.net/name_list.html",
+                            ]
+                    for url in url_list:
+                        r = requests.get(url, headers={"User-Agent": "Chrome3.8"})
+                        name_list.extend(re.findall(r"/name/(\S+).html", r.content))
+                    name = random.choice(name_list)
+                    msg = '更改联系人姓名: %s=>%s' % (contact_name, name)
+                    order.contact_info['name'] = name
+                    order.save()
+                    order.reload()
+                not_support_list = ['177', '147', '178', '176', '170']
+                if phone_num[0:3] in not_support_list:
+                    if rebot.telephone[0:3] not in not_support_list:
+                        telephone = rebot.telephone
+                    else:
+                        telephone = random.choice(["13267109876", "13560750217","18656022990", "15914162537", "13510175093"])
+                    msg = '更改联系人手机号: %s=>%s' % (phone_num, telephone)
+                    order.contact_info['telephone'] = telephone
+                    order.save()
+                    order.reload()
+                if msg:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": ret.get("msg", '') + msg,
+                    })
+                return lock_result
+                  
 #             flag = False
 #             for i in [u"参数错误"]:
 #                 if i in errmsg:
@@ -220,7 +257,7 @@ class Flow(BaseFlow):
     def send_lock_request_by_web(self, rebot, order, token):
         data = {
           "sdfgfgfg": "on",
-          "contact_name": order.contact_info['name'],
+          "contact_name": order.contact_info['name'].strip(),
           "phone_num": order.contact_info['telephone'],
           "contact_card_num": "",
           "sign_id": order.line.extra_info['sign_id'],
@@ -577,14 +614,19 @@ class Flow(BaseFlow):
                 return {"flag": "error", "content": ''}
             sel = etree.HTML(r.content)
             plateform = pay_channel
-            data = dict(
-                payid=sel.xpath("//input[@name='payid']/@value")[0],
-                bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
-                plate=sel.xpath("//input[@id='s_plate']/@value")[0],
-                plateform=plateform,
-                qr_pay_mode=0,
-                discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
-            )
+            try:
+                data = dict(
+                    payid=sel.xpath("//input[@name='payid']/@value")[0],
+                    bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
+                    plate=sel.xpath("//input[@id='s_plate']/@value")[0],
+                    plateform=plateform,
+                    qr_pay_mode=0,
+                    discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
+                )
+            except:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                return {"flag": "error", "content": "请重试!"}    
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             r = rebot.http_post(info_url, data=data, headers=headers, cookies=json.loads(rebot.cookies),timeout=60)
             sel = etree.HTML(r.content)

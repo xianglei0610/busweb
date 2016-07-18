@@ -303,7 +303,7 @@ class Flow(BaseFlow):
             'tbody', attrs={'class': 'rebody'})
         crawl_source = "hn96520"
         now = dte.now()
-        tpk = now + datetime.timedelta(hours=1)
+        tpk = now + datetime.timedelta(hours=1.2)
         update_attrs = {}
         ft = Line.objects.filter(s_city_name=line.s_city_name,
                                  d_city_name=line.d_city_name, drv_date=line.drv_date)

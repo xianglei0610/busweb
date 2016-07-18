@@ -206,8 +206,14 @@ class Flow(BaseFlow):
             u'拱北票务中心': 'GBPW01-102024',
             u'西埔站': 'XPZ001-102029',
         }
-        for x in xrange(5):
-            code, cookies = vcode_zhw()
+        result_info = {}
+        now = dte.now()
+        for x in xrange(3):
+            v = vcode_zhw()
+            if not v:
+                continue
+            code = v[0]
+            cookies = v[1]
             data = {
                 'SchDate': line['drv_date'],
                 'SchTime': '',
@@ -221,7 +227,6 @@ class Flow(BaseFlow):
             if '验证码' in info.get_text():
                 continue
             items = info.find_all('tr', attrs={'id': True})
-            now = dte.now()
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
                                      d_city_name=line.d_city_name, drv_date=line.drv_date)
@@ -255,12 +260,14 @@ class Flow(BaseFlow):
                 except:
                     pass
 
-            result_info = {}
             if not update_attrs:
                 result_info.update(result_msg="no line info", update_attrs={
                                    "left_tickets": 0, "refresh_datetime": now})
             else:
                 result_info.update(result_msg="ok", update_attrs=update_attrs)
+            return result_info
+        else:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):

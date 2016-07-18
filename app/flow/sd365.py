@@ -55,20 +55,16 @@ class Flow(BaseFlow):
         pre = 'member_name=%s&tktphone=%s&\
         ticketpass=%s&paytype=3&shopid=%s&\
         port=%s&line=%s&tdate=%s+%s&offer=0&\
-        offer2=0&tkttype=0&\
-        savefriend[]=1&tktname[]=%s&papertype[]=0&paperno[]=%s&\
-        offertype[]=1&price[]=%s\
-            &insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0' %(uname, tel, tpass, \
-            shopid, port, lline, line['drv_date'], line['drv_time'], \
-            uname, uid, line['full_price'])
+        offer2=0&tkttype=0&' %(uname, tel, tpass, \
+            shopid, port, lline, line['drv_date'], line['drv_time'])
         rider = list(order.riders)
-        for x in rider:
-            if uid == x['id_number']:
-                rider.remove(x)
+        #for x in rider:
+        #     if uid == x['id_number']:
+        #         rider.remove(x)
         tmp = ''
-        if pk > 1:
+        if 1:
             for i, x in enumerate(rider):
-                i += 2
+                i += 1
                 tmp += 'savefriend[]=%s&tktname[]=%s&papertype[]=0&paperno[]=%s&offertype[]=&price[]=%s&\
                 insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0&' %(i, x['name'].encode('utf-8'), x['id_number'], line['full_price'])
 
@@ -79,7 +75,7 @@ class Flow(BaseFlow):
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
         location = urllib.unquote(r.headers.get('location', ''))
-        rebot_log.info(location)
+        # rebot_log.info(location)
         try:
             sn = location.split(',')[3]
         except:
@@ -96,6 +92,7 @@ class Flow(BaseFlow):
             r = requests.get(nurl, headers=headers)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
             if len(r.content) == 0 or '该班次价格不存在' in urlstr:
+                self.close_line(line)
                 fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
@@ -118,6 +115,7 @@ class Flow(BaseFlow):
             })
             return lock_result
         elif '不售票' in location or '票务错误' in location or '超出人数限制' in location or '票源不足' in location:
+            self.close_line(line)
             errlst = re.findall(r'message=(\S+)&url', location)
             errmsg = unicode(errlst and errlst[0] or "")
             lock_result.update({
@@ -250,48 +248,57 @@ class Flow(BaseFlow):
             }
             lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
             # rebot_log.info(lasturl)
-            r = requests.get(lasturl, headers=headers)
-            soup = r.json()
-            tpk = now + datetime.timedelta(hours=2)
-            update_attrs = {}
-            ft = Line.objects.filter(s_city_name=line.s_city_name,
-                                     d_city_name=line.d_city_name, drv_date=line.drv_date)
-            t = {x.line_id: x for x in ft}
-            # rebot_log.info(t)
-            # rebot_log.info(len(t))
-            update_attrs = {}
-            for x in soup:
+            for y in xrange(1):
+                r = requests.get(lasturl)
                 try:
-                    drv_date = x['bpnDate']
-                    drv_time = x['bpnSendTime']
-                    left_tickets = x['bpnLeftNum']
-                    full_price = x['prcPrice']
-                    bus_num = x['bliID']
-                    drv_datetime = dte.strptime("%s %s" % (
-                        drv_date, drv_time), "%Y-%m-%d %H:%M")
-                    line_id_args = {
-                        "s_city_name": line.s_city_name,
-                        "d_city_name": line.d_city_name,
-                        "crawl_source": line.crawl_source,
-                        "drv_datetime": drv_datetime,
-                        'bus_num': bus_num,
-                    }
-                    line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
-                    # rebot_log.info(line_id)
-                    # rebot_log.info(left_tickets)
-                    if line_id in t:
-                        t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price})
-                    if line_id == line.line_id and int(left_tickets) and tpk < line.drv_datetime:
-                        update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price}
+                    soup = r.json()
                 except:
-                    pass
+                    result_info = {}
+                    result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                    return result_info
+                tpk = now + datetime.timedelta(hours=2.2)
+                update_attrs = {}
+                ft = Line.objects.filter(s_city_name=line.s_city_name,
+                                         d_city_name=line.d_city_name, drv_date=line.drv_date)
+                t = {x.line_id: x for x in ft}
+                # rebot_log.info(t)
+                # rebot_log.info(len(t))
+                update_attrs = {}
+                for x in soup:
+                    try:
+                        drv_date = x['bpnDate']
+                        drv_time = x['bpnSendTime']
+                        left_tickets = x['bpnLeftNum']
+                        full_price = x['prcPrice']
+                        bus_num = x['bliID']
+                        drv_datetime = dte.strptime("%s %s" % (
+                            drv_date, drv_time), "%Y-%m-%d %H:%M")
+                        line_id_args = {
+                            "s_city_name": line.s_city_name,
+                            "d_city_name": line.d_city_name,
+                            "crawl_source": line.crawl_source,
+                            "drv_datetime": drv_datetime,
+                            'bus_num': bus_num,
+                        }
+                        line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                        # rebot_log.info(line_id)
+                        # rebot_log.info(left_tickets)
+                        if line_id in t:
+                            t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price})
+                        if line_id == line.line_id and int(left_tickets) and tpk < line.drv_datetime:
+                            update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price}
+                    except:
+                        pass
 
-            result_info = {}
-            if not update_attrs:
-                result_info.update(result_msg="no line info", update_attrs={
-                                   "left_tickets": 0, "refresh_datetime": now})
-            else:
-                result_info.update(result_msg="ok", update_attrs=update_attrs)
+                result_info = {}
+                if not update_attrs:
+                    result_info.update(result_msg="no line info", update_attrs={
+                                       "left_tickets": 0, "refresh_datetime": now})
+                else:
+                    result_info.update(result_msg="ok", update_attrs=update_attrs)
+                return result_info
+        else:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
