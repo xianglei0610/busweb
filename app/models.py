@@ -2291,9 +2291,9 @@ class Lvtu100AppRebot(Rebot):
                 "addr_id": idx,
                 "member_id": self.member_id,
             }]
-        params = {"data": json.dumps(params)}
-        params = self.post_data_templ(params)
-        self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+            params = {"data": json.dumps(params)}
+            params = self.post_data_templ(params)
+            self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
 
     def get_riders(self):
         url = "http://api.lvtu100.com/uc/member/getpurchase"
