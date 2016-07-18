@@ -1558,6 +1558,7 @@ class WxszRebot(Rebot):
 class GdswRebot(Rebot):
     user_agent = db.StringField()
     token = db.StringField()
+    mobile = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -1623,6 +1624,7 @@ class GdswRebot(Rebot):
             return 0
         if self.telephone not in [res["data"]["name"],res["data"]["mobile"]]:
             return 0
+        self.modify(mobile=res["data"]["mobile"])
         return 1
 
     def clear_riders(self):

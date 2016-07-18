@@ -34,7 +34,7 @@ class Flow(BaseFlow):
             "endcity": line.extra_info["endcity"],
             "endnode": line.extra_info["endnodename"],
             "fromcity": line.s_city_name,
-            "mobile": rebot.telephone,
+            "mobile": rebot.mobile,
             "nonce": rd,
             "orderno": "",
             "paytype": "alipay",
