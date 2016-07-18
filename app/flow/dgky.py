@@ -41,6 +41,16 @@ class Flow(BaseFlow):
                "Referer": "http://www.mp0769.com/",
                "Host": "www.mp0769.com",
                }
+        contact_name = order.contact_info["name"]
+        if contact_name.isdigit():
+            msg = u"姓名是数字，切换到省网下单"
+            order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
+            lock_result.update({
+                "result_code": 2,
+                "source_account": '',
+                "result_reason":  msg
+            })
+            return lock_result
         cj = cookielib.LWPCookieJar()
         cookie_support = urllib2.HTTPCookieProcessor(cj)
         opener = urllib2.build_opener(cookie_support, urllib2.HTTPHandler)
