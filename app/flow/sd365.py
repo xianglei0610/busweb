@@ -294,6 +294,9 @@ class Flow(BaseFlow):
                 else:
                     result_info.update(result_msg="ok", update_attrs=update_attrs)
                 return result_info
+        else:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
 
