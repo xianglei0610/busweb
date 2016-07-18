@@ -89,18 +89,18 @@ class Flow(BaseFlow):
 
         pa = pre + tmp + suf
         pa = ''.join(pa.split())
-        rebot_log.info(pa)
+        # rebot_log.info(pa)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         r = requests.post(url, headers=headers, cookies=cookies, data=pa)
         soup = bs(r.content, 'lxml')
-        rebot_log.info(soup)
+        # rebot_log.info(soup)
         try:
             sn = soup.find('input', attrs={'id': 'dealOrder'}).get('value', '')
         except:
             sn = ''
-        rebot_log.info(cookies)
-        rebot_log.info(soup.title)
-        rebot_log.info(sn)
+        # rebot_log.info(cookies)
+        # rebot_log.info(soup.title)
+        # rebot_log.info(sn)
         if '确认支付' in soup.title and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             # cookies = {}
@@ -263,7 +263,7 @@ class Flow(BaseFlow):
         is_login = rebot.test_login_status()
 
         # 登录验证码
-        rebot_log.info(is_login)
+        # rebot_log.info(is_login)
         if not is_login:
             for x in xrange(3):
                 v = vcode_glcx()
@@ -296,7 +296,7 @@ class Flow(BaseFlow):
                         'user': rebot.telephone,
                         'pass': rebot.password,
                     }
-                    rebot_log.info(re.findall(r'\d+', info)[0])
+                    # rebot_log.info(re.findall(r'\d+', info)[0])
                     rebot.modify(cookies=json.dumps(ncookies))
                     break
 
