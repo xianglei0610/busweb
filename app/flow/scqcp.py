@@ -10,6 +10,7 @@ import random
 import urlparse
 import datetime
 import time
+import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -146,6 +147,33 @@ class Flow(BaseFlow):
             })
         else:
             errmsg = ret['msg']
+            if u"参数错误" in errmsg:
+                contact_name = order.contact_info['name'].strip()
+                phone_num = order.contact_info['telephone']
+                if contact_name.isdigit():
+                    name_list = []
+                    url_list = [
+                            "http://zhao.resgain.net/name_list.html",
+                            "http://shen.resgain.net/name_list.html",
+                            ]
+                    for url in url_list:
+                        r = requests.get(url, headers={"User-Agent": "Chrome3.8"})
+                        name_list.extend(re.findall(r"/name/(\S+).html", r.content))
+                    name = random.choice(name_list)
+                    order.contact_info['name'] = name
+                    order.save()
+                    order.reload()
+                if phone_num[0:3] in ['177', '147', '178', '176', '170']:
+                    order.contact_info['telephone'] = rebot.telephone
+                    order.save()
+                    order.reload()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": ret.get("msg", '') or ret,
+                })
+                return lock_result
+                  
 #             flag = False
 #             for i in [u"参数错误"]:
 #                 if i in errmsg:
