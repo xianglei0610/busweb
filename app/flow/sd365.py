@@ -92,6 +92,7 @@ class Flow(BaseFlow):
             r = requests.get(nurl, headers=headers)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
             if len(r.content) == 0 or '该班次价格不存在' in urlstr:
+                self.close_line(line)
                 fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
@@ -114,6 +115,7 @@ class Flow(BaseFlow):
             })
             return lock_result
         elif '不售票' in location or '票务错误' in location or '超出人数限制' in location or '票源不足' in location:
+            self.close_line(line)
             errlst = re.findall(r'message=(\S+)&url', location)
             errmsg = unicode(errlst and errlst[0] or "")
             lock_result.update({
@@ -251,7 +253,7 @@ class Flow(BaseFlow):
                 if len(r.content) == 0:
                     continue
                 soup = r.json()
-                tpk = now + datetime.timedelta(hours=2)
+                tpk = now + datetime.timedelta(hours=2.2)
                 update_attrs = {}
                 ft = Line.objects.filter(s_city_name=line.s_city_name,
                                          d_city_name=line.d_city_name, drv_date=line.drv_date)
