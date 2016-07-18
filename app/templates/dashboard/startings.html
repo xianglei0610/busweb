@@ -54,6 +54,10 @@
                             <label for="sourceSite" class="sr-only">出发城市</label>
                             <input type="text" class="form-control" id="" placeholder="出发城市" name="s_city" value="{{condition.s_city}}">
                         </div>
+                        <div class="form-group col-md-2">
+                            <label for="sourceSite" class="sr-only">出发站名</label>
+                            <input type="text" class="form-control" id="" placeholder="出发站名" name="s_sta" value="{{condition.s_sta}}">
+                        </div>
                         <div class="col-md-offset-1 col-md-1">
                             <button type="submit" class="btn btn-primary">查&nbsp;&nbsp;询</button>
                         </div>
@@ -80,7 +84,7 @@
                     <th>查班次</th>
                     <th>目的地</th>
                     <th>线路数量</th>
-                    <th>今日出票数/率</th>
+                    <th>今日订单数/成功率</th>
                 </tr>
             </thead>
 
@@ -97,15 +101,22 @@
                         {{item.sta_name}}
                     </td>
                     <td>
-                        待开发
+                        <a href="#" data-value="{{item.open_time}}" id="source" class="sel-source-{{item.id}}" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="数据源">{{item.crawl_source and source_info[item.crawl_source]["name"]}}</a>
+                        <script>$('.sel-source-{{item.id}}').editable({source: "/startings/{{item.id}}/source"});</script>
                     </td>
                     <td>
-                        待开发
+                        {% if item.source_weight%}
+                            {% for k, v in item.source_weight.items()%}
+                            {{source_info[k]["name"]}}: <a href="#" data-value="{{v}}" id="weight" class="sel-weight" data-type="select" data-pk="{{item.id}}_{{k}}" data-url="/startings/set" data-title="权重">{{v}}</a> <br/>
+                            {% endfor %}
+                        {% else %}
+                            <a href="#" data-value="default" id="weight" class="sel-weight" data-type="select" data-pk="{{item.id}}_" data-url="/startings/set" data-title="权重">默认</a>
+                        {% endif %}
                     </td>
                     <td>
-                        <a href="#" data-value="{{item.open_time}}" id="opentime" class="sel-opentime user-config-edit" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="起始时间">{{item.open_time}}</a>
+                        <a href="#" data-value="{{item.open_time}}" id="opentime" class="sel-opentime" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="起始时间">{{item.open_time}}</a>
                         --
-                        <a href="#" data-value="{{item.end_time}}" id="endtime" class="sel-endtime user-config-edit" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="结束时间">{{item.end_time}}</a>
+                        <a href="#" data-value="{{item.end_time}}" id="endtime" class="sel-endtime" data-type="select" data-pk="{{item.id}}" data-url="/startings/set" data-title="结束时间">{{item.end_time}}</a>
                     </td>
                     <td>
                         <div class="switch switch-mini close-state" id="id-switch-yz" data-station="{{item.id}}" data-action="open_yzcx">
@@ -157,7 +168,15 @@
             </ul>
         </nav>
     </div>
+
 <script type="text/javascript">
+    function success_callback(data){
+        if(data.code==1){
+            $.scojs_message(data.msg, $.scojs_message.TYPE_OK);
+        }else{
+            $.scojs_message(data.msg, $.scojs_message.TYPE_ERROR);
+        }
+    };
     $(".form_datetime").datetimepicker({
         format: "yyyy-mm-dd",
         autoclose: true,
@@ -175,13 +194,20 @@
         source: [
             "00:00","01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
             "20:00", "21:00", "22:00", "23:00", "24:00"
-        ]
+        ],
+        success: function(data){ success_callback(data);}
     });
     $('.sel-endtime').editable({
         source: [
             "00:00","01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
             "20:00", "21:00", "22:00", "23:00", "24:00"
-        ]
+        ],
+        success: function(data){ success_callback(data);}
+    });
+
+    $('.sel-weight').editable({
+        source: [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000],
+        success: function(data){ success_callback(data);}
     });
 
     $('.switch')['bootstrapSwitch']();
@@ -194,13 +220,7 @@
 				pk: $(this).attr("data-station"),
                 flag: data.value,
 			},
-			success : function(data){
-				if(data.code==1){
-                    $.scojs_message(data.msg, $.scojs_message.TYPE_OK);
-			    }else{
-                    $.scojs_message(data.msg, $.scojs_message.TYPE_ERROR);
-                }
-		    }
+            success: function(data){ success_callback(data);}
 		});
     });
 </script>

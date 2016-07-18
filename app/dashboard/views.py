@@ -183,6 +183,8 @@ def parse_page_data(qs):
     params = request.values.to_dict()
     page = int(params.get("page", 1))
     page_size = int(params.get("page_size", 20))
+    if params.get('tab', '') =='yichang':
+        page_size = 100
     page_num = int(math.ceil(total*1.0/page_size))
     skip = (page-1)*page_size
 
@@ -420,19 +422,30 @@ def starting_list():
     params = request.values.to_dict()
     province = params.get("province", "")
     s_city = params.get("s_city", "")
+    s_sta = params.get("s_sta", "")
+    now = dte.now()
 
     city_query = {}
     if province:
         city_query.update(province=province)
     if s_city:
         city_query.update(city_name=s_city)
-    cqs = OpenCity.objects.filter(**city_query)
 
-    qs = OpenStation.objects.filter(city__in=cqs)
+    sta_query = {}
+    if s_sta:
+        sta_query.update(sta_name__contains=s_sta)
+    cqs = OpenCity.objects.filter(**city_query)
+    qs = OpenStation.objects.filter(city__in=cqs, **sta_query)
+
+    line_count = {}
+    # for d in Line.objects.filter(drv_datetime__gt=now).aggregate({"$group":{"_id":{"sta_name":"$s_sta_name", "city_name": "$s_city_name"}, "cnt":{"$sum":1}}}):
+    #     line_count[d["_id"]["sta_name"]] = d["cnt"]
+
     return render_template('dashboard/startings.html',
                            page=parse_page_data(qs),
                            source_info=SOURCE_INFO,
                            condition=params,
+                           line_count=line_count,
                            )
 
 
@@ -444,30 +457,66 @@ def starting_config():
     if action == "opentime":
         obj= OpenStation.objects.get(id=params["pk"])
         obj.modify(open_time=params["value"])
+        obj.clear_cache()
         return jsonify({"code": 1, "msg": "修改售票时间成功" })
     elif action == "endtime":
         obj= OpenStation.objects.get(id=params["pk"])
         obj.modify(end_time=params["value"])
+        obj.clear_cache()
         return jsonify({"code": 1, "msg": "修改售票时间成功" })
     elif action == "open_yzcx":
         obj= OpenStation.objects.get(id=params["pk"])
         flag = params["flag"]
         if flag == "true":
             obj.modify(close_status=obj.close_status^STATION_CLOSE_YZCX)
+            obj.clear_cache()
             return jsonify({"code": 1, "msg": "打开余票查询"})
         else:
             obj.modify(close_status=obj.close_status|STATION_CLOSE_YZCX)
+            obj.clear_cache()
             return jsonify({"code": 1, "msg": "关闭余票查询"})
     elif action == "open_bccx":
         obj= OpenStation.objects.get(id=params["pk"])
         flag = params["flag"]
         if flag == "true":
             obj.modify(close_status=obj.close_status^STATION_CLOSE_BCCX)
+            obj.clear_cache()
             return jsonify({"code": 1, "msg": "打开班次查询"})
         else:
             obj.modify(close_status=obj.close_status|STATION_CLOSE_BCCX)
+            obj.clear_cache()
             return jsonify({"code": 1, "msg": "关闭班次查询"})
+    elif action == "source":
+        obj= OpenStation.objects.get(id=params["pk"])
+        if params["value"] not in SOURCE_INFO:
+            return jsonify({"code": 0, "msg": "参数错误" })
+        obj.modify(crawl_source=params["value"])
+        obj.clear_cache()
+        return jsonify({"code": 1, "msg": "修改售票时间成功" })
+    elif action == "weight":
+        pk, site = params["pk"].split("_")
+        obj= OpenStation.objects.get(id=pk)
+        if not site:
+            if obj.source_weight:
+                return jsonify({"code": 0, "msg": "已经初始化过了,请刷新页面" })
+            site_list = Line.objects.filter(s_city_name__startswith=obj.city.city_name, s_sta_name=obj.sta_name).distinct("crawl_source")
+            obj.modify(source_weight={k: 1000/(len(site_list)) for k in site_list})
+            return jsonify({"code": 1, "msg": "初始化源站权重成功" })
+        data = obj.source_weight
+        data[site] = int(params["value"])
+        obj.modify(source_weight=data)
+        obj.clear_cache()
+        return jsonify({"code": 1, "msg": "修改权重成功" })
     return jsonify({"code": 0, "msg": "执行失败"})
+
+@dashboard.route('/startings/<station_id>/source', methods=["GET"])
+@superuser_required
+def starting_source_list(station_id):
+    sta_obj = OpenStation.objects.get_or_404(id=station_id)
+    data = []
+    for s in Line.objects.filter(s_city_name__startswith=sta_obj.city.city_name, s_sta_name=sta_obj.sta_name).distinct("crawl_source"):
+        data.append({s: SOURCE_INFO[s]["name"]})
+    return json.dumps(data, ensure_ascii=False)
 
 
 @dashboard.route('/startings/<station_id>/destination', methods=['POST', 'GET'])

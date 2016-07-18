@@ -41,6 +41,27 @@ class Flow(BaseFlow):
                "Referer": "http://www.mp0769.com/",
                "Host": "www.mp0769.com",
                }
+        contact_name = order.contact_info["name"]
+        if contact_name.isdigit():
+            msg = u"姓名是数字，切换到广东省网下单"
+            order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
+            lock_result.update({
+                "result_code": 2,
+                "source_account": '',
+                "result_reason":  msg
+            })
+            return lock_result
+        try:
+            order.contact_info["name"].decode('utf8').encode('gb2312')
+        except:
+            msg = u"汉字转换错误，切换到广东省网下单"
+            order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
+            lock_result.update({
+                "result_code": 2,
+                "source_account": '',
+                "result_reason":  msg
+            })
+            return lock_result
         cj = cookielib.LWPCookieJar()
         cookie_support = urllib2.HTTPCookieProcessor(cj)
         opener = urllib2.build_opener(cookie_support, urllib2.HTTPHandler)
@@ -94,7 +115,6 @@ class Flow(BaseFlow):
             if not params or int(params['ct_price']) == 0:
                 continue
             else:
-                print "ct_price ", params['ct_price']
                 ct_price = params['ct_price']
                 full_price = params['ct_price']
                 left_tickets = params['ct_accnum']
@@ -340,7 +360,11 @@ class Flow(BaseFlow):
                 station_name = td[0].replace('\r\n', '').replace('\t', '').replace(' ',  '')
                 if station_name == line.d_sta_name:
                     station_url = "http://www.mp0769.com/cbprjdisp8.asp?"+href
-                    form, sel = self.is_end_station(urllib2, headers, station_url)
+                    try:
+                        form, sel = self.is_end_station(urllib2, headers, station_url)
+                    except:
+                        result_info.update(result_msg="timeout default 5", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                        return result_info
         update_attrs = {}
         if form:
             sch = sel.xpath('//table[@width="600"]/tr')
@@ -449,23 +473,32 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         if order.status == STATUS_WAITING_ISSUE:
-            r = requests.get(order.pay_url)
-            content = r.content.decode('gbk')
-            res = re.findall(r"alert\('(.*?)'\);", content)
-            if res:
-                errmsg = res[0]
-                if u"您的订单已过有效期" in errmsg:
-                    order.modify(status=STATUS_LOCK_RETRY)
-                    order.on_lock_retry(reason=errmsg)
-                else:
-                    if u'不可预售' in errmsg:
-                        self.close_line(order.line, reason=errmsg)
-                    order.modify(status=STATUS_LOCK_FAIL)
-                    order.on_lock_fail(reason=errmsg)
-                    issued_callback.delay(order.order_no)
+            res = self.request_order_detail(order)
+            if not res:
+                msg = u'未获取源站订单号，不允许支付'
+                order.modify(status=STATUS_LOCK_RETRY,
+                             line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),
+                             crawl_source='gdsw')
+                order.on_lock_retry(reason=msg)
+                order.reload()
             else:
-                order.update(pay_channel='alipay')
-            return {"flag": "url", "content": order.pay_url}
+                r = requests.get(order.pay_url)
+                content = r.content.decode('gbk')
+                res = re.findall(r"alert\('(.*?)'\);", content)
+                if res:
+                    errmsg = res[0]
+                    if u"您的订单已过有效期" in errmsg:
+                        order.modify(status=STATUS_LOCK_RETRY)
+                        order.on_lock_retry(reason=errmsg)
+                    else:
+                        if u'不可预售' in errmsg:
+                            self.close_line(order.line, reason=errmsg)
+                        order.modify(status=STATUS_LOCK_FAIL)
+                        order.on_lock_fail(reason=errmsg)
+                        issued_callback.delay(order.order_no)
+                else:
+                    order.update(pay_channel='alipay')
+                    return {"flag": "url", "content": order.pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()

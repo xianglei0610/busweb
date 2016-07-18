@@ -16,8 +16,10 @@ env.hosts = SERVER_LIST.values()
 
 
 def deploy(name=""):
-    if name not in ("api", "celery", "dashboard", "cron"):
-        raise Exception("name should be in (api, celery, dashboard), but it's %s" % name)
+    name_list = name.split("_")
+    for name in name_list:
+        if name not in ("api", "celery", "dashboard", "cron"):
+            raise Exception("name should be in (api, celery, dashboard), but it's %s" % name)
 
     with cd("/home/12308/code/busweb/"):
         # 拉代码
@@ -25,12 +27,13 @@ def deploy(name=""):
         run("git fetch")
         run("git merge origin/master")
 
-        # 重启supervisor
-        if name == "cron":
-            if env.host == "114.55.74.162":
-                run("sudo supervisorctl restart scrapy:cron")
-        else:
-            run("sudo supervisorctl restart server:%s" % name)
+        for name in name_list:
+            # 重启supervisor
+            if name == "cron":
+                if env.host == "114.55.74.162":
+                    run("sudo supervisorctl restart scrapy:cron")
+            else:
+                run("sudo supervisorctl restart server:%s" % name)
 
 
 def deploy_all():

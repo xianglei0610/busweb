@@ -421,7 +421,11 @@ class Flow(BaseFlow):
                 "RideStation": line.s_sta_name,
                 "RideStationId": line.s_sta_id
             }
-            r = rebot.http_post(queryline_url, data=data, headers=rebot.http_header(), cookies=json.loads(rebot.cookies))
+            try:
+                r = rebot.http_post(queryline_url, data=data, headers=rebot.http_header(), cookies=json.loads(rebot.cookies))
+            except:
+                result_info.update(result_msg="bjky timeout default 5", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                return result_info
             content = r.content
             if not isinstance(content, unicode):
                 content = content.decode('utf-8')

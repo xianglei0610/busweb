@@ -190,6 +190,8 @@ class Flow(BaseFlow):
             r = rebot.http_post(pay_url, data=urllib.urlencode(data), headers=headers)
             ret = r.json()
             self.refresh_issue(order)
+            if order.pay_channel != "alipay":
+                order.modify(pay_channel="alipay")
             return {"flag": "html", "content": ret["data"]}
 
     def do_refresh_line(self, line):

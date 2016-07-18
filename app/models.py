@@ -130,8 +130,6 @@ class OpenCity(db.Document):
             obj.add_to_cache()
         return obj
 
-
-
     def check_new_dest(self):
         qs = Line.objects.filter(s_province=self.province, s_city_name__startswith=self.city_name) \
                          .aggregate({
@@ -207,6 +205,9 @@ class OpenStation(db.Document):
     close_status = db.IntField(default=STATION_CLOSE_NONE)   # 关闭状态: 定义见constants.py
     extra_info = db.DictField()             # 自定义数据
     create_datetime = db.DateTimeField(default=dte.now)
+    line_count = db.IntField()              # 线路数, 由定时任务间隔时间刷新这个值
+    day_order_count = db.DictField()        # 每天订单数和成功率, {"2016-07-08": {"count": 0, "succ_count":0}}, 由定时任务间隔时间刷新这个值
+
 
     meta = {
         "indexes": [
@@ -236,7 +237,9 @@ class OpenStation(db.Document):
         for d in qs:
             d = d["_id"]
             lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
-        self.modify(dest_info=lst)
+
+        site_list = Line.objects.filter(s_city_name__startswith=self.city.city_name, s_sta_name=self.sta_name).distinct("crawl_source")
+        self.modify(dest_info=lst, source_weight={k: 1000/(len(site_list)) for k in site_list})
         line_log.info("[init_station_dest] %s %s, %s个目的地" % (city.city_name, self.sta_name, len(lst)))
         self.clear_cache()
 
@@ -305,6 +308,7 @@ class Line(db.Document):
             "drv_time",
             "drv_datetime",
             ("s_city_name", "d_city_name", "drv_date", "crawl_source"),
+            # ("s_city_name", "d_city_name", "drv_date", "crawl_source"),
             {
                 'fields': ['crawl_datetime'],
                 'expireAfterSeconds': 3600 * 24 * 20,       # 20天
@@ -527,6 +531,38 @@ class Line(db.Document):
                                       d_sta_name=self.d_sta_name,
                                       d_city_name=self.d_city_name,
                                       drv_datetime=self.drv_datetime)
+                self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
+            except Line.DoesNotExist:
+                self.modify(compatible_lines={self.crawl_source: self.line_id})
+            return self.compatible_lines
+        elif self.s_city_name == "深圳":
+            # 广东省网，深圳客货
+            if self.crawl_source == SOURCE_SZKY:
+                trans = {
+                        u"机场汽车站":u'机场客运站',
+                        u"福田站":u"深圳福田汽车客运站",
+                        u"深圳北汽车站":u'深圳北汽车客运站',
+                        u"南山站":u'南山汽车站',
+                        u"东湖汽车站":u'东湖客运站',
+                        }
+                tar_source = SOURCE_GDSW
+            elif self.crawl_source == SOURCE_GDSW:
+                trans = {
+                        u'机场客运站':u"机场汽车站",
+                        u"深圳福田汽车客运站":u"福田站",
+                        u'深圳北汽车客运站':u"深圳北汽车站",
+                        u'南山汽车站':u"南山站",
+                        u'东湖客运站':u"东湖汽车站",
+                        }
+                tar_source = SOURCE_SZKY
+            try:
+                ob = Line.objects.get(crawl_source=tar_source,
+                                      s_city_name=self.s_city_name,
+                                      s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
+                                      d_sta_name=self.d_sta_name,
+                                      d_city_name=self.d_city_name,
+                                      drv_datetime=self.drv_datetime,
+                                      bus_num=self.bus_num)
                 self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
@@ -1584,6 +1620,7 @@ class WxszRebot(Rebot):
 class GdswRebot(Rebot):
     user_agent = db.StringField()
     token = db.StringField()
+    mobile = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -1596,8 +1633,8 @@ class GdswRebot(Rebot):
     def proxy_ip(self):
         return ""
 
-    def on_add_doing_order(self, order):
-        self.modify(is_locked=True)
+    # def on_add_doing_order(self, order):
+    #     self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
         self.modify(is_locked=False)
@@ -1647,8 +1684,9 @@ class GdswRebot(Rebot):
             return 0
         if not res["success"]:
             return 0
-        if res["data"]["mobile"] != self.telephone:
+        if self.telephone not in [res["data"]["name"],res["data"]["mobile"]]:
             return 0
+        self.modify(mobile=res["data"]["mobile"])
         return 1
 
     def clear_riders(self):
@@ -2317,9 +2355,9 @@ class Lvtu100AppRebot(Rebot):
                 "addr_id": idx,
                 "member_id": self.member_id,
             }]
-        params = {"data": json.dumps(params)}
-        params = self.post_data_templ(params)
-        self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
+            params = {"data": json.dumps(params)}
+            params = self.post_data_templ(params)
+            self.http_post(url, headers=self.post_header(), data=urllib.urlencode(params))
 
     def get_riders(self):
         url = "http://api.lvtu100.com/uc/member/getpurchase"

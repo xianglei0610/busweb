@@ -67,6 +67,7 @@ def vcode_zhw():
             # im.save(code + '.png')
             return (code, r.cookies)
         sleep(0.25)
+    return ()
 
 def vcode_glcx(cookies={}):
     url = 'http://www.0000369.cn/rand.action'

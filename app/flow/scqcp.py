@@ -10,6 +10,7 @@ import random
 import urlparse
 import datetime
 import time
+import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -92,8 +93,8 @@ class Flow(BaseFlow):
 
         if not is_login:
             lock_result.update(result_code=2,
-                                source_account=rebot.telephone,
-                                result_reason="账号未登陆")
+                               source_account=rebot.telephone,
+                               result_reason="账号未登陆")
             return lock_result
 
         try:
@@ -102,16 +103,23 @@ class Flow(BaseFlow):
             rebot.modify(ip="")
             rebot.modify(cookies="{}")
             lock_result.update(result_code=2,
-                                source_account=rebot.telephone,
-                                result_reason="获取token失败")
+                               source_account=rebot.telephone,
+                               result_reason="获取token失败")
             return lock_result
         if res.get('status', '') == 0:
             token = res.get('token', '')
         elif res.get('status', '') == 1:
             msg = res.get('msg', '')
+            if u'输入参数不对，请参考接口文档' in msg:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason="获取token失败2")
+                return lock_result
             lock_result.update(result_code=0,
-                                source_account=rebot.telephone,
-                                result_reason="获取token失败:"+msg)
+                               source_account=rebot.telephone,
+                               result_reason="获取token失败:"+msg)
             return lock_result
         ret = self.send_lock_request_by_web(rebot, order, token)
         if not ret:
@@ -139,6 +147,42 @@ class Flow(BaseFlow):
             })
         else:
             errmsg = ret['msg']
+            if u"参数错误" in errmsg:
+                contact_name = order.contact_info['name'].strip()
+                phone_num = order.contact_info['telephone']
+                msg = ''
+                if contact_name.isdigit():
+                    name_list = []
+                    url_list = [
+                            "http://zhao.resgain.net/name_list.html",
+                            "http://shen.resgain.net/name_list.html",
+                            ]
+                    for url in url_list:
+                        r = requests.get(url, headers={"User-Agent": "Chrome3.8"})
+                        name_list.extend(re.findall(r"/name/(\S+).html", r.content))
+                    name = random.choice(name_list)
+                    msg = '更改联系人姓名: %s=>%s' % (contact_name, name)
+                    order.contact_info['name'] = name
+                    order.save()
+                    order.reload()
+                not_support_list = ['177', '147', '178', '176', '170']
+                if phone_num[0:3] in not_support_list:
+                    if rebot.telephone[0:3] not in not_support_list:
+                        telephone = rebot.telephone
+                    else:
+                        telephone = random.choice(["13267109876", "13560750217","18656022990", "15914162537", "13510175093"])
+                    msg = '更改联系人手机号: %s=>%s' % (phone_num, telephone)
+                    order.contact_info['telephone'] = telephone
+                    order.save()
+                    order.reload()
+                if msg:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": ret.get("msg", '') + msg,
+                    })
+                return lock_result
+                  
 #             flag = False
 #             for i in [u"参数错误"]:
 #                 if i in errmsg:
@@ -185,6 +229,7 @@ class Flow(BaseFlow):
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
         except:
+            rebot.modify(ip='')
             r = rebot.http_get(url, headers=new_headers, timeout=70, allow_redirects=False)
             location_url = r.headers.get('location', '')
             res = {}
@@ -212,7 +257,7 @@ class Flow(BaseFlow):
     def send_lock_request_by_web(self, rebot, order, token):
         data = {
           "sdfgfgfg": "on",
-          "contact_name": order.contact_info['name'],
+          "contact_name": order.contact_info['name'].strip(),
           "phone_num": order.contact_info['telephone'],
           "contact_card_num": "",
           "sign_id": order.line.extra_info['sign_id'],
@@ -569,14 +614,19 @@ class Flow(BaseFlow):
                 return {"flag": "error", "content": ''}
             sel = etree.HTML(r.content)
             plateform = pay_channel
-            data = dict(
-                payid=sel.xpath("//input[@name='payid']/@value")[0],
-                bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
-                plate=sel.xpath("//input[@id='s_plate']/@value")[0],
-                plateform=plateform,
-                qr_pay_mode=0,
-                discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
-            )
+            try:
+                data = dict(
+                    payid=sel.xpath("//input[@name='payid']/@value")[0],
+                    bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
+                    plate=sel.xpath("//input[@id='s_plate']/@value")[0],
+                    plateform=plateform,
+                    qr_pay_mode=0,
+                    discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
+                )
+            except:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                return {"flag": "error", "content": "请重试!"}    
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             r = rebot.http_post(info_url, data=data, headers=headers, cookies=json.loads(rebot.cookies),timeout=60)
             sel = etree.HTML(r.content)
@@ -586,7 +636,9 @@ class Flow(BaseFlow):
                 if order.pay_money != pay_money or order.pay_order_no != pay_order_no:
                     order.modify(pay_money=pay_money, pay_order_no=pay_order_no, pay_channel='yh')
             except:
-                pass
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                return {"flag": "error", "content": "请重试!"}
             return {"flag": "html", "content": r.content}
         return {"flag": "error", "content": "锁票失败, 请重试!"}
         # else:
