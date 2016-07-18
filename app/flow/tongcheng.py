@@ -581,6 +581,7 @@ class Flow(BaseFlow):
         # return result_info
 
     def do_refresh_line_by_app(self, line):
+        now = dte.now()
         result_info = {
             "result_msg": "",
             "update_attrs": {},
@@ -608,7 +609,6 @@ class Flow(BaseFlow):
             return result_info
         res = r.json()
         res = res["response"]
-        now = dte.now()
         if res["header"]["rspCode"] != "0000" or not res["body"]:
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
