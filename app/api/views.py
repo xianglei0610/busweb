@@ -156,15 +156,14 @@ def query_line():
 
     data = []
     for sta in OpenStation.objects.filter(city=open_city):
+        if sta.close_status & STATION_CLOSE_BCCX:
+            continue
         qs_line = Line.objects.filter(s_city_name__startswith=starting_name,
                                       s_sta_name=sta.sta_name,
-                                      d_city_name__startswith=dest_name,
+                                      d_city_name=dest_name,
                                       drv_date=start_date,
                                       crawl_source=sta.crawl_source)
-        for line in qs_line:
-            if sta.close_status & STATION_CLOSE_BCCX:
-                continue
-            data.append(line.get_json())
+        data.extend(map(lambda l: l.get_json(), qs_line))
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 
