@@ -43,7 +43,18 @@ class Flow(BaseFlow):
                }
         contact_name = order.contact_info["name"]
         if contact_name.isdigit():
-            msg = u"姓名是数字，切换到省网下单"
+            msg = u"姓名是数字，切换到广东省网下单"
+            order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
+            lock_result.update({
+                "result_code": 2,
+                "source_account": '',
+                "result_reason":  msg
+            })
+            return lock_result
+        try:
+            order.contact_info["name"].decode('utf8').encode('gb2312')
+        except:
+            msg = u"汉字转换错误，切换到广东省网下单"
             order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
             lock_result.update({
                 "result_code": 2,
@@ -104,7 +115,6 @@ class Flow(BaseFlow):
             if not params or int(params['ct_price']) == 0:
                 continue
             else:
-                print "ct_price ", params['ct_price']
                 ct_price = params['ct_price']
                 full_price = params['ct_price']
                 left_tickets = params['ct_accnum']
@@ -479,7 +489,7 @@ class Flow(BaseFlow):
                     issued_callback.delay(order.order_no)
             else:
                 order.update(pay_channel='alipay')
-            return {"flag": "url", "content": order.pay_url}
+                return {"flag": "url", "content": order.pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()
