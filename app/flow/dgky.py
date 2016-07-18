@@ -473,23 +473,32 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         if order.status == STATUS_WAITING_ISSUE:
-            r = requests.get(order.pay_url)
-            content = r.content.decode('gbk')
-            res = re.findall(r"alert\('(.*?)'\);", content)
-            if res:
-                errmsg = res[0]
-                if u"您的订单已过有效期" in errmsg:
-                    order.modify(status=STATUS_LOCK_RETRY)
-                    order.on_lock_retry(reason=errmsg)
-                else:
-                    if u'不可预售' in errmsg:
-                        self.close_line(order.line, reason=errmsg)
-                    order.modify(status=STATUS_LOCK_FAIL)
-                    order.on_lock_fail(reason=errmsg)
-                    issued_callback.delay(order.order_no)
+            res = self.request_order_detail(order)
+            if not res:
+                msg = u'未获取源站订单号，不允许支付'
+                order.modify(status=STATUS_LOCK_RETRY,
+                             line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),
+                             crawl_source='gdsw')
+                order.on_lock_retry(reason=msg)
+                order.reload()
             else:
-                order.update(pay_channel='alipay')
-                return {"flag": "url", "content": order.pay_url}
+                r = requests.get(order.pay_url)
+                content = r.content.decode('gbk')
+                res = re.findall(r"alert\('(.*?)'\);", content)
+                if res:
+                    errmsg = res[0]
+                    if u"您的订单已过有效期" in errmsg:
+                        order.modify(status=STATUS_LOCK_RETRY)
+                        order.on_lock_retry(reason=errmsg)
+                    else:
+                        if u'不可预售' in errmsg:
+                            self.close_line(order.line, reason=errmsg)
+                        order.modify(status=STATUS_LOCK_FAIL)
+                        order.on_lock_fail(reason=errmsg)
+                        issued_callback.delay(order.order_no)
+                else:
+                    order.update(pay_channel='alipay')
+                    return {"flag": "url", "content": order.pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()
