@@ -1621,7 +1621,7 @@ class GdswRebot(Rebot):
             return 0
         if not res["success"]:
             return 0
-        if res["data"]["mobile"] != self.telephone:
+        if self.telephone not in [res["data"]["name"],res["data"]["mobile"]]:
             return 0
         return 1
 
