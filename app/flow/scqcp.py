@@ -150,6 +150,7 @@ class Flow(BaseFlow):
             if u"参数错误" in errmsg:
                 contact_name = order.contact_info['name'].strip()
                 phone_num = order.contact_info['telephone']
+                msg = ''
                 if contact_name.isdigit():
                     name_list = []
                     url_list = [
@@ -160,6 +161,7 @@ class Flow(BaseFlow):
                         r = requests.get(url, headers={"User-Agent": "Chrome3.8"})
                         name_list.extend(re.findall(r"/name/(\S+).html", r.content))
                     name = random.choice(name_list)
+                    msg = '更改联系人姓名: %s=>%s' % (contact_name, name)
                     order.contact_info['name'] = name
                     order.save()
                     order.reload()
@@ -169,14 +171,16 @@ class Flow(BaseFlow):
                         telephone = rebot.telephone
                     else:
                         telephone = random.choice(["13267109876", "13560750217","18656022990", "15914162537", "13510175093"])
+                    msg = '更改联系人手机号: %s=>%s' % (phone_num, telephone)
                     order.contact_info['telephone'] = telephone
                     order.save()
                     order.reload()
-                lock_result.update({
-                    "result_code": 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": ret.get("msg", '') or ret,
-                })
+                if msg:
+                    lock_result.update({
+                        "result_code": 2,
+                        "source_account": rebot.telephone,
+                        "result_reason": ret.get("msg", '') + msg,
+                    })
                 return lock_result
                   
 #             flag = False
