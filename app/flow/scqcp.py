@@ -220,7 +220,7 @@ class Flow(BaseFlow):
     def send_lock_request_by_web(self, rebot, order, token):
         data = {
           "sdfgfgfg": "on",
-          "contact_name": order.contact_info['name'],
+          "contact_name": order.contact_info['name'].strip(),
           "phone_num": order.contact_info['telephone'],
           "contact_card_num": "",
           "sign_id": order.line.extra_info['sign_id'],
