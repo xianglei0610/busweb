@@ -68,6 +68,23 @@ def vcode_zhw():
             return (code, r.cookies)
         sleep(0.25)
 
+def vcode_glcx(cookies={}):
+    url = 'http://www.0000369.cn/rand.action'
+    for x in xrange(5):
+        r = requests.get(url, cookies=cookies)
+        im = cStringIO.StringIO(r.content)
+        im = Image.open(im)
+        im = im.convert('L')
+        im = im.point(lambda x: 255 if x > 130 else 0)
+        im = ecp(im, 7)
+        code = image_to_string(im, lang='glcx', config='-psm 8')
+        code = re.findall(r'[0-9]', str(code))
+        code = ''.join(code)
+        if len(code) == 4:
+            # im.save(code + '.png')
+            return (code, r.cookies)
+        sleep(0.1)
+    return ()
 
 def trans_js_str(s):
     """

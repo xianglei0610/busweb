@@ -1021,6 +1021,68 @@ class Rebot(db.Document):
                 continue
             return r
 
+class GlcxWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    userid = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "glcxweb_rebot",
+    }
+    crawl_source = SOURCE_GLCX
+    is_for_lock = True
+
+    def check_login(self):
+        url = 'http://www.0000369.cn/user!getCurUser.action'
+        headers = {
+            "User-Agent": self.user_agent,
+        }
+        cookies = json.loads(self.cookies)
+        r = requests.get(url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        tel = soup.find_all('label')[0]
+        if tel:
+            tel = tel.get_text().strip()
+        if tel == self.telephone:
+            return 1
+        return 0
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
+    @classmethod
+    def login_all(cls):
+        # 登陆所有预设账号
+        has_checked = {}
+        accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
+        rebot_log.info(accounts)
+        for bot in cls.objects:
+            has_checked[bot.telephone] = 1
+            if bot.telephone not in accounts:
+                bot.modify(is_active=False)
+                continue
+            pwd = accounts[bot.telephone]
+            bot.modify(password=pwd[0])
+            bot.login()
+
+        for tele, (pwd, userid) in accounts.items():
+            if tele in has_checked:
+                continue
+            bot = cls(is_active=True,
+                      is_locked=False,
+                      telephone=tele,
+                      password=pwd,
+                      userid=userid,
+                      )
+            bot.save()
+            bot.login()
 
 class WmcxWebRebot(Rebot):
     user_agent = db.StringField()
