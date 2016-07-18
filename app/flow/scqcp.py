@@ -614,14 +614,19 @@ class Flow(BaseFlow):
                 return {"flag": "error", "content": ''}
             sel = etree.HTML(r.content)
             plateform = pay_channel
-            data = dict(
-                payid=sel.xpath("//input[@name='payid']/@value")[0],
-                bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
-                plate=sel.xpath("//input[@id='s_plate']/@value")[0],
-                plateform=plateform,
-                qr_pay_mode=0,
-                discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
-            )
+            try:
+                data = dict(
+                    payid=sel.xpath("//input[@name='payid']/@value")[0],
+                    bank=bank, #,'BOCB2C',#sel.xpath("//input[@id='s_bank']/@value")[0],
+                    plate=sel.xpath("//input[@id='s_plate']/@value")[0],
+                    plateform=plateform,
+                    qr_pay_mode=0,
+                    discountCode=sel.xpath("//input[@id='discountCode']/@value")[0]
+                )
+            except:
+                rebot.modify(ip="")
+                rebot.modify(cookies="{}")
+                return {"flag": "error", "content": "请重试!"}    
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             r = rebot.http_post(info_url, data=data, headers=headers, cookies=json.loads(rebot.cookies),timeout=60)
             sel = etree.HTML(r.content)
