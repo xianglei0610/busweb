@@ -67,6 +67,7 @@ def vcode_zhw():
             # im.save(code + '.png')
             return (code, r.cookies)
         sleep(0.25)
+    return ()
 
 
 def trans_js_str(s):

@@ -207,7 +207,11 @@ class Flow(BaseFlow):
             u'西埔站': 'XPZ001-102029',
         }
         for x in xrange(5):
-            code, cookies = vcode_zhw()
+            v = vcode_zhw()
+            if not v:
+                continue
+            code = v[0]
+            cookies = v[1]
             data = {
                 'SchDate': line['drv_date'],
                 'SchTime': '',

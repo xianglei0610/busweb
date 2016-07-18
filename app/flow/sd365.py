@@ -252,7 +252,7 @@ class Flow(BaseFlow):
             # rebot_log.info(lasturl)
             for y in xrange(3):
                 r = requests.get(lasturl)
-                if len(r.content) > 0 and r.ok:
+                if len(r.content) == 0:
                     continue
                 soup = r.json()
                 tpk = now + datetime.timedelta(hours=2)
