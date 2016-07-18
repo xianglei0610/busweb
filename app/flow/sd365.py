@@ -55,20 +55,16 @@ class Flow(BaseFlow):
         pre = 'member_name=%s&tktphone=%s&\
         ticketpass=%s&paytype=3&shopid=%s&\
         port=%s&line=%s&tdate=%s+%s&offer=0&\
-        offer2=0&tkttype=0&\
-        savefriend[]=1&tktname[]=%s&papertype[]=0&paperno[]=%s&\
-        offertype[]=1&price[]=%s\
-            &insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0' %(uname, tel, tpass, \
-            shopid, port, lline, line['drv_date'], line['drv_time'], \
-            uname, uid, line['full_price'])
+        offer2=0&tkttype=0&' %(uname, tel, tpass, \
+            shopid, port, lline, line['drv_date'], line['drv_time'])
         rider = list(order.riders)
-        for x in rider:
-            if uid == x['id_number']:
-                rider.remove(x)
+        #for x in rider:
+        #     if uid == x['id_number']:
+        #         rider.remove(x)
         tmp = ''
-        if pk > 1:
+        if 1:
             for i, x in enumerate(rider):
-                i += 2
+                i += 1
                 tmp += 'savefriend[]=%s&tktname[]=%s&papertype[]=0&paperno[]=%s&offertype[]=&price[]=%s&\
                 insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0&' %(i, x['name'].encode('utf-8'), x['id_number'], line['full_price'])
 
@@ -79,7 +75,7 @@ class Flow(BaseFlow):
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
         location = urllib.unquote(r.headers.get('location', ''))
-        rebot_log.info(location)
+        # rebot_log.info(location)
         try:
             sn = location.split(',')[3]
         except:
