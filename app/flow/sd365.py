@@ -250,7 +250,7 @@ class Flow(BaseFlow):
             }
             lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
             # rebot_log.info(lasturl)
-            r = requests.get(lasturl, headers=headers)
+            r = requests.get(lasturl)
             soup = r.json()
             tpk = now + datetime.timedelta(hours=2)
             update_attrs = {}
