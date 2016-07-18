@@ -494,13 +494,9 @@ def starting_config():
     elif action == "weight":
         pk, site = params["pk"].split("_")
         obj= OpenStation.objects.get(id=pk)
-        if not site:
-            if obj.source_weight:
-                return jsonify({"code": 0, "msg": "已经初始化过了,请刷新页面" })
-            site_list = Line.objects.filter(s_city_name__startswith=obj.city.city_name, s_sta_name=obj.sta_name).distinct("crawl_source")
-            obj.modify(source_weight={k: 1000/(len(site_list)) for k in site_list})
-            return jsonify({"code": 1, "msg": "初始化源站权重成功" })
-        data = obj.source_weight
+        site_list = Line.objects.filter(s_city_name__startswith=obj.city.city_name, s_sta_name=obj.sta_name).distinct("crawl_source")
+        data = {k: 1000/(len(site_list)) for k in site_list}
+        data.update(obj.source_weight)
         data[site] = int(params["value"])
         obj.modify(source_weight=data)
         obj.clear_cache()
