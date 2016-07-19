@@ -233,7 +233,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['cqky'])
 
     # 四川
-    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['scqcp'])
+    sched.add_cron_job(bus_crawl, hour=18, minute=0, args=['scqcp'])
 #     sched.add_cron_job(bus_crawl, hour=22, minute=30, args=['scqcp'], kwargs={"crawl_kwargs":{"city": "成都市"}})
 
     # 江苏道路客运
