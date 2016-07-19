@@ -333,15 +333,19 @@ class Flow(BaseFlow):
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
-                no, pay = "", 0
-                for s in order.pay_url.split("?")[1].split("&"):
-                    k, v = s.split("=")
-                    if k == "out_trade_no":
-                        no = v
-                    elif k == "total_fee":
-                        pay = float(v)
-                if no and order.pay_order_no != no:
-                    order.modify(pay_order_no=no, pay_money=pay or order.order_price, pay_channel='yh')
+                if "BankList" in order.pay_url:     # 银联支付
+                    pay = float(order.lock_info["paymoney"])
+                    order.modify(pay_money=pay or order.order_price, pay_channel='yh')
+                else:
+                    no, pay = "", 0
+                    for s in order.pay_url.split("?")[1].split("&"):
+                        k, v = s.split("=")
+                        if k == "out_trade_no":
+                            no = v
+                        elif k == "total_fee":
+                            pay = float(v)
+                    if no and order.pay_order_no != no:
+                        order.modify(pay_order_no=no, pay_money=pay or order.order_price, pay_channel='alipay')
                 return {"flag": "url", "content": order.pay_url}
         else:
             return {"flag": "error", "content": u"账号登录失败"}
