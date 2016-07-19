@@ -358,7 +358,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['xyjt'])
 
     # 珠海汽车购票
-    sched.add_cron_job(bus_crawl, hour=18, minute=0, args=['zhw'])
+    sched.add_cron_job(bus_crawl, hour=11, minute=0, args=['zhw'])
 
     # 山东365汽车票
     sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['sd365'], kwargs={"crawl_kwargs":{"city": "烟台市,蓬莱市,海阳市,栖霞市,招远市,莱阳市,龙口市,济南市,淄博市,济宁市,东营市,聊城市,德州市,潍坊市,天津市,莱芜市,枣庄市,榆林,寿光,泰安,新泰市,肥城市,莱州市,滨州市,临沂市"}})

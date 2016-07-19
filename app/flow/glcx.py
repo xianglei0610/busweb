@@ -67,17 +67,15 @@ class Flow(BaseFlow):
         url = 'http://www.0000369.cn/buytks!toAffirm.action'
         pre = 'insuranceValue=2&name=%s&idcard=%s&\
         tel=%s&tkstype=0&insurance=0&' %(uname, uid, tel)
-        rider = list(order.riders)
-        pk = len(rider)
-        for x in rider:
-            if uid == x['id_number']:
-                rider.remove(x)
+        # rider = list(order.riders)
+        pk = len(order.riders)
+        # for x in rider:
+        #     if uid == x['id_number']:
+        #         rider.remove(x)
         tmp = ''
-        if pk > 1:
-            for i, x in enumerate(rider):
-                i += 2
-                tmp += 'name=%s&idcard=%s&tel=%s&tkstype=0&\
-                insurance=0&' %(x['name'], x['id_number'], x['telephone'])
+        for x in order.riders:
+            tmp += 'name=%s&idcard=%s&tel=%s&tkstype=0&\
+            insurance=0&' %(x['name'], x['id_number'], x['telephone'])
 
         suf = 'rand=%s&bliid=%s+&sendTime=&stationId=%s&\
         bliidSendDatetime=%s+%s&arrivalPortID=%s&\
