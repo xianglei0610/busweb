@@ -132,7 +132,7 @@ class Flow(BaseFlow):
 
     def do_lock_ticket_by_app(self, order):
         lock_result = {
-            "lock_info": {}
+            "lock_info": {},
             "source_account": order.source_account,
             "result_code": 0,
             "result_reason": "",
