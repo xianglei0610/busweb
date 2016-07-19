@@ -17,6 +17,8 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5, vcode_zhw
 from app import rebot_log
+from pymongo import MongoClient
+vcookies = MongoClient('db', 27017).web12308.zhwcity
 # import cStringIO
 # from selenium import webdriver
 # from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -208,12 +210,17 @@ class Flow(BaseFlow):
         }
         result_info = {}
         now = dte.now()
-        for x in xrange(3):
-            v = vcode_zhw()
+        for x in xrange(1):
+            v = vcookies.find_one({'cookies': {'$exists': True}})
+            if v:
+                code = v['code']
+                cookies = v['cookies']
+            else:
+                v = vcode_zhw()
+                code = v[0]
+                cookies = v[1]
             if not v:
                 continue
-            code = v[0]
-            cookies = v[1]
             data = {
                 'SchDate': line['drv_date'],
                 'SchTime': '',
@@ -226,6 +233,8 @@ class Flow(BaseFlow):
             info = soup.find('table', attrs={'id': 'changecolor'})
             if '验证码' in info.get_text():
                 continue
+            rebot_log.info(cookies)
+            rebot_log.info(code)
             items = info.find_all('tr', attrs={'id': True})
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
@@ -235,7 +244,7 @@ class Flow(BaseFlow):
             for x in items:
                 try:
                     y = x.find_all('td')
-                    sts = x.find('input', attrs={'disabled': 'disabled'})
+                    sts = x.find('input', attrs={'class': 'g_table_btn', 'onclick': True}).get('value')
                     drv_date = y[0].get_text().strip()
                     drv_time = y[1].get_text().strip()
                     s_sta_name = y[2].get_text().strip()
@@ -255,7 +264,7 @@ class Flow(BaseFlow):
                     line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
                     if line_id in t:
                         t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
-                    if line_id == line.line_id:
+                    if line_id == line.line_id and u'立即购买' == sts:
                         update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
                 except:
                     pass
