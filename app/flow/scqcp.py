@@ -531,7 +531,7 @@ class Flow(BaseFlow):
         except:
             result_info.update(result_msg="scqcp timeout default 15", update_attrs={"left_tickets": 15, "refresh_datetime": now})
             return result_info
-        if ret["head"]['statusCode'] == '0000':
+        if ret.get("head", {}).get('statusCode', '') == '0000':
             if ret["body"].get('ticketLines', []):
                 raw = ret["body"].get('ticketLines', [])[0]
                 full_price = float(raw["fullPrice"])
@@ -549,7 +549,7 @@ class Flow(BaseFlow):
             else:  # 线路信息没查到
                 result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
-            result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", bank='',**kwargs):
