@@ -17,6 +17,8 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5, vcode_zhw
 from app import rebot_log
+from pymongo import MongoClient
+vcookies = MongoClient('db', 27017).web12308.zhwcity
 # import cStringIO
 # from selenium import webdriver
 # from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -208,12 +210,17 @@ class Flow(BaseFlow):
         }
         result_info = {}
         now = dte.now()
-        for x in xrange(3):
-            v = vcode_zhw()
+        for x in xrange(1):
+            v = vcookies.find_one({'cookies': {'$exists': True}})
+            if v:
+                code = v['code']
+                cookies = v['cookies']
+            else:
+                v = vcode_zhw()
+                code = v[0]
+                cookies = v[1]
             if not v:
                 continue
-            code = v[0]
-            cookies = v[1]
             data = {
                 'SchDate': line['drv_date'],
                 'SchTime': '',
@@ -226,6 +233,8 @@ class Flow(BaseFlow):
             info = soup.find('table', attrs={'id': 'changecolor'})
             if '验证码' in info.get_text():
                 continue
+            rebot_log.info(cookies)
+            rebot_log.info(code)
             items = info.find_all('tr', attrs={'id': True})
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
