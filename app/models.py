@@ -308,7 +308,7 @@ class Line(db.Document):
             "drv_time",
             "drv_datetime",
             ("s_city_name", "d_city_name", "drv_date", "crawl_source"),
-            # ("s_city_name", "d_city_name", "drv_date", "crawl_source"),
+            ("s_city_name","s_sta_name","d_city_name", "drv_date", "crawl_source"),
             {
                 'fields': ['crawl_datetime'],
                 'expireAfterSeconds': 3600 * 24 * 20,       # 20天

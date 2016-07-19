@@ -248,11 +248,14 @@ class Flow(BaseFlow):
             }
             lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
             # rebot_log.info(lasturl)
-            for y in xrange(3):
+            for y in xrange(1):
                 r = requests.get(lasturl)
-                if len(r.content) == 0:
-                    continue
-                soup = r.json()
+                try:
+                    soup = r.json()
+                except:
+                    result_info = {}
+                    result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                    return result_info
                 tpk = now + datetime.timedelta(hours=2.2)
                 update_attrs = {}
                 ft = Line.objects.filter(s_city_name=line.s_city_name,
@@ -294,6 +297,9 @@ class Flow(BaseFlow):
                 else:
                     result_info.update(result_msg="ok", update_attrs=update_attrs)
                 return result_info
+        else:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
 
