@@ -246,10 +246,8 @@ def main():
     # sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "南京"}})
     sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "济南"}})
     sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "淄博"}})
-    sched.add_cron_job(bus_crawl, hour=18, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "临沂"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "威海"}})
-    sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "天津,潍坊,泰安"}})
-    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "日照,滨州,德州,聊城"}})
+    sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "天津"}})
 
     # 江苏客运
     # sched.add_cron_job(bus_crawl, hour=8, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
