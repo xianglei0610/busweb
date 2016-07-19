@@ -130,36 +130,38 @@ class Flow(BaseFlow):
 
             soup = bs(r.content, 'lxml')
             title = soup.title
-            info = soup.find('table', attrs={
-                             'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
-            pay_money = info[-1].find_all('td')[-1].get_text()
-            pay_money = float(re.search(r'\d+', pay_money).group(0))
-            raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
-                'value').split('=')[-1]
-            if '准备付款' in title:
+            try:
+                info = soup.find('table', attrs={
+                                 'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+                pay_money = info[-1].find_all('td')[-1].get_text()
+                pay_money = float(re.search(r'\d+', pay_money).group(0))
+                raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
+                    'value').split('=')[-1]
+                if '准备付款' in title:
+                    expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+                    lock_result.update({
+                        'result_code': 1,
+                        'raw_order_no': raw_order_no,
+                        "expire_datetime": expire_time,
+                        "source_account": rebot.telephone,
+                        'pay_money': pay_money,
+                    })
+                    # 删除之前乘客
+                    # rebot.clear_riders(riders)
+                    return lock_result
+            except:
+                rebot = order.change_lock_rebot()
+                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+                errmsg = unicode(errlst and errlst[0] or "")
                 expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
                 lock_result.update({
-                    'result_code': 1,
-                    'raw_order_no': raw_order_no,
+                    'result_code': 2,
+                    "result_reason": errmsg,
                     "expire_datetime": expire_time,
                     "source_account": rebot.telephone,
-                    'pay_money': pay_money,
+                    'pay_money': 0,
                 })
-                # 删除之前乘客
-                # rebot.clear_riders(riders)
                 return lock_result
-
-        errmsg = soup.find(
-            'td', attrs={'class': 'mmainbody'}).get_text().strip().encode('utf-8')
-        expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-        lock_result.update({
-            'result_code': 2,
-            "result_reason": errmsg,
-            "expire_datetime": expire_time,
-            "source_account": rebot.telephone,
-            'pay_money': 0,
-        })
-        return lock_result
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
@@ -299,8 +301,12 @@ class Flow(BaseFlow):
         url = pre + urllib.urlencode(params)
         r = requests.get(url, headers=headers, data=params)
         soup = bs(r.content, 'lxml')
-        info = soup.find('table', attrs={'class': 'resulttb'}).find_all(
-            'tbody', attrs={'class': 'rebody'})
+        try:
+            info = soup.find('table', attrs={'class': 'resulttb'}).find_all('tbody', attrs={'class': 'rebody'})
+        except:
+            result_info = {}
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
         crawl_source = "hn96520"
         now = dte.now()
         tpk = now + datetime.timedelta(hours=1.2)
