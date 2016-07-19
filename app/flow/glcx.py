@@ -65,8 +65,7 @@ class Flow(BaseFlow):
         # rebot_log.info(info)
         v = vcode_glcx(cookies)
         url = 'http://www.0000369.cn/buytks!toAffirm.action'
-        pre = 'insuranceValue=2&name=%s&idcard=%s&\
-        tel=%s&tkstype=0&insurance=0&' %(uname, uid, tel)
+        pre = 'insuranceValue=2&'
         # rider = list(order.riders)
         pk = len(order.riders)
         # for x in rider:

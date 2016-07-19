@@ -19,11 +19,11 @@ from app.utils import md5, vcode_zhw
 from app import rebot_log
 from pymongo import MongoClient
 vcookies = MongoClient('db', 27017).web12308.zhwcity
+from requests.utils import cookiejar_from_dict, dict_from_cookiejar
 # import cStringIO
 # from selenium import webdriver
 # from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 # from cchardet import detect
-# import ipdb
 
 
 class Flow(BaseFlow):
@@ -215,12 +215,11 @@ class Flow(BaseFlow):
             if v:
                 code = v['code']
                 cookies = v['cookies']
+                cookies = cookiejar_from_dict(cookies)
             else:
                 v = vcode_zhw()
                 code = v[0]
                 cookies = v[1]
-            if not v:
-                continue
             data = {
                 'SchDate': line['drv_date'],
                 'SchTime': '',
@@ -228,13 +227,17 @@ class Flow(BaseFlow):
                 'StartStation': d.get(line['s_sta_name'], ''),
                 'SchDstNodeName': line['d_city_name'],
             }
-            r = requests.post(url, headers=headers, cookies=cookies, data=urllib.urlencode(data))
+            r = requests.post(url, headers=headers, cookies=cookies, data=data)
             soup = bs(r.content, 'lxml')
             info = soup.find('table', attrs={'id': 'changecolor'})
             if '验证码' in info.get_text():
+                vcookies.remove({'cookies': {'$exists': True}})
                 continue
-            rebot_log.info(cookies)
-            rebot_log.info(code)
+            else:
+                cookies = dict(r.cookies)
+                cks = {'JSESSIONID1_ZH_DY_SHFW': cookies.values()[0]}
+                if vcookies.find({'cookies': cks}).count() <= 0:
+                    vcookies.save({'cookies': cks, 'code': code})
             items = info.find_all('tr', attrs={'id': True})
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
