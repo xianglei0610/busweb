@@ -490,6 +490,7 @@ class Flow(BaseFlow):
                     if u"您的订单已过有效期" in errmsg:
                         order.modify(status=STATUS_LOCK_RETRY)
                         order.on_lock_retry(reason=errmsg)
+                        return {"flag": "error", "content": '重新打开'}
                     else:
                         if u'不可预售' in errmsg:
                             self.close_line(order.line, reason=errmsg)
