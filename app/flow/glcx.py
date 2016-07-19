@@ -74,7 +74,7 @@ class Flow(BaseFlow):
         tmp = ''
         for x in order.riders:
             tmp += 'name=%s&idcard=%s&tel=%s&tkstype=0&\
-            insurance=0&' %(x['name'], x['id_number'], x['telephone'])
+            insurance=0&' %(x['name'], x['id_number'], tel)
 
         suf = 'rand=%s&bliid=%s+&sendTime=&stationId=%s&\
         bliidSendDatetime=%s+%s&arrivalPortID=%s&\
