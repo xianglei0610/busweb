@@ -233,7 +233,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['cqky'])
 
     # 四川
-    sched.add_cron_job(bus_crawl, hour=18, minute=0, args=['scqcp'])
+    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['scqcp'])
 #     sched.add_cron_job(bus_crawl, hour=22, minute=30, args=['scqcp'], kwargs={"crawl_kwargs":{"city": "成都市"}})
 
     # 江苏道路客运
@@ -342,7 +342,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=1, minute=40, args=['bus365'], kwargs={"crawl_kwargs":{"city": "长春市,吉林市,四平市,辽源市,通化市,白山市,松原市,白城市,图们市,敦化市"}})
     sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['bus365'], kwargs={"crawl_kwargs":{"city": "兰州市,嘉峪关市,金昌市,白银市,天水市,武威市,张掖市,平凉市,酒泉市,庆阳市,定西市,陇南市"}})
     sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['bus365'], kwargs={"crawl_kwargs":{"city": "西宁市,乐都县,海北州,祁连县"}})
-    sched.add_cron_job(bus_crawl, hour=2, minute=10, args=['bus365'], kwargs={"crawl_kwargs":{"city": "赤峰市,巴林左旗,巴林右旗,通辽市,海拉尔,正蓝旗,集宁区"}})
+    sched.add_cron_job(bus_crawl, hour=2, minute=10, args=['bus365'], kwargs={"crawl_kwargs":{"city": "呼和浩特,赤峰市,巴林左旗,巴林右旗,通辽市,海拉尔,正蓝旗,集宁区"}})
 
     # 新途云
     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['xintuyun'])
