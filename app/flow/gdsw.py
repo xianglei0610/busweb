@@ -37,7 +37,8 @@ class Flow(BaseFlow):
             "mobile": rebot.mobile,
             "nonce": rd,
             "orderno": "",
-            "paytype": "alipay",
+            # "paytype": "alipay",
+            "paytype": "yinlian",
             "price": str(line.real_price()),
             "psw": rebot.password,
             "schcode": line.bus_num,
@@ -72,9 +73,62 @@ class Flow(BaseFlow):
         # url带的参数
         url_pramas = {"token": rebot.token}
         url_pramas.update(base)
-        url = "http://www.gdnyt.cn/api/ticketorder/lockticket/?"+urllib.urlencode(url_pramas)
+        #url = "http://www.gdnyt.cn/api/ticketorder/lockticket/?"+urllib.urlencode(url_pramas)
+        url = "http://wechat.gdnyt.com:8000/NytPayApi/LockTicket_lock?"+urllib.urlencode(url_pramas)
         return url, lock_params
 
+
+    def do_lock_ticket_by_web(self, order):
+        lock_result = {
+            "lock_info": {},
+            "source_account": order.source_account,
+            "result_code": 0,
+            "result_reason": "",
+            "pay_url": "",
+            "raw_order_no": "",
+            "expire_datetime": "",
+            "pay_money": 0,
+        }
+        rebot = order.get_lock_rebot()
+        url = "http://ticket.gdcd.gov.cn/BaseApp/OrderCmd.ashx"
+        data = {
+            "cmd": "orderSubmit",
+            "o_CustomerName": order.contact_info["name"],
+            "o_Mobele": order.contact_info["telephone"],
+            "o_Email": "%s@qq.com" % order.contact_info["telephone"],
+            "ContactAddress": "",
+            "payTypeCode": "OnlineUnionPay",
+            "payTypeName": "银联在线支付",
+            "o_Memo": "",
+            "o_IdCard": order.contact_info["id_number"],
+            "o_IdType": 1,
+            "IdTypeName": "身份证",
+        }
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36",
+        }
+        r = rebot.http_post(url, headers=headers, data=urllib.urlencode(data))
+        res = r.json()
+        msg = res.get("msg", "")
+        if res.get("success", False):
+            expire_time = dte.now()+datetime.timedelta(seconds=20*60)
+            raw_order, key = msg.split(",")
+            lock_result.update({
+                "result_code": 1,
+                "result_reason": msg,
+                "raw_order_no": raw_order,
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                "lock_info": {"data": [{"transid": key, "orderno": raw_order}]},
+            })
+        else:
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": msg,
+                "source_account": rebot.telephone,
+            })
+        return lock_result
 
     def do_lock_ticket_by_app(self, order):
         lock_result = {
@@ -138,6 +192,7 @@ class Flow(BaseFlow):
 
     def do_lock_ticket(self, order):
         return self.do_lock_ticket_by_app(order)
+        # return self.do_lock_ticket_by_web(order)
 
     def send_order_request_by_app(self, order):
         rebot = order.get_lock_rebot()
@@ -286,7 +341,7 @@ class Flow(BaseFlow):
                     elif k == "total_fee":
                         pay = float(v)
                 if no and order.pay_order_no != no:
-                    order.modify(pay_order_no=no, pay_money=pay, pay_channel='alipay')
+                    order.modify(pay_order_no=no, pay_money=pay or order.order_price, pay_channel='yh')
                 return {"flag": "url", "content": order.pay_url}
         else:
             return {"flag": "error", "content": u"账号登录失败"}
