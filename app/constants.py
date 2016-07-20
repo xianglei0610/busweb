@@ -3203,7 +3203,7 @@ SOURCE_INFO = {
         "accounts": {}
     },
     SOURCE_GLCX: {
-        "name": "汽车出行网",
+        "name": "山东交运",
         "website": "http://www.0000369.cn/buytks!list.action/",
         "accounts": {
             "15338702029": ("123456", "350425199006091012"),
