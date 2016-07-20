@@ -166,7 +166,7 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                     "result_reason":  res["msg"]
                 })
-        elif u"您未登录或登录已过期" in res["msg"] or u"例行维护" in res["msg"]:
+        elif u"您未登录或登录已过期" in res["msg"] or u"例行维护" in res["msg"] or u'现暂停网上购票业务' in res['msg']:
             rebot.modify(ip="")
             lock_result.update({
                  "result_code": 2,
