@@ -353,9 +353,12 @@ class Flow(BaseFlow):
     def _get_query_period(self, line):
         t = line.drv_datetime.strftime("%H%M")
         lst = [
-            ("0600", "1200"),
+            ("0600", "0800"),
+            ("0800", "1000"),
+            ("1000", "1200"),
             ("1200", "1400"),
-            ("1400", "1800"),
+            ("1400", "1600"),
+            ("1600", "1800"),
             ("1800", "2359"),
         ]
         for s, e in lst:
@@ -376,6 +379,7 @@ class Flow(BaseFlow):
             "schtimestart": stime,
             "tocity": line.d_city_name,
             # "tocity": line.d_sta_name,
+            "startstation": line.s_sta_id,
         }
         headers={"Content-Type": "application/json; charset=UTF-8", "User-Agent": random.choice(MOBILE_USER_AGENG)}
         try:
