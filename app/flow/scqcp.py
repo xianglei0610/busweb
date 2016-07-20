@@ -628,13 +628,26 @@ class Flow(BaseFlow):
                 rebot.modify(cookies="{}")
                 return {"flag": "error", "content": "请重试!"}    
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
-            r = rebot.http_post(info_url, data=data, headers=headers, cookies=json.loads(rebot.cookies),timeout=60)
-            sel = etree.HTML(r.content)
+            cookies = json.loads(rebot.cookies)
+            r = rebot.http_post(info_url, data=data, headers=headers, cookies=cookies,timeout=60)
+            cookies.update(dict(r.cookies))
+#             sel = etree.HTML(r.content)
             try:
-                pay_order_no = sel.xpath("//input[@name='out_trade_no']/@value")[0].strip()
-                pay_money = sel.xpath("//input[@name='total_fee']/@value")[0].strip()
+                data = self.extract_alipay(r.content)
+                pay_money = float(data["total_fee"])
+                pay_order_no = data["out_trade_no"]
                 if order.pay_money != pay_money or order.pay_order_no != pay_order_no:
                     order.modify(pay_money=pay_money, pay_order_no=pay_order_no, pay_channel='yh')
+                jump_url = "https://mapi.alipay.com/gateway.do?_input_charset=utf-8"
+                headers.update({"Host": "mapi.alipay.com",
+                                "Referer": "http://scqcp.com/ticketOrder/middlePay.html",
+                                "Content-Type": "application/x-www-form-urlencoded"
+                                })
+                res = rebot.http_post(jump_url, data=urllib.urlencode(data), headers=headers, cookies=cookies)
+                if u'fastpayLoginForm' not in res.content.decode('gbk'):
+                    rebot.modify(ip="")
+                    rebot.modify(cookies="{}")
+                    return {"flag": "error", "content": "请重试!"}
             except:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
