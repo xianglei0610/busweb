@@ -247,7 +247,7 @@ class Flow(BaseFlow):
             for x in items:
                 try:
                     y = x.find_all('td')
-                    sts = x.find('input', attrs={'class': 'g_table_btn', 'onclick': True}).get('value')
+                    sts = x.find('input', attrs={'class': 'table_btn_dis'}).get('value')
                     drv_date = y[0].get_text().strip()
                     drv_time = y[1].get_text().strip()
                     s_sta_name = y[2].get_text().strip()
@@ -269,7 +269,8 @@ class Flow(BaseFlow):
                         t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
                     if line_id == line.line_id and sts in [u'不在服务时间', u'立即购买']:
                         update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
-                except:
+                except Exception, e:
+                    print e
                     pass
 
             if not update_attrs:
