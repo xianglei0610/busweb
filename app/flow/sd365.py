@@ -135,7 +135,7 @@ class Flow(BaseFlow):
         headers = {'User-Agent': ua}
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         url = 'http://www.36565.cn/?c=order2&a=index'
-        data = {'eport': order.contact_info['id_number']}
+        data = {'eport': order.riders[0]['id_number']}
         r = requests.post(url, headers=headers, data=data)
         soup = bs(r.content, 'lxml')
         info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})

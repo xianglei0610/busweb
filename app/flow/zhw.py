@@ -267,7 +267,7 @@ class Flow(BaseFlow):
                     line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
                     if line_id in t:
                         t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
-                    if line_id == line.line_id and u'立即购买' == sts:
+                    if line_id == line.line_id and sts in [u'不在服务时间', u'立即购买']:
                         update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
                 except:
                     pass
