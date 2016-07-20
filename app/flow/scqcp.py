@@ -359,7 +359,8 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
-        res = self.send_order_request_by_web(order)
+        rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
+        res = self.send_order_request_by_web(order, rebot)
         if not order.raw_order_no:
             order.modify(raw_order_no=res['order_no'])
         status = res["order_status"]
@@ -425,8 +426,7 @@ class Flow(BaseFlow):
             ret_info[tid]["order_status"] = "sell_succeeded"
         return ret_info
 
-    def send_order_request_by_web(self, order):
-        rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
+    def send_order_request_by_web(self, order, rebot):
         url = "http://inner.cdqcp.com/ticket"
         content = {"orderNum": "",
                    "payOrderId": order.lock_info["pay_order_id"],
