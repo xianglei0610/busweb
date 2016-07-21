@@ -115,8 +115,9 @@ class Flow(BaseFlow):
             })
             return lock_result
         elif '不售票' in location or '票务错误' in location or '超出人数限制' in location or '票源不足' in location:
+            order_log.info("[lock-fail] order: %s %s", order.order_no, location)
             self.close_line(line)
-            errlst = re.findall(r'message=(\S+)&url', location)
+            errlst = re.findall(r'message=(\S+)', location)
             errmsg = unicode(errlst and errlst[0] or "")
             lock_result.update({
                 'result_code': 0,
@@ -221,7 +222,7 @@ class Flow(BaseFlow):
                 'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
             }
             return result_info
-        rebot_log.info(nurl)
+        # rebot_log.info(nurl)
         for x in xrange(1):
             url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)
             r = requests.get(url, headers=headers)
