@@ -1633,8 +1633,8 @@ class GdswRebot(Rebot):
     def proxy_ip(self):
         return ""
 
-    # def on_add_doing_order(self, order):
-    #     self.modify(is_locked=True)
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
 
     def on_remove_doing_order(self, order):
         self.modify(is_locked=False)
