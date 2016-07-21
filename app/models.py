@@ -1293,7 +1293,7 @@ class Hn96520WebRebot(Rebot):
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
         rider_url = 'http://www.hn96520.com/member/modify.aspx'
-        r = self.http_get(rider_url, headers=headers, cookies=cookies)
+        r = self.http_get(rider_url, headers=headers, cookies=cookies, timeout=512)
         soup = BeautifulSoup(r.content, 'lxml')
         info = soup.find('table', attrs={'class': 'tblp shadow', 'style': True}).find_all('tr', attrs={'id': True})
         for x in info:
@@ -1302,7 +1302,7 @@ class Hn96520WebRebot(Rebot):
             if uid in riders or not riders:
                 delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid={1}'.format(uid, self.memid)
                 # rebot_log.info(delurl)
-                self.http_get(delurl, headers=headers, cookies=cookies)
+                self.http_get(delurl, headers=headers, cookies=cookies, timeout=2048)
 
     def add_riders(self, order):
         url = "http://www.hn96520.com/member/modify.aspx"
