@@ -120,7 +120,7 @@ class Flow(BaseFlow):
                 left_tickets = params['ct_accnum']
                 end_station = params['ct_stname'].decode('gbk')
                 break
-        if float(full_price) > 0:
+        if float(full_price) > 0 and float(full_price) == float(order.order_price) :
             agree_url = sel.xpath('//form[@id="Form1"]/@action')[0]
             agree_url = "http://www.mp0769.com/" + agree_url
             data = urllib.urlencode(params)
