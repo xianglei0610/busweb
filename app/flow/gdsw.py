@@ -37,8 +37,8 @@ class Flow(BaseFlow):
             "mobile": rebot.mobile,
             "nonce": rd,
             "orderno": "",
-            # "paytype": "alipay",
-            "paytype": "yinlian",
+            "paytype": "alipay",
+            # "paytype": "yinlian",
             "price": str(line.real_price()),
             "psw": rebot.password,
             "schcode": line.bus_num,
@@ -73,8 +73,8 @@ class Flow(BaseFlow):
         # url带的参数
         url_pramas = {"token": rebot.token}
         url_pramas.update(base)
-        # url = "http://www.gdnyt.cn/api/ticketorder/lockticket/?"+urllib.urlencode(url_pramas)
-        url = "http://wechat.gdnyt.com:8000/NytPayApi/LockTicket_lock?"+urllib.urlencode(url_pramas)
+        url = "http://www.gdnyt.cn/api/ticketorder/lockticket/?"+urllib.urlencode(url_pramas)
+        # url = "http://wechat.gdnyt.com:8000/NytPayApi/LockTicket_lock?"+urllib.urlencode(url_pramas)
         return url, lock_params
 
 
