@@ -138,19 +138,25 @@ class Flow(BaseFlow):
         r = requests.get(url, headers=headers, cookies=cookies)
         soup = bs(r.content, 'lxml')
         info = soup.find('table', attrs={'id': 'selorder'}).find_all('tr', attrs={'class': True})
+        amount = 0
         for x in info:
-            sn1 = x.find_all('td')[1].get_text().strip()
-            drv_date = x.find_all('td')[3].get_text().strip()
-            drv_time = x.find_all('td')[4].get_text().strip()
-            if sn == sn1 and drv_date == order.line.drv_date and drv_time == order.line.drv_time:
-                state = x.find_all('td')[6].get_text().strip()
-                return {
-                    "state": state,
-                    "pick_no": sn,
-                    "pick_site": '',
-                    'raw_order': sn,
-                    "pay_money": 0.0,
-                }
+            try:
+                sn1 = x.find_all('td')[1].get_text().strip()
+                drv_date = x.find_all('td')[3].get_text().strip()
+                drv_time = x.find_all('td')[4].get_text().strip()
+                if sn == sn1 and drv_date == order.line.drv_date and drv_time == order.line.drv_time:
+                    amount += 1
+                    state = x.find_all('td')[6].get_text().strip()
+            except:
+                pass
+        if amount == len(order.riders):
+            return {
+                "state": state,
+                "pick_no": sn,
+                "pick_site": '',
+                'raw_order': sn,
+                "pay_money": 0.0,
+            }
 
 
 
