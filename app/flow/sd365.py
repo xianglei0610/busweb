@@ -135,25 +135,26 @@ class Flow(BaseFlow):
         headers = {'User-Agent': ua}
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         url = 'http://www.36565.cn/?c=order2&a=index'
-        data = {'eport': order.riders[0]['id_number']}
-        r = requests.post(url, headers=headers, data=data)
-        soup = bs(r.content, 'lxml')
-        info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})
-        sn = order.pay_order_no
-        for x in info:
-            sn1 = x.find('div', attrs={'class': 'billnobreak'}).get_text().strip()
-            state = x.find('div', attrs={'class': 'bstate'}).get_text().strip()
-            amount = int(x.find('div', attrs={'class': 'busnum'}).get_text().strip())
-            if sn1 == sn:
-                return {
-                    "state": state,
-                    "pick_no": '',
-                    "pcode": order.extra_info.get('pcode'),
-                    "pick_site": '',
-                    'raw_order': order.extra_info.get('orderUUID'),
-                    "pay_money": 0.0,
-                    'amount': amount,
-                }
+        for y in order.riders:
+            data = {'eport': y['id_number']}
+            r = requests.post(url, headers=headers, data=data)
+            soup = bs(r.content, 'lxml')
+            info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})
+            sn = order.pay_order_no
+            for x in info:
+                sn1 = x.find('div', attrs={'class': 'billnobreak'}).get_text().strip()
+                state = x.find('div', attrs={'class': 'bstate'}).get_text().strip()
+                amount = int(x.find('div', attrs={'class': 'busnum'}).get_text().strip())
+                if sn1 == sn:
+                    return {
+                        "state": state,
+                        "pick_no": '',
+                        "pcode": order.extra_info.get('pcode'),
+                        "pick_site": '',
+                        'raw_order': order.extra_info.get('orderUUID'),
+                        "pay_money": 0.0,
+                        'amount': amount,
+                    }
 
     # 刷新出票
     def do_refresh_issue(self, order):
