@@ -315,8 +315,9 @@ class Flow(BaseFlow):
                 r = requests.post(pay_url, data=urllib.urlencode(data), headers=headers, cookies=cookies, allow_redirects=False)
                 soup = bs(r.content, 'lxml')
                 # rebot_log.info(soup)
+                content = r.content.replace('src="/', 'src="http://www.0000369.cn/').replace('href="/', 'href="http://www.0000369.cn/')
                 trade_no = soup.find_all('label')[0].get_text()
                 pay_money = float(soup.find_all('label')[1].get_text())
                 if order.pay_money != pay_money or order.pay_order_no != trade_no:
                     order.modify(pay_money=pay_money, pay_order_no=trade_no, pay_channel='yh')
-                return {"flag": "html", "content": r.content.replace('src="/', 'src="http://www.0000369.cn/')}
+                return {"flag": "html", "content": content}
