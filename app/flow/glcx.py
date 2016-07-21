@@ -120,12 +120,12 @@ class Flow(BaseFlow):
                 'pay_money': 0,
             })
             return lock_result
-        # elif fail_reason:
-        #     lock_result.update({
-        #         'result_code': 0,
-        #         "lock_info": {"fail_reason": fail_reason}
-        #     })
-        #     return lock_result
+        else:
+            lock_result.update({
+                'result_code': 2,
+                "lock_info": {"fail_reason": ''}
+            })
+            return lock_result
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
