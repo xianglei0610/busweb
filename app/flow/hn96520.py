@@ -97,7 +97,7 @@ class Flow(BaseFlow):
             if 'ROLLBACK' in urlstr or '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
                 order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
                 self.close_line(line)
-                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
+                errlst = re.findall(r"msg=(\S+)", urlstr)
                 errmsg = unicode(errlst and errlst[0] or "")
                 lock_result.update({
                     'result_code': 0,
