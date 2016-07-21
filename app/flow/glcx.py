@@ -137,21 +137,27 @@ class Flow(BaseFlow):
         }
         r = requests.get(url, headers=headers, cookies=cookies)
         soup = bs(r.content, 'lxml')
-        info = soup.find()
+        info = soup.find('table', attrs={'id': 'selorder'}).find_all('tr', attrs={'class': True})
+        amount = 0
         for x in info:
-            ocode = x['OrderCode']
-            if sn == ocode:
-                pcode = x.get('Password', '')
-                state = x['OrderStatus']
+            try:
+                sn1 = x.find_all('td')[1].get_text().strip()
+                drv_date = x.find_all('td')[3].get_text().strip()
+                drv_time = x.find_all('td')[4].get_text().strip()
+                if sn == sn1 and drv_date == order.line.drv_date and drv_time == order.line.drv_time:
+                    amount += 1
+                    state = x.find_all('td')[6].get_text().strip()
+            except:
+                pass
+        if amount == len(order.riders):
+            return {
+                "state": state,
+                "pick_no": sn,
+                "pick_site": '',
+                'raw_order': sn,
+                "pay_money": 0.0,
+            }
 
-        return {
-            "state": state,
-            "pick_no": pcode,
-            "pick_code": pcode,
-            "pick_site": '',
-            'raw_order': sn,
-            "pay_money": 0.0,
-        }
 
 
     # 刷新出票
@@ -166,32 +172,24 @@ class Flow(BaseFlow):
             result_info.update(result_msg="状态未变化")
             return result_info
         ret = self.send_order_request(order)
+        # rebot_log.info(ret)
         state = ret['state']
-        code = ret['pick_code']
-        if '已取消' in state:
-            result_info.update({
-                "result_code": 5,
-                "result_msg": state,
-            })
-        elif '失败' in state:
+        if '失败' in state:
             result_info.update({
                 "result_code": 2,
                 "result_msg": state,
             })
-        elif '已付款确认' in state and code:
-            no, site, raw_order = ret['pick_no'], ret[
-                'pick_site'], ret['raw_order']
+        elif '已付款' == state:
+            no,  raw_order = ret['pick_no'], ret['raw_order']
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
-                "code": code,
                 "no": no,
-                "site": site,
                 'raw_order': raw_order,
             }
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HN96520]
-            code_list = ["%s" % (code)]
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_GLCX]
+            code_list = []
             msg_list = [dx_tmpl % dx_info]
             result_info.update({
                 "result_code": 1,
@@ -229,17 +227,19 @@ class Flow(BaseFlow):
         for x in items:
             try:
                 y = x.find_all('td')
-                bus_num = y[0].get_text().strip()
+                # bus_num = y[0].get_text().strip()
                 full_price = y[6].get_text().strip()
                 left_tickets = y[10].get_text().strip()
                 line_id_args = {
                     's_city_name': line.s_city_name,
                     'd_city_name': line.d_city_name,
-                    'bus_num': bus_num,
                     'crawl_source': line.crawl_source,
+                    's_sta_name': line.s_sta_name,
+                    'd_sta_name': line.d_sta_name,
                     'drv_datetime': line.drv_datetime,
                 }
-                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                # line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
                     t[line_id].update(**{"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now})
                 if line_id == line.line_id and int(left_tickets):
@@ -285,17 +285,20 @@ class Flow(BaseFlow):
                                   # allow_redirects=False,
                                   cookies=cookies)
                 soup = bs(r.content, 'lxml')
-                info = soup.find('a', attrs={'onclick': 'tomyorder();'}).get_text()
-                if re.findall(r'\d+', info)[0]:
-                    ncookies = {
-                        'JSESSIONID': dict(cookies)['JSESSIONID'],
-                        'remm': 'true',
-                        'user': rebot.telephone,
-                        'pass': rebot.password,
-                    }
-                    # rebot_log.info(re.findall(r'\d+', info)[0])
-                    rebot.modify(cookies=json.dumps(ncookies))
-                    break
+                try:
+                    info = soup.find('a', attrs={'onclick': 'tomyorder();'}).get_text()
+                    if re.findall(r'\d+', info)[0]:
+                        ncookies = {
+                            'JSESSIONID': dict(cookies)['JSESSIONID'],
+                            'remm': 'true',
+                            'user': rebot.telephone,
+                            'pass': rebot.password,
+                        }
+                        # rebot_log.info(re.findall(r'\d+', info)[0])
+                        rebot.modify(cookies=json.dumps(ncookies))
+                        break
+                except:
+                    pass
 
         is_login = is_login or rebot.test_login_status()
         if is_login:
@@ -318,8 +321,9 @@ class Flow(BaseFlow):
                 r = requests.post(pay_url, data=urllib.urlencode(data), headers=headers, cookies=cookies, allow_redirects=False)
                 soup = bs(r.content, 'lxml')
                 # rebot_log.info(soup)
+                content = r.content.replace('src="/', 'src="http://www.0000369.cn/').replace('href="/', 'href="http://www.0000369.cn/')
                 trade_no = soup.find_all('label')[0].get_text()
                 pay_money = float(soup.find_all('label')[1].get_text())
                 if order.pay_money != pay_money or order.pay_order_no != trade_no:
                     order.modify(pay_money=pay_money, pay_order_no=trade_no, pay_channel='yh')
-                return {"flag": "html", "content": r.content.replace('src="/', 'src="http://www.0000369.cn/')}
+                return {"flag": "html", "content": content}
