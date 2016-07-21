@@ -300,7 +300,7 @@ class Flow(BaseFlow):
         # }
         line_url = "http://58.213.132.28/weixin/proxy/queryBus"
         req_data = {
-            "ewx": "FSclq1vvBHkQRfFqCaVal5+g6aovi02md1tfoQkuFUjwpwMPj4cjwu0EEWzvYfwohaqwrerSReE3zaLOAa1g85WWGXWruPxN2bD04NjmfV8=",
+            "ewx": "ROxgn80ecZQrWIzo4Ca89MVgGD4LZ9pGp0PNwOwzlC6k0r9EcmpJGpyt37mOv9LBoJezNz1rYtIUczw7Ed2BjjOiiPlA0H2f2C9TnO+qdJo=",
             "drive_date": line.drv_datetime.strftime("%Y%m%d"),
             "rst_name": line.s_sta_name,
             "dst_name": line.d_city_name,
