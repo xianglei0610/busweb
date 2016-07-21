@@ -189,7 +189,7 @@ class Flow(BaseFlow):
                 'raw_order': raw_order,
             }
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_GLCX]
-            code_list = []
+            code_list = [no]
             msg_list = [dx_tmpl % dx_info]
             result_info.update({
                 "result_code": 1,
@@ -263,42 +263,9 @@ class Flow(BaseFlow):
         # rebot_log.info(is_login)
         if not is_login:
             for x in xrange(3):
-                v = vcode_glcx()
-                if not v:
-                    continue
-                valid_code = v[0]
-                cookies = v[1]
-                params = {
-                    "userId": rebot.telephone,
-                    "password": rebot.password,
-                    "rand": valid_code,
-                    'remmber': 'on',
-                }
-                headers = {
-                    "User-Agent": rebot.user_agent,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                }
-                url = 'http://www.0000369.cn/login!login.action'
-                r = requests.post(url,
-                                  data=urllib.urlencode(params),
-                                  headers=headers,
-                                  # allow_redirects=False,
-                                  cookies=cookies)
-                soup = bs(r.content, 'lxml')
-                try:
-                    info = soup.find('a', attrs={'onclick': 'tomyorder();'}).get_text()
-                    if re.findall(r'\d+', info)[0]:
-                        ncookies = {
-                            'JSESSIONID': dict(cookies)['JSESSIONID'],
-                            'remm': 'true',
-                            'user': rebot.telephone,
-                            'pass': rebot.password,
-                        }
-                        # rebot_log.info(re.findall(r'\d+', info)[0])
-                        rebot.modify(cookies=json.dumps(ncookies))
-                        break
-                except:
-                    pass
+                if rebot.login() == "OK":
+                    is_login = True
+                    break
 
         is_login = is_login or rebot.test_login_status()
         if is_login:

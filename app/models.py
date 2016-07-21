@@ -16,6 +16,7 @@ from lxml import etree
 from bs4 import BeautifulSoup
 from app import db
 from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter
+from app.utils import vcode_glcx
 from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
 from pymongo import MongoClient
@@ -1085,13 +1086,44 @@ class GlcxWebRebot(Rebot):
         return 0
 
     def login(self):
-        ua = random.choice(BROWSER_USER_AGENT)
-        self.last_login_time = dte.now()
-        self.user_agent = ua
-        self.is_active = True
-        self.cookies = "{}"
-        self.save()
-        return "OK"
+        for x in xrange(3):
+            v = vcode_glcx()
+            if not v:
+                continue
+            valid_code = v[0]
+            cookies = v[1]
+            params = {
+                "userId": self.telephone,
+                "password": self.password,
+                "rand": valid_code,
+                'remmber': 'on',
+            }
+            headers = {
+                "User-Agent": self.user_agent or random.choice(BROWSER_USER_AGENT),
+                "Content-Type": "application/x-www-form-urlencoded",
+            }
+            url = 'http://www.0000369.cn/login!login.action'
+            r = requests.post(url,
+                                data=urllib.urlencode(params),
+                                headers=headers,
+                                # allow_redirects=False,
+                                cookies=cookies)
+            soup = BeautifulSoup(r.content, 'lxml')
+            try:
+                info = soup.find('a', attrs={'onclick': 'tomyorder();'}).get_text()
+                if re.findall(r'\d+', info)[0]:
+                    ncookies = {
+                        'JSESSIONID': dict(cookies)['JSESSIONID'],
+                        'remm': 'true',
+                        'user': self.telephone,
+                        'pass': self.password,
+                    }
+                    # rebot_log.info(re.findall(r'\d+', info)[0])
+                    self.modify(cookies=json.dumps(ncookies))
+                    return "OK"
+            except:
+                pass
+        return "fail"
 
     @classmethod
     def login_all(cls):
