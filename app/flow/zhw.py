@@ -206,14 +206,14 @@ class Flow(BaseFlow):
         now = dte.now()
         for x in xrange(1):
             rebot = ZhwWebRebot.objects.filter(telephone='15338702029').first()
-            if rebot.code and rebot.cookies == '{}':
-                code = rebot.code
-                cookies = json.loads(rebot.cookies)
-                cookies = cookiejar_from_dict(cookies)
-            else:
+            if not rebot.code and rebot.cookies == '{}':
                 v = vcode_zhw()
                 code = v[0]
                 cookies = v[1]
+            else:
+                code = rebot.code
+                cookies = json.loads(rebot.cookies)
+                cookies = cookiejar_from_dict(cookies)
             data = {
                 'SchDate': line['drv_date'],
                 'SchTime': '',
