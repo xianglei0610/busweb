@@ -1891,7 +1891,7 @@ class ScqcpAppRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return ""
+#         return ""
         rds = get_redis("default")
         ipstr = self.ip
         if ipstr and rds.sismember(RK_PROXY_IP_SCQCP, ipstr):
@@ -1921,7 +1921,7 @@ class ScqcpAppRebot(Rebot):
         return qs[rd]
 
     def login(self):
-#         return
+        return
         ua = random.choice(MOBILE_USER_AGENG)
         device = "android" if "android" in ua else "ios"
 
@@ -1935,7 +1935,6 @@ class ScqcpAppRebot(Rebot):
         }
         r = self.http_get(url, headers=headers)
         ret = r.json()
-        print ret
         token = ret["token"]
         self.user_agent = ua
         self.token = token
@@ -2039,14 +2038,13 @@ class ScqcpWebRebot(Rebot):
                 }):
             cnt = d["count"]
             phone = d["_id"]["phone"]
-            if cnt >= 10:
+            if cnt >= 5:
                 droped.add(phone)
         tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
 
     def login(self, valid_code="", token='', headers={}, cookies={}):
         vcode_flag = False
-        valid_code= 1
         if not valid_code:
             login_form_url = "http://scqcp.com/login/index.html?%s" % time.time()
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
@@ -2061,7 +2059,6 @@ class ScqcpWebRebot(Rebot):
             cookies.update(dict(r.cookies))
             valid_code = vcode_scqcp(r.content)
             vcode_flag = True
-        valid_code= ''    
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
