@@ -1458,6 +1458,8 @@ class XyjtWebRebot(Rebot):
 class ZhwWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    code = db.StringField()
+
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
         "collection": "zhwweb_rebot",

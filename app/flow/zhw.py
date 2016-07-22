@@ -14,16 +14,10 @@ from bs4 import BeautifulSoup as bs
 from app.constants import *
 from datetime import datetime as dte
 from app.flow.base import Flow as BaseFlow
-from app.models import Line
+from app.models import Line, ZhwWebRebot
 from app.utils import md5, vcode_zhw
 from app import rebot_log
-from pymongo import MongoClient
-vcookies = MongoClient('db', 27017).web12308.zhwcity
 from requests.utils import cookiejar_from_dict, dict_from_cookiejar
-# import cStringIO
-# from selenium import webdriver
-# from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-# from cchardet import detect
 
 
 class Flow(BaseFlow):
@@ -211,10 +205,10 @@ class Flow(BaseFlow):
         result_info = {}
         now = dte.now()
         for x in xrange(1):
-            v = vcookies.find_one({'cookies': {'$exists': True}})
-            if v:
-                code = v['code']
-                cookies = v['cookies']
+            rebot = ZhwWebRebot.objects.filter(telephone='15338702029').first()
+            if rebot:
+                code = rebot.code
+                cookies = json.loads(rebot.cookies)
                 cookies = cookiejar_from_dict(cookies)
             else:
                 v = vcode_zhw()
@@ -231,13 +225,13 @@ class Flow(BaseFlow):
             soup = bs(r.content, 'lxml')
             info = soup.find('table', attrs={'id': 'changecolor'})
             if '验证码' in info.get_text():
-                vcookies.remove({'cookies': {'$exists': True}})
+                # vcookies.remove({'cookies': {'$exists': True}})
+                rebot.modify(cookies={}, code='')
                 continue
             else:
                 cookies = dict(r.cookies)
                 cks = {'JSESSIONID1_ZH_DY_SHFW': cookies.values()[0]}
-                if vcookies.find({'cookies': cks}).count() <= 0:
-                    vcookies.save({'cookies': cks, 'code': code})
+                rebot.modify(cookies=json.dumps(cks), code=code)
             items = info.find_all('tr', attrs={'id': True})
             update_attrs = {}
             ft = Line.objects.filter(s_city_name=line.s_city_name,
@@ -247,7 +241,7 @@ class Flow(BaseFlow):
             for x in items:
                 try:
                     y = x.find_all('td')
-                    sts = x.find('input', attrs={'class': 'table_btn_dis'}).get('value')
+                    sts = x.find('input', attrs={'class': 'g_table_btn'}).get('value', '')
                     drv_date = y[0].get_text().strip()
                     drv_time = y[1].get_text().strip()
                     s_sta_name = y[2].get_text().strip()
