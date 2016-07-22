@@ -16,7 +16,7 @@ from datetime import datetime as dte
 from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5, vcode_glcx
-from app import rebot_log
+from app import rebot_log, order_log
 # import cStringIO
 from time import sleep
 
@@ -121,6 +121,8 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
+            fail_msg = soup.title
+            order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
             lock_result.update({
                 'result_code': 2,
                 "lock_info": {"fail_reason": ''}
