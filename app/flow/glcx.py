@@ -121,11 +121,21 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
-            fail_msg = soup.title
-            order_log.info("[lock-fail] order: %s %s", order.order_no, fail_msg)
+            try:
+                errmsg = soup.find('ul', attrs={'class': 'errorMessage'}).get_text().strip()
+            except:
+                errmsg = ''
+            if errmsg:
+                order_log.info("[lock-fail] order: %s %s", order.order_no, errmsg)
+                lock_result.update({
+                    'result_code': 2,
+                    "result_reason": errmsg,
+                })
+                return lock_result
+            errmsg = soup.title.get_text()
             lock_result.update({
                 'result_code': 2,
-                "lock_info": {"fail_reason": ''}
+                "result_reason": errmsg,
             })
             return lock_result
 

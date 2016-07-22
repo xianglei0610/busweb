@@ -92,6 +92,7 @@ class Flow(BaseFlow):
             r = requests.get(nurl, headers=headers)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
             if len(r.content) == 0 or '该班次价格不存在' in urlstr:
+                order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
                 self.close_line(line)
                 fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
@@ -111,7 +112,7 @@ class Flow(BaseFlow):
         elif fail_reason:
             lock_result.update({
                 'result_code': 0,
-                "lock_info": {"fail_reason": fail_reason}
+                "result_reason": fail_reason,
             })
             return lock_result
         elif '不售票' in location or '票务错误' in location or '超出人数限制' in location or '票源不足' in location:
@@ -121,13 +122,13 @@ class Flow(BaseFlow):
             errmsg = unicode(errlst and errlst[0] or "")
             lock_result.update({
                 'result_code': 0,
-                "lock_info": {"fail_reason": errmsg}
+                "result_reason": errmsg,
             })
             return lock_result
         else:
             lock_result.update({
                 'result_code': 2,
-                "lock_info": {"fail_reason": location.split('=')[0]}
+                "result_reason": location,
             })
             return lock_result
 
