@@ -481,6 +481,7 @@ class Flow(BaseFlow):
                              crawl_source='gdsw')
                 order.on_lock_retry(reason=msg)
                 order.reload()
+                return {"flag": "error", "content": '重新打开'}
             else:
                 r = requests.get(order.pay_url)
                 content = r.content.decode('gbk')
@@ -499,7 +500,7 @@ class Flow(BaseFlow):
                         issued_callback.delay(order.order_no)
                 else:
                     order.update(pay_channel='alipay')
-                    return {"flag": "url", "content": order.pay_url}
+                    return {"flag": "html", "content": content}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()
