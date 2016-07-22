@@ -206,7 +206,7 @@ class Flow(BaseFlow):
         now = dte.now()
         for x in xrange(1):
             rebot = ZhwWebRebot.objects.filter(telephone='15338702029').first()
-            if rebot:
+            if rebot.code and rebot.cookies == '{}':
                 code = rebot.code
                 cookies = json.loads(rebot.cookies)
                 cookies = cookiejar_from_dict(cookies)
@@ -224,9 +224,9 @@ class Flow(BaseFlow):
             r = requests.post(url, headers=headers, cookies=cookies, data=data)
             soup = bs(r.content, 'lxml')
             info = soup.find('table', attrs={'id': 'changecolor'})
-            if '验证码' in info.get_text():
+            if '验证码错误' in info.get_text():
                 # vcookies.remove({'cookies': {'$exists': True}})
-                rebot.modify(cookies={}, code='')
+                rebot.modify(cookies='{}', code='')
                 continue
             else:
                 cookies = dict(r.cookies)
