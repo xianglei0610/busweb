@@ -127,14 +127,14 @@ class Flow(BaseFlow):
             rebot.modify(cookies="{}")
             rebot = order.change_lock_rebot()
             lock_result.update(result_code=2,
-                                source_account=rebot.telephone,
-                                result_reason="锁票异常")
+                               source_account=rebot.telephone,
+                               result_reason="锁票异常")
             return lock_result
-        lock_result = {
-            "lock_info": ret,
-            "source_account": rebot.telephone,
-            "pay_money": 0,
-        }
+        lock_result.update({
+                            "lock_info": ret,
+                            "source_account": rebot.telephone,
+                            "pay_money": 0,
+                            })
         if ret.get("status", '') == 1:
             expire_datetime = dte.now()+datetime.timedelta(seconds=28*60)
             lock_result.update({
