@@ -498,9 +498,11 @@ class Flow(BaseFlow):
                         order.modify(status=STATUS_LOCK_FAIL)
                         order.on_lock_fail(reason=errmsg)
                         issued_callback.delay(order.order_no)
+                        return {"flag": "error", "content": '锁票失败'}
                 else:
                     order.update(pay_channel='alipay')
-                    return {"flag": "html", "content": content}
+                    return {"flag": "url", "content": order.pay_url}
+                    #return {"flag": "html", "content": content}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()
