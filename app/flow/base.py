@@ -168,14 +168,13 @@ class Flow(object):
             return
         elif code == 1:         # 出票成功
             msg_list = ret["pick_msg_list"] or order.pick_msg_list
+            code_list = ret["pick_code_list"] or order.pick_code_list
+            if not code_list:   # 最初设计要求msg_list和code_list长度必须一致
+                code_list = [""] * len(msg_list)
+
             msg = msg_list and msg_list[0] or ""
-            order_log.info("[issue-refresh-result] order: %s succ. msg:%s, pick_msg: %s",
-                            order.order_no,
-                            ret["result_msg"],
-                            msg)
-            order.modify(status=STATUS_ISSUE_SUCC,
-                         pick_code_list=ret["pick_code_list"] or order.pick_code_list,
-                         pick_msg_list=msg_list)
+            order_log.info("[issue-refresh-result] order: %s succ. msg:%s, pick_msg: %s", order.order_no, ret["result_msg"], msg)
+            order.modify(status=STATUS_ISSUE_SUCC, pick_code_list=code_list, pick_msg_list=msg_list)
             order.on_issue_success()
             issued_callback.delay(order.order_no)
         elif code == 2:         # 出票失败

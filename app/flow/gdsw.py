@@ -383,7 +383,7 @@ class Flow(BaseFlow):
         }
         headers={"Content-Type": "application/json; charset=UTF-8", "User-Agent": random.choice(MOBILE_USER_AGENG)}
         try:
-            r = requests.post(url, data=json.dumps(params), headers=headers)
+            r = requests.post(url, data=json.dumps(params), headers=headers, timeout=10)
             res = r.json()
         except:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
