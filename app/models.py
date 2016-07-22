@@ -206,8 +206,11 @@ class OpenStation(db.Document):
     close_status = db.IntField(default=STATION_CLOSE_NONE)   # 关闭状态: 定义见constants.py
     extra_info = db.DictField()             # 自定义数据
     create_datetime = db.DateTimeField(default=dte.now)
-    line_count = db.IntField()              # 线路数, 由定时任务间隔时间刷新这个值
-    day_order_count = db.DictField()        # 每天订单数和成功率, {"2016-07-08": {"count": 0, "succ_count":0}}, 由定时任务间隔时间刷新这个值
+
+    day_order_count = db.DictField()        # 每天订单数和失败单数, {"2016-07-08": {"count": 0, "fail_count": 0}}, 由定时任务间隔时间刷新这个值
+    day_line_count = db.DictField()         # 今天线路数量, {"2016-07-08": {"count": 0,}, 由定时任务间隔时间刷新这个值
+    day_line_query_count = db.DictField()   # 每天余票查询次数和失败次数, {"2016-07-08": {"count": 0, "fail_count":0}}, 由定时任务间隔时间刷新这个值
+    refresh_datetime = db.DateTimeField()   # 最近刷新时间
 
 
     meta = {
@@ -218,6 +221,16 @@ class OpenStation(db.Document):
             ("city", "sta_name"),
         ],
     }
+
+    def refresh(self):
+        # 线路数
+        today_str = dte.now().strftime("%Y-%m-%d")
+        line_count = Line.objects.filter(city_name__startswith=self.city.city_name, s_sta_name=self.sta_name, drv_date=today_str).count()
+        order_qs = Order.objects.filter(starting_name="%s;%s" % (self.city.city_name, self.sta_name), create_date_time__gte=today_str)
+
+        order_count = order_qs.count()
+        fail_order_count = order_qs.filter(status__in=[5, 6, 13]).count()
+
 
     def init_dest(self):
         """
