@@ -125,7 +125,7 @@ class Flow(BaseFlow):
                 errmsg = soup.find('ul', attrs={'class': 'errorMessage'}).get_text().strip()
             except:
                 errmsg = ''
-            if '座号不足' in errmsg:
+            if '座号不足' in errmsg or '票价非法更改' in errmsg:
                 self.close_line(order.line)
                 lock_result.update({
                     'result_code': 0,
