@@ -125,6 +125,13 @@ class Flow(BaseFlow):
                 errmsg = soup.find('ul', attrs={'class': 'errorMessage'}).get_text().strip()
             except:
                 errmsg = ''
+            if '座号不足' in errmsg:
+                self.close_line(order.line)
+                lock_result.update({
+                    'result_code': 0,
+                    "result_reason": errmsg,
+                })
+                return lock_result
             if errmsg:
                 order_log.info("[lock-fail] order: %s %s", order.order_no, errmsg)
                 lock_result.update({
