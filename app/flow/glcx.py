@@ -246,7 +246,7 @@ class Flow(BaseFlow):
         for x in items:
             try:
                 y = x.find_all('td')
-                # bus_num = y[0].get_text().strip()
+                bus_num = y[0].get_text().strip()
                 full_price = y[6].get_text().strip()
                 left_tickets = y[10].get_text().strip()
                 line_id_args = {
@@ -261,7 +261,7 @@ class Flow(BaseFlow):
                 line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
                 if line_id in t:
                     t[line_id].update(**{"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now})
-                if line_id == line.line_id and int(left_tickets):
+                if line_id == line.line_id and int(left_tickets) and bus_num == line.bus_num:
                     update_attrs = {"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now}
             except:
                 pass
