@@ -27,12 +27,9 @@ class Flow(BaseFlow):
     # 锁票
     def get_proxy(self):
         rds = get_redis("default")
-        ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_SD365, ipstr):
-            return ipstr
         ipstr = rds.srandmember(RK_PROXY_IP_SD365)
-        self.modify(ip=ipstr)
-        return ipstr
+        ip = {'http': 'http://%s' %ipstr}
+        return ip
 
     def do_lock_ticket(self, order):
         lock_result = {
