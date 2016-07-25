@@ -1073,6 +1073,29 @@ class Rebot(db.Document):
                 continue
             return r
 
+class Sd365WebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "sd365web_rebot",
+    }
+    crawl_source = SOURCE_SD365
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SD365, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SD365)
+        self.modify(ip=ipstr)
+        return ipstr
+
+
 class GlcxWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
