@@ -559,6 +559,7 @@ if "proxy_list" not in globals():
     proxy_list[ChangtuProxyConsumer.name] = ChangtuProxyConsumer()
     proxy_list[Bus365ProxyConsumer.name] = Bus365ProxyConsumer()
     proxy_list[HN96520ProxyConsumer.name] = HN96520ProxyConsumer()
+    proxy_list[SD365ProxyConsumer.name] = SD365ProxyConsumer()
 
     for name, obj in proxy_list.items():
         proxy_producer.registe_consumer(obj)
