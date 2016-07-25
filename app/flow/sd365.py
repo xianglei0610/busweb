@@ -89,20 +89,20 @@ class Flow(BaseFlow):
         except:
             sn = ''
         fail_reason = ''
-        if not sn:
-            ndata = {
-                'sid': extra['sid'],
-                'l': extra['l'],
-                'dpid': extra['dpid'],
-                't': extra['t'],
-            }
-            nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
-            r = requests.get(nurl, headers=headers, proxies=proxies)
-            urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-            if '该班次价格不存在' in urlstr:
-                order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
-                self.close_line(line)
-                fail_reason = u'服务器异常'
+        # if not sn:
+        #     ndata = {
+        #         'sid': extra['sid'],
+        #         'l': extra['l'],
+        #         'dpid': extra['dpid'],
+        #         't': extra['t'],
+        #     }
+        #     nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
+        #     r = requests.get(nurl, headers=headers, proxies=proxies)
+        #     urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
+        #     if '该班次价格不存在' in urlstr:
+        #         order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
+        #         self.close_line(line)
+        #         fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             # cookies = {}
