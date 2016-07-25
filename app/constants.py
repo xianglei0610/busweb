@@ -3649,7 +3649,7 @@ SOURCE_INFO = {
     },
     SOURCE_HEBKY: {
         "name": "河北客运",
-        "website": "http://www.hb96505.com",
+        "website": "http://60.2.147.28/dync/09//index.jsp",
         "accounts": {
             # telephone: {password, auth)
             "1367109876": ("a123456", ''),

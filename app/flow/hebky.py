@@ -225,7 +225,7 @@ class Flow(BaseFlow):
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
-                order_url = "http://www.hb96505.com/dync/09/wsgp/order_success.jsp?orderNo=%s"%order.raw_order_no
+                order_url = "http://60.2.147.28/dync/09/wsgp/order_success.jsp?orderNo=%s"%order.raw_order_no
                 headers = {
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
@@ -236,7 +236,7 @@ class Flow(BaseFlow):
                 soup = BeautifulSoup(r.content, "lxml")
                 payCompanyType = soup.select("#order_submit_zfslx")[0].get("value")
                 cookies.update(dict(r.cookies))
-                to_pay_url = "http://www.hb96505.com/com/yxd/pris/wsgp/atoPayPage.action"
+                to_pay_url = "http://60.2.147.28/com/yxd/pris/wsgp/atoPayPage.action"
                 data = {
                           "orderId": order.lock_info['encode_orderId'],
                           "payCompanyType": payCompanyType
@@ -252,7 +252,7 @@ class Flow(BaseFlow):
 #                   "orderId": order.lock_info['encode_orderId'],
 #                   "paymentCompanyCode": paymentCompanyCode
 #                   }
-                pay_url = "http://www.hb96505.com/com/hy/cpt/biz/payment/common/toPayment.action"
+                pay_url = "http://60.2.147.28/com/hy/cpt/biz/payment/common/toPayment.action"
                 params ={
                     "orderId": order.lock_info['encode_orderId'],
                     "payOrderNo": order.raw_order_no,
@@ -270,7 +270,7 @@ class Flow(BaseFlow):
             custom_headers = {}
             custom_headers.update(headers)
             custom_headers.update({"Content-Type": "application/x-www-form-urlencoded"})
-            url = "http://www.hb96505.com//com/yxd/pris/common/personLogin.action?username=%s&password=%s&rand=%s&isChkUser=0&isAutoLogin=0"%(rebot.telephone,rebot.password,valid_code)
+            url = "http://60.2.147.28//com/yxd/pris/common/personLogin.action?username=%s&password=%s&rand=%s&isChkUser=0&isAutoLogin=0"%(rebot.telephone,rebot.password,valid_code)
             r = requests.get(url, headers=custom_headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             rebot.modify(cookies=json.dumps(cookies))
@@ -281,7 +281,7 @@ class Flow(BaseFlow):
                 self.lock_ticket(order)
             return _get_page(rebot)
         else:
-            login_form = "http://www.hb96505.com/dync/09/grzx/userLogin.jsp"
+            login_form = "http://60.2.147.28/dync/09/grzx/userLogin.jsp"
             ua = random.choice(BROWSER_USER_AGENT)
             headers = {"User-Agent": ua}
             r = requests.get(login_form, headers=headers)
