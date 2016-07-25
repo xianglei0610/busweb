@@ -423,6 +423,7 @@ def starting_list():
     province = params.get("province", "")
     s_city = params.get("s_city", "")
     s_sta = params.get("s_sta", "")
+    close_status = params.get("close_status", "")
 
     city_query = {}
     if province:
@@ -431,6 +432,8 @@ def starting_list():
         city_query.update(city_name=s_city)
 
     sta_query = {}
+    if close_status:
+        sta_query.update({"close_status": int(close_status)})
     if s_sta:
         sta_query.update(sta_name__contains=s_sta)
     cqs = OpenCity.objects.filter(**city_query)
@@ -449,6 +452,7 @@ def starting_list():
                            condition=params,
                            line_stat=line_stat,
                            today_str=today_str,
+                           close_status_msg=STATION_CLOSE_MSG,
                            )
 
 

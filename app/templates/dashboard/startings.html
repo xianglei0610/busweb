@@ -58,6 +58,15 @@
                             <label for="sourceSite" class="sr-only">出发站名</label>
                             <input type="text" class="form-control" id="" placeholder="出发站名" name="s_sta" value="{{condition.s_sta}}">
                         </div>
+                        <div class="form-group col-md-1">
+                            <label for="sourceSite" class="sr-only">关闭状态</label>
+                            <select class="form-control" name="close_status" id="id-close">
+                                <option value="">==关闭状态==</option>
+                                {%for k,v in close_status_msg.items()%}
+                                <option value="{{k}}" {%if condition.close_status==k|string %}selected{% endif %}>{{v}}</option>
+                                {%endfor%}
+                            </select>
+                        </div>
                         <div class="col-md-offset-1 col-md-1">
                             <button type="submit" class="btn btn-primary">查&nbsp;&nbsp;询</button>
                         </div>
