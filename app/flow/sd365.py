@@ -11,6 +11,7 @@ import random
 from bs4 import BeautifulSoup as bs
 # from PIL import Image
 
+from app.proxy import get_redis
 from app.constants import *
 from datetime import datetime as dte
 from app.flow.base import Flow as BaseFlow
@@ -24,6 +25,15 @@ class Flow(BaseFlow):
     name = 'sd365'
 
     # 锁票
+    def get_proxy(self):
+        rds = get_redis("default")
+        ipstr = self.ip
+        if ipstr and rds.sismember(RK_PROXY_IP_SD365, ipstr):
+            return ipstr
+        ipstr = rds.srandmember(RK_PROXY_IP_SD365)
+        self.modify(ip=ipstr)
+        return ipstr
+
     def do_lock_ticket(self, order):
         lock_result = {
             "lock_info": {},
@@ -35,6 +45,7 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
+        proxies = self.get_proxy()
         line = order.line
         pk = len(order.riders)
         ua = random.choice(BROWSER_USER_AGENT)
@@ -73,7 +84,7 @@ class Flow(BaseFlow):
         # rebot_log.info(pa)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
-        r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256)
+        r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256, proxies=proxies)
         location = urllib.unquote(r.headers.get('location', ''))
         # rebot_log.info(location)
         try:
@@ -89,7 +100,7 @@ class Flow(BaseFlow):
                 't': extra['t'],
             }
             nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
-            r = requests.get(nurl, headers=headers)
+            r = requests.get(nurl, headers=headers, proxies=proxies)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
             if len(r.content) == 0 or '该班次价格不存在' in urlstr:
                 order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
@@ -142,12 +153,13 @@ class Flow(BaseFlow):
 
     def send_order_request(self, order):
         ua = random.choice(BROWSER_USER_AGENT)
+        proxies = self.get_proxy()
         headers = {'User-Agent': ua}
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         url = 'http://www.36565.cn/?c=order2&a=index'
         for y in order.riders:
             data = {'eport': y['id_number']}
-            r = requests.post(url, headers=headers, data=data)
+            r = requests.post(url, headers=headers, data=data, proxies=proxies)
             soup = bs(r.content, 'lxml')
             info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})
             sn = order.pay_order_no
@@ -162,6 +174,7 @@ class Flow(BaseFlow):
                         "pcode": order.extra_info.get('pcode'),
                         "pick_site": '',
                         'raw_order': order.extra_info.get('orderUUID'),
+
                         "pay_money": 0.0,
                         'amount': amount,
                     }
@@ -223,7 +236,8 @@ class Flow(BaseFlow):
             't': extra['t'],
         }
         nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
-        r = requests.get(nurl, headers=headers)
+        proxies = self.get_proxy()
+        r = requests.get(nurl, headers=headers, proxies=proxies)
         urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
         if len(r.content) == 0 or '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
             result_info = {
@@ -234,7 +248,7 @@ class Flow(BaseFlow):
         # rebot_log.info(nurl)
         for x in xrange(1):
             url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=headers, proxies=proxies)
             try:
                 code = r.content.split('code:')[-1].split()[0].split('"')[1]
             except:
@@ -260,7 +274,7 @@ class Flow(BaseFlow):
             lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
             # rebot_log.info(lasturl)
             for y in xrange(1):
-                r = requests.get(lasturl)
+                r = requests.get(lasturl, proxies=proxies)
                 try:
                     soup = r.json()
                 except:
