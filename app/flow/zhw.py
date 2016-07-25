@@ -288,10 +288,10 @@ class Flow(BaseFlow):
                 ua = random.choice(BROWSER_USER_AGENT)
                 headers = {
                     "User-Agent": ua,
-                    "Content-Type": "application/x-www-form-urlencoded"
                 }
                 url = 'http://www.zhwsbs.gov.cn:9013/jsps/shfw2/pay_ctky_orderPost.jsp'
-                r = requests.get(url, headers=headers, cookies=cookies)
+                cks = {'JSESSIONID1_ZH_DY_SHFW': cookies.values()[0]}
+                r = requests.get(url, headers=headers, cookies=cks)
                 soup = bs(r.content, 'lxml')
                 info = soup.find('form').find_all('input', attrs={'name': True})
                 data = {}
