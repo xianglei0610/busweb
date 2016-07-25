@@ -32,6 +32,12 @@ def cut_str(context, value, size=20):
 def bitor(context, value, target):
     return value&target
 
+@jinja2.contextfilter
+@dashboard.app_template_filter()
+def percent_divide(context, value, target):
+    if not target:
+        return "100%"
+    return "%.2f%%" % (value/float(target))
 
 @dashboard.after_request
 def log_response(response):

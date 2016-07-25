@@ -57,6 +57,13 @@ def refresh_order_status():
     return cnt
 
 
+@check(run_in_local=True)
+def refresh_station():
+    from app.models import OpenStation
+    for obj in OpenStation.objects.all():
+        obj.refresh()
+
+
 @check()
 def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
     url_list = app.config["SCRAPYD_URLS"]
@@ -412,6 +419,9 @@ def main():
 
     #(补救措施) 定时刷新状态
     sched.add_interval_job(refresh_order_status, minutes=4)
+
+    # 定时刷新站统计信息
+    sched.add_interval_job(refresh_station, minutes=10)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)

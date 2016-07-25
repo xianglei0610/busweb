@@ -448,6 +448,7 @@ def starting_list():
                            source_info=SOURCE_INFO,
                            condition=params,
                            line_stat=line_stat,
+                           today_str=today_str,
                            )
 
 
@@ -522,6 +523,24 @@ def starting_source_list(station_id):
 def destionation_list(station_id):
     sta_obj = OpenStation.objects.get_or_404(id=station_id)
     return render_template('dashboard/starting-destination.html',
+                           open_station=sta_obj,
+                           )
+
+
+@dashboard.route('/startings/<station_id>/linecount', methods=['POST', 'GET'])
+@superuser_required
+def line_count_of_starting(station_id):
+    sta_obj = OpenStation.objects.get_or_404(id=station_id)
+    return render_template('dashboard/starting-linecount.html',
+                           open_station=sta_obj,
+                           )
+
+
+@dashboard.route('/startings/<station_id>/ordercount', methods=['POST', 'GET'])
+@superuser_required
+def order_count_of_starting(station_id):
+    sta_obj = OpenStation.objects.get_or_404(id=station_id)
+    return render_template('dashboard/starting-ordercount.html',
                            open_station=sta_obj,
                            )
 

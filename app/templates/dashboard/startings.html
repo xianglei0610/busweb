@@ -133,10 +133,16 @@
                         <a data-trigger="modal" href="/startings/{{item.id}}/destination" data-title="目的地列表" class="btn" style="padding:0px;">{{item.dest_info|length}}</a><br/>
                     </td>
                     <td>
-                        待开发
+                        <a data-trigger="modal" href="/startings/{{item.id}}/linecount" data-title="线路数" class="btn" style="padding:0px;">{{item.day_line_count[today_str] or 0}}</a>
                     </td>
                     <td>
-                        待开发
+                        <a data-trigger="modal" href="/startings/{{item.id}}/ordercount" data-title="订单数" class="btn" style="padding:0px;">
+                            {%if item.day_order_count[today_str]%}
+                                {{item.day_order_count[today_str]["total"]}}, {{(item.day_order_count[today_str]["total"]-item.day_order_count[today_str]["fail"])|percent_divide(item.day_order_count[today_str]["total"])}}
+                            {%else%}
+                                0, 0
+                            {%endif%}
+                        </a>
                     </td>
                 </tr>
                 {%endfor%}

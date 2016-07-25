@@ -230,7 +230,7 @@ class OpenStation(db.Document):
         order_count = order_qs.count()
         fail_order_count = order_qs.filter(status__in=[5, 6, 13]).count()
 
-        self.modify(day_line_count__today_str=line_count, day_order_count__todaystr={"count": order_count, "fail": fail_order_count})
+        self.modify(day_line_count__today_str=line_count, day_order_count__todaystr={"count": order_count, "fail": fail_order_count}, refresh_datetime=dte.now())
         line_log.info("[station-refresh] %s line(total:%s), order(total:%s,fail:%s)", self.sta_name, line_count, order_count, fail_order_count)
 
 
