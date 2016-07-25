@@ -11,6 +11,7 @@ from app.flow import get_compatible_flow
 from app import order_log, access_log, line_log
 from tasks import async_lock_ticket
 from app import db
+from app.utils import get_redis
 
 
 @api.before_request
@@ -178,39 +179,51 @@ def query_line_detail():
 
     """
     req_data = request.get_data()
-    line_log.info("[query_line_detail] %s" % req_data)
     post = json.loads(req_data)
+
+    rds = get_redis("line")
+    today_str = dte.now().strftime("%Y-%m-%d")
+    rds.incr(RK_DAY_LINE_STAT % (today_str, "total"), 1)
+
     try:
         line = Line.objects.get(line_id=post["line_id"])
     except Line.DoesNotExist:
+        line_log.info("[fail-detail] 线路不存在 %s", post["line_id"])
         return jsonify({"code": RET_LINE_404, "message": "线路不存在", "data": ""})
 
     open_city = line.get_open_city()
-    if open_city and not open_city.is_active:
-        return jsonify({"code": RET_CITY_NOT_OPEN, "message": "%s is not open" % open_city.city_name, "data": ""})
+    if not open_city or not open_city.is_active:
+        line_log.info("[fail-detail] 未找到opencity或未打开 %s", line.line_id)
+        return jsonify({"code": RET_CITY_NOT_OPEN, "message": "%s is not open" % line.s_city_name, "data": ""})
     open_station = open_city.get_open_station(line.s_sta_name)
     if not open_station:
+        line_log.info("[fail-detail] 未找到openstation %s %s %s", line.line_id, line.s_city_name, line.s_sta_name)
         return jsonify({"code": RET_CITY_NOT_OPEN, "message": "%s is not open" % line.s_sta_name, "data": ""})
 
     if open_station.close_status & STATION_CLOSE_YZCX:
         data = line.get_json()
         data["left_tickets"] = 0
+        line_log.info("[fail-detail] 此站禁止余票查询%s %s, %s", line.line_id, line.s_city_name, line.s_sta_name)
         return jsonify({"code": RET_OK, "message": "%s 余票查询已关闭" % line.s_sta_name, "data": data})
     now_time = dte.now().strftime("%H:%M")
     if now_time >= open_station.end_time  or now_time <= open_station.open_time:
         data = line.get_json()
         data["left_tickets"] = 0
+        line_log.info("[fail-detail] 售票时间不对%s %s, %s", line.line_id, line.s_city_name, line.s_sta_name)
         return jsonify({"code": RET_OK, "message": "售票时间是%s~%s" % (open_station.open_time, open_station.end_time), "data": data})
 
     flow, new_line = get_compatible_flow(line)
     if not flow:
         data = line.get_json()
         data["left_tickets"] = 0
+        line_log.info("[fail-detail] 未找到flow %s %s, %s", line.line_id, line.s_city_name, line.s_sta_name)
         return jsonify({"code": RET_OK, "message": "没找到对应flow", "data": data})
 
     flow.refresh_line(new_line)
     data = new_line.get_json()
     data["line_id"] = line.line_id
+    if data["left_tickets"] > 0:
+        rds.incr(RK_DAY_LINE_STAT % (today_str, "succ"), 1)
     return jsonify({"code": RET_OK, "message": "OK", "data": data})
 
 

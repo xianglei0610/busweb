@@ -209,7 +209,6 @@ class OpenStation(db.Document):
 
     day_order_count = db.DictField()        # 每天订单数和失败单数, {"2016-07-08": {"count": 0, "fail_count": 0}}, 由定时任务间隔时间刷新这个值
     day_line_count = db.DictField()         # 今天线路数量, {"2016-07-08": {"count": 0,}, 由定时任务间隔时间刷新这个值
-    day_line_query_count = db.DictField()   # 每天余票查询次数和失败次数, {"2016-07-08": {"count": 0, "fail_count":0}}, 由定时任务间隔时间刷新这个值
     refresh_datetime = db.DateTimeField()   # 最近刷新时间
 
 
@@ -230,6 +229,9 @@ class OpenStation(db.Document):
 
         order_count = order_qs.count()
         fail_order_count = order_qs.filter(status__in=[5, 6, 13]).count()
+
+        self.modify(day_line_count__today_str=line_count, day_order_count__todaystr={"count": order_count, "fail": fail_order_count})
+        line_log.info("[station-refresh] %s line(total:%s), order(total:%s,fail:%s)", self.sta_name, line_count, order_count, fail_order_count)
 
 
     def init_dest(self):

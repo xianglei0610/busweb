@@ -423,7 +423,6 @@ def starting_list():
     province = params.get("province", "")
     s_city = params.get("s_city", "")
     s_sta = params.get("s_sta", "")
-    now = dte.now()
 
     city_query = {}
     if province:
@@ -437,15 +436,18 @@ def starting_list():
     cqs = OpenCity.objects.filter(**city_query)
     qs = OpenStation.objects.filter(city__in=cqs, **sta_query)
 
-    line_count = {}
-    # for d in Line.objects.filter(drv_datetime__gt=now).aggregate({"$group":{"_id":{"sta_name":"$s_sta_name", "city_name": "$s_city_name"}, "cnt":{"$sum":1}}}):
-    #     line_count[d["_id"]["sta_name"]] = d["cnt"]
+    today_str = dte.now().strftime("%Y-%m-%d")
+    rds = get_redis("line")
+    line_stat = {}
+    line_stat["total"] = int(rds.get(RK_DAY_LINE_STAT % (today_str, "total")) or 1)
+    line_stat["succ"] = int(rds.get(RK_DAY_LINE_STAT % (today_str, "succ")) or 1)
+    line_stat["percent"] = "%.2f%%" % ((line_stat["succ"]* 100)/float(line_stat["total"]))
 
     return render_template('dashboard/startings.html',
                            page=parse_page_data(qs),
                            source_info=SOURCE_INFO,
                            condition=params,
-                           line_count=line_count,
+                           line_stat=line_stat,
                            )
 
 
