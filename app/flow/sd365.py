@@ -89,20 +89,20 @@ class Flow(BaseFlow):
         except:
             sn = ''
         fail_reason = ''
-        if not sn:
-            ndata = {
-                'sid': extra['sid'],
-                'l': extra['l'],
-                'dpid': extra['dpid'],
-                't': extra['t'],
-            }
-            nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
-            r = requests.get(nurl, headers=headers, proxies=proxies)
-            urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-            if len(r.content) == 0 or '该班次价格不存在' in urlstr:
-                order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
-                self.close_line(line)
-                fail_reason = u'服务器异常'
+        # if not sn:
+        #     ndata = {
+        #         'sid': extra['sid'],
+        #         'l': extra['l'],
+        #         'dpid': extra['dpid'],
+        #         't': extra['t'],
+        #     }
+        #     nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
+        #     r = requests.get(nurl, headers=headers, proxies=proxies)
+        #     urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
+        #     if '该班次价格不存在' in urlstr:
+        #         order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
+        #         self.close_line(line)
+        #         fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             # cookies = {}
@@ -236,7 +236,7 @@ class Flow(BaseFlow):
         proxies = self.get_proxy()
         r = requests.get(nurl, headers=headers, proxies=proxies)
         urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-        if len(r.content) == 0 or '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
+        if '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
             result_info = {
                 'result_msg' :"no line info",
                 'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
@@ -320,6 +320,7 @@ class Flow(BaseFlow):
                     result_info.update(result_msg="ok", update_attrs=update_attrs)
                 return result_info
         else:
+            result_info = {}
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
 
