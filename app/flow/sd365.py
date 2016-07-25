@@ -320,6 +320,7 @@ class Flow(BaseFlow):
                     result_info.update(result_msg="ok", update_attrs=update_attrs)
                 return result_info
         else:
+            result_info = {}
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
 
