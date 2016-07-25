@@ -88,7 +88,7 @@ class Flow(BaseFlow):
             sn = location.split(',')[3]
         except:
             sn = ''
-        fail_reason = ''
+        # fail_reason = ''
         # if not sn:
         #     ndata = {
         #         'sid': extra['sid'],
@@ -105,9 +105,6 @@ class Flow(BaseFlow):
         #         fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-            # cookies = {}
-            # for x, y in cks.items():
-            #     cookies[x] = y
             order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': tpass})
             lock_result.update({
                 'result_code': 1,
@@ -117,12 +114,12 @@ class Flow(BaseFlow):
                 'pay_money': 0,
             })
             return lock_result
-        elif fail_reason:
-            lock_result.update({
-                'result_code': 0,
-                "result_reason": fail_reason,
-            })
-            return lock_result
+        # elif fail_reason:
+        #     lock_result.update({
+        #         'result_code': 0,
+        #         "result_reason": fail_reason,
+        #     })
+        #     return lock_result
         elif '不售票' in location or '票务错误' in location or '超出人数限制' in location or '票源不足' in location:
             order_log.info("[lock-fail] order: %s %s", order.order_no, location)
             self.close_line(line)
@@ -234,14 +231,14 @@ class Flow(BaseFlow):
         }
         nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         proxies = self.get_proxy()
-        r = requests.get(nurl, headers=headers, proxies=proxies)
-        urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-        if '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
-            result_info = {
-                'result_msg' :"no line info",
-                'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
-            }
-            return result_info
+        # r = requests.get(nurl, headers=headers, proxies=proxies)
+        # urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
+        # if '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
+        #     result_info = {
+        #         'result_msg' :"no line info",
+        #         'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
+        #     }
+        #     return result_info
         # rebot_log.info(nurl)
         for x in xrange(1):
             url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)

@@ -4193,7 +4193,7 @@ SOURCE_INFO = {
     },
     SOURCE_GLCX: {
         "name": "山东交运",
-        "website": "http://www.0000369.cn/buytks!list.action/",
+        "website": "http://www.0000369.cn/buytks!list.action",
         "accounts": {
             "15338702029": ("123456", "350425199006091012"),
             "17071527232": ("123456", '441802199610301135'),
