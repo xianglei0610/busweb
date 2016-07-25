@@ -3797,7 +3797,7 @@ class HebkyWebRebot(Rebot):
 
     def check_login(self):
         try:
-            user_url = "http://www.hb96505.com//com/yxd/pris/grzx/grzl/detailPersonalData.action"
+            user_url = "http://60.2.147.28//com/yxd/pris/grzx/grzl/detailPersonalData.action"
             headers = {"User-Agent": self.user_agent}
             cookies = json.loads(self.cookies)
             data = {}
