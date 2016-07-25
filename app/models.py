@@ -224,13 +224,18 @@ class OpenStation(db.Document):
     def refresh(self):
         # 线路数
         today_str = dte.now().strftime("%Y-%m-%d")
-        line_count = Line.objects.filter(city_name__startswith=self.city.city_name, s_sta_name=self.sta_name, drv_date=today_str).count()
-        order_qs = Order.objects.filter(starting_name="%s;%s" % (self.city.city_name, self.sta_name), create_date_time__gte=today_str)
+        line_count = Line.objects.filter(s_city_name__startswith=self.city.city_name, s_sta_name=self.sta_name, drv_date=today_str).count()
+        order_qs = Order.objects.filter(starting_name__startswith=self.city.city_name, starting_name__endswith=self.sta_name, create_date_time__gte=today_str)
 
         order_count = order_qs.count()
         fail_order_count = order_qs.filter(status__in=[5, 6, 13]).count()
 
-        self.modify(day_line_count__today_str=line_count, day_order_count__todaystr={"count": order_count, "fail": fail_order_count}, refresh_datetime=dte.now())
+        attrs = {
+            "day_line_count__%s" % today_str:line_count,
+            "day_order_count__%s" % today_str:{"total": order_count, "fail": fail_order_count},
+            "refresh_datetime":dte.now()
+        }
+        self.modify(**attrs)
         line_log.info("[station-refresh] %s line(total:%s), order(total:%s,fail:%s)", self.sta_name, line_count, order_count, fail_order_count)
 
 

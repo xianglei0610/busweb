@@ -37,7 +37,7 @@ def bitor(context, value, target):
 def percent_divide(context, value, target):
     if not target:
         return "100%"
-    return "%.2f%%" % (value/float(target))
+    return "%.2f%%" % (value*100/float(target))
 
 @dashboard.after_request
 def log_response(response):

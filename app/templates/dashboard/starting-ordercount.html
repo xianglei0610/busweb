@@ -23,8 +23,15 @@
         <div style="padding: 10px;">
             <table class="table table-condensed">
                <tbody>
-                   {%for k,v in open_station.day_order_count.items()%}
-                   <tr><td>k</td><td>{{v["total"]}}, {{v["fail"]}}</td></tr>
+                   {%for k,v in open_station.day_order_count.items()|sort(reverse=True)%}
+                   <tr><td>{{k}}</td>
+                     <td>
+                          {%if v%}
+                          {{(v["total"]-v["fail"])|percent_divide(v["total"])}}({{v["total"]-v["fail"]}}/{{v["total"]}})
+                          {%else%}
+                              0, 0
+                          {%endif%}
+                   </td></tr>
                    {%endfor%}
                </tbody>
             </table>

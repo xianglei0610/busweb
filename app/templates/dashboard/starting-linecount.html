@@ -23,8 +23,8 @@
         <div style="padding: 10px;">
             <table class="table table-condensed">
                <tbody>
-                   {%for k,v in open_station.day_line_count.items()%}
-                   <tr><td>k</td><td>{{v}}</td></tr>
+                 {%for k,v in open_station.day_line_count.items()|sort(reverse=True)%}
+                   <tr><td>{{k}}</td><td>{{v}}</td></tr>
                    {%endfor%}
                </tbody>
             </table>

@@ -85,7 +85,7 @@
                     <th>查班次</th>
                     <th>目的地</th>
                     <th>线路数量</th>
-                    <th>今日订单数/成功率</th>
+                    <th>出票成功率</th>
                 </tr>
             </thead>
 
@@ -138,7 +138,7 @@
                     <td>
                         <a data-trigger="modal" href="/startings/{{item.id}}/ordercount" data-title="订单数" class="btn" style="padding:0px;">
                             {%if item.day_order_count[today_str]%}
-                                {{item.day_order_count[today_str]["total"]}}, {{(item.day_order_count[today_str]["total"]-item.day_order_count[today_str]["fail"])|percent_divide(item.day_order_count[today_str]["total"])}}
+                            {{(item.day_order_count[today_str]["total"]-item.day_order_count[today_str]["fail"])|percent_divide(item.day_order_count[today_str]["total"])}}({{item.day_order_count[today_str]["total"]-item.day_order_count[today_str]["fail"]}}/{{item.day_order_count[today_str]["total"]}})
                             {%else%}
                                 0, 0
                             {%endif%}
