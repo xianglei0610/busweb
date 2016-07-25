@@ -4359,7 +4359,7 @@ RK_PROXY_IP_BJKY = "proxy:cbd"
 RK_PROXY_IP_LNKY = "proxy:lnky"
 RK_PROXY_IP_E8S = "proxy:e8s"
 RK_PROXY_IP_HN96520 = "proxy:hn96520"
-RK_PROXY_IP_QDKY= "proxy:sd365"
+RK_PROXY_IP_SD365 = "proxy:sd365"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"  # 当前使用的
 RK_PROXY_IP_CQKY_BLACK = "proxy:cqky:black:%s"  # 黑名单
 
