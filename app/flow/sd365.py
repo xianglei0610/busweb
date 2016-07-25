@@ -99,7 +99,7 @@ class Flow(BaseFlow):
             nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
             r = requests.get(nurl, headers=headers, proxies=proxies)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-            if len(r.content) == 0 or '该班次价格不存在' in urlstr:
+            if '该班次价格不存在' in urlstr:
                 order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
                 self.close_line(line)
                 fail_reason = u'服务器异常'
@@ -236,7 +236,7 @@ class Flow(BaseFlow):
         proxies = self.get_proxy()
         r = requests.get(nurl, headers=headers, proxies=proxies)
         urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-        if len(r.content) == 0 or '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
+        if '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
             result_info = {
                 'result_msg' :"no line info",
                 'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
