@@ -72,7 +72,7 @@ class Flow(BaseFlow):
         url = "http://api.lvtu100.com/orders/create"
         data = rebot.post_data_templ(self.get_lock_request_info(order))
         headers = rebot.post_header()
-        r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers)
+        r = rebot.http_post(url, data=urllib.urlencode(data), headers=headers, timeout=45)
         res = r.json()
         errmsg = res["message"]
         if res["code"] == 0:
