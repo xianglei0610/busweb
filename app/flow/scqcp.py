@@ -542,7 +542,7 @@ class Flow(BaseFlow):
                 info = {
                     "full_price": full_price,
                     "fee": service_price,
-                    "left_tickets": raw["amount"],
+                    "left_tickets": int(raw["amount"]),
                     "refresh_datetime": now,
                 }
                 result_info.update(result_msg="ok", update_attrs=info)
