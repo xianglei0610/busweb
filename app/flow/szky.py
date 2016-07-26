@@ -139,7 +139,7 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                     "result_reason": res["msg"]
                 })
-            elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"]:
+            elif u"当前用户今天交易数已满" in res["msg"] or u"当前登录用户已被列为可疑用户" in res["msg"] or u"当前系统维护中" in res["msg"] or u'维护时间' in  res["msg"]:
                 rebot.modify(cookies="{}")
                 rebot = order.change_lock_rebot()
                 lock_result.update({
