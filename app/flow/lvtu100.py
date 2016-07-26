@@ -158,7 +158,7 @@ class Flow(BaseFlow):
                 "result_code": 2,
                 "result_msg": state,
             })
-        elif state=="出票失败":
+        elif state==4:
             result_info.update({
                 "result_code": 2,
                 "result_msg": state,
