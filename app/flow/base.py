@@ -273,12 +273,10 @@ class Flow(object):
         if update:
             if "refresh_datetime" not in update:
                 update["refresh_datetime"] = now
+            if update.get("left_tickets", 10) < 2:   # 少于2张票视为无票
+                update["left_tickets"] = 0
             line.modify(**update)
-        line_log.info("[refresh-result] line:%s %s, result: %s, update: %s",
-                      line.crawl_source,
-                      line.line_id,
-                      ret["result_msg"],
-                      str(update))
+        line_log.info("[refresh-result] line:%s %s, result: %s, update: %s", line.crawl_source, line.line_id, ret["result_msg"], str(update))
 
     def do_refresh_line(self, line):
         """
