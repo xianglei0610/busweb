@@ -106,7 +106,7 @@ class Flow(BaseFlow):
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             if order.extra_info.get('retry_count', ''):
-                order.modity(extra_info={})
+                order.modify(extra_info={})
             order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': tpass})
             lock_result.update({
                 'result_code': 1,
