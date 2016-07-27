@@ -243,8 +243,13 @@ class Flow(BaseFlow):
         t = {x.line_id: x for x in ft}
         update_attrs = {}
         soup = bs(r.content, 'lxml')
-        info = soup.find('table', attrs={'id': 'selbuy'})
-        items = info.find_all('tr', attrs={'class': True})
+        try:
+            info = soup.find('table', attrs={'id': 'selbuy'})
+            items = info.find_all('tr', attrs={'class': True})
+        except:
+            result_info = {}
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
         for x in items:
             try:
                 y = x.find_all('td')

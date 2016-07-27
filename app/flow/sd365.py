@@ -82,10 +82,9 @@ class Flow(BaseFlow):
         # rebot_log.info(pa)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
-        r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256, proxies=proxies)
-        location = urllib.unquote(r.headers.get('location', ''))
-        # rebot_log.info(location)
         try:
+            r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256, proxies=proxies)
+            location = urllib.unquote(r.headers.get('location', ''))
             sn = location.split(',')[3]
         except:
             sn = ''
@@ -154,9 +153,20 @@ class Flow(BaseFlow):
         url = 'http://www.36565.cn/?c=order2&a=index'
         for y in order.riders:
             data = {'eport': y['id_number']}
-            r = requests.post(url, headers=headers, data=data, proxies=proxies)
-            soup = bs(r.content, 'lxml')
-            info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})
+            try:
+                r = requests.post(url, headers=headers, data=data, proxies=proxies)
+                soup = bs(r.content, 'lxml')
+                info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})
+            except:
+                return {
+                    "state": 'proxy error',
+                    "pick_no": '',
+                    "pcode": order.extra_info.get('pcode'),
+                    "pick_site": '',
+                    'raw_order': order.extra_info.get('orderUUID'),
+                    "pay_money": 0.0,
+                    'amount': '',
+                }
             sn = order.pay_order_no
             for x in info:
                 sn1 = x.find('div', attrs={'class': 'billnobreak'}).get_text().strip()
@@ -169,7 +179,6 @@ class Flow(BaseFlow):
                         "pcode": order.extra_info.get('pcode'),
                         "pick_site": '',
                         'raw_order': order.extra_info.get('orderUUID'),
-
                         "pay_money": 0.0,
                         'amount': amount,
                     }
@@ -222,7 +231,6 @@ class Flow(BaseFlow):
             "User-Agent": ua,
             'Content-Type': 'application/x-www-form-urlencoded',
         }
-        # rebot_log.info(line['s_city_name'])
         extra = line.extra_info
         ndata = {
             'sid': extra['sid'],
@@ -230,8 +238,8 @@ class Flow(BaseFlow):
             'dpid': extra['dpid'],
             't': extra['t'],
         }
-        nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         proxies = self.get_proxy()
+        # nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         # r = requests.get(nurl, headers=headers, proxies=proxies)
         # urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
         # if '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
@@ -243,8 +251,8 @@ class Flow(BaseFlow):
         # rebot_log.info(nurl)
         for x in xrange(1):
             url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)
-            r = requests.get(url, headers=headers, proxies=proxies)
             try:
+                r = requests.get(url, headers=headers, proxies=proxies)
                 code = r.content.split('code:')[-1].split()[0].split('"')[1]
             except:
                 code = ''
@@ -269,8 +277,8 @@ class Flow(BaseFlow):
             lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
             # rebot_log.info(lasturl)
             for y in xrange(1):
-                r = requests.get(lasturl, proxies=proxies)
                 try:
+                    r = requests.get(lasturl, proxies=proxies)
                     soup = r.json()
                 except:
                     result_info = {}
