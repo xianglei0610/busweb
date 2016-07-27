@@ -249,12 +249,12 @@ class Flow(BaseFlow):
             'Content-Type': 'application/x-www-form-urlencoded',
         }
         extra = line.extra_info
-        ndata = {
-            'sid': extra['sid'],
-            'l': extra['l'],
-            'dpid': extra['dpid'],
-            't': extra['t'],
-        }
+        # ndata = {
+        #     'sid': extra['sid'],
+        #     'l': extra['l'],
+        #     'dpid': extra['dpid'],
+        #     't': extra['t'],
+        # }
         proxies = self.get_proxy()
         # nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
         # r = requests.get(nurl, headers=headers, proxies=proxies)
@@ -271,10 +271,12 @@ class Flow(BaseFlow):
             try:
                 r = requests.get(url, headers=headers, proxies=proxies)
                 code = r.content.split('code:')[-1].split()[0].split('"')[1]
+                soup = bs(r.content, 'lxml')
+                info = soup.find_all('input', attrs={'class': 'filertctrl', 'name': 'siids'})
             except:
-                code = ''
-            soup = bs(r.content, 'lxml')
-            info = soup.find_all('input', attrs={'class': 'filertctrl', 'name': 'siids'})
+                result_info = {}
+                result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                return result_info
             sids = ''
             for x in info:
                 sids += x['value'] + ','
