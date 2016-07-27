@@ -4365,6 +4365,7 @@ RK_PROXY_IP_CQKY_BLACK = "proxy:cqky:black:%s"  # 黑名单
 
 RK_PROXY_IP_SCQCP = "proxy:scqcp"
 RK_PROXY_IP_BUS365 = "proxy:bus365"
+RK_PROXY_IP_CHANGTU = "proxy:changtu"
 
 RK_OPEN_STATION = "station:%s:%s"
 RK_DAY_LINE_STAT = "line:stat:%s:%s"
