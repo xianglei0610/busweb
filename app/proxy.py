@@ -98,9 +98,9 @@ class ProxyProducer(object):
 
     def crawl_from_samair(self):
         add_cnt = 0
+        from selenium import webdriver
         for i in range(1, 10):
             url = "http://www.samair.ru/proxy-by-country/China-%02d.htm" % i
-            from selenium import webdriver
             driver = webdriver.PhantomJS()
             driver.get(url)
             for trobj in driver.find_elements_by_tag_name("tr"):

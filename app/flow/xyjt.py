@@ -194,6 +194,7 @@ class Flow(BaseFlow):
         soup = bs(dr.page_source, 'lxml')
         pay_url = soup.find_all('script')[-1].get_text()
         pay_url = pay_url.split("'")[1].strip()
+        dr.quit()
         # dr.get(pay_url)
         # rebot_log.info(pay_url)
         # r = requests.get(lurl, headers=headers, cookies=cks)
@@ -375,6 +376,7 @@ class Flow(BaseFlow):
                 y = x.find_all('td')
                 drv_date = y[0].get_text().strip()
                 s_sta_name = y[1].get_text().strip()
+                bus_num = y[2].get_text().strip()
                 d_city_name = y[3].get_text().strip()
                 drv_time = y[5].get_text().strip()
                 left_tickets = int(y[8].get_text().strip())
@@ -392,7 +394,7 @@ class Flow(BaseFlow):
                 if line_id in t:
                     t[line_id].update(
                         **{"left_tickets": left_tickets, "refresh_datetime": now})
-                if line_id == line.line_id:
+                if line_id == line.line_id and bus_num == line.bus_num:
                     update_attrs = {
                         "left_tickets": left_tickets, "refresh_datetime": now}
             except:

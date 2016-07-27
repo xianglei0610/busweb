@@ -23,6 +23,7 @@ import random
 
 class Flow(BaseFlow):
     name = 'sd365'
+    requests.adapters.DEFAULT_RETRIES = 5  # fix Max retries exceeded with url
 
     # 锁票
     def get_proxy(self):

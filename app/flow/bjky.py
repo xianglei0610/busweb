@@ -458,7 +458,7 @@ class Flow(BaseFlow):
                 info = {
                     "full_price": float(price),
                     "fee": 0,
-                    "left_tickets": left_tickets,
+                    "left_tickets": int(left_tickets),
                     "refresh_datetime": now,
                 }
                 if line_id == line.line_id:
@@ -531,7 +531,7 @@ class Flow(BaseFlow):
                             info = {
                                 "full_price": info["fullPrice"],
                                 "fee": fee,
-                                "left_tickets": left_tickets,
+                                "left_tickets": int(left_tickets),
                                 "refresh_datetime": now,
                             }
                             update_attrs = info

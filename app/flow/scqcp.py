@@ -165,7 +165,7 @@ class Flow(BaseFlow):
                     order.contact_info['name'] = name
                     order.save()
                     order.reload()
-                not_support_list = ['177', '147', '178', '176', '170', '173']
+                not_support_list = ['177', '147', '178', '176', '170', '173', '186', '187']
                 if phone_num[0:3] in not_support_list:
                     if rebot.telephone[0:3] not in not_support_list:
                         telephone = rebot.telephone
@@ -542,7 +542,7 @@ class Flow(BaseFlow):
                 info = {
                     "full_price": full_price,
                     "fee": service_price,
-                    "left_tickets": raw["amount"],
+                    "left_tickets": int(raw["amount"]),
                     "refresh_datetime": now,
                 }
                 result_info.update(result_msg="ok", update_attrs=info)
