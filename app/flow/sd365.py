@@ -86,8 +86,12 @@ class Flow(BaseFlow):
             r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256, proxies=proxies)
             location = urllib.unquote(r.headers.get('location', ''))
             sn = location.split(',')[3]
+            # rebot_log.info(r.content)
+            # rebot_log.info(location)
+            # rebot_log.info(proxies)
         except:
             sn = ''
+            location = ''
         # fail_reason = ''
         # if not sn:
         #     ndata = {
