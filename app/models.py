@@ -260,7 +260,12 @@ class OpenStation(db.Document):
             lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
 
         site_list = Line.objects.filter(s_city_name__startswith=self.city.city_name, s_sta_name=self.sta_name).distinct("crawl_source")
-        self.modify(dest_info=lst, source_weight={k: 1000/(len(site_list)) for k in site_list})
+
+        d = {k: 1000/(len(site_list)) for k in site_list}
+        weights = {}
+        for k, v in d.items():
+            weights[k] = self.source_weight.get(k, v)
+        self.modify(dest_info=lst, source_weight=weights)
         line_log.info("[init_station_dest] %s %s, %s个目的地" % (city.city_name, self.sta_name, len(lst)))
         self.clear_cache()
 
