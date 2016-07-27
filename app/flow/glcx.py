@@ -161,10 +161,10 @@ class Flow(BaseFlow):
         for x in info:
             try:
                 sn1 = x.find_all('td')[1].get_text().strip()
-                drv_date = x.find_all('td')[3].get_text().strip()
-                drv_time = x.find_all('td')[4].get_text().strip()
                 if sn == sn1:
                     amount += 1
+                    drv_date = x.find_all('td')[3].get_text().strip()
+                    drv_time = x.find_all('td')[4].get_text().strip()
                     state = x.find_all('td')[6].get_text().strip()
             except:
                 pass
