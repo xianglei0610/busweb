@@ -105,6 +105,8 @@ class Flow(BaseFlow):
         #         fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+            if order.extra_info.get('retry_count', ''):
+                order.modity(extra_info={})
             order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': tpass})
             lock_result.update({
                 'result_code': 1,
@@ -139,6 +141,17 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
+            retry_count = order.extra_info.get('retry_count', '')
+            if not retry_count:
+                retry_count = 1
+            if retry_count > 7:
+                lock_result.update({
+                    'result_code': 0,
+                    "result_reason": '无法下单',
+                })
+                return lock_result
+            retry_count += 1
+            order.modify(extra_info={'retry_count': retry_count})
             lock_result.update({
                 'result_code': 2,
                 "result_reason": location,
