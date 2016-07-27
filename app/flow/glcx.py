@@ -163,8 +163,6 @@ class Flow(BaseFlow):
                 sn1 = x.find_all('td')[1].get_text().strip()
                 if sn == sn1:
                     amount += 1
-                    drv_date = x.find_all('td')[3].get_text().strip()
-                    drv_time = x.find_all('td')[4].get_text().strip()
                     state = x.find_all('td')[6].get_text().strip()
             except:
                 pass
@@ -175,8 +173,6 @@ class Flow(BaseFlow):
                 "pick_site": '',
                 'raw_order': sn,
                 "pay_money": 0.0,
-                'drv_date': drv_date,
-                'drv_time': drv_time,
             }
 
 
@@ -201,9 +197,9 @@ class Flow(BaseFlow):
                 "result_msg": state,
             })
         elif '已付款' == state:
-            no,  raw_order, drv_date, drv_time = ret['pick_no'], ret['raw_order'], ret['drv_date'], ret['drv_time']
+            no,  raw_order = ret['pick_no'], ret['raw_order']
             dx_info = {
-                "time": '%s %s' %(drv_date, drv_time),
+                "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "no": no,
