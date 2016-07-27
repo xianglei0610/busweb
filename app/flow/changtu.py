@@ -183,8 +183,7 @@ class Flow(BaseFlow):
                     "lock_info": ret,
                 })
             else:   # 未知错误
-                if "无效订单" in msg:
-                    rebot.modify(cookies="{}", ip="")
+                rebot.modify(cookies="{}", ip="")
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": "%s-%s" % (fail_code, msg),
