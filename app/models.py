@@ -265,6 +265,9 @@ class OpenStation(db.Document):
         weights = {}
         for k, v in d.items():
             weights[k] = self.source_weight.get(k, v)
+
+        if not self.crawl_source and weights:
+            self.modify(crawl_source=weights.keys()[0])
         self.modify(dest_info=lst, source_weight=weights)
         line_log.info("[init_station_dest] %s %s, %s个目的地" % (city.city_name, self.sta_name, len(lst)))
         self.clear_cache()
