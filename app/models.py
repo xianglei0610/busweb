@@ -1078,6 +1078,151 @@ class Rebot(db.Document):
                 continue
             return r
 
+
+class FjkyAppRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "fjkyapp_rebot",
+    }
+    crawl_source = SOURCE_FJKY
+    is_for_lock = True
+
+    def on_add_doing_order(self, order):
+        self.modify(is_locked=True)
+
+    def on_remove_doing_order(self, order):
+        self.modify(is_locked=False)
+
+    @property
+    def proxy_ip(self):
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         key = RK_PROXY_IP_HEBKY
+#         if ipstr and rds.sismember(key, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(key)
+#         self.modify(ip=ipstr)
+#         return ipstr
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": ua or self.user_agent,
+        }
+
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(
+            is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        if order:
+            for d in Order.objects.filter(status=14,
+                                          crawl_source=SOURCE_FJKY,
+                                          lock_datetime__gt=today) \
+                    .aggregate({
+                        "$group": {
+                            "_id": {"phone": "$source_account"},
+                            "count": {"$sum": "$ticket_amount"}}
+                    }):
+                cnt = d["count"]
+                phone = d["_id"]["phone"]
+                if cnt + int(order.ticket_amount) > 20:
+                    droped.add(phone)
+        tele = random.choice(list(all_accounts - droped))
+        return cls.objects.get(telephone=tele)
+
+    def login(self):
+        ua = random.choice(MOBILE_USER_AGENG)
+        header = self.http_header(ua)
+        data = {
+            "username": self.telephone,
+            "password": self.password
+        }
+        login_url = "http://www.968980.cn/com/yxd/pris/openapi/personLogin.action"
+        r = self.http_post(login_url, data=data, headers=header)
+        ret = r.json()
+        if int(ret["akfAjaxResult"]) == 0 and int(ret["values"]['result']["code"]) == 1:
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.is_active = True
+            self.save()
+            return "OK"
+        else:
+            return "fail"
+
+    def check_login(self):
+        try:
+            user_url = "http://www.968980.cn/com/yxd/pris/openapi/detailPersonalData.action"
+            headers = {"User-Agent": self.user_agent}
+            cookies = json.loads(self.cookies)
+            data = {"memberId": "2"}
+            res = self.http_post(user_url, data=data,
+                                 headers=headers, cookies=cookies)
+            res = res.json()
+            if res.get('akfAjaxResult', '') == '0' and res['values']['member']:
+                userName = res['values']['member']['userName']
+                if userName == self.telephone:
+                    return 1
+                else:
+                    self.modify(cookies='')
+                    return 0
+        except:
+            return 0
+
+
+class FjkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField()
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "fjkyweb_rebot",
+    }
+    crawl_source = SOURCE_FJKY
+
+    @property
+    def proxy_ip(self):
+        return ''
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
+    def check_login(self):
+        try:
+            user_url = "http://www.968980.cn/com/yxd/pris/grzx/grzl/detailPersonalData.action"
+            headers = {"User-Agent": self.user_agent}
+            cookies = json.loads(self.cookies)
+            data = {}
+            res = self.http_post(user_url, data=data,
+                                 headers=headers, cookies=cookies)
+            res = res.json()
+            if res.get('akfAjaxResult', '') == '0' and res['values']['member']:
+                userName = res['values']['member']['userName']
+                if userName == self.telephone:
+                    return 1
+                else:
+                    self.modify(cookies='')
+                    return 0
+            else:
+                return 0
+        except:
+            return 0
+
+
 class Sd365WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
@@ -1215,6 +1360,7 @@ class GlcxWebRebot(Rebot):
                       )
             bot.save()
             bot.login()
+
 
 class WmcxWebRebot(Rebot):
     user_agent = db.StringField()
