@@ -171,10 +171,10 @@ class ProxyProducer(object):
         rds = get_redis("default")
         add_cnt = rds.sadd(RK_PROXY_IP_ALL, ipstr)
         from tasks import check_add_proxy_ip
-        if add_cnt:     # 新增的
-            for c in self.consumer_list:
-                # c.on_producer_add(ipstr)
-                check_add_proxy_ip.delay(c.name, ipstr)
+        #if add_cnt:
+        for c in self.consumer_list:
+            # c.on_producer_add(ipstr)
+            check_add_proxy_ip.delay(c.name, ipstr)
         return add_cnt
 
     def get_proxy(self):
