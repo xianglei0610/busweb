@@ -39,6 +39,7 @@ SOURCE_ZHW = "zhw"      # 珠海汽车票
 SOURCE_SD365 = "sd365"  # 山东365汽车票
 SOURCE_LVTU100 = "lvtu100"
 SOURCE_GLCX = "glcx"
+SOURCE_FJKY = "fjky"
 
 
 PAY_TYPE_SOURCE = {
@@ -60,6 +61,14 @@ PAY_TYPE_SOURCE = {
 }
 
 SOURCE_INFO = {
+    SOURCE_FJKY: {
+        "name": "福建客运",
+        "website": "http://www.968980.cn/",
+        "accounts": {
+            # telephone: {password, auth)
+            "13267109876": ("a123456", ''),
+            },
+    },
     SOURCE_LVTU100: {
         "name": "旅途100",
         "website": "http://www.lvtu100.com/",
@@ -4416,6 +4425,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_LVTU100: "购票成功，验证码：%(code)s。%(start)s-%(end)s，发车时间：%(time)s，建议提前1小时至始发站出示本信息兑取纸质票，如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_SD365: "您的%(amount)s张%(time)s %(start)s至%(end)s车票订购成功！请凭购票身份证和密码%(pcode)s取票",
     SOURCE_GLCX: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
+    SOURCE_FJKY: "您已成功购买%(time)s%(start)s-%(end)s的车票,本次购票取票号：%(no)s，取票密码：%(code)s。",
 }
 
 CITY_NAME_TRANS = {
