@@ -361,10 +361,14 @@ class Flow(BaseFlow):
                    "Content-Type": "application/x-www-form-urlencoded",
                    'X-MicrosoftAjax': 'Delta=true',
                    }
-        r = requests.post(url, headers=headers, data=urllib.urlencode(data))
-        soup = bs(r.content, 'lxml')
-        info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GVBccx'}).find_all(
-            'tr', attrs={'class': True})
+        try:
+            r = requests.post(url, headers=headers, data=urllib.urlencode(data), timeout=30)
+            soup = bs(r.content, 'lxml')
+            info = soup.find('table', attrs={'id': 'ctl00_ContentPlaceHolder1_GVBccx'}).find_all('tr', attrs={'class': True})
+        except:
+            result_info = {}
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
         now = dte.now()
         update_attrs = {}
         ft = Line.objects.filter(s_city_name=line.s_city_name,

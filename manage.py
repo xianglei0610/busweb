@@ -171,6 +171,7 @@ def sync_open_city(site, province_name):
         openObj.is_active = True
         try:
             openObj.save()
+            openObj.init_station()
             print openObj.city_name
         except:
             print '%s already existed'%city_name
