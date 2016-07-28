@@ -309,9 +309,9 @@ class Flow(BaseFlow):
         headers = {"User-Agent": ua,
                    "Content-Type": "application/x-www-form-urlencoded"}
         url = pre + urllib.urlencode(params)
-        r = requests.get(url, headers=headers, data=params)
-        soup = bs(r.content, 'lxml')
         try:
+            r = requests.get(url, headers=headers, data=params, timeout=15)
+            soup = bs(r.content, 'lxml')
             info = soup.find('table', attrs={'class': 'resulttb'}).find_all('tbody', attrs={'class': 'rebody'})
         except:
             result_info = {}
