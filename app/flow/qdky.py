@@ -19,6 +19,7 @@ from app.utils import md5
 from app import rebot_log
 # import cStringIO
 from time import sleep
+from app.models import QdkyWebRebot
 
 
 class Flow(BaseFlow):
@@ -32,6 +33,27 @@ class Flow(BaseFlow):
         }
         for x in xrange(5):
             r = requests.get(url, headers=headers)
+            soup = bs(r.content, 'lxml')
+            try:
+                state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+                valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+                if state and valid and r.ok:
+                    return (state, valid, dict(r.cookies))
+            except:
+                pass
+
+    def update_state1(self):
+        while 1:
+            rebot = random.choice(QdkyWebRebot.objects.filter())
+            if rebot.check_login():
+                break
+        url = 'http://ticket.qdjyjt.com/'
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0",
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+        for x in xrange(5):
+            r = rebot.http_get(url, headers=headers)
             soup = bs(r.content, 'lxml')
             try:
                 state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
@@ -60,12 +82,12 @@ class Flow(BaseFlow):
             return lock_result
         rebot = order.get_lock_rebot()
         v = rebot.add_riders(order)
-        if v[0] == '2332':
-            lock_result.update({
-                'result_code': 0,
-                'result_reason': v[1],
-            })
-            return lock_result
+        # if v[0] == '2332':
+        #     lock_result.update({
+        #         'result_code': 0,
+        #         'result_reason': v[1],
+        #     })
+        #     return lock_result
         if v[0] == '2333':
             lock_result.update({
                 'result_code': 2,
@@ -137,7 +159,7 @@ class Flow(BaseFlow):
             pay_money = float(info[7].get_text())
         except:
             sn = ''
-            pay_money = ''
+            pay_money = 0
         url = 'http://ticket.qdjyjt.com/FrontPay.aspx'
         r = rebot.http_get(url, headers=headers, cookies=cookies)
         soup = bs(r.content, 'lxml')
@@ -335,8 +357,9 @@ class Flow(BaseFlow):
                 if line_id == line.line_id and int(left_tickets):
                     update_attrs = {"left_tickets": left_tickets, 'full_price': full_price, "refresh_datetime": now}
             except:
-                pass
-
+                result_info = {}
+                result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                return result_info
         result_info = {}
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})

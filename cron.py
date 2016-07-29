@@ -371,6 +371,10 @@ def main():
     # 山东交运
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['glcx'])
 
+    # 青岛客运
+    sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['qdky'])
+
+
     # 深圳客运
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['szky'])
 
@@ -409,6 +413,7 @@ def main():
     sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["hn96520"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["sd365"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["qdky"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
     sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
