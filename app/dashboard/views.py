@@ -560,7 +560,7 @@ def src_code_img(order_no):
         cookies = data.get("cookies")
         r = requests.get(code_url, headers=headers, cookies=cookies)
         return r.content
-    elif order.crawl_source in ["bjky", "cqky", 'scqcp', "changtu", 'xintuyun', "hn96520",'szky']:
+    elif order.crawl_source in ["bjky", "cqky", 'scqcp', "changtu", 'xintuyun', "hn96520",'szky','fjky','qdky']:
         rebot = order.get_lock_rebot()
         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
         data = json.loads(session[key])
@@ -676,6 +676,7 @@ def user_list():
         "CCB": "建设银行",
         "SPABANK": "平安银行",
         "SPDB": "浦发银行",
+        "ABC": "农业银行",
     }
     pay_types = {
         u"yhzf": "银行支付",

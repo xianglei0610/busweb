@@ -80,13 +80,14 @@ class Flow(BaseFlow):
         pa = pre + tmp + '&bankname=ZHIFUBAO'
         pa = ''.join(pa.split())
         # rebot_log.info(pa)
+        # rebot_log.info(proxies)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         try:
-            r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=256, proxies=proxies)
+            r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=64, proxies=proxies)
+            # rebot_log.info(r.content)
             location = urllib.unquote(r.headers.get('location', ''))
             sn = location.split(',')[3]
-            # rebot_log.info(r.content)
             # rebot_log.info(location)
             # rebot_log.info(proxies)
         except:
@@ -148,7 +149,7 @@ class Flow(BaseFlow):
             retry_count = order.extra_info.get('retry_count', '')
             if not retry_count:
                 retry_count = 1
-            if retry_count > 7:
+            if retry_count > 15:
                 lock_result.update({
                     'result_code': 0,
                     "result_reason": '无法下单',

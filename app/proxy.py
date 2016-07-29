@@ -171,10 +171,10 @@ class ProxyProducer(object):
         rds = get_redis("default")
         add_cnt = rds.sadd(RK_PROXY_IP_ALL, ipstr)
         from tasks import check_add_proxy_ip
-        if add_cnt:     # 新增的
-            for c in self.consumer_list:
-                # c.on_producer_add(ipstr)
-                check_add_proxy_ip.delay(c.name, ipstr)
+        #if add_cnt:
+        for c in self.consumer_list:
+            # c.on_producer_add(ipstr)
+            check_add_proxy_ip.delay(c.name, ipstr)
         return add_cnt
 
     def get_proxy(self):
@@ -542,6 +542,24 @@ class SD365ProxyConsumer(ProxyConsumer):
             return False
         return True
 
+class QDKYProxyConsumer(ProxyConsumer):
+    PROXY_KEY = RK_PROXY_IP_QDKY
+    name = "qdky"
+
+    def valid_proxy(self, ipstr):
+        url = "http://ticket.qdjyjt.com"
+        print url
+        try:
+            ua = random.choice(BROWSER_USER_AGENT)
+            r = requests.get(url,
+                             headers={"User-Agent": ua},
+                             timeout=30,
+                             proxies={"http": "http://%s" % ipstr})
+            if u"青岛长途汽车售票网" in r.content:
+                return True
+        except:
+            return False
+        return True
 
 
 proxy_producer = ProxyProducer()
@@ -560,6 +578,7 @@ if "proxy_list" not in globals():
     proxy_list[Bus365ProxyConsumer.name] = Bus365ProxyConsumer()
     proxy_list[HN96520ProxyConsumer.name] = HN96520ProxyConsumer()
     proxy_list[SD365ProxyConsumer.name] = SD365ProxyConsumer()
+    proxy_list[QDKYProxyConsumer.name] = QDKYProxyConsumer()
 
     for name, obj in proxy_list.items():
         proxy_producer.registe_consumer(obj)
