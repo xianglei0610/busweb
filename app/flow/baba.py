@@ -246,8 +246,7 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif state=="出票异常":
-            self.close_line(order.line, "出票异常")
+        elif state in ["出票异常", "出票失败待退款"]:
             result_info.update({
                 "result_code": 2,
                 "result_msg": state,
