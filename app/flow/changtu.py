@@ -70,6 +70,7 @@ class Flow(BaseFlow):
         try:
             token = soup.select("#t")[0].get("value")
         except:
+            rebot.modify(ip="")
             if r.status_code == 200 and "畅途网" in r.content:
                 lock_result.update({"result_code": 2, "result_reason": "没拿到到token"})
             return lock_result
