@@ -148,6 +148,7 @@ class Flow(BaseFlow):
         r = rebot.http_post(detail_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
         ret = r.json()
         return {
+            "pay_status": ret['values']['result']['order']['payState'],
             "state": ret['values']['result']['order']['orderState'],
             "order_no": ret['values']['result']['order']['orderNo'],
             "pick_no": ret['values']['result']['order']['takeTicketNo'],
@@ -225,6 +226,10 @@ class Flow(BaseFlow):
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
+                rebot_app = order.get_lock_rebot()
+                res = self.send_orderDetail_request(rebot_app, order)
+                if res['pay_status'] == '005002':
+                    return {"flag": "false", "content": '订单已经支付?'}
                 order_url = "http://60.2.147.28/dync/09/wsgp/order_success.jsp?orderNo=%s"%order.raw_order_no
                 headers = {
                     "User-Agent": rebot.user_agent,
