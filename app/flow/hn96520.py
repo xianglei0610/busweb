@@ -81,16 +81,16 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers,
                                cookies=cookies, data=urllib.urlencode(param), timeout=512)
             urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
-            if '333' in urlstr:
-                rebot = order.change_lock_rebot()
-                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
-                errmsg = unicode(errlst and errlst[0] or "")
-                lock_result.update({
-                    'result_code': 2,
-                    "source_account": rebot.telephone,
-                    "result_reason": errmsg,
-                })
-                return lock_result
+            # if '333' in urlstr:
+            #     rebot = order.change_lock_rebot()
+            #     errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
+            #     errmsg = unicode(errlst and errlst[0] or "")
+            #     lock_result.update({
+            #         'result_code': 2,
+            #         "source_account": rebot.telephone,
+            #         "result_reason": errmsg,
+            #     })
+            #     return lock_result
             tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
             tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
             tpk1 = datetime.datetime.now().hour
@@ -159,7 +159,7 @@ class Flow(BaseFlow):
                     # 删除之前乘客
                     # rebot.clear_riders(riders)
                     return lock_result
-            except:
+            except Exception, e:
                 rebot = order.change_lock_rebot()
                 errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
                 errmsg = unicode(errlst and errlst[0] or "")
