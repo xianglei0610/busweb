@@ -676,6 +676,7 @@ def user_list():
         "CCB": "建设银行",
         "SPABANK": "平安银行",
         "SPDB": "浦发银行",
+        "ABC": "农业银行",
     }
     pay_types = {
         u"yhzf": "银行支付",
