@@ -40,6 +40,7 @@ SOURCE_SD365 = "sd365"  # 山东365汽车票
 SOURCE_LVTU100 = "lvtu100"
 SOURCE_GLCX = "glcx"
 SOURCE_FJKY = "fjky"
+SOURCE_QDKY = "qdky"    # 青岛客运
 
 
 PAY_TYPE_SOURCE = {
@@ -4227,6 +4228,22 @@ SOURCE_INFO = {
             "17090097239": ("123456", '510811199011154261'),
             }
     },
+    SOURCE_QDKY: {
+        "name": "青岛客运",
+        "website": 'http://ticket.qdjyjt.com/',
+        "accounts": {
+            # "a1533870": ("123456"),
+            "a1707152": ("123456"),
+            "a1709250": ("123456"),
+            "a1705132": ("123456"),
+            "a1326710": ("123456"),
+            "a1708626": ("123456"),
+            "a1709513": ("123456"),
+            "a1709531": ("123456"),
+            "a1708003": ("123456"),
+            "a1709009": ("123456"),
+            }
+    },
 }
 
 SCQCP_DOMAIN = "http://java.cdqcp.com"
@@ -4379,6 +4396,7 @@ RK_PROXY_IP_LNKY = "proxy:lnky"
 RK_PROXY_IP_E8S = "proxy:e8s"
 RK_PROXY_IP_HN96520 = "proxy:hn96520"
 RK_PROXY_IP_SD365 = "proxy:sd365"
+RK_PROXY_IP_QDKY= "proxy:qdky"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"  # 当前使用的
 RK_PROXY_IP_CQKY_BLACK = "proxy:cqky:black:%s"  # 黑名单
 
@@ -4436,6 +4454,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_SD365: "您的%(amount)s张%(time)s %(start)s至%(end)s车票订购成功！请凭购票身份证和密码%(pcode)s取票",
     SOURCE_GLCX: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_FJKY: "您已成功购买%(time)s%(start)s-%(end)s的车票,本次购票取票号：%(no)s，取票密码：%(code)s。",
+    SOURCE_QDKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
 }
 
 CITY_NAME_TRANS = {
