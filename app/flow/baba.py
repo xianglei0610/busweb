@@ -211,8 +211,9 @@ class Flow(BaseFlow):
             elif s.startswith("取票地点:"):
                 site = s.lstrip("取票地点:")
         pay_money = float(re.findall(r"(\d+.\d)",soup.select_one(".order_Aprice").text)[0])
+        state = soup.select(".re_pay_success")[0].get_text().strip()
         return {
-            "state": soup.select(".re_pay_success")[0].get_text().split(u"：")[1].strip(),
+            "state": state,
             "pick_no": no,
             "pick_code": code,
             "pick_site": site,

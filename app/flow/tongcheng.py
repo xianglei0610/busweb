@@ -456,7 +456,7 @@ class Flow(BaseFlow):
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
-                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.order_price)
+                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.pay_money)
                 r = rebot.http_post("http://member.ly.com/bus/Pay/MobileGateway",
                                      data=form_str,
                                      headers=headers,
