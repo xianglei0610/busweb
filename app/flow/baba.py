@@ -6,7 +6,6 @@ import requests
 import json
 import urllib
 import datetime
-import traceback
 import re
 
 from app.constants import *
@@ -15,18 +14,11 @@ from app.models import Line
 from datetime import datetime as dte
 from app.utils import md5
 from bs4 import BeautifulSoup
-from app import line_log
 
 
 class Flow(BaseFlow):
 
     name = "baba"
-
-    #def check_rider_idcard(self, order):
-    #    valid_url = "http://www.bababus.com/order/validateCard.htm"
-    # psgIdCode=350628199012101520&psgIdType=1
-    #    for r in order.riders:
-    #        pass
 
     def do_lock_ticket(self, order):
         lock_result = {
@@ -52,6 +44,9 @@ class Flow(BaseFlow):
             "beginStationId": line.s_sta_id,
             "endStationId": line.d_sta_id,
             "endStationName": line.d_sta_name,
+            "beginStationName": line.s_sta_name,
+            "leaveTime": line.drv_time,
+            "fullPrice": line.full_price,
         }
 
         check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
@@ -135,6 +130,18 @@ class Flow(BaseFlow):
             "contactIdCode": order.contact_info["id_number"],
             "contactPhone": order.contact_info["telephone"],
             "contactEmail": "",
+
+            "hdnBeginCondition": line.s_city_name,
+            "hdnEndCondition": line.d_city_name,
+            "hdnLeaveDate": line.drv_date,
+            # "nameCheck": "on",
+            # "hdnNameId": "",
+            # "hdnName 罗江
+            # "hdnIdType   1
+            # "hdnIdTypeText   身份证
+            # "hdnIdCode   431021199004165616
+            # "hdnTel
+            # "hdnEmail
         }
         encode_list= [urllib.urlencode(submit_data),]
         for r in order.riders:
@@ -360,6 +367,9 @@ class Flow(BaseFlow):
             "beginStationId": line.s_sta_id,
             "endStationId": line.d_sta_id,
             "endStationName": line.d_sta_name,
+            "beginStationName": line.s_sta_name,
+            "leaveTime": line.drv_time,
+            "fullPrice": line.full_price,
         }
         check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
         ua = random.choice(BROWSER_USER_AGENT)
@@ -374,7 +384,7 @@ class Flow(BaseFlow):
                 result_info.update(result_msg=res["msg"], update_attrs={"left_tickets": 0, "refresh_datetime": now})
                 return result_info
 
-        line_url = "http://s4mdata.bababus.com:80/app/v3/ticket/busList.htm"
+        line_url = "http://s4mdata.bababus.com:80/app/v5/ticket/busList.htm"
         params = {
             "content":{
                 "pageSize": 1025,
@@ -388,11 +398,13 @@ class Flow(BaseFlow):
                 "channelVer": "BabaBus",
                 "usId": "",
                 "appId": "com.hundsun.InternetSaleTicket",
-                "appVer": "1.0.0",
+                "appVer": "1.4.0",
                 "loginStatus": "0",
                 "imei": "864895020513527",
-                "mobileVer": "4.4.4",
-                "terminalType": "1"
+                "mobileVer": "6.0",
+                "terminalType": "1",
+                "platformCode": "01",
+                "phone": "",
             },
             "key": ""
         }
@@ -424,7 +436,7 @@ class Flow(BaseFlow):
                 obj = Line.objects.get(line_id=line_id)
             except Line.DoesNotExist:
                 continue
-            extra_info = {"depotName": d["depotName"], "sbId": d["sbId"], "stId": d["stId"], "depotId": d["depotId"]}
+            extra_info = {"depotName": d.get("depotName", ""), "sbId": d["sbId"], "stId": d["stId"], "depotId": d["depotId"]}
             info = {
                 "full_price": float(d["fullPrice"]),
                 "fee": 0,
