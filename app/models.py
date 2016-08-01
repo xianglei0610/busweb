@@ -1434,6 +1434,15 @@ class Sd365WebRebot(Rebot):
         self.modify(ip=ipstr)
         return ipstr
 
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
 
 class GlcxWebRebot(Rebot):
     user_agent = db.StringField()

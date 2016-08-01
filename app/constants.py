@@ -4208,7 +4208,9 @@ SOURCE_INFO = {
     SOURCE_SD365: {
         "name": "山东365汽车票",
         "website": "http://www.36565.cn/",
-        "accounts": {}
+        "accounts": {
+            "18025457649": ("123456", ""),
+        }
     },
     SOURCE_GLCX: {
         "name": "山东交运",

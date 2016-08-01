@@ -2,23 +2,18 @@
 
 import requests
 import re
-import time
-import json
 import urllib
-
 import datetime
 import random
-from bs4 import BeautifulSoup as bs
-# from PIL import Image
 
+from bs4 import BeautifulSoup as bs
 from app.proxy import get_redis
 from app.constants import *
 from datetime import datetime as dte
 from app.flow.base import Flow as BaseFlow
-from app.models import Line
+from app.models import Line,Sd365WebRebot
 from app.utils import md5
-from app import rebot_log, order_log
-import random
+from app import order_log
 
 
 class Flow(BaseFlow):
@@ -56,7 +51,6 @@ class Flow(BaseFlow):
         uname = order.contact_info['name']
         tel = order.contact_info['telephone']
         uid = order.contact_info['id_number']
-        # tpass = '200101'
         tpass = random.randint(111111, 999999)
         shopid = extra['sid']
         port = extra['dpid']
@@ -79,17 +73,12 @@ class Flow(BaseFlow):
 
         pa = pre + tmp + '&bankname=ZHIFUBAO'
         pa = ''.join(pa.split())
-        # rebot_log.info(pa)
-        # rebot_log.info(proxies)
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         try:
             r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=64, proxies=proxies)
-            # rebot_log.info(r.content)
             location = urllib.unquote(r.headers.get('location', ''))
             sn = location.split(',')[3]
-            # rebot_log.info(location)
-            # rebot_log.info(proxies)
         except:
             sn = ''
             location = ''
@@ -214,7 +203,6 @@ class Flow(BaseFlow):
             return result_info
         ret = self.send_order_request(order)
         state = ret['state']
-        # rebot_log.info(ret)
         if '失败' in state:
             result_info.update({
                 "result_code": 2,
@@ -238,116 +226,72 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
-            # rebot_log.info(result_info)
         return result_info
 
-    # 线路刷新, java接口调用
     def do_refresh_line(self, line):
-        ua = random.choice(BROWSER_USER_AGENT)
         now = dte.now()
-        headers = {
-            "User-Agent": ua,
-            'Content-Type': 'application/x-www-form-urlencoded',
+        headers = {"User-Agent": random.choice(BROWSER_USER_AGENT),}
+        rebot = Sd365WebRebot.get_one()
+        url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)
+        try:
+            r = rebot.http_get(url, headers=headers)
+            code = r.content.split('code:')[-1].split()[0].split('"')[1]
+            soup = bs(r.content, 'lxml')
+            info = soup.find_all('input', attrs={'class': 'filertctrl', 'name': 'siids'})
+        except:
+            result_info = {}
+            result_info.update(result_msg="exception_ok1", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            return result_info
+        sids = ",".join([x["value"] for x in info])
+        data = {
+            'a': 'getlinebysearch',
+            'c': 'tkt3',
+            'toid': '',
+            'type': '0',
+            'code': code,
+            'date': line.drv_date,
+            'sids': sids,
+            'to': line.d_city_name,
         }
-        extra = line.extra_info
-        # ndata = {
-        #     'sid': extra['sid'],
-        #     'l': extra['l'],
-        #     'dpid': extra['dpid'],
-        #     't': extra['t'],
-        # }
-        proxies = self.get_proxy()
-        # nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
-        # r = requests.get(nurl, headers=headers, proxies=proxies)
-        # urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-        # if '该班次价格不存在' in urlstr or '发车前2小时不售票' in urlstr:
-        #     result_info = {
-        #         'result_msg' :"no line info",
-        #         'update_attrs': {"left_tickets": 0, "refresh_datetime": now}
-        #     }
-        #     return result_info
-        # rebot_log.info(nurl)
-        for x in xrange(1):
-            url = 'http://www.36565.cn/?c=tkt3&a=search&fromid=&from={0}&toid=&to={1}&date={2}&time=0#'.format(line.s_city_name, line.d_city_name, line.drv_date)
+        lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
+        for y in xrange(1):
             try:
-                r = requests.get(url, headers=headers, proxies=proxies)
-                code = r.content.split('code:')[-1].split()[0].split('"')[1]
-                soup = bs(r.content, 'lxml')
-                info = soup.find_all('input', attrs={'class': 'filertctrl', 'name': 'siids'})
+                r = rebot.http_get(lasturl, headers=headers)
+                soup = r.json()
             except:
                 result_info = {}
-                result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                result_info.update(result_msg="exception_ok2", update_attrs={"left_tickets": 5, "refresh_datetime": now})
                 return result_info
-            sids = ''
-            for x in info:
-                sids += x['value'] + ','
-            # rebot_log.info(sids + code)
-            if not sids and not code:
-                continue
-            data = {
-                'a': 'getlinebysearch',
-                'c': 'tkt3',
-                'toid': '',
-                'type': '0',
-                'code': code,
-                'date': line.drv_date,
-                'sids': sids[:-1],
-                'to': line.d_city_name,
-            }
-            lasturl = 'http://www.36565.cn/?' + urllib.urlencode(data)
-            # rebot_log.info(lasturl)
-            for y in xrange(1):
-                try:
-                    r = requests.get(lasturl, proxies=proxies)
-                    soup = r.json()
-                except:
-                    result_info = {}
-                    result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
-                    return result_info
-                tpk = now + datetime.timedelta(hours=2.2)
-                update_attrs = {}
-                ft = Line.objects.filter(s_city_name=line.s_city_name,
-                                         d_city_name=line.d_city_name, drv_date=line.drv_date)
-                t = {x.line_id: x for x in ft}
-                # rebot_log.info(t)
-                # rebot_log.info(len(t))
-                update_attrs = {}
-                for x in soup:
-                    try:
-                        drv_date = x['bpnDate']
-                        drv_time = x['bpnSendTime']
-                        left_tickets = x['bpnLeftNum']
-                        full_price = x['prcPrice']
-                        bus_num = x['bliID']
-                        drv_datetime = dte.strptime("%s %s" % (
-                            drv_date, drv_time), "%Y-%m-%d %H:%M")
-                        line_id_args = {
-                            "s_city_name": line.s_city_name,
-                            "d_city_name": line.d_city_name,
-                            "crawl_source": line.crawl_source,
-                            "drv_datetime": drv_datetime,
-                            'bus_num': bus_num,
-                        }
-                        line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(bus_num)s-%(crawl_source)s" % line_id_args)
-                        # rebot_log.info(line_id)
-                        # rebot_log.info(left_tickets)
-                        if line_id in t:
-                            t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price})
-                        if line_id == line.line_id and int(left_tickets) and tpk < line.drv_datetime:
-                            update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price}
-                    except:
-                        pass
 
-                result_info = {}
-                if not update_attrs:
-                    result_info.update(result_msg="no line info", update_attrs={
-                                       "left_tickets": 0, "refresh_datetime": now})
-                else:
-                    result_info.update(result_msg="ok", update_attrs=update_attrs)
-                return result_info
-        else:
+            update_attrs = {}
+            ft = Line.objects.filter(s_city_name=line.s_city_name,d_city_name=line.d_city_name, drv_date=line.drv_date)
+            t = {x.line_id: x for x in ft}
+            update_attrs = {}
+            for x in soup:
+                drv_date = x['bpnDate']
+                drv_time = x['bpnSendTime']
+                left_tickets = x['bpnLeftNum']
+                full_price = x['prcPrice']
+                drv_datetime = dte.strptime("%s %s" % (drv_date, drv_time), "%Y-%m-%d %H:%M")
+                line_id_args = {
+                    "s_city_name": line.s_city_name,
+                    "d_city_name": line.d_city_name,
+                    "s_sta_name": unicode(x["shifazhan"]),
+                    "d_sta_name": unicode(x["prtName"]),
+                    "crawl_source": line.crawl_source,
+                    "drv_datetime": drv_datetime,
+                }
+                line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+                if line_id in t:
+                    t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price})
+                if line_id == line.line_id and int(left_tickets):
+                    update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now, 'full_price': full_price}
+
             result_info = {}
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            if not update_attrs:
+                result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            else:
+                result_info.update(result_msg="ok", update_attrs=update_attrs)
             return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
@@ -356,7 +300,6 @@ class Flow(BaseFlow):
         def _get_page():
             if order.status == STATUS_WAITING_ISSUE:
                 pay_url = order.extra_info.get('pay_url')
-                # rebot_log.info(pay_url)
                 no, pay = "", 0
                 for s in pay_url.split("?")[1].split("&"):
                     k, v = s.split("=")
