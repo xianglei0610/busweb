@@ -69,6 +69,7 @@ def vcode_zhw():
         sleep(0.25)
     return ()
 
+
 def vcode_glcx(cookies={}):
     url = 'http://www.0000369.cn/rand.action'
     for x in xrange(5):
@@ -86,6 +87,7 @@ def vcode_glcx(cookies={}):
             return (code, r.cookies)
         sleep(0.1)
     return ()
+
 
 def trans_js_str(s):
     """

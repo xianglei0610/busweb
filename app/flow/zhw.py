@@ -180,32 +180,16 @@ class Flow(BaseFlow):
     # 线路刷新, java接口调用
     def do_refresh_line(self, line):
         url = 'http://www.zhwsbs.gov.cn:9013/shfw/zaotsTicket/pageLists.xhtml'
-        ua = random.choice(BROWSER_USER_AGENT)
         headers = {
-            "User-Agent": ua,
+            "User-Agent": random.choice(BROWSER_USER_AGENT),
             "Content-Type": "application/x-www-form-urlencoded",
             'Referer': 'http://www.zhwsbs.gov.cn:9013/shfw/zaotsTicket/pageLists.xhtml',
         }
-        d = {
-            u'香洲长途站': 'C1K001-102017',
-            u'上冲站': 'C1K027-102018',
-            u'南溪站': 'C1K013-102019',
-            u'拱北通大站': 'C1K030-102023',
-            u'斗门站': 'C2K003-102027',
-            u'井岸站': 'C2K001-102028',
-            u'红旗站': 'C1K006-102030',
-            u'三灶站': 'C1K004-102031',
-            u'平沙站': 'C1K007-102032',
-            u'南水站': 'C1K008-102033',
-            u'唐家站': 'TJZ001-102020',
-            u'金鼎站': 'JDZ001-102021',
-            u'拱北票务中心': 'GBPW01-102024',
-            u'西埔站': 'XPZ001-102029',
-        }
+
         result_info = {}
         now = dte.now()
-        for x in xrange(1):
-            rebot = ZhwWebRebot.objects.filter(telephone='15338702029').first()
+        rebot = ZhwWebRebot.get_one()
+        for i in range(4):
             if not rebot.code and rebot.cookies == '{}':
                 v = vcode_zhw()
                 code = v[0]
@@ -218,64 +202,58 @@ class Flow(BaseFlow):
                 'SchDate': line['drv_date'],
                 'SchTime': '',
                 'checkCode': code,
-                'StartStation': d.get(line['s_sta_name'], ''),
+                'StartStation': line.s_sta_name,
                 'SchDstNodeName': line['d_city_name'],
             }
             r = requests.post(url, headers=headers, cookies=cookies, data=data)
             soup = bs(r.content, 'lxml')
             info = soup.find('table', attrs={'id': 'changecolor'})
-            if '验证码错误' in info.get_text():
-                # vcookies.remove({'cookies': {'$exists': True}})
+            errtext = info.get_text()
+            if '验证码错误' in errtext or u"未生成验证码" in errtext:
                 rebot.modify(cookies='{}', code='')
-                continue
             else:
                 cookies = dict(r.cookies)
                 cks = {'JSESSIONID1_ZH_DY_SHFW': cookies.values()[0]}
                 rebot.modify(cookies=json.dumps(cks), code=code)
-            items = info.find_all('tr', attrs={'id': True})
-            update_attrs = {}
-            ft = Line.objects.filter(s_city_name=line.s_city_name,
-                                     d_city_name=line.d_city_name, drv_date=line.drv_date)
-            t = {x.line_id: x for x in ft}
-            update_attrs = {}
-            for x in items:
-                try:
-                    y = x.find_all('td')
-                    sts = x.find('input', attrs={'class': 'g_table_btn'}).get('value', '')
-                    drv_date = y[0].get_text().strip()
-                    drv_time = y[1].get_text().strip()
-                    s_sta_name = y[2].get_text().strip()
-                    d_sta_name = y[3].get_text().strip()
-                    left_tickets = y[5].get_text().strip()
-                    # vehicle_type = y[6].get_text().strip()
-                    drv_datetime = dte.strptime("%s %s" % (
-                        drv_date, drv_time), "%Y-%m-%d %H:%M")
-                    line_id_args = {
-                        "s_city_name": line.s_city_name,
-                        "d_city_name": line.d_city_name,
-                        "s_sta_name": s_sta_name,
-                        "d_sta_name": d_sta_name,
-                        "crawl_source": line.crawl_source,
-                        "drv_datetime": drv_datetime,
-                    }
-                    line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
-                    if line_id in t:
-                        t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
-                    if line_id == line.line_id and sts in [u'不在服务时间', u'立即购买']:
-                        update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
-                except Exception, e:
-                    print e
-                    pass
-
-            if not update_attrs:
-                result_info.update(result_msg="no line info", update_attrs={
-                                   "left_tickets": 0, "refresh_datetime": now})
-            else:
-                result_info.update(result_msg="ok", update_attrs=update_attrs)
-            return result_info
+                break
         else:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
-            return result_info
+
+        items = info.find_all('tr', attrs={'id': True})
+        update_attrs = {}
+        ft = Line.objects.filter(s_city_name=line.s_city_name, d_city_name=line.d_city_name, drv_date=line.drv_date)
+        t = {x.line_id: x for x in ft}
+        update_attrs = {}
+        for x in items:
+            y = x.find_all('td')
+            sts = x.find('input', attrs={'class': 'g_table_btn'}).get('value', '')
+            drv_date = y[0].get_text().strip()
+            drv_time = y[1].get_text().strip()
+            s_sta_name = y[2].get_text().strip()
+            d_sta_name = y[3].get_text().strip()
+            left_tickets = y[5].get_text().strip()
+            # vehicle_type = y[6].get_text().strip()
+            drv_datetime = dte.strptime("%s %s" % (
+                drv_date, drv_time), "%Y-%m-%d %H:%M")
+            line_id_args = {
+                "s_city_name": line.s_city_name,
+                "d_city_name": line.d_city_name,
+                "s_sta_name": s_sta_name,
+                "d_sta_name": d_sta_name,
+                "crawl_source": line.crawl_source,
+                "drv_datetime": drv_datetime,
+            }
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+            if line_id in t:
+                t[line_id].update(**{"left_tickets": left_tickets, "refresh_datetime": now})
+            if line_id == line.line_id and sts in [u'不在服务时间', u'立即购买']:
+                update_attrs = {"left_tickets": left_tickets, "refresh_datetime": now}
+
+        if not update_attrs:
+            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        else:
+            result_info.update(result_msg="ok", update_attrs=update_attrs)
+        return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
