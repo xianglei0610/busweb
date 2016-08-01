@@ -3326,6 +3326,8 @@ class TCWebRebot(Rebot):
     is_for_lock = False
 
     def login(self, headers=None, cookies={}, valid_code=""):
+        if self.test_login_status():
+            return "OK"
         login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
         pwd_info = SOURCE_INFO[self.crawl_source]["pwd_encode"]
         data = {
