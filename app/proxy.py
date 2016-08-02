@@ -522,7 +522,7 @@ class HN96520ProxyConsumer(ProxyConsumer):
                 return True
         except:
             return False
-        return True
+        return False
 
 class SD365ProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_SD365
@@ -540,7 +540,7 @@ class SD365ProxyConsumer(ProxyConsumer):
                 return True
         except:
             return False
-        return True
+        return False
 
 class QDKYProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_QDKY
@@ -548,7 +548,6 @@ class QDKYProxyConsumer(ProxyConsumer):
 
     def valid_proxy(self, ipstr):
         url = "http://ticket.qdjyjt.com"
-        print url
         try:
             ua = random.choice(BROWSER_USER_AGENT)
             r = requests.get(url,
@@ -559,7 +558,7 @@ class QDKYProxyConsumer(ProxyConsumer):
                 return True
         except:
             return False
-        return True
+        return False
 
 
 proxy_producer = ProxyProducer()
