@@ -1,13 +1,11 @@
 # coding=utf-8
 
-import requests
 import re
 import urllib
 import datetime
 import random
 
 from bs4 import BeautifulSoup as bs
-from app.proxy import get_redis
 from app.constants import *
 from datetime import datetime as dte
 from app.flow.base import Flow as BaseFlow
@@ -18,14 +16,6 @@ from app import order_log
 
 class Flow(BaseFlow):
     name = 'sd365'
-    requests.adapters.DEFAULT_RETRIES = 5  # fix Max retries exceeded with url
-
-    # 锁票
-    def get_proxy(self):
-        rds = get_redis("default")
-        ipstr = rds.srandmember(RK_PROXY_IP_SD365)
-        ip = {'http': 'http://%s' %ipstr}
-        return ip
 
     def do_lock_ticket(self, order):
         lock_result = {
@@ -38,9 +28,8 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        proxies = self.get_proxy()
+        rebot = order.get_lock_rebot()
         line = order.line
-        pk = len(order.riders)
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {'User-Agent': ua}
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
@@ -50,7 +39,6 @@ class Flow(BaseFlow):
             extra[x] = y.encode('utf-8')
         uname = order.contact_info['name']
         tel = order.contact_info['telephone']
-        uid = order.contact_info['id_number']
         tpass = random.randint(111111, 999999)
         shopid = extra['sid']
         port = extra['dpid']
@@ -61,42 +49,23 @@ class Flow(BaseFlow):
         offer2=0&tkttype=0&' %(uname, tel, tpass, \
             shopid, port, lline, line['drv_date'], line['drv_time'])
         rider = list(order.riders)
-        #for x in rider:
-        #     if uid == x['id_number']:
-        #         rider.remove(x)
         tmp = ''
-        if 1:
-            for i, x in enumerate(rider):
-                i += 1
-                tmp += 'savefriend[]=%s&tktname[]=%s&papertype[]=0&paperno[]=%s&offertype[]=&price[]=%s&\
-                insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0&' %(i, x['name'].encode('utf-8'), x['id_number'], line['full_price'])
+        for i, x in enumerate(rider):
+            i += 1
+            tmp += 'savefriend[]=%s&tktname[]=%s&papertype[]=0&paperno[]=%s&offertype[]=&price[]=%s&\
+            insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0&' %(i, x['name'].encode('utf-8'), x['id_number'], line['full_price'])
 
         pa = pre + tmp + '&bankname=ZHIFUBAO'
         pa = ''.join(pa.split())
         pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         try:
-            r = requests.post(url, headers=headers, data=pa, allow_redirects=False, timeout=64, proxies=proxies)
+            r = rebot.http_post(url, headers=headers, data=pa, allow_redirects=False, timeout=64)
             location = urllib.unquote(r.headers.get('location', ''))
             sn = location.split(',')[3]
         except:
             sn = ''
             location = ''
-        # fail_reason = ''
-        # if not sn:
-        #     ndata = {
-        #         'sid': extra['sid'],
-        #         'l': extra['l'],
-        #         'dpid': extra['dpid'],
-        #         't': extra['t'],
-        #     }
-        #     nurl = 'http://www.36565.cn/?c=tkt3&a=confirm&' + urllib.urlencode(ndata)
-        #     r = requests.get(nurl, headers=headers, proxies=proxies)
-        #     urlstr = urllib.unquote(r.url.decode('gbk').encode('utf-8'))
-        #     if '该班次价格不存在' in urlstr:
-        #         order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
-        #         self.close_line(line)
-        #         fail_reason = u'服务器异常'
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             if order.extra_info.get('retry_count', ''):
@@ -110,12 +79,6 @@ class Flow(BaseFlow):
                 'pay_money': 0,
             })
             return lock_result
-        # elif fail_reason:
-        #     lock_result.update({
-        #         'result_code': 0,
-        #         "result_reason": fail_reason,
-        #     })
-        #     return lock_result
         elif '不售票' in location or '票务错误' in location or '超出人数限制' in location or '票源不足' in location:
             order_log.info("[lock-fail] order: %s %s", order.order_no, location)
             self.close_line(line)
@@ -154,14 +117,14 @@ class Flow(BaseFlow):
 
     def send_order_request(self, order):
         ua = random.choice(BROWSER_USER_AGENT)
-        proxies = self.get_proxy()
         headers = {'User-Agent': ua}
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         url = 'http://www.36565.cn/?c=order2&a=index'
+        rebot = order.get_lock_rebot()
         for y in order.riders:
             data = {'eport': y['id_number']}
             try:
-                r = requests.post(url, headers=headers, data=data, proxies=proxies)
+                r = rebot.http_post(url, headers=headers, data=data)
                 soup = bs(r.content, 'lxml')
                 info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})
             except:
