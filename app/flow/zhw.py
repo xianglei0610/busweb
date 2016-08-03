@@ -226,7 +226,7 @@ class Flow(BaseFlow):
         update_attrs = {}
         for x in items:
             y = x.find_all('td')
-            sts = x.find('input', attrs={'class': 'g_table_btn'}).get('value', '')
+            sts = y[8].select_one("input").get("value")
             drv_date = y[0].get_text().strip()
             drv_time = y[1].get_text().strip()
             s_sta_name = y[2].get_text().strip()
