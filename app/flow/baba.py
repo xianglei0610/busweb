@@ -179,7 +179,7 @@ class Flow(BaseFlow):
             #    body = "源站: 巴巴快巴, <br/> 城市: %s, <br/> 车站: %s" % (line.s_city_name, line.s_sta_name)
             #    async_send_email.delay("客运站联网中断", body)
             lock_result.update({
-                "result_code": 0,
+                "result_code": 2,
                 "result_reason": errmsg,
                 "source_account": rebot.telephone,
             })
