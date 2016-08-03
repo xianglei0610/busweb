@@ -605,8 +605,7 @@ class Flow(BaseFlow):
         try:
             r = rebot.http_post(url, "getbusschedule", data)
         except:
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
-            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
             return result_info
         res = r.json()
         res = res["response"]
