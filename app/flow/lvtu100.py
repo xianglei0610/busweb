@@ -85,9 +85,9 @@ class Flow(BaseFlow):
             })
         else:
             code = 2
-            if u"锁票异常" in errmsg:
-                self.close_line(order.line, reason=errmsg)
-                code = 0
+            # if u"锁票异常" in errmsg:
+            #     self.close_line(order.line, reason=errmsg)
+            #     code = 0
             lock_result.update({
                 "result_code": code,
                 "result_reason": res["message"],
