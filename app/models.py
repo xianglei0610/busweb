@@ -239,9 +239,11 @@ class OpenStation(db.Document):
         line_log.info("[station-refresh] %s line(total:%s), order(total:%s,fail:%s)", self.sta_name, line_count, order_count, fail_order_count)
 
 
-    def init_dest(self):
+    def init_dest(self, clear_before=False):
         """
         初始化目的地
+
+        clear_before - False: 增量增加 True: 覆盖
         """
         city = self.city
         qs = Line.objects.filter(s_province=city.province, s_city_name__startswith=city.city_name, s_sta_name=self.sta_name) \
@@ -254,10 +256,20 @@ class OpenStation(db.Document):
                                  }
                              }
                          })
-        lst = []
-        for d in qs:
-            d = d["_id"]
-            lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
+        if clear_before:
+            lst = []
+            for d in qs:
+                d = d["_id"]
+                lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
+        else:
+            lst = self.dest_info
+            tmp = {(d["name"], d["dest_id"]):1 for d in lst}
+            for d in qs:
+                d = d["_id"]
+                if (d["city_name"], d["city_id"]) in tmp:
+                    continue
+                tmp[(d["city_name"], d["city_id"])] = 1
+                lst.append({"name": d["city_name"], "code": d["city_code"], "dest_id": d["city_id"]})
 
         site_list = Line.objects.filter(s_city_name__startswith=self.city.city_name, s_sta_name=self.sta_name).distinct("crawl_source")
 
@@ -1433,6 +1445,15 @@ class Sd365WebRebot(Rebot):
         ipstr = rds.srandmember(RK_PROXY_IP_SD365)
         self.modify(ip=ipstr)
         return ipstr
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
 
 
 class GlcxWebRebot(Rebot):
@@ -3326,6 +3347,8 @@ class TCWebRebot(Rebot):
     is_for_lock = False
 
     def login(self, headers=None, cookies={}, valid_code=""):
+        if self.test_login_status():
+            return "OK"
         login_url = "https://passport.ly.com/Member/MemberLoginAjax.aspx"
         pwd_info = SOURCE_INFO[self.crawl_source]["pwd_encode"]
         data = {

@@ -28,6 +28,11 @@ COMPANY_TO_SOURCE = {
     "河南金象客运信息服务有限公司": SOURCE_HN96520,
     "广东南粤通客运联网中心有限公司": SOURCE_GDSW,
     "徐州公路运输集团有限责任公司": SOURCE_XYJT,
+    "东莞市汇联票务服务有限公司": SOURCE_DGKY,
+    "北京阿尔萨客运有限公司": SOURCE_E8S,
+    "烟台远征电子科技开发有限公司": SOURCE_SD365,
+    "上海天雅物联网科技有限公司": SOURCE_LVTU100,
+    "安徽恒生皖美网络科技有限公司": SOURCE_WMCX,
 }
 
 def parse_alipay_record(f):
@@ -126,7 +131,7 @@ def import_alipay_record(filename):
         order = match_alipay_order(trade_info)
         site = trade_info["交易对方"]
         trade_status = trade_info["交易状态"]
-        if site == "深圳市一二三零八网络科技有限公司":
+        if site in ["深圳市一二三零八网络科技有限公司", "深圳市哈巴科技有限公司(*圳市哈巴科技有限公司)", "深圳市哈巴科技有限公司"]:
             continue
         if not order:
             if trade_status not in ["交易关闭", "等待付款"]:

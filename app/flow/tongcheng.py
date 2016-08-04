@@ -456,7 +456,7 @@ class Flow(BaseFlow):
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
-                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.order_price)
+                form_str = "OrderId=%s&TotalAmount=%s" % (order.lock_info["orderId"], order.pay_money)
                 r = rebot.http_post("http://member.ly.com/bus/Pay/MobileGateway",
                                      data=form_str,
                                      headers=headers,
@@ -605,8 +605,7 @@ class Flow(BaseFlow):
         try:
             r = rebot.http_post(url, "getbusschedule", data)
         except:
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 1, "refresh_datetime": now})
-            line_log.info("%s\n%s", "".join(traceback.format_exc()), locals())
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
             return result_info
         res = r.json()
         res = res["response"]

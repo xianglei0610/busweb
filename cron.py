@@ -255,6 +255,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "淄博"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "威海"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "天津"}})
+    sched.add_cron_job(bus_crawl, hour=12, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "天津"}})  # 因为代理的问题, 爬2遍
 
     # 江苏客运
     # sched.add_cron_job(bus_crawl, hour=8, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
@@ -279,21 +280,22 @@ def main():
     # sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['cbd'], kwargs={"crawl_kwargs":{"city": "常熟,吴江"}})
 
     # 同程旅行
-    sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "南通"}})
-    sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "天津"}})
-    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "无锡"}})
-    sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "镇江,宜兴"}})
-    sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "徐州"}})
-    sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "兴化,江阴"}})
-    sched.add_cron_job(bus_crawl, hour=0, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "连云港,扬州"}})
-    # sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "南京"}})
-    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
-    sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "常州"}})
-    sched.add_cron_job(bus_crawl, hour=21, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "昆山,太仓"}})
-    sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "常熟,吴江"}})
-    # sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "盐城"}})
-    sched.add_cron_job(bus_crawl, hour=6, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "句容,靖江,大丰,扬中,溧阳"}})
-    sched.add_cron_job(bus_crawl, hour=5, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "射阳,滨海,盱眙,涟水"}})
+    sched.add_cron_job(bus_crawl, hour=13, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"province": "江苏"}})
+    # sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "南通"}})
+    # sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "天津"}})
+    # sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "无锡"}})
+    # sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "镇江,宜兴"}})
+    # sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "徐州"}})
+    # sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "兴化,江阴"}})
+    # sched.add_cron_job(bus_crawl, hour=0, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "连云港,扬州"}})
+    # # sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "南京"}})
+    # sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
+    # sched.add_cron_job(bus_crawl, hour=19, minute=10, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "常州"}})
+    # sched.add_cron_job(bus_crawl, hour=21, minute=30, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "昆山,太仓"}})
+    # sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "常熟,吴江"}})
+    # # sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "盐城"}})
+    # sched.add_cron_job(bus_crawl, hour=6, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "句容,靖江,大丰,扬中,溧阳"}})
+    # sched.add_cron_job(bus_crawl, hour=5, minute=0, args=['tongcheng_app'], kwargs={"crawl_kwargs":{"city": "射阳,滨海,盱眙,涟水"}})
 
     # 快巴
     #sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['kuaiba'], kwargs={"crawl_kwargs":{"province": "北京"}})
@@ -366,7 +368,8 @@ def main():
     sched.add_cron_job(bus_crawl, hour=11, minute=0, args=['zhw'])
 
     # 山东365汽车票
-    #sched.add_cron_job(bus_crawl, hour=12, minute=10, args=['sd365'], kwargs={"crawl_kwargs":{"city": "烟台市,蓬莱市,海阳市,栖霞市,招远市,莱阳市,龙口市,济南市,淄博市,济宁市,东营市,聊城市,德州市,潍坊市,天津市,莱芜市,枣庄市,榆林,寿光,泰安,新泰市,肥城市,莱州市,滨州市,临沂市"}})
+    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['sd365'], kwargs={"crawl_kwargs":{"province": "山东"}})
+    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['sd365'], kwargs={"crawl_kwargs":{"province": "天津"}})
 
     # 山东交运
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['glcx'])
