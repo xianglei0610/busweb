@@ -56,7 +56,7 @@ class Flow(BaseFlow):
         res = r.json()
         if not res["success"]:
             msg = res["msg"]
-            if res["msg"] == "查询失败":
+            if res["msg"] in ["查询失败","必填内容不能为空"]:
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": msg,
