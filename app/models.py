@@ -706,6 +706,8 @@ class Order(db.Document):
             "source_account",
             "kefu_username",
             "yc_status",
+            "order_channel",
+            "channel_order_no",
         ],
     }
 
@@ -3487,7 +3489,7 @@ class GzqcpAppRebot(Rebot):
     @property
     def proxy_ip(self):
         return ""
-    
+
     def http_header(self, ua=""):
         return {
             "Charset": "UTF-8",

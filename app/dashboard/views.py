@@ -229,6 +229,9 @@ def order_list():
     pay_channel = params.get("pay_channel", "")
     if pay_channel:
         query.update(pay_channel=pay_channel)
+    order_channel = params.get("order_channel", "")
+    if order_channel:
+        query.update(order_channel=order_channel)
     q_key = params.get("q_key", "")
     q_value = params.get("q_value", "").strip()
 
@@ -249,6 +252,8 @@ def order_list():
         elif q_key == "trade_no":
             Q_query = (db.Q(pay_trade_no=q_value)|db.Q(refund_trade_no=q_value))
         elif q_key == "pay_order_no":
+            query.update(pay_order_no=q_value)
+        elif q_key == "channel_order_no":
             query.update(pay_order_no=q_value)
 
     kefu_name = params.get("kefu_name", "")
@@ -321,6 +326,8 @@ def order_list():
         kefu_count = {d["_id"]["kefu_username"]: d["total"] for d in qs.aggregate({"$group": {"_id": {"kefu_username": "$kefu_username"}, "total":{"$sum": 1}}})}
         site_count = {d["_id"]["crawl_source"]: d["total"] for d in qs.aggregate({"$group": {"_id": {"crawl_source": "$crawl_source"}, "total":{"$sum": 1}}})}
         status_count = {str(d["_id"]["status"]): d["total"] for d in qs.aggregate({"$group": {"_id": {"status": "$status"}, "total":{"$sum": 1}}})}
+        order_channel_count= {str(d["_id"]["channel"]): d["total"] for d in qs.aggregate({"$group": {"_id": {"channel": "$order_channel"}, "total":{"$sum": 1}}})}
+
         status_count["0"] = qs.count()
         account_count = {}
         if source:
@@ -345,6 +352,7 @@ def order_list():
                                 account_count=account_count,
                                 all_user=AdminUser.objects.filter(is_removed=0),
                                 pay_channel=PAY_CHANNEL,
+                                order_channel_count=order_channel_count,
                                 )
 
 
