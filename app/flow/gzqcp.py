@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import GzqcpAppRebot, Line
+from app.models import GzqcpAppRebot, Line, GzqcpWebRebot
 from datetime import datetime as dte
 from app.utils import md5
 from app import order_log, line_log
@@ -23,55 +23,30 @@ class Flow(BaseFlow):
     name = "gzqcp"
 
     def do_lock_ticket(self, order):
+        lock_result = {
+            "lock_info": {},
+            "source_account": '',
+            "result_code": -1,
+            "result_reason": "",
+            "pay_url": "",
+            "raw_order_no": "",
+            "expire_datetime": "",
+            "pay_money": 0,
+        }
         rebot = order.get_lock_rebot()
         if not rebot.test_login_status():
             rebot.login()
             rebot.reload()
-        line = order.line
-        data = {
-            "busInfoModel.fcsk": line.drv_time,
-            "busInfoModel.ddz": line.d_sta_name,
-            "busInfoModel.scdbm": line.s_sta_id,
-            "busInfoModel.bcjtbm": line.extra_info['busCompanyCode'],
-            "busInfoModel.scd": line.s_sta_name,
-            "busInfoModel.fcrq": line.drv_date,
-            "busInfoModel.ddzbm": line.d_sta_id,
-            "busInfoModel.bcbh": line.bus_num,
-            "busInfoModel.sfzx": line.extra_info['busCodeType'],
-            "busInfoModel.regsName": line.extra_info['regsName'],
-            }
-        riders = order.riders
-        tmp = {}
-        for i in range(len(riders)):
-            tmp = {
-                "passengers[%s].idCode" % i: riders[i]["id_number"],
-                "passengers[%s].cname" % i: riders[i]["name"],
-                "passengers[%s].phone" % i: riders[i]["telephone"],
-                "passengers[%s].insTypeCode" % i: "2",
-                "passengers[%s].psgBabyFlg" % i: "0",
-                "passengers[%s].psgInsuranceFlg" % i: "0",
-                "passengers[%s].ticketType" % i: '0',
-                "passengers[%s].insPrice" % i: "0",
-                "passengers[%s].idType" % i: "1101",
-            }
-            data.update(tmp)
-        order_log.info("[lock-start] order: %s,account:%s start  lock request", order.order_no, rebot.telephone)
-        try:
-            res = self.send_lock_request(order, rebot, data=data)
-        except Exception, e:
-            order_log.info("[lock-end] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-            rebot.login()
-            rebot.reload()
-            res = self.send_lock_request(order, rebot, data=data)
-        order_log.info("[lock-end] order: %s,account:%s lock request result : %s", order.order_no, rebot.telephone,res)
 
+        res = self.send_lock_request(order, rebot)
+        print res
         if res.has_key('struts.token'):
             del res['struts.token']
-        lock_result = {
+        lock_result.update({
             "lock_info": res,
             "source_account": rebot.telephone,
-            "pay_money": line.real_price()*order.ticket_amount,
-        }
+            "pay_money": '',
+        })
         if res['values']['result'] == 'success':
             order_no = res["values"]['orderInfo']['orderMap']['ddh']
             order_log.info("[lock-end] order: %s,account:%s start   query encode orderId request", order.order_no, rebot.telephone)
@@ -91,13 +66,14 @@ class Flow(BaseFlow):
                 "pay_url": "",
                 "raw_order_no": order_no,
                 "expire_datetime": expire_time,
-                "lock_info": res
+                "lock_info": res,
+                "pay_money": encode_order_detail['pay_money'],
             })
         else:
             errmsg = res['values']['result'].replace("\r\n", " ")
             for s in ["剩余座位数不足"]:
                 if s in errmsg:
-                    self.close_line(line, reason=errmsg)
+                    self.close_line(order.line, reason=errmsg)
                     break
             lock_result.update({
                 "result_code": 0,
@@ -108,13 +84,46 @@ class Flow(BaseFlow):
             })
         return lock_result
 
-    def send_lock_request(self, order, rebot, data):
+    def send_lock_request(self, order, rebot):
         """
         单纯向源站发请求
         """
+        line = order.line
+        data = {
+            "busInfoModel.fcsk": line.drv_time,
+            "busInfoModel.ddz": line.d_sta_name,
+            "busInfoModel.scdbm": line.s_sta_id,
+            "busInfoModel.bcjtbm": line.extra_info['busCompanyCode'],
+            "busInfoModel.scd": line.s_sta_name,
+            "busInfoModel.fcrq": line.drv_date,
+            "busInfoModel.ddzbm": line.d_sta_id,
+            "busInfoModel.bcbh": line.bus_num,
+            "busInfoModel.sfzx": line.extra_info['busCodeType'],
+            "busInfoModel.regsName": line.extra_info['regsName'],
+
+            "busInfoModel.bj": '0.00',
+            "busInfoModel.xspj": '0.00',
+            "busInfoModel.ptpj": line.full_price*order.ticket_amount
+            }
+        riders = order.riders
+        tmp = {}
+        for i in range(len(riders)):
+            tmp = {
+                "passengers[%s].idCode" % i: riders[i]["id_number"],
+                "passengers[%s].cname" % i: riders[i]["name"],
+                "passengers[%s].phone" % i: riders[i]["telephone"],
+                "passengers[%s].insTypeCode" % i: "2",
+                "passengers[%s].psgBabyFlg" % i: "0",
+                "passengers[%s].psgInsuranceFlg" % i: "0",
+                "passengers[%s].ticketType" % i: '0',
+                "passengers[%s].insPrice" % i: "0",
+                "passengers[%s].idType" % i: "1",
+            }
+            data.update(tmp)
         order_url = "http://www.gzsqcp.com/com/yxd/pris/openapi/addOrder.action"
         headers = rebot.http_header()
-        r = requests.post(order_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+        cookies = json.loads(rebot.cookies)
+        r = rebot.http_post(order_url, data=data, headers=headers, cookies=cookies)
         ret = r.json()
         return ret
 
@@ -124,10 +133,12 @@ class Flow(BaseFlow):
         data = {
             "orderNo": order.lock_info["values"]['orderInfo']['orderMap']['ddh'] if order else lock_info["values"]['orderInfo']['orderMap']['ddh'],
         }
-        r = requests.post(detail_url, data=data, headers=headers, cookies=json.loads(rebot.cookies) )
+        r = rebot.http_post(detail_url, data=data, headers=headers, cookies=json.loads(rebot.cookies) )
         ret = r.json()
+        print ret
         return {
             "orderId": ret["values"]["orderInfoPreviewModel"]['order']['orderId'],
+            "pay_money": ret["values"]["orderInfoPreviewModel"]['order']['orderMoney'],
         }
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
@@ -138,7 +149,7 @@ class Flow(BaseFlow):
         data = {
             "orderId": order.lock_info['encode_orderId'],
         }
-        r = requests.post(detail_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
+        r = rebot.http_post(detail_url, data=data, headers=headers, cookies=json.loads(rebot.cookies))
         ret = r.json()
         return {
             "state": ret['values']['result']['order']['orderState'],
@@ -212,37 +223,51 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
-        rebot = order.get_lock_rebot()
+        if not order.source_account:
+            rebot = order.get_lock_rebot()
+        rebot = GzqcpWebRebot.objects.get(telephone=order.source_account)
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
-                order_url = "http://www.gzsqcp.com/wsgp/order_success.jsp?orderNo=%s"%order.raw_order_no
+                order_url = "http://gzsqcp.com/dync/08/wsgp/order_success.jsp?orderNo=%s"%order.raw_order_no
                 headers = {
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
                 data = {}
                 cookies = json.loads(rebot.cookies)
-                r = requests.post(order_url, data=data, headers=headers, cookies=cookies)
+                r = rebot.http_post(order_url, data=data, headers=headers, cookies=cookies)
                 soup = BeautifulSoup(r.content, "lxml")
                 payCompanyType = soup.select("#order_submit_zfslx")[0].get("value")
                 cookies.update(dict(r.cookies))
-                to_pay_url = "http://www.gzsqcp.com/com/yxd/pris/wsgp/atoPayPage.action"
+                to_pay_url = "http://gzsqcp.com/com/yxd/pris/wsgp/atoPayPage.action"
                 data = {
                           "orderId": order.lock_info['encode_orderId'],
                           "payCompanyType": payCompanyType
                           }
-                r = requests.post(to_pay_url, data=data, headers=headers, cookies=cookies)
+                r = rebot.http_post(to_pay_url, data=data, headers=headers, cookies=cookies)
                 sel = etree.HTML(r.content)
                 cookies.update(dict(r.cookies))
                 title = u"支付宝支付(PC)"
                 paymentCompanyCode = sel.xpath('//td/img[@title="%s"]/@pcompany'%title)
-                pay_url = "http://www.gzsqcp.com:80/com/yxd/pris/payment/payOnline.action"
+                beanName = sel.xpath('//input[@id="beanName"]/@value')[0]
+                payAmount = sel.xpath('//input[@id="payAmount"]/@value')[0]
+                payCompanyType = sel.xpath('//input[@id="payCompanyType"]/@value')[0]
+                pay_url = "http://gzsqcp.com:80/com/hy/cpt/biz/payment/common/toPayment.action"
                 params = {
                   "orderId": order.lock_info['encode_orderId'],
-                  "paymentCompanyCode": paymentCompanyCode
+                  "payOrderNo": order.raw_order_no,
+                  "payCompanyCode": '001',
+                  "payCompanyType": payCompanyType,
+                  "beanName": beanName,
+                  "payAmount": payAmount
                   }
-                r = requests.post(pay_url, data=params, headers=headers, cookies=cookies)
+                headers.update({
+                                "Upgrade-Insecure-Requests": "1",
+                                "Referer":"http://gzsqcp.com/com/yxd/pris/wsgp/atoPayPage.action"
+                                })
+                r = rebot.http_post(pay_url, data=params, headers=headers, cookies=cookies)
+                order.update(pay_channel='alipay', pay_money=float(payAmount))
                 return {"flag": "html", "content": r.content}
 
         if valid_code:
@@ -259,11 +284,11 @@ class Flow(BaseFlow):
         is_login = rebot.test_login_status()
 
         if is_login:
-            if order.status == STATUS_LOCK_RETRY:
+            if order.status in [STATUS_WAITING_LOCK, STATUS_LOCK_RETRY]:
                 self.lock_ticket(order)
             return _get_page(rebot)
         else:
-            login_form = "http://www.gzsqcp.com/grzx/userLogin.jsp"
+            login_form = "http://gzsqcp.com/dync/08/grzx/userLogin.jsp"
             ua = random.choice(BROWSER_USER_AGENT)
             headers = {"User-Agent": ua}
             r = requests.get(login_form, headers=headers)
@@ -292,30 +317,29 @@ class Flow(BaseFlow):
 
         ua = random.choice(MOBILE_USER_AGENG)
         headers = {"User-Agent": ua}
-        data = {
-            "startDepotCode": line.extra_info['s_code'],
-            "busCompanyCode": line.extra_info['busCompanyCode'],
-            }
-
-        url = "http://www.gzsqcp.com/com/yxd/pris/wsgp/isInternet.action"
-        res = requests.post(url, data=data, headers=headers)
-        ret = res.json()
-        result = ret['values']['result']
-        if result == '0':
-            result_info.update(result_msg="station no internet", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-            return result_info
+#         data = {
+#             "startDepotCode": line.extra_info['s_code'],
+#             "busCompanyCode": line.extra_info['busCompanyCode'],
+#             }
+# 
+#         url = "http://www.gzsqcp.com/com/yxd/pris/wsgp/isInternet.action"
+#         res = requests.post(url, data=data, headers=headers)
+#         ret = res.json()
+#         result = ret['values']['result']
+#         if result == '0':
+#             result_info.update(result_msg="station no internet", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+#             return result_info
 
         line_url = 'http://www.gzsqcp.com/com/yxd/pris/openapi/queryAllTicket.action'
         data = {
             "arrivalDepotCode": line.extra_info['e_code'],
+            "arriveIsArea": line.extra_info['arriveIsArea'],
             "beginTime": line.drv_date,
-            "startName": line.s_city_name,
-            "endName": line.d_city_name,
-            "startDepotCode": line.extra_info['s_code']
+            "startDepotCode": line.extra_info['s_code'],
+            "startIsArea": "1",
         }
         r = requests.post(line_url, data=data, headers=headers)
         res = r.json()
-        now = dte.now()
         if res["akfAjaxResult"] != "0":
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
