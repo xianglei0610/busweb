@@ -165,7 +165,7 @@ class Flow(BaseFlow):
                     order.contact_info['name'] = name
                     order.save()
                     order.reload()
-                not_support_list = ['171','177', '147', '178', '176', '170', '173', '186', '187']
+                not_support_list = ['171', '177', '147', '178', '176', '170', '173', '186', '187']
                 if phone_num[0:3] in not_support_list:
                     if rebot.telephone[0:3] not in not_support_list:
                         telephone = rebot.telephone
@@ -182,7 +182,7 @@ class Flow(BaseFlow):
                     })
                 if msg:
                     lock_result.update({
-                        "result_reason": ret.get("msg", '') + msg,
+                        "result_reason": ret.get("msg", '') + ":" + msg,
                     })
                 return lock_result
                   
