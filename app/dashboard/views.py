@@ -254,7 +254,7 @@ def order_list():
         elif q_key == "pay_order_no":
             query.update(pay_order_no=q_value)
         elif q_key == "channel_order_no":
-            query.update(pay_order_no=q_value)
+            query.update(channel_order_no=q_value)
 
     kefu_name = params.get("kefu_name", "")
     if kefu_name:
