@@ -121,6 +121,7 @@ class Flow(BaseFlow):
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         url = 'http://www.36565.cn/?c=order2&a=index'
         rebot = order.get_lock_rebot()
+        rebot.modify(ip="")
         for y in order.riders:
             data = {'eport': y['id_number']}
             try:
