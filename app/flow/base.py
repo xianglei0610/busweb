@@ -51,12 +51,20 @@ class Flow(object):
             order_log.info("[lock-ignore] order: %s %s", order.order_no, fail_msg)
             return
 
+        force_fail = False
         if (order.line.drv_datetime-dte.now()).total_seconds() <= 40*60:
+            force_fail = True
+            fail_msg =  "[系统检查]距离开车时间太近"
+        elif order.order_channel.lower() == "taobao" and (dte.now()-order.create_date_time).total_seconds()>5*60*60:
+            force_fail = True
+            fail_msg =  "[系统检查]淘宝的单,过了5小时则自动失败"
+
+        if force_fail:
             ret = {
                 "lock_info": {},
                 "source_account": order.source_account,
                 "result_code": 0,
-                "result_reason": "[系统检查]距离开车时间太近",
+                "result_reason": fail_msg,
                 "pay_url": "",
                 "raw_order_no": "",
                 "expire_datetime": "",
@@ -64,6 +72,7 @@ class Flow(object):
             }
         else:
             ret = self.do_lock_ticket(order, **kwargs)
+
         order.reload()
         fail_msg = self.check_lock_condition(order)
         if fail_msg:  # 再次检查, 防止重复支付
