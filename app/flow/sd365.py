@@ -75,7 +75,7 @@ class Flow(BaseFlow):
                 'result_code': 1,
                 'raw_order_no': sn,
                 "expire_datetime": expire_time,
-                "source_account": '',
+                "source_account": rebot.telephone,
                 'pay_money': 0,
             })
             return lock_result
@@ -88,6 +88,7 @@ class Flow(BaseFlow):
                 lock_result.update({
                     'result_code': 0,
                     "result_reason": errmsg,
+                    "source_account": rebot.telephone,
                 })
                 return lock_result
             errlst = re.findall(r'message=(\S+)', location)
@@ -95,6 +96,7 @@ class Flow(BaseFlow):
             lock_result.update({
                 'result_code': 0,
                 "result_reason": errmsg,
+                "source_account": rebot.telephone,
             })
             return lock_result
         else:
