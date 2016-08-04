@@ -3391,12 +3391,17 @@ class TCWebRebot(Rebot):
 class GzqcpWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    ip = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
         "collection": "gzqcpweb_rebot",
     }
     crawl_source = SOURCE_GZQCP
+
+    @property
+    def proxy_ip(self):
+        return "192.168.1.51:8888"
 
     def check_login(self):
         try:
@@ -3443,6 +3448,7 @@ class GzqcpWebRebot(Rebot):
 class GzqcpAppRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
+    ip = db.StringField()
 
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
@@ -3451,6 +3457,10 @@ class GzqcpAppRebot(Rebot):
     crawl_source = SOURCE_GZQCP
     is_for_lock = True
 
+    @property
+    def proxy_ip(self):
+        return ""
+    
     def http_header(self, ua=""):
         return {
             "Charset": "UTF-8",
