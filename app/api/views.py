@@ -253,6 +253,10 @@ def submit_order():
         }],
         "locked_return_url: ""                    # 锁票成功回调地址
         "issued_return_url: ""                    # 出票成功回调地址
+
+        "channel": "pc|wx|taobao...",                   # 售票来源 字符串类型
+        "insurance": 3.0,                               # 保险费: 小数
+        "channel_order_no": "12308q16080414083743f",    # 合作方订单号
     }
 
     Return:
@@ -325,6 +329,10 @@ def submit_order():
     order.bus_num = line.bus_num
     order.starting_name = line.s_city_name + ';' + line.s_sta_name
     order.destination_name = line.d_city_name + ';' + line.d_sta_name
+
+    order.order_channel = post.get("channel", "")
+    order.order_insurance = float(post.get("insurance", "").strip())
+    order.channel_order_no = post.get("channel_order_no", "")
     order.save()
     order.on_create()
 

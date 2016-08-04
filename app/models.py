@@ -637,6 +637,9 @@ class Order(db.Document):
     status = db.IntField()
     order_price = db.FloatField()  # 订单金额, 12308平台传来的金额
     create_date_time = db.DateTimeField()
+    order_channel = db.StringField()      #  用户买票渠道, 12308平台传来的
+    order_insurance = db.FloatField()     #  用户支付的保险费, 12308平台传来的
+    channel_order_no = db.StringField()   #  第三方合作订单号, 12308平台传来的
 
     # 车票信息
     line = db.ReferenceField(Line)
