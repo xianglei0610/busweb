@@ -3424,7 +3424,8 @@ class GzqcpWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return "192.168.1.51:8888"
+        return ''
+#         return "192.168.1.51:8888"
 
     def check_login(self):
         try:
