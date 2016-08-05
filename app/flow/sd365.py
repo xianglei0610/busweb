@@ -90,6 +90,8 @@ class Flow(BaseFlow):
                 continue
             if name.endswith("[]"):
                 params.setdefault(name, []).append(value)
+            else:
+                params[name]=value
         params["bankname"] = "ZHIFUBAO"
 
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
