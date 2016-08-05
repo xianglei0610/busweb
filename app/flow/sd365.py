@@ -46,6 +46,14 @@ class Flow(BaseFlow):
         soup = BeautifulSoup(r.content, "lxml")
         params = {unicode(o.get("name")): unicode(o.get("value")) for o in soup.select("#orderlistform input")}
         if not params:
+            if r.status_code == 200 and not r.content:
+                self.close_line(line, reason="响应内容为空")
+                lock_result.update({
+                    "result_code": 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": "响应内容为空",
+                })
+                return lock_result
             errmsg = soup.select_one(".jump_mes h4").text
             if u"该班次价格不存在" in errmsg or u"发车前2小时不售票" in errmsg:
                 self.close_line(line, reason=errmsg)
@@ -108,9 +116,8 @@ class Flow(BaseFlow):
         })
         r = rebot.http_post(url, headers=headers, data=urllib.urlencode(params, doseq=1), allow_redirects=False, timeout=30, cookies=cookies)
         location = urllib.unquote(r.headers.get('location', ''))
-        sn = location.split(',')[3]
-
-        if 'mapi.alipay.com' in location and sn:
+        if 'mapi.alipay.com' in location:
+            sn = location.split(',')[3]
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': pick_code})
             lock_result.update({
@@ -119,11 +126,16 @@ class Flow(BaseFlow):
                 "expire_datetime": expire_time,
                 "source_account": rebot.telephone,
                 'pay_money': 0,
+                "result_reason": location,
             })
             return lock_result
         else:
+            code = 2
+            if "检票车站在班次途经站中不存在" in location:
+                self.close_line(line, reason=location)
+                code = 0
             lock_result.update({
-                'result_code': 2,
+                'result_code': code,
                 "result_reason": location,
                 "source_account": rebot.telephone,
             })
