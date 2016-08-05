@@ -10,6 +10,7 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Lvtu100AppRebot, Line
 from datetime import datetime as dte
 from app.utils import md5, get_redis
+from app import order_log
 
 class Flow(BaseFlow):
 
@@ -127,6 +128,7 @@ class Flow(BaseFlow):
         pay_money = float(pay_info["amount"])
         pay_no = str(pay_info["payment_id"])
         if order.pay_order_no != pay_no:
+            order_log.info("[chane_pay_order_no] order:%s, %s=>%s", order.order_no, order.pay_order_no, pay_no)
             order.modify(pay_order_no=pay_no, pay_money=pay_money)
         state = int(ret["data"]["status"])
         if state== 2:   # 出票成功

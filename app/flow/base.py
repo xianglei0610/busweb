@@ -1,8 +1,6 @@
 # -*- coding:utf-8 -*-
 import urllib2
 import json
-import traceback
-import os
 import time
 
 from app.constants import *
