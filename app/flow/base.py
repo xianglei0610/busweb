@@ -55,9 +55,9 @@ class Flow(object):
         if (order.line.drv_datetime-dte.now()).total_seconds() <= 40*60:
             force_fail = True
             fail_msg =  "[系统检查]距离开车时间太近"
-        elif order.order_channel.lower() == "taobao" and (dte.now()-order.create_date_time).total_seconds()>5*60*60:
+        elif order.order_channel.lower() == "taobao" and (dte.now()-order.create_date_time).total_seconds()>5*60*60+50*60:
             force_fail = True
-            fail_msg =  "[系统检查]淘宝的单,过了5小时则自动失败"
+            fail_msg =  "[系统检查]淘宝的单,过了5小时50分则自动失败"
 
         if force_fail:
             ret = {
