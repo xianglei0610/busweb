@@ -44,13 +44,20 @@ class Flow(BaseFlow):
         r = rebot.http_get("http://www.365tkt.com/?"+ urllib.urlencode(params), headers=headers)
         cookies = r.cookies
         soup = BeautifulSoup(r.content, "lxml")
-        params = {o.get("name"): o.get("value") for o in soup.select("#orderlistform input")}
+        params = {unicode(o.get("name")): unicode(o.get("value")) for o in soup.select("#orderlistform input")}
         if not params:
             errmsg = soup.select_one(".jump_mes h4").text
-            if u"该班次价格不存在" in errmsg:
+            if u"该班次价格不存在" in errmsg or u"发车前2小时不售票" in errmsg:
                 self.close_line(line, reason=errmsg)
                 lock_result.update({
                     "result_code": 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": errmsg,
+                })
+                return lock_result
+            else:
+                lock_result.update({
+                    "result_code": 2,
                     "source_account": rebot.telephone,
                     "result_reason": errmsg,
                 })
@@ -85,7 +92,7 @@ class Flow(BaseFlow):
         soup = BeautifulSoup(r.content, "lxml")
         params = {}
         for o in soup.select("#tktlock input"):
-            name, value = o.get("name"), o.get("value")
+            name, value = unicode(o.get("name") or ""), unicode(o.get("value") or "")
             if not name:
                 continue
             if name.endswith("[]"):
@@ -93,6 +100,7 @@ class Flow(BaseFlow):
             else:
                 params[name]=value
         params["bankname"] = "ZHIFUBAO"
+        params["member_name"] = order.contact_info["name"]
 
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         headers.update({
