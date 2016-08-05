@@ -152,9 +152,9 @@ class Flow(BaseFlow):
             data = {'eport': y['id_number']}
             try:
                 r = rebot.http_post(url, headers=headers, data=data)
-                soup = bs(r.content, 'lxml')
+                soup = BeautifulSoup(r.content, 'lxml')
                 info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})
-            except:
+            except Exception,e:
                 return {
                     "state": 'proxy error',
                     "pick_no": '',
@@ -230,7 +230,7 @@ class Flow(BaseFlow):
             rebot.modify(ip="")
             r = rebot.http_get(url, headers=headers)
             code = r.content.split('code:')[-1].split()[0].split('"')[1]
-            soup = bs(r.content, 'lxml')
+            soup = BeautifulSoup(r.content, 'lxml')
             info = soup.find_all('input', attrs={'class': 'filertctrl', 'name': 'siids'})
         except Exception, e:
             result_info = {}
