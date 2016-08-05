@@ -40,10 +40,21 @@ class Flow(BaseFlow):
             "dpid": line.extra_info["dpid"],
             "t": line.drv_date,
         }
+        rebot.modify(ip="")
         r = rebot.http_get("http://www.365tkt.com/?"+ urllib.urlencode(params), headers=headers)
         cookies = r.cookies
         soup = BeautifulSoup(r.content, "lxml")
         params = {o.get("name"): o.get("value") for o in soup.select("#orderlistform input")}
+        if not params:
+            errmsg = soup.select_one(".jump_mes h4").text
+            if u"该班次价格不存在" in errmsg:
+                self.close_line(line, reason=errmsg)
+                lock_result.update({
+                    "result_code": 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": errmsg,
+                })
+                return lock_result
 
         # confirming
         pick_code = random.randint(111111, 999999)
@@ -67,20 +78,25 @@ class Flow(BaseFlow):
             "Content-Type": "application/x-www-form-urlencoded",
         })
         url = "http://www.365tkt.com/?c=tkt3&a=confirming"
-        r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(params))
+        r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(params, doseq=1))
         cookies = cookies.update(r.cookies)
 
         # lock
-        soup = BeatutifulSoup(r.content, "lxml")
+        soup = BeautifulSoup(r.content, "lxml")
         params = {}
         for o in soup.select("#tktlock input"):
             name, value = o.get("name"), o.get("value")
+            if not name:
+                continue
             if name.endswith("[]"):
                 params.setdefault(name, []).append(value)
         params["bankname"] = "ZHIFUBAO"
 
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
-        r = rebot.http_post(url, headers=headers, data=pa, allow_redirects=False, timeout=45)
+        headers.update({
+            "Referer": "http://www.365tkt.com/?c=tkt3&a=confirming",
+        })
+        r = rebot.http_post(url, headers=headers, data=urllib.urlencode(params, doseq=1), allow_redirects=False, timeout=30, cookies=cookies)
         location = urllib.unquote(r.headers.get('location', ''))
         sn = location.split(',')[3]
 
