@@ -5,13 +5,12 @@ import urllib
 import datetime
 import random
 
-from bs4 import BeautifulSoup as bs
+from bs4 import BeautifulSoup
 from app.constants import *
 from datetime import datetime as dte
 from app.flow.base import Flow as BaseFlow
 from app.models import Line,Sd365WebRebot
 from app.utils import md5
-from app import order_log
 
 
 class Flow(BaseFlow):
@@ -30,47 +29,82 @@ class Flow(BaseFlow):
         }
         rebot = order.get_lock_rebot()
         line = order.line
-        ua = random.choice(BROWSER_USER_AGENT)
-        headers = {'User-Agent': ua}
-        headers['Content-Type'] = 'application/x-www-form-urlencoded'
-        headers['Referer'] = 'http://www.36565.cn/?c=tkt3&a=confirming'
-        extra = line.extra_info
-        for x, y in extra.items():
-            extra[x] = y.encode('utf-8')
-        uname = order.contact_info['name']
-        tel = order.contact_info['telephone']
-        tpass = random.randint(111111, 999999)
-        shopid = extra['sid']
-        port = extra['dpid']
-        lline = extra['l']
-        pre = 'member_name=%s&tktphone=%s&\
-        ticketpass=%s&paytype=3&shopid=%s&\
-        port=%s&line=%s&tdate=%s+%s&offer=0&\
-        offer2=0&tkttype=0&' %(uname, tel, tpass, \
-            shopid, port, lline, line['drv_date'], line['drv_time'])
-        rider = list(order.riders)
-        tmp = ''
-        for i, x in enumerate(rider):
-            i += 1
-            tmp += 'savefriend[]=%s&tktname[]=%s&papertype[]=0&paperno[]=%s&offertype[]=&price[]=%s&\
-            insureproduct[]=1&insurenum[]=0&insurefee[]=0&chargefee[]=0&' %(i, x['name'].encode('utf-8'), x['id_number'], line['full_price'])
 
-        pa = pre + tmp + '&bankname=ZHIFUBAO'
-        pa = ''.join(pa.split())
-        pa = urllib.quote(pa.encode('utf-8'), safe='=&+')
+        # confirm
+        headers = {'User-Agent': random.choice(BROWSER_USER_AGENT)}
+        params = {
+            "c": "tkt3",
+            "a": "confirm",
+            "sid": line.extra_info["sid"],
+            "l": line.extra_info["l"],
+            "dpid": line.extra_info["dpid"],
+            "t": line.drv_date,
+        }
+        rebot.modify(ip="")
+        r = rebot.http_get("http://www.365tkt.com/?"+ urllib.urlencode(params), headers=headers)
+        cookies = r.cookies
+        soup = BeautifulSoup(r.content, "lxml")
+        params = {o.get("name"): o.get("value") for o in soup.select("#orderlistform input")}
+        if not params:
+            errmsg = soup.select_one(".jump_mes h4").text
+            if u"该班次价格不存在" in errmsg:
+                self.close_line(line, reason=errmsg)
+                lock_result.update({
+                    "result_code": 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": errmsg,
+                })
+                return lock_result
+
+        # confirming
+        pick_code = random.randint(111111, 999999)
+        params2 = {
+            "savefriend[]": [0 for i in range(len(order.riders))],
+            "tktname[]": [d["name"] for d in order.riders],
+            "papertype[]": [0 for i in range(len(order.riders))],
+            "paperno[]": [d["id_number"] for d in order.riders],
+            "offertype[]": [1 for i in range(len(order.riders))],
+            "price[]": [line.full_price for i in range(len(order.riders))],
+            "insureproduct[]": [1 for i in range(len(order.riders))],
+            "insurenum[]": [0 for i in range(len(order.riders))],
+            "insurefee[]": [0 for i in range(len(order.riders))],
+            "chargefee[]": [0 for i in range(len(order.riders))],
+            "member_name": order.contact_info["name"],
+            "tktphone": order.contact_info["telephone"],
+            "ticketpass": pick_code,
+        }
+        params.update(params2)
+        headers.update({
+            "Content-Type": "application/x-www-form-urlencoded",
+        })
+        url = "http://www.365tkt.com/?c=tkt3&a=confirming"
+        r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(params, doseq=1))
+        cookies = cookies.update(r.cookies)
+
+        # lock
+        soup = BeautifulSoup(r.content, "lxml")
+        params = {}
+        for o in soup.select("#tktlock input"):
+            name, value = o.get("name"), o.get("value")
+            if not name:
+                continue
+            if name.endswith("[]"):
+                params.setdefault(name, []).append(value)
+            else:
+                params[name]=value
+        params["bankname"] = "ZHIFUBAO"
+
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
-        try:
-            r = rebot.http_post(url, headers=headers, data=pa, allow_redirects=False, timeout=64)
-            location = urllib.unquote(r.headers.get('location', ''))
-            sn = location.split(',')[3]
-        except:
-            sn = ''
-            location = ''
+        headers.update({
+            "Referer": "http://www.365tkt.com/?c=tkt3&a=confirming",
+        })
+        r = rebot.http_post(url, headers=headers, data=urllib.urlencode(params, doseq=1), allow_redirects=False, timeout=30, cookies=cookies)
+        location = urllib.unquote(r.headers.get('location', ''))
+        sn = location.split(',')[3]
+
         if 'mapi.alipay.com' in location and sn:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-            if order.extra_info.get('retry_count', ''):
-                order.modify(extra_info={})
-            order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': tpass})
+            order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': pick_code})
             lock_result.update({
                 'result_code': 1,
                 'raw_order_no': sn,
@@ -79,41 +113,11 @@ class Flow(BaseFlow):
                 'pay_money': 0,
             })
             return lock_result
-        elif '不售票' in location or '票务错误' in location or '超出人数限制' in location or '票源不足' in location:
-            order_log.info("[lock-fail] order: %s %s", order.order_no, location)
-            self.close_line(line)
-            errlst = re.findall(r'message=(\S+)&url', location)
-            errmsg = unicode(errlst and errlst[0] or "")
-            if errmsg:
-                lock_result.update({
-                    'result_code': 0,
-                    "result_reason": errmsg,
-                    "source_account": rebot.telephone,
-                })
-                return lock_result
-            errlst = re.findall(r'message=(\S+)', location)
-            errmsg = unicode(errlst and errlst[0] or "")
-            lock_result.update({
-                'result_code': 0,
-                "result_reason": errmsg,
-                "source_account": rebot.telephone,
-            })
-            return lock_result
         else:
-            retry_count = order.extra_info.get('retry_count', '')
-            if not retry_count:
-                retry_count = 1
-            if retry_count > 15:
-                lock_result.update({
-                    'result_code': 0,
-                    "result_reason": '无法下单',
-                })
-                return lock_result
-            retry_count += 1
-            order.modify(extra_info={'retry_count': retry_count})
             lock_result.update({
                 'result_code': 2,
                 "result_reason": location,
+                "source_account": rebot.telephone,
             })
             return lock_result
 
