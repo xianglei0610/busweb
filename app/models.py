@@ -1840,15 +1840,6 @@ class XyjtWebRebot(Rebot):
     crawl_source = SOURCE_XYJT
     is_for_lock = True
 
-    def clear_riders(self, riders={}):
-        pass
-
-    def add_riders(self, order):
-        pass
-
-    def test_login_status(self):
-        pass
-
     # 初始化帐号
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)

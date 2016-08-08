@@ -44,13 +44,28 @@ class Flow(BaseFlow):
         r = rebot.http_get("http://www.365tkt.com/?"+ urllib.urlencode(params), headers=headers)
         cookies = r.cookies
         soup = BeautifulSoup(r.content, "lxml")
-        params = {o.get("name"): o.get("value") for o in soup.select("#orderlistform input")}
+        params = {unicode(o.get("name")): unicode(o.get("value")) for o in soup.select("#orderlistform input")}
         if not params:
+            if r.status_code == 200 and not r.content:
+                self.close_line(line, reason="响应内容为空")
+                lock_result.update({
+                    "result_code": 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": "响应内容为空",
+                })
+                return lock_result
             errmsg = soup.select_one(".jump_mes h4").text
-            if u"该班次价格不存在" in errmsg:
+            if u"该班次价格不存在" in errmsg or u"发车前2小时不售票" in errmsg:
                 self.close_line(line, reason=errmsg)
                 lock_result.update({
                     "result_code": 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": errmsg,
+                })
+                return lock_result
+            else:
+                lock_result.update({
+                    "result_code": 2,
                     "source_account": rebot.telephone,
                     "result_reason": errmsg,
                 })
@@ -85,7 +100,7 @@ class Flow(BaseFlow):
         soup = BeautifulSoup(r.content, "lxml")
         params = {}
         for o in soup.select("#tktlock input"):
-            name, value = o.get("name"), o.get("value")
+            name, value = unicode(o.get("name") or ""), unicode(o.get("value") or "")
             if not name:
                 continue
             if name.endswith("[]"):
@@ -93,6 +108,7 @@ class Flow(BaseFlow):
             else:
                 params[name]=value
         params["bankname"] = "ZHIFUBAO"
+        params["member_name"] = order.contact_info["name"]
 
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
         headers.update({
@@ -100,9 +116,8 @@ class Flow(BaseFlow):
         })
         r = rebot.http_post(url, headers=headers, data=urllib.urlencode(params, doseq=1), allow_redirects=False, timeout=30, cookies=cookies)
         location = urllib.unquote(r.headers.get('location', ''))
-        sn = location.split(',')[3]
-
-        if 'mapi.alipay.com' in location and sn:
+        if 'mapi.alipay.com' in location:
+            sn = location.split(',')[3]
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             order.modify(extra_info={'pay_url': location, 'sn': sn, 'pcode': pick_code})
             lock_result.update({
@@ -111,11 +126,16 @@ class Flow(BaseFlow):
                 "expire_datetime": expire_time,
                 "source_account": rebot.telephone,
                 'pay_money': 0,
+                "result_reason": location,
             })
             return lock_result
         else:
+            code = 2
+            if "检票车站在班次途经站中不存在" in location:
+                self.close_line(line, reason=location)
+                code = 0
             lock_result.update({
-                'result_code': 2,
+                'result_code': code,
                 "result_reason": location,
                 "source_account": rebot.telephone,
             })
@@ -132,9 +152,9 @@ class Flow(BaseFlow):
             data = {'eport': y['id_number']}
             try:
                 r = rebot.http_post(url, headers=headers, data=data)
-                soup = bs(r.content, 'lxml')
+                soup = BeautifulSoup(r.content, 'lxml')
                 info = soup.find_all('div', attrs={'class': 'userinfoff'})[1].find_all('div', attrs={'class': 'billinfo'})
-            except:
+            except Exception,e:
                 return {
                     "state": 'proxy error',
                     "pick_no": '',
@@ -210,7 +230,7 @@ class Flow(BaseFlow):
             rebot.modify(ip="")
             r = rebot.http_get(url, headers=headers)
             code = r.content.split('code:')[-1].split()[0].split('"')[1]
-            soup = bs(r.content, 'lxml')
+            soup = BeautifulSoup(r.content, 'lxml')
             info = soup.find_all('input', attrs={'class': 'filertctrl', 'name': 'siids'})
         except Exception, e:
             result_info = {}

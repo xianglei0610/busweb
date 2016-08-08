@@ -240,8 +240,8 @@ def main():
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['cqky'])
 
     # 四川
+    sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['scqcp'], kwargs={"crawl_kwargs":{"city": "成都市,绵阳市,南充市,德阳市,宜宾市"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=0, args=['scqcp'])
-#     sched.add_cron_job(bus_crawl, hour=22, minute=30, args=['scqcp'], kwargs={"crawl_kwargs":{"city": "成都市"}})
 
     # 江苏道路客运
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['jsdlky'])
@@ -351,8 +351,8 @@ def main():
     sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['bus365'], kwargs={"crawl_kwargs":{"city": "西宁市,乐都县,海北州,祁连县"}})
     sched.add_cron_job(bus_crawl, hour=2, minute=10, args=['bus365'], kwargs={"crawl_kwargs":{"city": "呼和浩特,赤峰市,巴林左旗,巴林右旗,通辽市,海拉尔,正蓝旗,集宁区"}})
 
-    # 新途云
-    sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['xintuyun'])
+#     # 新途云
+#     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['xintuyun'])
 
     # 河南
     sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['hn96520'])
@@ -387,15 +387,15 @@ def main():
 
     #东莞客运
     sched.add_cron_job(bus_crawl, hour=12, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "东莞总站"}})
-    sched.add_cron_job(bus_crawl, hour=13, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "市客运北站,市客运东站"}})
-    sched.add_cron_job(bus_crawl, hour=13, minute=20, args=['dgky'], kwargs={"crawl_kwargs":{"city": "东城汽车客运站,松山湖汽车客运站"}})
-    sched.add_cron_job(bus_crawl, hour=13, minute=40, args=['dgky'], kwargs={"crawl_kwargs":{"city": "长安客运站,虎门客运站,厚街专线车站,沙田汽车客运站"}})
-    sched.add_cron_job(bus_crawl, hour=14, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "石龙客运站,石龙千里客运站,桥头车站,东坑车站"}})
-    sched.add_cron_job(bus_crawl, hour=14, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "石排客运站,樟木头振通车站"}})
-    sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "大朗汽车客运站"}})
-    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "清溪客运站,塘厦车站"}})
-    sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "上沙汽车客运站,凤岗客运站"}})
-    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "东莞市南城汽车客运站,东莞市黄江汽车客运站"}})
+    sched.add_cron_job(bus_crawl, hour=13, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "长安客运站"}})
+    sched.add_cron_job(bus_crawl, hour=14, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "东莞市南城汽车客运站,"}})
+    sched.add_cron_job(bus_crawl, hour=14, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "石龙客运站,石龙千里客运站,桥头车站,东坑车站"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "市客运东站,石排客运站,樟木头振通车站"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "大朗汽车客运站,凤岗客运站"}})
+    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "塘厦车站"}})
+    sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['dgky'], kwargs={"crawl_kwargs":{"city": "松山湖汽车客运站,上沙汽车客运站,虎门客运站,厚街专线车站,东城汽车客运站,沙田汽车客运站,清溪客运站"}})
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "市客运北站,东莞市黄江汽车客运站"}})
+
 
     #e8s
     sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['e8s'])
