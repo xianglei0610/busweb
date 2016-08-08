@@ -248,8 +248,9 @@ class Flow(BaseFlow):
             if r.status_code == 200 and not r.content:
                 result_info.update(result_msg="响应内容为空", update_attrs={"left_tickets": 0, "refresh_datetime": now})
                 return result_info
-            errmsg = soup.select_one(".jump_mes h4").text
+            errmsg = soup.select_one(".jump_mes h4")
             if errmsg:
+                errmsg = errmsg.text
                 result_info.update(result_msg=errmsg, update_attrs={"left_tickets": 0, "refresh_datetime": now})
             else:
                 result_info.update(result_msg="exception_ok1", update_attrs={"left_tickets": 5, "refresh_datetime": now})
