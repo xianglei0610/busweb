@@ -6,6 +6,7 @@ import urllib
 import datetime
 import random
 import urlparse
+import re
 
 from app.constants import *
 from bs4 import BeautifulSoup as bs
@@ -42,8 +43,10 @@ class Flow(BaseFlow):
         headers = {
             'User-Agent': random.choice(BROWSER_USER_AGENT)
         }
+        cookies = {}
         lock_url = urlparse.urljoin(base_url, line.extra_info["lock_url"])
         r = rebot.http_get(lock_url, headers=headers)
+        cookies.update(dict(r.cookies))
 
         # 提交参数
         soup = bs(r.content, "lxml")
@@ -74,7 +77,8 @@ class Flow(BaseFlow):
             'User-Agent': random.choice(BROWSER_USER_AGENT),
             "Content-Type": "application/x-www-form-urlencoded",
         }
-        r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=r.cookies, headers=headers)
+        r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=cookies, headers=headers)
+        cookies.update(dict(r.cookies))
         soup = bs(r.content, "lxml")
 
         # 下单锁票
@@ -82,7 +86,8 @@ class Flow(BaseFlow):
         params = {}
         for o in soup.select("#netordersubmit input"):
             params[o.get("name")] = o.get("value")
-        r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=r.cookies, headers=headers)
+        r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=cookies, headers=headers)
+        cookies.update(dict(r.cookies))
         soup = bs(r.content, "lxml")
 
         # 下单锁票2
@@ -101,13 +106,36 @@ class Flow(BaseFlow):
             "ctl00$ContentPlaceHolder1$TxtSubject": "徐运集团--长途汽车票",
             "ctl00$ContentPlaceHolder1$TxtBody": "",
         }
-        r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=r.cookies, headers=headers)
+        r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=cookies, headers=headers)
+        cookies.update(dict(r.cookies))
         soup = bs(r.content, "lxml")
 
+        # 支付页面
         params = {}
         for o in soup.select("#netchecksubmit input"):
             params[o.get("name")] = o.get("value")
         raw_order = params["bespoke_id"]
+        lock_url = urlparse.urljoin(base_url, soup.select_one("#netchecksubmit").get('action'))
+        headers.update({
+            "Origin": "http://order.xuyunjt.com",
+            "Referer": "http://order.xuyunjt.com/wsdgnetcheck.aspx",
+        })
+        r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=cookies, headers=headers)
+        cookies.update(dict(r.cookies))
+        soup = bs(r.content, "lxml")
+
+        # 支付页面2
+        lock_url = urlparse.urljoin(base_url, soup.select_one("#aspnetForm").get('action'))
+        params = {}
+        for o in soup.select("#aspnetForm input"):
+            params[o.get("name")] = o.get("value")
+        params["ctl00$ContentPlaceHolder1$Imgbtnsubmit2.x"] = 72
+        params["ctl00$ContentPlaceHolder1$Imgbtnsubmit2.y"] = 27
+        r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=cookies, headers=headers)
+        cookies.update(dict(r.cookies))
+        pay_url = re.findall(r"window.open\(\'(\S+)',''", r.content)[0]
+        print pay_url
+
         if raw_order:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             lock_result.update({
@@ -115,7 +143,9 @@ class Flow(BaseFlow):
                 'raw_order_no': raw_order,
                 "expire_datetime": expire_time,
                 "source_account": rebot.telephone,
-                'pay_money': 0,
+                'pay_money': float(re.findall(r"total_fee=(\S+)&sign=", pay_url)[0]),
+                "pay_url": pay_url,
+                "lock_info": {},
             })
             return lock_result
         else:
@@ -318,39 +348,20 @@ class Flow(BaseFlow):
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
-        rebot = order.get_lock_rebot()
         # 获取alipay付款界面
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
 
         if order.status == STATUS_WAITING_ISSUE:
-            url = "http://order.xuyunjt.com/lastsubmit.aspx"
-            headers = {
-                'User-Agent': random.choice(BROWSER_USER_AGENT),
-                "Referer": "http://order.xuyunjt.com/wsdgnetcheck.aspx",
-                "Content-Type": "application/x-www-form-urlencoded",
-            }
-            params = {
-                "sel": 0,
-                "bespoke_id": order.raw_order_no,
-                "cardno": order.contact_info["id_number"],
-                "number": order.ticket_amount,
-                "money": order.pay_money or order.order_price,
-                "ticketmessage": "",
-                "strconfirm": "",
-            }
-            r = rebot.http_post(url, data=urllib.urlencode(params), headers=headers)
-            print r.content
-
-            # pay_url = order.extra_info.get('pay_url')
-            # no, pay = "", 0
-            # for s in pay_url.split("?")[1].split("&"):
-            #     k, v = s.split("=")
-            #     if k == "out_trade_no":
-            #         no = v
-            #     elif k == "total_fee":
-            #         pay = float(v)
-            # if no and order.pay_order_no != no:
-            #     order.modify(pay_order_no=no, pay_money=pay,pay_channel='alipay')
-            return {"flag": "html", "content": r.content}
+            pay_url = order.pay_url
+            no, pay = "", 0
+            for s in pay_url.split("?")[1].split("&"):
+                k, v = s.split("=")
+                if k == "out_trade_no":
+                    no = v
+                elif k == "total_fee":
+                    pay = float(v)
+            if no and order.pay_order_no != no:
+                order.modify(pay_order_no=no, pay_money=pay,pay_channel='alipay')
+            return {"flag": "url", "content": pay_url}
         return "锁票失败, 请重试"
