@@ -341,8 +341,8 @@ def main():
     #唐山省网
     sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['hebky'],kwargs={"crawl_kwargs":{"city": "唐山"}})
 
-    #内蒙古呼运
-    sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['nmghy'])
+#     #内蒙古呼运
+#     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['nmghy'])
 
     #巴士365
     sched.add_cron_job(bus_crawl, hour=1, minute=20, args=['bus365'], kwargs={"crawl_kwargs":{"city": "哈尔滨市,齐齐哈尔,鸡西市,鹤岗市,双鸭山市,大庆市,伊春市,佳木斯市,七台河市,牡丹江市,黑河市"}})
