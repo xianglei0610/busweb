@@ -1,7 +1,6 @@
 # coding=utf-8
 
 import requests
-import json
 import urllib
 import datetime
 import random
@@ -15,8 +14,6 @@ from app.flow.base import Flow as BaseFlow
 from app.models import Line, XyjtWebRebot
 from app.utils import md5, get_redis
 from app import rebot_log
-from selenium import webdriver
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
 class Flow(BaseFlow):
@@ -134,7 +131,6 @@ class Flow(BaseFlow):
         r = rebot.http_post(lock_url, data=urllib.urlencode(params), cookies=cookies, headers=headers)
         cookies.update(dict(r.cookies))
         pay_url = re.findall(r"window.open\(\'(\S+)',''", r.content)[0]
-        print pay_url
 
         if raw_order:
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
@@ -318,6 +314,8 @@ class Flow(BaseFlow):
             td_lst = tr_o.select("td")
             index_tr = lambda idx: td_lst[idx].text.strip()
             drv_date, drv_time = index_tr(0), index_tr(5)
+            if u"流水" in drv_time:
+                continue
             drv_datetime=dte.strptime("%s %s" % (drv_date, drv_time), "%Y-%m-%d %H:%M")
             left_tickets=int(index_tr(8))
             full_price=float(index_tr(6))
