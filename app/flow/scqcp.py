@@ -185,21 +185,20 @@ class Flow(BaseFlow):
                         "result_reason": ret.get("msg", '') + ":" + msg,
                     })
                 return lock_result
-                  
-#             flag = False
-#             for i in [u"参数错误"]:
-#                 if i in errmsg:
-#                     flag = True
-#                     break
-#             if flag:
-#                 lock_result.update({
-#                     "result_code": 2,
-#                     "source_account": rebot.telephone,
-#                     "result_reason": ret.get("msg", '') or ret,
-#                 })
-#                 return lock_result
+            flag = False
+            for i in [u"执行方法GetSchSeatsNo出错"]:
+                if i in errmsg:
+                    flag = True
+                    break
+            if flag:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": ret.get("msg", '') or ret,
+                })
+                return lock_result
 
-            for s in ["余票不足", "只能预售2小时之后的票", "余位不够", "车票已售完"]:
+            for s in ["余票不足", "只能预售2小时之后的票", "余位不够", "已售完","超出最大座位数","已停售",'不允许远程售票']:
                 if s in errmsg:
                     self.close_line(order.line, reason=errmsg)
                     break

@@ -42,19 +42,15 @@ class Flow(BaseFlow):
                "Host": "www.mp0769.com",
                }
         contact_name = order.contact_info["name"]
+        msg = ''
         if contact_name.isdigit():
             msg = u"姓名是数字，切换到广东省网下单"
-            order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
-            lock_result.update({
-                "result_code": 2,
-                "source_account": '',
-                "result_reason":  msg
-            })
-            return lock_result
         try:
             order.contact_info["name"].decode('utf8').encode('gb2312')
         except:
             msg = u"汉字转换错误，切换到广东省网下单"
+
+        if msg:
             order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
             lock_result.update({
                 "result_code": 2,
@@ -120,7 +116,17 @@ class Flow(BaseFlow):
                 left_tickets = params['ct_accnum']
                 end_station = params['ct_stname'].decode('gbk')
                 break
-        if float(full_price) > 0 and float(full_price) == float(order.order_price) :
+
+        if float(full_price) > 0:
+            if float(full_price)*order.ticket_amount != float(order.order_price):
+                msg = u"金额不一致"
+                order.modify(line=Line.objects.get(line_id=order.line.check_compatible_lines().get("gdsw", "")),crawl_source='gdsw')
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": '',
+                    "result_reason":  msg
+                })
+                return lock_result
             agree_url = sel.xpath('//form[@id="Form1"]/@action')[0]
             agree_url = "http://www.mp0769.com/" + agree_url
             data = urllib.urlencode(params)
@@ -488,17 +494,16 @@ class Flow(BaseFlow):
                 res = re.findall(r"alert\('(.*?)'\);", content)
                 if res:
                     errmsg = res[0]
-                    if u"您的订单已过有效期" in errmsg:
-                        order.modify(status=STATUS_LOCK_RETRY)
-                        order.on_lock_retry(reason=errmsg)
-                        return {"flag": "error", "content": '重新打开'}
-                    else:
-                        if u'不可预售' in errmsg:
-                            self.close_line(order.line, reason=errmsg)
+                    if u'不可预售' in errmsg:
+                        self.close_line(order.line, reason=errmsg)
                         order.modify(status=STATUS_LOCK_FAIL)
                         order.on_lock_fail(reason=errmsg)
                         issued_callback.delay(order.order_no)
                         return {"flag": "error", "content": '锁票失败'}
+                    else:
+                        order.modify(status=STATUS_LOCK_RETRY)
+                        order.on_lock_retry(reason=errmsg)
+                        return {"flag": "error", "content": '重新打开'}
                 else:
                     order.update(pay_channel='alipay')
                     return {"flag": "url", "content": order.pay_url}
