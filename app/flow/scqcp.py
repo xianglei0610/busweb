@@ -572,6 +572,8 @@ class Flow(BaseFlow):
             if msg in u'用户名或密码错误':
                 order.change_lock_rebot()
                 order.reload()
+            rebot = order.get_lock_rebot()
+            rebot.modify(ip='')
             return {"flag": "error", "content": "账号自动登陆失败，请再次重试!"}
 
         # 验证码处理
