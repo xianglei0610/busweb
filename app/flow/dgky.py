@@ -391,7 +391,7 @@ class Flow(BaseFlow):
                 left_tickets = 5
                 end_station = line.d_sta_name
                 try:
-                    for i in range(5):
+                    for i in range(3):
                         param = {}
                         for s in href.split(";")[0][15:-1].split("?")[1].split("&"):
                             k, v = s.split("=")
