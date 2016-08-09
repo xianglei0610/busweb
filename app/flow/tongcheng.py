@@ -367,11 +367,11 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif state == "已取消":
-            result_info.update({
-                "result_code": 5,
-                "result_msg": state,
-            })
+        # elif state == "已取消":  # 已取消也有可能已经支付了, 避免造成损失, 先注销掉
+        #     result_info.update({
+        #         "result_code": 5,
+        #         "result_msg": state,
+        #     })
         elif state=="出票成功":
             body = ret["body"]
             result_info.update({
@@ -417,11 +417,11 @@ class Flow(BaseFlow):
         #         "result_code": 4,
         #         "result_msg": state,
         #     })
-        # elif state == "已取消":
-        #     result_info.update({
-        #         "result_code": 2,
-        #         "result_msg": state,
-        #     })
+        # # elif state == "已取消":  # 已取消也有可能已经支付了, 避免造成损失, 先注销掉
+        # #     result_info.update({
+        # #         "result_code": 2,
+        # #         "result_msg": state,
+        # #     })
         # elif state=="出票失败":
         #     self.close_line(order.line, "出票失败")
         #     result_info.update({
