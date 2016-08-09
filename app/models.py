@@ -2468,9 +2468,15 @@ class ScqcpWebRebot(Rebot):
                 "token": token,
             }
             login_url = "http://scqcp.com/login/check.json"
-            r = self.http_post(login_url, data=data,
-                               headers=headers, cookies=cookies)
-            res = r.json()
+            try:
+                r = self.http_post(login_url, data=data,
+                                   headers=headers, cookies=cookies)
+                res = r.json()
+            except:
+                self.modify(ip='')
+                r = self.http_post(login_url, data=data,
+                                   headers=headers, cookies=cookies)
+                res = r.json()
             if res["success"]:     # 登陆成功
                 cookies.update(dict(r.cookies))
                 self.modify(cookies=json.dumps(cookies), is_active=True)
