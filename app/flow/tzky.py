@@ -5,7 +5,6 @@ import random
 import json
 import urllib
 import datetime
-import urllib2
 import re
 
 from app.constants import *
@@ -172,11 +171,12 @@ class Flow(BaseFlow):
             order.modify(raw_order_no=ret["order_no"], lock_info=lock_info, pay_money=ret["pay_money"])
 
         state = ret["state"]
-        if state == "已过期":
-            result_info.update({
-                "result_code": 5,
-                "result_msg": state,
-            })
+        if state == "已过期":  # 付款了也可能变成已过期状态, 从而造成重复下单支付
+            pass
+            # result_info.update({
+            #     "result_code": 5,
+            #     "result_msg": state,
+            # })
         elif state=="购票成功":
             no, code  = ret["pick_no"], ret["pick_code"]
             dx_info = {
