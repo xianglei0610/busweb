@@ -494,17 +494,16 @@ class Flow(BaseFlow):
                 res = re.findall(r"alert\('(.*?)'\);", content)
                 if res:
                     errmsg = res[0]
-                    if u"您的订单已过有效期" in errmsg:
-                        order.modify(status=STATUS_LOCK_RETRY)
-                        order.on_lock_retry(reason=errmsg)
-                        return {"flag": "error", "content": '重新打开'}
-                    else:
-                        if u'不可预售' in errmsg:
-                            self.close_line(order.line, reason=errmsg)
+                    if u'不可预售' in errmsg:
+                        self.close_line(order.line, reason=errmsg)
                         order.modify(status=STATUS_LOCK_FAIL)
                         order.on_lock_fail(reason=errmsg)
                         issued_callback.delay(order.order_no)
                         return {"flag": "error", "content": '锁票失败'}
+                    else:
+                        order.modify(status=STATUS_LOCK_RETRY)
+                        order.on_lock_retry(reason=errmsg)
+                        return {"flag": "error", "content": '重新打开'}
                 else:
                     order.update(pay_channel='alipay')
                     return {"flag": "url", "content": order.pay_url}
