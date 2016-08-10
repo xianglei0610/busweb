@@ -112,6 +112,7 @@ class Flow(BaseFlow):
                 "passengers[%s].ticketType" % i: '0',
                 "passengers[%s].insPrice" % i: "0",
                 "passengers[%s].idType" % i: "1101",
+                "passengers[%s].insTypeCode" % i: "2",
             }
             data.update(tmp)
         order_url = "http://www.968980.cn/com/yxd/pris/openapi/addOrder.action"
