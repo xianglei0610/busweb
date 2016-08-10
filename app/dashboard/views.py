@@ -169,11 +169,15 @@ class YiChangeOP(MethodView):
         else:
             if order.yc_status == YC_STATUS_ING:
                 return jsonify({"code":0, "msg": "执行失败，已经是异常单了"})
-            old_kefu = AdminUser.objects.get(username=order.kefu_username)
-            order.modify(yc_status=YC_STATUS_ING, kefu_username=kefu)
-            msg = "%s将单设为异常单, 处理人:%s=>%s 描述:%s" % (current_user.username, old_kefu.username, kefu, desc)
+
+            old_kefu = None
+            if order.kefu_username:
+                old_kefu = AdminUser.objects.get(username=order.kefu_username)
+            order.modify(yc_status=YC_STATUS_ING, kefu_username=kefu, kefu_assigntime=dte.now())
+            msg = "%s将单设为异常单, 处理人:%s=>%s 描述:%s" % (current_user.username, getattr(old_kefu, "username", ""), kefu, desc)
             order.add_trace(OT_YICHANG, msg)
-            assign.remove_dealing(order, old_kefu)
+            if old_kefu:
+                assign.remove_dealing(order, old_kefu)
             access_log.info("[yichangop] %s", msg)
             return jsonify({"code":1, "msg": "设置异常执行成功"})
 
