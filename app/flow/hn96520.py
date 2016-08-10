@@ -267,11 +267,11 @@ class Flow(BaseFlow):
                 "result_code": 5,
                 "result_msg": state,
             })
-        elif '失败' in state:
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
+        # elif '失败' in state:  # 出现了单状态是失败, 但源站表示出票成功, 先注释掉
+        #     result_info.update({
+        #         "result_code": 2,
+        #         "result_msg": state,
+        #     })
         elif '已付款确认' in state and code:
             no, site, raw_order = ret['pick_no'], ret[
                 'pick_site'], ret['raw_order']
@@ -295,7 +295,6 @@ class Flow(BaseFlow):
             })
         return result_info
 
-    # 线路刷新, java接口调用
     def do_refresh_line(self, line):
         now = dte.now()
         pre = 'http://www.hn96520.com/placeorder.aspx?'
