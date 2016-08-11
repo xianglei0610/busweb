@@ -1,10 +1,14 @@
 # -*- coding:utf-8 -*-
 import jinja2
 
+from app.constants import *
 from flask import Blueprint
+from flask import jsonify
+from flask import render_template, request, redirect, url_for, jsonify, session, make_response, flash
 
 dashboard = Blueprint('dashboard', __name__)
 
+print 2222222222222222
 import views, errors, auth
 
 
@@ -42,3 +46,14 @@ def percent_divide(context, value, target):
 @dashboard.after_request
 def log_response(response):
     return response
+
+
+# ============================error===================
+@dashboard.app_errorhandler(404)
+def page_not_found(e):
+    return jsonify({"code": RET_PAGE_404, "message": "page not found", "data": ""})
+
+
+@dashboard.app_errorhandler(500)
+def internal_server_error(e):
+    return render_template('dashboard/error.html')

@@ -46,7 +46,7 @@
 
 {% block script_footer %}
 <script type="text/javascript">
-    var auto_reload = true;
+    var auto_reload = false;
     $('.switch')['bootstrapSwitch']();
     var idInt = setInterval(function(){
         if(!auto_reload){
@@ -64,7 +64,7 @@
         auto_reload=false;
     });
     $('.sel-change').on('hidden', function(e, reason) {
-        auto_reload=true;
+        auto_reload=false;
         if(reason === 'save' || reason === 'cancel') {
         }
     });
