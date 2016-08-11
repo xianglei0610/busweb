@@ -221,6 +221,7 @@ class Flow(BaseFlow):
             "User-Agent": rebot.user_agent,
         }
         cookies = json.loads(rebot.cookies)
+        rebot.modify(ip="")
         r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
         order_no = re.findall(r"订单号：(\d+)", r.content)[0]
         state = re.findall(r"订单状态：(\S+)<", r.content)[0]
@@ -277,8 +278,8 @@ class Flow(BaseFlow):
             code_list = []
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "start": order.line.s_sta_name,
-                "end": order.line.d_sta_name,
+                "start": order.starting_name.split(";")[1],
+                "end": order.destination_name.split(";")[1],
                 "code": pick_code,
                 "no": pick_no,
                 "raw_order": order.raw_order_no,
@@ -288,6 +289,10 @@ class Flow(BaseFlow):
             province = getattr(order.line, "s_province", None)
             if pick_code and pick_no:
                 dx_tmpl = DUAN_XIN_TEMPL["changtu2"]
+                code_list.append(pick_code)
+                msg_list.append(dx_tmpl % dx_info)
+            elif pick_code:
+                dx_tmpl = DUAN_XIN_TEMPL["changtu_hascode"]
                 code_list.append(pick_code)
                 msg_list.append(dx_tmpl % dx_info)
             elif province and province == "山东":
