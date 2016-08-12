@@ -59,6 +59,6 @@ def internal_server_error(e):
     print request.url
     kwargs = {
         "title": "500错误",
-        "message": "打开 %s 报错, 请联系技术" % request.url,
+        "message": "打开 %s 报错, 请联系技术" % request.path,
     }
     return render_template('dashboard/error.html', **kwargs)
