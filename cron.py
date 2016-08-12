@@ -339,7 +339,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=8, minute=30, args=['bjky'])
 
     #唐山省网
-    sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['hebky'],kwargs={"crawl_kwargs":{"city": "唐山"}})
+    #sched.add_cron_job(bus_crawl, hour=17, minute=10, args=['hebky'],kwargs={"crawl_kwargs":{"city": "唐山"}})
 
 #     #内蒙古呼运
 #     sched.add_cron_job(bus_crawl, hour=16, minute=10, args=['nmghy'])
