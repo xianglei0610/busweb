@@ -216,8 +216,8 @@ def main():
     #sched.add_cron_job(bus_crawl, hour=19, minute=40, args=['bus100', "410000"]) #河南
 
     # 巴巴快巴
-    sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['baba'], kwargs={"crawl_kwargs":{"province": "安徽"}})
-    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['baba'], kwargs={"crawl_kwargs":{"province": "江苏"}})
+    # sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['baba'], kwargs={"crawl_kwargs":{"province": "安徽"}})
+    # sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['baba'], kwargs={"crawl_kwargs":{"province": "江苏"}})
 
     # 方便网
     # sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "山东"}})
@@ -251,11 +251,12 @@ def main():
 
     # 畅途网
     # sched.add_cron_job(bus_crawl, hour=20, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "南京"}})
-    sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "济南"}})
+    # sched.add_cron_job(bus_crawl, hour=16, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"province": "济南"}})
     sched.add_cron_job(bus_crawl, hour=17, minute=30, args=['changtu'], kwargs={"crawl_kwargs":{"city": "淄博"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "威海"}})
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "天津"}})
-    sched.add_cron_job(bus_crawl, hour=12, minute=0, args=['changtu'], kwargs={"crawl_kwargs":{"city": "天津"}})  # 因为代理的问题, 爬2遍
+    sched.add_cron_job(bus_crawl, hour=0, minute=15, args=['changtu'], kwargs={"crawl_kwargs":{"province": "湖南"}})
+    sched.add_cron_job(bus_crawl, hour=3, minute=15, args=['changtu'], kwargs={"crawl_kwargs":{"province": "广东"}})
 
     # 江苏客运
     # sched.add_cron_job(bus_crawl, hour=8, minute=0, args=['jsky'], kwargs={"crawl_kwargs":{"city": "苏州,张家港"}})
@@ -318,13 +319,13 @@ def main():
 
     #张家港市民网页 & 无线苏州
     sched.add_cron_job(bus_crawl, hour=23, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "张家港"}})
-    sched.add_cron_job(bus_crawl, hour=0, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "苏州"}})
+    # sched.add_cron_job(bus_crawl, hour=0, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "苏州"}})
     sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "常熟"}})
     sched.add_cron_job(bus_crawl, hour=2, minute=0, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "太仓"}})
     sched.add_cron_job(bus_crawl, hour=2, minute=30, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "吴江"}})
     sched.add_cron_job(bus_crawl, hour=3, minute=0, args=['zjgsm'], kwargs={"crawl_kwargs":{"city": "昆山"}})
 
-    sched.add_cron_job(bus_crawl, hour=18, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "张家港"}})
+    # sched.add_cron_job(bus_crawl, hour=18, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "张家港"}})
     sched.add_cron_job(bus_crawl, hour=18, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "苏州"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=30, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "常熟"}})
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['wxsz'], kwargs={"crawl_kwargs":{"city": "太仓"}})
@@ -377,7 +378,6 @@ def main():
     # 青岛客运
     sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['qdky'])
 
-
     # 深圳客运
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['szky'])
 
@@ -399,14 +399,13 @@ def main():
 
 #     #e8s
 #     sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['e8s'])
-# 
+#
 #     #wmcx
 #     sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['wmcx'], kwargs={"crawl_kwargs":{"province": "安徽"}})
 
     #fjky
     sched.add_cron_job(bus_crawl, hour=14, minute=30, args=['fjky'], kwargs={"crawl_kwargs":{"city": "南平市,宁德市,福安市,福鼎市,古田县,光泽县,,霞浦县,政和县,周宁县,柘荣县"}})
     sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['fjky'], kwargs={"crawl_kwargs":{"city": "建阳市,建瓯市,明溪县,屏南县,浦城县,邵武市,寿宁县,顺昌县,松溪县,武夷山市"}})
-
 
 
     # 代理ip相关
