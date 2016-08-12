@@ -656,20 +656,17 @@ def order_pay(order_no):
         cut = order.pay_money-order.order_price
         if cut and not force:
             msg = "订单金额和支付金额相差 %s 元, 禁止支付!  <a href='%s'>继续支付</a>" % (cut,url_for("dashboard.order_pay", order_no=order.order_no, force=1))
-            return msg
             return render_template('dashboard/error.html', title="禁止支付", message=msg)
         return redirect(ret["content"])
     elif flag == "html":
         cut = order.pay_money-order.order_price
         if cut and not force:
             msg = "订单金额和支付金额相差 %s 元, 禁止支付!  <a href='%s'>继续支付</a>" % (cut,url_for("dashboard.order_pay", order_no=order.order_no, force=1))
-            return msg
             return render_template('dashboard/error.html', title="禁止支付", message=msg)
         return ret["content"]
     elif flag == "input_code":
         return render_template('dashboard/src-code-input.html', order=order, source_info=SOURCE_INFO)
     elif flag == "error":
-        return "%s  <a href='%s'>点击重试</a>" % (ret["content"], url_for("dashboard.order_pay", order_no=order.order_no))
         return render_template('dashboard/error.html', title="异常页面", message=ret["content"])
     return render_template('dashboard/error.html', title="异常页面", message=str(json.dumps(ret,ensure_ascii = False)))
 
