@@ -51,7 +51,11 @@ def log_response(response):
 
 @dashboard.app_errorhandler(404)
 def page_not_found(e):
-    return jsonify({"code": RET_PAGE_404, "message": "page not found", "data": ""})
+    kwargs = {
+        "title": "404错误",
+        "message": "不存在这个页面",
+    }
+    return render_template('dashboard/error.html', **kwargs)
 
 
 @dashboard.app_errorhandler(500)
