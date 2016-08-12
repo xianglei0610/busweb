@@ -33,7 +33,7 @@ class Flow(BaseFlow):
         lock_result = {
             "lock_info": res,
             "source_account": rebot.telephone,
-            "pay_money": line.real_price()*order.ticket_amount,
+            "pay_money": 0,
         }
 
         if res['akfAjaxResult'] != '0':
@@ -249,23 +249,20 @@ class Flow(BaseFlow):
                 r = requests.post(to_pay_url, data=data, headers=headers, cookies=cookies)
                 sel = etree.HTML(r.content)
                 cookies.update(dict(r.cookies))
-                payAmount = sel.xpath('//form[@id="payOrderForm"]/input[@id="payAmount"]/@value')[0]
-#                 title = u"支付宝支付(PC)"
-#                 paymentCompanyCode = sel.xpath('//td/img[@title="%s"]/@pcompany'%title)
-#                 pay_url = "http://60.2.147.28:80/com/yxd/pris/payment/payOnline.action"
-#                 params = {
-#                   "orderId": order.lock_info['encode_orderId'],
-#                   "paymentCompanyCode": paymentCompanyCode
-#                   }
                 pay_url = "http://60.2.147.28/com/hy/cpt/biz/payment/common/toPayment.action"
-                params ={
-                    "orderId": order.lock_info['encode_orderId'],
-                    "payOrderNo": order.raw_order_no,
-                    "payCompanyCode": "002",
-                    "payAmount": payAmount
-                    }
+                beanName = sel.xpath('//input[@id="beanName"]/@value')[0]
+                payAmount = sel.xpath('//input[@id="payAmount"]/@value')[0]
+                payCompanyType = sel.xpath('//input[@id="payCompanyType"]/@value')[0]
+                params = {
+                  "orderId": order.lock_info['encode_orderId'],
+                  "payOrderNo": order.raw_order_no or res['order_no'],
+                  "payCompanyCode": '002',
+                  "payCompanyType": payCompanyType,
+                  "beanName": beanName,
+                  "payAmount": payAmount
+                  }
                 r = requests.post(pay_url, data=params, headers=headers, cookies=cookies)
-                order.update(pay_channel='yh')
+                order.modify(pay_channel='yh', pay_money=float(payAmount))
                 return {"flag": "html", "content": r.content}
 
         if valid_code:
@@ -324,10 +321,10 @@ class Flow(BaseFlow):
         line_url = 'http://60.2.147.28/com/yxd/pris/openapi/queryAllTicket.action'
         data = {
             "arrivalDepotCode": line.extra_info['e_code'],
+            "arriveIsArea": line.extra_info['arriveIsArea'],
             "beginTime": line.drv_date,
-            "startName": line.s_sta_name,
-            "endName": line.d_city_name,
-            "startDepotCode": line.extra_info['s_code']
+            "startDepotCode": line.extra_info['s_code'],
+            "startIsArea": "0",
         }
         try:
             r = requests.post(line_url, data=data, headers=headers)

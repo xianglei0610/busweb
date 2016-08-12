@@ -103,7 +103,7 @@ class Flow(BaseFlow):
 
             "busInfoModel.bj": '0.00',
             "busInfoModel.xspj": '0.00',
-            "busInfoModel.ptpj": line.full_price*order.ticket_amount
+            "busInfoModel.ptpj": line.full_price
             }
         riders = order.riders
         tmp = {}
