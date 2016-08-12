@@ -233,8 +233,8 @@ def main():
     # sched.add_cron_job(bus_crawl, hour=4, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "四川"}})
     # sched.add_cron_job(bus_crawl, hour=5, minute=10, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "南通"}})
 
-    # 贵州汽车票务网
-#     sched.add_cron_job(bus_crawl, hour=6, minute=10, args=['gzqcp'])
+    #贵州汽车票务网
+    sched.add_cron_job(bus_crawl, hour=1, minute=10, args=['gzqcp'])
 
     # 重庆客运
     sched.add_cron_job(bus_crawl, hour=19, minute=0, args=['cqky'])
@@ -397,11 +397,11 @@ def main():
     sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['dgky'], kwargs={"crawl_kwargs":{"city": "市客运北站,东莞市黄江汽车客运站"}})
 
 
-    #e8s
-    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['e8s'])
-
-    #wmcx
-    sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['wmcx'], kwargs={"crawl_kwargs":{"province": "安徽"}})
+#     #e8s
+#     sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['e8s'])
+# 
+#     #wmcx
+#     sched.add_cron_job(bus_crawl, hour=21, minute=10, args=['wmcx'], kwargs={"crawl_kwargs":{"province": "安徽"}})
 
     #fjky
     sched.add_cron_job(bus_crawl, hour=14, minute=30, args=['fjky'], kwargs={"crawl_kwargs":{"city": "南平市,宁德市,福安市,福鼎市,古田县,光泽县,,霞浦县,政和县,周宁县,柘荣县"}})

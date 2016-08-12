@@ -295,6 +295,10 @@ class Flow(BaseFlow):
                 dx_tmpl = DUAN_XIN_TEMPL["changtu_hascode"]
                 code_list.append(pick_code)
                 msg_list.append(dx_tmpl % dx_info)
+            elif pick_no:
+                dx_tmpl = DUAN_XIN_TEMPL["changtu_hasno"]
+                code_list.append(pick_no)
+                msg_list.append(dx_tmpl % dx_info)
             elif province and province == "山东":
                 dx_tmpl = DUAN_XIN_TEMPL["changtu_sd"]
                 code_list.append("")
