@@ -721,8 +721,16 @@ def dealing_order():
         kf_order_cnt = 5
     else:
         kf_order_cnt = 3
+    rds = get_redis("order")
+    key = "assigned:time:%s" % current_user.username
 
-    if current_user.is_switch and not current_user.is_close:
+    last_assign = rds.get(key)
+    can_refresh = True
+    if last_assign and (time.time()-float(last_assign)) < 2.5:  # 请求太频繁
+        can_refresh = False
+
+    if current_user.is_switch and not current_user.is_close and can_refresh:
+        rds.set(key, time.time())
         for i in range(2):
             order_ct = assign.dealing_size(current_user)
             if order_ct >= kf_order_cnt:
@@ -732,10 +740,6 @@ def dealing_order():
                 continue
             if order.kefu_username:
                 continue
-#             if order.crawl_source in (SOURCE_BUS365):
-#                 if current_user.username not in ('xiangleilei', 'luojunping'):
-#                     assign.enqueue_wating_lock(order)
-#                     continue
             order.update(kefu_username=current_user.username, kefu_assigntime=dte.now())
             assign.add_dealing(order, current_user)
 
@@ -753,7 +757,6 @@ def dealing_order():
         qs = assign.dealing_orders(current_user).order_by("create_date_time")
     elif tab == "yichang":
         qs = Order.objects.filter(kefu_username=current_user.username, yc_status=YC_STATUS_ING)
-    rds = get_redis("order")
     locking = {}
     dealing_seconds = {}
 #     is_close = False

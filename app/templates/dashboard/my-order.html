@@ -46,7 +46,7 @@
 
 {% block script_footer %}
 <script type="text/javascript">
-    var auto_reload = false;
+    var auto_reload = true;
     $('.switch')['bootstrapSwitch']();
     var idInt = setInterval(function(){
         if(!auto_reload){
@@ -61,7 +61,7 @@
     });
 
     $('.sel-change').on('shown', function(e, editable) {
-        auto_reload=false;
+        auto_reload=true;
     });
     $('.sel-change').on('hidden', function(e, reason) {
         auto_reload=false;
