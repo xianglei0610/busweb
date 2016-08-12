@@ -69,6 +69,14 @@ class Flow(BaseFlow):
             })
         else:
             errmsg = res['values']['result'].replace("\r\n", " ")
+            if "超出购票上限" in errmsg:
+                new_rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": new_rebot.telephone,
+                    "result_reason": str(rebot.telephone) + errmsg,
+                })
+                return lock_result
             for s in ["剩余座位数不足"]:
                 if s in errmsg:
                     self.close_line(line, reason=errmsg)
