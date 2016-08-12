@@ -638,18 +638,14 @@ def order_pay(order_no):
     code = params.get("valid_code", "")
     force = int(params.get("force", "0"))
 
-    # 临时修复
-    if order.kefu_username in ["luojunping", "ck12308",'yangchao'] and order.crawl_source == SOURCE_XINTUYUN:
-        return "你不能支付新途云的单子，请转给其他人支付!"
-
     if order.status not in [STATUS_WAITING_ISSUE, STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-        return "订单已成功或失败,不需要支付"
+        return render_template('dashboard/error.html', title="出票结束", message="订单已经 %s, 不需要操作" % STATUS_MSG[order.status])
     if order.kefu_username != current_user.username:
-        return "请先要%s把单转给你再支付" % order.kefu_username
+        return render_template('dashboard/error.html', title="禁止支付", message="请先要%s把单转给你再支付" % order.kefu_username)
     rds = get_redis("order")
     key = RK_ORDER_LOCKING % order.order_no
     if rds.get(key):
-        return "正在锁票,请稍后重试   <a href='%s'>点击重试</a>" % url_for("dashboard.order_pay", order_no=order.order_no)
+        return render_template('dashboard/error.html', title="正在锁票", message="正在锁票中, 不用重复点击, 请稍等一段时间后重新打开页面")
 
     flow = get_flow(order.crawl_source)
     ret = flow.get_pay_page(order, valid_code=code, session=session, bank=current_user.yh_type)
@@ -657,18 +653,23 @@ def order_pay(order_no):
         ret = {}
     flag = ret.get("flag", "")
     if flag == "url":
-        if order.pay_money != order.order_price and not force:
-            return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("dashboard.order_pay", order_no=order.order_no, force=1)
+        cut = order.pay_money-order.order_price
+        if cut and not force:
+            msg = "订单金额和支付金额相差 %s 元, 禁止支付!  <a href='%s'>继续支付</a>" % url_for("dashboard.order_pay", order_no=order.order_no, force=1)
+            return render_template('dashboard/error.html', title="禁止支付", message=msg)
         return redirect(ret["content"])
     elif flag == "html":
-        if order.pay_money != order.order_price and not force:
-            return "订单金额不等于支付金额, 禁止支付! <a href='%s'>继续支付</a>" % url_for("dashboard.order_pay", order_no=order.order_no, force=1)
+        cut = order.pay_money-order.order_price
+        if cut and not force:
+            msg = "订单金额和支付金额相差 %s 元, 禁止支付!  <a href='%s'>继续支付</a>" % url_for("dashboard.order_pay", order_no=order.order_no, force=1)
+            return render_template('dashboard/error.html', title="禁止支付", message=msg)
         return ret["content"]
     elif flag == "input_code":
         return render_template('dashboard/src-code-input.html', order=order, source_info=SOURCE_INFO)
     elif flag == "error":
         return "%s  <a href='%s'>点击重试</a>" % (ret["content"], url_for("dashboard.order_pay", order_no=order.order_no))
-    return "异常页面 %s" % str(json.dumps(ret,ensure_ascii = False))
+        return render_template('dashboard/error.html', title="异常页面", message=ret["content"])
+    return render_template('dashboard/error.html', title="异常页面", message=str(json.dumps(ret,ensure_ascii = False)))
 
 
 @dashboard.route('/users', methods=['GET', 'POST'])

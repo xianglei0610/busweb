@@ -56,7 +56,6 @@ def page_not_found(e):
 
 @dashboard.app_errorhandler(500)
 def internal_server_error(e):
-    print request.url
     kwargs = {
         "title": "500错误",
         "message": "打开 %s 报错, 请联系技术" % request.path,
