@@ -2633,13 +2633,14 @@ class ChangtuWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_CHANGTU, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(RK_PROXY_IP_CHANGTU)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ""
+        # rds = get_redis("default")
+        # ipstr = self.ip
+        # if ipstr and rds.sismember(RK_PROXY_IP_CHANGTU, ipstr):
+        #     return ipstr
+        # ipstr = rds.srandmember(RK_PROXY_IP_CHANGTU)
+        # self.modify(ip=ipstr)
+        # return ipstr
 
     def on_add_doing_order(self, order):
         self.modify(is_locked=True)
