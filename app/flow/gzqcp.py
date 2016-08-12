@@ -215,11 +215,11 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
             })
-        elif state in ("001002", "001004", "001005"):#取消购票,购票失败,退票成功
-            result_info.update({
-                "result_code": 2,
-                "result_msg": order_status_mapping[state],
-            })
+#         elif state in ("001002", "001004", "001005"):#取消购票,购票失败,退票成功
+#             result_info.update({
+#                 "result_code": 2,
+#                 "result_msg": order_status_mapping[state],
+#             })
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
