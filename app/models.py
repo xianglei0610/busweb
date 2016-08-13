@@ -1075,7 +1075,7 @@ class Rebot(db.Document):
             if self.proxy_ip:
                 kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
             if "timeout" not in kwargs:
-                kwargs["timeout"] = 30
+                kwargs["timeout"] = 25
             try:
                 r = requests.get(url, **kwargs)
             except Exception, e:
@@ -1092,7 +1092,7 @@ class Rebot(db.Document):
             if self.proxy_ip:
                 kwargs["proxies"] = {"http": "http://%s" % self.proxy_ip}
             if "timeout" not in kwargs:
-                kwargs["timeout"] = 30
+                kwargs["timeout"] = 25
             try:
                 r = requests.post(url, **kwargs)
             except Exception, e:
