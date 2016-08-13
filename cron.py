@@ -435,7 +435,7 @@ def main():
     sched.add_interval_job(refresh_order_status, minutes=4)
 
     # 定时刷新站统计信息
-    sched.add_interval_job(refresh_station, minutes=15)
+    sched.add_interval_job(refresh_station, minutes=20)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
