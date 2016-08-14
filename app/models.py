@@ -531,51 +531,6 @@ class Line(db.Document):
             except Line.DoesNotExist:
                 self.modify(compatible_lines={self.crawl_source: self.line_id})
             return self.compatible_lines
-        elif self.s_city_name == "珠海":
-            # 广东省网，珠海汽车购票
-            if self.crawl_source == SOURCE_ZHW:
-                trans = {
-                        # u"上冲站":u"上冲站",
-                        # u"拱北通大站":u"拱北汽车站",
-                        # u"香洲长途站":u"香洲长途站",
-                        # u"斗门站":u"斗门站",
-                        # u"":u"岐关口岸站",
-                        u"平沙站":u"珠海平沙汽车客运站",
-                        u"红旗站":u"珠海红旗汽车客运站",
-                        # u"三灶站":u"三灶站",
-                        u"南溪站":u"珠海南溪汽车客运站",
-                        # u"":u"珠海九洲港汽车客运站",
-                        # u"":u"吉大配客点",
-                        u"南水站":u"珠海南水汽车客运站",
-                        }
-                tar_source = SOURCE_GDSW
-            elif self.crawl_source == SOURCE_GDSW:
-                trans = {
-                        # u"上冲站":u"上冲站",
-                        # u"拱北汽车站":u"拱北通大站",
-                        # u"香洲长途站":u"香洲长途站",
-                        # u"斗门站":u"斗门站",
-                        # u"":u"岐关口岸站",
-                        u"珠海平沙汽车客运站":u"平沙站",
-                        u"珠海红旗汽车客运站":u"红旗站",
-                        # u"三灶站":u"三灶站",
-                        u"珠海南溪汽车客运站南溪站":u"南溪站",
-                        # u"":u"珠海九洲港汽车客运站",
-                        # u"":u"吉大配客点",
-                        u"珠海南水汽车客运站":u"南水站",
-                        }
-                tar_source = SOURCE_ZHW
-            try:
-                ob = Line.objects.get(crawl_source=tar_source,
-                                      s_city_name=self.s_city_name,
-                                      s_sta_name=trans.get(self.s_sta_name, self.s_sta_name),
-                                      d_sta_name=self.d_sta_name,
-                                      d_city_name=self.d_city_name,
-                                      drv_datetime=self.drv_datetime)
-                self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
-            except Line.DoesNotExist:
-                self.modify(compatible_lines={self.crawl_source: self.line_id})
-            return self.compatible_lines
         elif self.s_city_name == "深圳":
             # 广东省网，深圳客货
             if self.crawl_source == SOURCE_SZKY:
