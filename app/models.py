@@ -2633,6 +2633,7 @@ class ChangtuWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
+        return ""
         rds = get_redis("default")
         ipstr = self.ip
         if ipstr and rds.sismember(RK_PROXY_IP_CHANGTU, ipstr):
