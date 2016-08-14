@@ -322,8 +322,6 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        result_info.update(result_msg="default 5", update_attrs={"left_tickets": 5, "refresh_datetime": now})
-        return result_info
 
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {
