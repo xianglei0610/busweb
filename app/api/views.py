@@ -16,7 +16,7 @@ from app.utils import get_redis
 
 @api.before_request
 def log_request():
-    access_log.info("[request] %s %s %s", request.environ.get('HTTP_X_REAL_IP', request.remote_addr), request.url, request.get_data())
+    access_log.info("[request_api] %s %s %s", request.environ.get('HTTP_X_REAL_IP', request.remote_addr), request.url, request.get_data())
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -139,7 +139,6 @@ def query_line():
         }
     """
     now = dte.now()
-    access_log.info("[query_line] %s" % request.get_data())
     try:
         post = json.loads(request.get_data())
         starting_name = post.get("starting_name")
@@ -205,8 +204,9 @@ def query_line_detail():
         data["left_tickets"] = 0
         line_log.info("[fail-detail] 此站禁止余票查询%s %s, %s", line.line_id, line.s_city_name, line.s_sta_name)
         return jsonify({"code": RET_OK, "message": "%s 余票查询已关闭" % line.s_sta_name, "data": data})
+
     now_time = dte.now().strftime("%H:%M")
-    if now_time >= open_station.end_time  or now_time <= open_station.open_time:
+    if now_time > open_station.end_time  or now_time < open_station.open_time:
         data = line.get_json()
         data["left_tickets"] = 0
         line_log.info("[fail-detail] 售票时间不对%s %s, %s", line.line_id, line.s_city_name, line.s_sta_name)
