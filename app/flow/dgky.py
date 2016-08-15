@@ -322,6 +322,7 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
+
         ua = random.choice(BROWSER_USER_AGENT)
         headers = {
                "User-Agent": ua,
