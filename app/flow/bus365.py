@@ -265,6 +265,10 @@ class Flow(BaseFlow):
             self.lock_ticket(order)
 
         if order.status == STATUS_WAITING_ISSUE:
+            rebot_app = Bus365AppRebot.objects.get(telephone=order.source_account)
+            ret = self.send_orderDetail_request(rebot_app, order=order)
+            if ret['state'] != 0:
+                return {"flag": "error", "content": '订单已经支付或者失效，不允许支付'}
             param = {
                      "ordertoken": order.lock_info['ordertoken'],
                      "orderno": order.lock_info['orderno'],
