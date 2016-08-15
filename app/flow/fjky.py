@@ -69,6 +69,13 @@ class Flow(BaseFlow):
             })
         else:
             errmsg = res['values']['result'].replace("\r\n", " ")
+            if '下单失败，请稍后再试' in errmsg:
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": rebot.telephone,
+                    "result_reason": errmsg,
+                })
+                return lock_result
             if "超出购票上限" in errmsg:
                 new_rebot = order.change_lock_rebot()
                 lock_result.update({
