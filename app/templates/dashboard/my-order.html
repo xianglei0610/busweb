@@ -60,14 +60,6 @@
         $("#id-form-switch").submit();
     });
 
-    $('.sel-change').on('shown', function(e, editable) {
-        auto_reload=true;
-    });
-    $('.sel-change').on('hidden', function(e, reason) {
-        auto_reload=false;
-        if(reason === 'save' || reason === 'cancel') {
-        }
-    });
     $('.sel-change').on('save', function(e, params) {
         msg = params.response.msg
         if(params.response.code==1){
