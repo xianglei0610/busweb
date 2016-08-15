@@ -112,8 +112,8 @@ class Flow(BaseFlow):
         }
 
         tel = order.contact_info["telephone"]
-        # if tel.startswith(u"171"):
-        #     tel = rebot.telephone
+        if line.s_city_name == u"珠海":
+            tel = "18025457649"
         submit_data = {
             "saveReceUserFlag": "N",
             "receUserName": order.contact_info["name"],
