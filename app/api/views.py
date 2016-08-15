@@ -16,7 +16,7 @@ from app.utils import get_redis
 
 @api.before_request
 def log_request():
-    access_log.info("[request] %s %s %s", request.environ.get('HTTP_X_REAL_IP', request.remote_addr), request.url, request.get_data())
+    access_log.info("[request_api] %s %s %s", request.environ.get('HTTP_X_REAL_IP', request.remote_addr), request.url, request.get_data())
 
 
 @api.route('/startings/query', methods=['POST'])
@@ -139,7 +139,6 @@ def query_line():
         }
     """
     now = dte.now()
-    access_log.info("[query_line] %s" % request.get_data())
     try:
         post = json.loads(request.get_data())
         starting_name = post.get("starting_name")
