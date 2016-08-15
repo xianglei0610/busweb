@@ -205,8 +205,9 @@ def query_line_detail():
         data["left_tickets"] = 0
         line_log.info("[fail-detail] 此站禁止余票查询%s %s, %s", line.line_id, line.s_city_name, line.s_sta_name)
         return jsonify({"code": RET_OK, "message": "%s 余票查询已关闭" % line.s_sta_name, "data": data})
+
     now_time = dte.now().strftime("%H:%M")
-    if now_time >= open_station.end_time  or now_time <= open_station.open_time:
+    if now_time > open_station.end_time  or now_time < open_station.open_time:
         data = line.get_json()
         data["left_tickets"] = 0
         line_log.info("[fail-detail] 售票时间不对%s %s, %s", line.line_id, line.s_city_name, line.s_sta_name)
