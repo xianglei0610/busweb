@@ -313,7 +313,7 @@ class Flow(BaseFlow):
             })
         return result_info
 
-    def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
+    def get_pay_page(self, order, valid_code="", session=None, bank="", **kwargs):
         rebot = order.get_lock_rebot()
 
         is_login = rebot.test_login_status()
@@ -360,13 +360,22 @@ class Flow(BaseFlow):
                     "User-Agent": rebot.user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
+                yh_dict = {
+                    "BOCB2C": 265,  # "中国银行",
+                    "CMB": 70,      # "招商银行"
+                    "CCB": 415,     # "建设银行",
+                    "SPABANK": 96,  # "平安银行",
+                    "SPDB": 74,     # "浦发银行",
+                    "ABC": 14,      # "农业银行",
+                }
                 params = {
                     "balance":"0.00",
-                    "payModel":33,
+                    "payModel":yh_dict[bank],      # 支付宝-33
                     "payPwd":"",
                     "balanceFlag":"N",
                     "orderId":order.lock_info["orderIds"][0]["orderId"]
                 }
+
                 cookies = json.loads(rebot.cookies)
                 r = rebot.http_post(pay_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
                 soup = BeautifulSoup(r.content, "lxml")
