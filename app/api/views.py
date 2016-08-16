@@ -331,7 +331,7 @@ def submit_order():
     order.destination_name = line.d_city_name + ';' + line.d_sta_name
 
     order.order_channel = post.get("channel", "")
-    order.order_insurance = float(post.get("insurance", "0").strip())
+    order.order_insurance = float(str(post.get("insurance", "0")).strip())
     order.channel_order_no = post.get("channel_order_no", "")
     order.save()
     order.on_create()
