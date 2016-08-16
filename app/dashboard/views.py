@@ -706,7 +706,9 @@ def user_list():
 @dashboard.route('/orders/my', methods=['GET'])
 @login_required
 def my_order():
-    return render_template("dashboard/my-order.html", tab=request.args.get("tab", "dealing"))
+    return render_template("dashboard/my-order.html",
+                           tab=request.args.get("tab", "dealing"),
+                           rfrom=request.args.get("rfrom", ""))
 
 
 @dashboard.route('/orders/dealing', methods=['GET'])
