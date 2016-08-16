@@ -392,7 +392,7 @@ class Flow(BaseFlow):
                 pay_money = float(data["total_fee"])
                 trade_no = data["out_trade_no"]
                 if order.pay_money != pay_money or order.pay_order_no != trade_no:
-                    order.modify(pay_money=pay_money, pay_order_no=trade_no, pay_channel='alipay')
+                    order.modify(pay_money=pay_money, pay_order_no=trade_no, pay_channel='yh')
                 return {"flag": "html", "content": r.content}
         else:
             data = {
