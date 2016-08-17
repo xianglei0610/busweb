@@ -32,7 +32,7 @@ def check_remove_proxy_ip(self, proxy_name, ipstr):
 
 
 @celery.task(bind=True)
-def async_clear_rider(site, account):
+def async_clear_rider(self, site, account):
     from app.models import get_rebot_class
     for cls in get_rebot_class(site):
         try:
