@@ -109,6 +109,8 @@ class Flow(BaseFlow):
 
         kefu = AdminUser.objects.get(username=order.kefu_username)
         # params["bankname"] = "ZHIFUBAO"  # 支付宝支付
+        # params["paytype"] = "3"  # 支付宝支付
+        params["paytype"] = "1"  # 支付宝支付
         params["bankname"] = kefu.yh_type
         params["member_name"] = order.contact_info["name"]
 
