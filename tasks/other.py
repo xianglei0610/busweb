@@ -29,3 +29,14 @@ def check_remove_proxy_ip(self, proxy_name, ipstr):
     if not consumer.valid_proxy(ipstr):
         consumer.remove_proxy(ipstr)
         return "removed"
+
+
+@celery.task(bind=True)
+def async_clear_rider(site, account):
+    from app.models import get_rebot_class
+    for cls in get_rebot_class(site):
+        try:
+            obj = cls.objects.get(telephone=account)
+            obj.clear_riders()
+        except:
+            pass

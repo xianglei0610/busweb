@@ -5,20 +5,16 @@ import re
 import time
 import json
 import urllib
-
 import datetime
 import random
-from bs4 import BeautifulSoup as bs
-# from PIL import Image
 
+from bs4 import BeautifulSoup as bs
 from app.constants import *
 from datetime import datetime as dte
 from app.flow.base import Flow as BaseFlow
 from app.models import Line
 from app.utils import md5
-from app import rebot_log, order_log
-# import cStringIO
-from time import sleep
+from tasks import async_clear_rider
 
 
 class Flow(BaseFlow):
@@ -59,145 +55,103 @@ class Flow(BaseFlow):
 
         rebot = order.get_lock_rebot()
         riders = rebot.add_riders(order)
-
         line = order.line
         param = {
             'bc': line.extra_info.get('bc', ''),
             'date': line.extra_info.get('date', ''),
             'global': line.extra_info.get('g', ''),
             'o': '0',
-            #'tSum': line.full_price*2,
             'tSum': line.full_price,
             'takemanIds': "," + ",".join(riders),
             'tid': line.extra_info.get('t', ''),
             'txtCode': valid_code,
         }
         url = 'http://www.hn96520.com/putin.aspx?' + urllib.urlencode(param)
-        rebot_log.info(url)
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
-        # 买票, 添加乘客, 购买班次
-        for x in xrange(1):
-            r = rebot.http_get(url, headers=headers,
-                               cookies=cookies, data=urllib.urlencode(param), timeout=512)
-            urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
-            # if '333' in urlstr:
-            #     rebot = order.change_lock_rebot()
-            #     errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
-            #     errmsg = unicode(errlst and errlst[0] or "")
-            #     lock_result.update({
-            #         'result_code': 2,
-            #         "source_account": rebot.telephone,
-            #         "result_reason": errmsg,
-            #     })
-            #     return lock_result
-            tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
-            tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
-            tpk1 = datetime.datetime.now().hour
-            if 'ROLLBACK' in urlstr or '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
-                order_log.info("[lock-fail] order: %s %s", order.order_no, urlstr)
-                self.close_line(line)
-                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
-                errmsg = unicode(errlst and errlst[0] or "")
-                if errmsg:
-                    lock_result.update({
-                        'result_code': 0,
-                        "source_account": rebot.telephone,
-                        "result_reason": errmsg,
-                    })
-                    return lock_result
-                errlst = re.findall(r"msg=(\S+)", urlstr)
-                errmsg = unicode(errlst and errlst[0] or "")
-                lock_result.update({
-                    'result_code': 0,
-                    "source_account": rebot.telephone,
-                    "result_reason": errmsg,
-                })
-                return lock_result
-            # tpk2 = datetime.datetime.now().strftime('%Y-%m-%d') + ' 23:00'
-            # tpk2 = datetime.datetime.strptime(tpk2, '%Y-%m-%d %H:%M')
-            if '订票结束时间' in urlstr and tpk >= order.line.drv_datetime and 9 < tpk1 <= 23:
-                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
-                errmsg = unicode(errlst and errlst[0] or "")
-                #rebot_log.info(2333333)
-                lock_result.update({
-                    'result_code': 0,
-                    "source_account": rebot.telephone,
-                    "result_reason": errmsg,
-                })
-                return lock_result
-            errlst = re.findall(
-                r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
 
+        # 买票, 添加乘客, 购买班次
+        r = rebot.http_get(url, headers=headers, cookies=cookies, data=urllib.urlencode(param))
+        urlstr = urllib.unquote(r.url.decode('gbk').encode('utf8'))
+        tpk = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d') + ' 09:00'
+        tpk = datetime.datetime.strptime(tpk, '%Y-%m-%d %H:%M')
+        if 'ROLLBACK' in urlstr or '暂时停止网上售票' in urlstr or '调用异常' in urlstr or '提前' in urlstr or '不足' in urlstr or '不够' in urlstr or '不存在' in urlstr or '停班' in urlstr or 'Unable' in urlstr:
+            self.close_line(line)
+            errlst = re.findall(r"msg=(\S+)&ErrorUrl", urlstr)
             errmsg = unicode(errlst and errlst[0] or "")
             if errmsg:
                 lock_result.update({
-                    'result_code': 2,
+                    'result_code': 0,
                     "source_account": rebot.telephone,
                     "result_reason": errmsg,
                 })
                 return lock_result
+            errlst = re.findall(r"msg=(\S+)", urlstr)
+            errmsg = unicode(errlst and errlst[0] or "")
+            lock_result.update({
+                'result_code': 0,
+                "source_account": rebot.telephone,
+                "result_reason": errmsg,
+            })
+            return lock_result
 
-            soup = bs(r.content, 'lxml')
-            title = soup.title
-            try:
-                info = soup.find('table', attrs={
-                                 'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
-                pay_money = info[-1].find_all('td')[-1].get_text()
-                pay_money = float(re.search(r'\d+', pay_money).group(0))
-                raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get(
-                    'value').split('=')[-1]
-                if '准备付款' in title:
-                    expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-                    lock_result.update({
-                        'result_code': 1,
-                        'raw_order_no': raw_order_no,
-                        "expire_datetime": expire_time,
-                        "source_account": rebot.telephone,
-                        'pay_money': pay_money,
-                    })
-                    # 删除之前乘客
-                    # rebot.clear_riders(riders)
-                    return lock_result
-            except Exception, e:
-                rebot = order.change_lock_rebot()
-                errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
-                errmsg = unicode(errlst and errlst[0] or "")
+        errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+        errmsg = unicode(errlst and errlst[0] or "")
+        if errmsg:
+            lock_result.update({
+                'result_code': 2,
+                "source_account": rebot.telephone,
+                "result_reason": errmsg,
+            })
+            return lock_result
+
+        soup = bs(r.content, 'lxml')
+        title = soup.title
+        try:
+            info = soup.find('table', attrs={'class': 'tblp shadow', 'cellspacing': True, 'cellpadding': True}).find_all('tr')
+            pay_money = info[-1].find_all('td')[-1].get_text()
+            pay_money = float(re.search(r'\d+', pay_money).group(0))
+            raw_order_no = soup.find('input', attrs={'id': 'txt_CopyLink'}).get('value').split('=')[-1]
+            if '准备付款' in title:
                 expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
                 lock_result.update({
-                    'result_code': 2,
-                    "result_reason": errmsg,
+                    'result_code': 1,
+                    'raw_order_no': raw_order_no,
                     "expire_datetime": expire_time,
                     "source_account": rebot.telephone,
-                    'pay_money': 0,
+                    'pay_money': pay_money,
                 })
+                async_clear_rider.delay()
                 return lock_result
+        except:
+            rebot = order.change_lock_rebot()
+            errlst = re.findall(r"msg=(\S+)&ErrorUrl", urllib.unquote(r.url.decode("gbk").encode("utf8")))
+            errmsg = unicode(errlst and errlst[0] or "")
+            lock_result.update({
+                'result_code': 2,
+                "result_reason": errmsg,
+                "source_account": rebot.telephone,
+                'pay_money': 0,
+            })
+            return lock_result
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
         sn = order.pay_order_no
-        sign = SOURCE_INFO.get('hn96520').get(
-            'accounts').get(order.source_account)[-2]
-        userid = SOURCE_INFO.get('hn96520').get(
-            'accounts').get(order.source_account)[-1]
-        # sign = '90e7709954c38af7713e1a64bad2012ecd00565e016e16823032e2d465dbd14a'
+        sign = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-2]
+        userid = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-1]
         username = order.source_account
         password = md5(order.source_account_pass)
-        url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(
-            username, password, sign, time.time())
+        url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(username, password, sign, time.time())
         headers = {
             "User-Agent": rebot.user_agent,
         }
-        r = rebot.http_get(url, headers=headers, timeout=256)
-        # rebot.http_get(url, headers=headers, cookies=r.cookies)
-        userid = json.loads(r.content[r.content.index(
-            "(") + 1: r.content.rindex(")")]).get('UserId', '')
+        r = rebot.http_get(url, headers=headers)
+        userid = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('UserId', '')
 
-        ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(
-            userid, sign, time.time())
-        r = rebot.http_get(ourl, headers=headers, cookies=r.cookies, timeout=256)
-        info = json.loads(r.content[r.content.index(
-            "(") + 1: r.content.rindex(")")]).get('OrderList', [])
+        ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(userid, sign, time.time())
+        r = rebot.http_get(ourl, headers=headers, cookies=r.cookies)
+        info = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('OrderList', [])
         for x in info:
             ocode = x['OrderCode']
             if sn == ocode:
@@ -212,41 +166,6 @@ class Flow(BaseFlow):
             'raw_order': sn,
             "pay_money": 0.0,
         }
-
-        # ocr方式取票码
-        # rebot = order.get_lock_rebot()
-        # sn = order.pay_order_no
-        # detail_url = 'http://www.hn96520.com/pick.aspx?p={0}'.format(sn)
-        # headers = {
-        #     "User-Agent": rebot.user_agent,
-        # }
-        # cookies = json.loads(rebot.cookies)
-        # r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
-        # soup = bs(r.content, "lxml")
-        # info = soup.find(
-        #     'table', attrs={'class': 'tblOrder shadow'}).find_all('tr')
-        # raw_order = info[1].find('td', attrs={'class': 'c2'}).get_text()
-        # state = info[2].find('td', attrs={'class': 'c2'}).get_text()
-        # pick_site = info[
-        #     4].find('td', attrs={'class': 'c2'}).get_text().split('[')[0]
-        # url = 'http://www.hn96520.com/text.aspx?p={0}'.format(sn)
-        # from pytesseract import image_to_string
-        # from app.utils import ecp
-        # r = rebot.http_get(url, headers=headers, cookies=cookies)
-        # tmpIm = cStringIO.StringIO(r.content)
-        # im = Image.open(tmpIm)
-        # im = im.crop((140, 70, 225, 90)).convert(
-        #     'L').point(lambda x: 255 if x > 160 else 0)
-        # im = ecp(im, 8)
-        # code = image_to_string(im, config='-psm 7')
-        # return {
-        #     "state": state,
-        #     "pick_no": code,
-        #     "pick_code": code,
-        #     "pick_site": pick_site,
-        #     'raw_order': raw_order,
-        #     "pay_money": 0.0,
-        # }
 
     # 刷新出票
     def do_refresh_issue(self, order):
@@ -361,14 +280,13 @@ class Flow(BaseFlow):
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
 
-    def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
+    def get_pay_page(self, order, valid_code="", bank="", pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
         is_login = rebot.test_login_status()
 
         # 登录验证码
         if valid_code and not is_login:
-            key = "pay_login_info_%s_%s" % (
-                order.order_no, order.source_account)
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
             info = json.loads(session[key])
             headers = info["headers"]
             cookies = info["cookies"]
@@ -403,8 +321,7 @@ class Flow(BaseFlow):
                         "headers": {"User-Agent": rebot.user_agent},
                         "valid_url": "http://www.hn96520.com/verifycode.aspx",
                     }
-                    key = "pay_login_info_%s_%s" % (
-                        order.order_no, order.source_account)
+                    key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                     session[key] = json.dumps(data)
                     return {"flag": "input_code", "content": ""}
 
@@ -439,7 +356,6 @@ class Flow(BaseFlow):
                 "headers": headers,
                 "valid_url": valid_url,
             }
-            key = "pay_login_info_%s_%s" % (
-                order.order_no, order.source_account)
+            key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
             session[key] = json.dumps(data)
             return {"flag": "input_code", "content": ""}
