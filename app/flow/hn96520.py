@@ -280,7 +280,7 @@ class Flow(BaseFlow):
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
 
-    def get_pay_page(self, order, valid_code="", bank="", pay_channel="alipay", **kwargs):
+    def get_pay_page(self, order, session=None, valid_code="", bank="", pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
         is_login = rebot.test_login_status()
 
