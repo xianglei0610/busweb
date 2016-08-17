@@ -389,8 +389,12 @@ class Flow(BaseFlow):
                 pay_url='http://www.changtu.com/pay/pay.htm'
                 r = rebot.http_post(pay_url, data=urllib.urlencode(raw_form), headers=headers, cookies=cookies)
                 data = self.extract_alipay(r.content)
-                pay_money = float(data["total_fee"])
-                trade_no = data["out_trade_no"]
+                if "total_fee" not in data:
+                    pay_money = re.findall(r"PAYMENT=(\d+)", r.content)[0]
+                    trade_no= re.findall(r"ORDERID=(\d+)", r.content)[0]
+                else:
+                    pay_money = float(data["total_fee"])
+                    trade_no = data["out_trade_no"]
                 if order.pay_money != pay_money or order.pay_order_no != trade_no:
                     order.modify(pay_money=pay_money, pay_order_no=trade_no, pay_channel='yh')
                 return {"flag": "html", "content": r.content}
