@@ -121,7 +121,7 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                     'pay_money': pay_money,
                 })
-                async_clear_rider.delay()
+                async_clear_rider.delay("hn96520", rebot.telephone)
                 return lock_result
         except:
             rebot = order.change_lock_rebot()
