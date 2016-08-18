@@ -110,7 +110,7 @@ class Flow(BaseFlow):
             token = res.get('token', '')
         elif res.get('status', '') == 1:
             msg = res.get('msg', '')
-            if u'输入参数不对，请参考接口文档' in msg or u'维护升级' in msg:
+            if u'输入参数不对，请参考接口文档' in msg or u'维护升级' in msg or 'connect timed out' in msg:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
                 lock_result.update(result_code=2,
