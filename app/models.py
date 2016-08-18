@@ -1586,7 +1586,6 @@ class Hn96520WebRebot(Rebot):
     sign = db.StringField()
     ip = db.StringField(default="")
 
-    # indexes索引, 'collections'
     meta = {
         "indexes": ["telephone", "is_active", "is_locked"],
         "collection": "hn96520web_rebot",
@@ -1605,34 +1604,6 @@ class Hn96520WebRebot(Rebot):
         # ipstr = rds.srandmember(key)
         # self.modify(ip=ipstr)
         # return ipstr
-
-   #  @classmethod
-   #  def get_one(cls, order=None):
-   #      sta_bind = SOURCE_INFO[cls.crawl_source].get("station_bind", {})
-   #      city_bind = SOURCE_INFO[cls.crawl_source].get("city_bind", {})
-   #      query = {}
-   #      if order and sta_bind:
-   #          s_sta_name = order.starting_name.split(";")[1]
-   #          if s_sta_name in sta_bind:
-   #              query.update(telephone__in=sta_bind[s_sta_name])
-   #      elif order and city_bind:
-   #          s_city_name = order.starting_name.split(";")[0]
-   #          if s_city_name in city_bind:
-   #              query.update(telephone__in=city_bind[s_city_name])
-   #      t = cls.objects._collection.find({'is_locked': True})
-   #      if t.count():
-   #          v = dte.now().strftime('%Y-%m-%d')
-   #          for x in t:
-   #              if x['doing_orders'].values().count(v) == 0:
-   #                  cls.objects._collection.update({'_id': x['_id'], {'$set': {'is_locked': False}})
-
-   #      qs = cls.objects.filter(is_active=True, is_locked=False).order_by('+last_login_time')
-   #      if not qs:
-   #          return
-   #      sub_qs = qs.filter(**query)
-   #      if sub_qs:
-   #          qs = sub_qs
-   #      return qs[0]
 
     @classmethod
     def get_one(cls, order=None):
@@ -1655,34 +1626,24 @@ class Hn96520WebRebot(Rebot):
         tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
 
-    def add_doing_order(self, order):
-        order.modify(source_account=self.telephone)
-        d = self.doing_orders
-        if order.order_no in d:
-            return
-        d[order.order_no] = 1
-        self.modify(last_login_time=dte.now())
-        self.modify(doing_orders=d)
-        self.on_add_doing_order(order)
-
-    def clear_riders(self, riders={}):
-        # 默认的不能删除
+    def clear_riders(self):
         is_login = self.test_login_status()
         if not is_login:
             return
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
         rider_url = 'http://www.hn96520.com/member/modify.aspx'
-        r = self.http_get(rider_url, headers=headers, cookies=cookies, timeout=512)
+        r = self.http_get(rider_url, headers=headers, cookies=cookies, timeout=60)
         soup = BeautifulSoup(r.content, 'lxml')
         info = soup.find('table', attrs={'class': 'tblp shadow', 'style': True}).find_all('tr', attrs={'id': True})
         for x in info:
             uid = x.get('id').strip()
             uid = str(re.search(r'\d+', uid).group(0))
-            if uid in riders or not riders:
-                delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid={1}'.format(uid, self.memid)
-                # rebot_log.info(delurl)
-                self.http_get(delurl, headers=headers, cookies=cookies, timeout=2048)
+            delurl = 'http://www.hn96520.com/member/takeman.ashx?action=DeleteTakeman&id={0}&memberid={1}'.format(uid, self.userid)
+            try:
+                r = self.http_get(delurl, headers=headers, cookies=cookies)
+            except:
+                pass
 
     def add_riders(self, order):
         url = "http://www.hn96520.com/member/modify.aspx"
@@ -1710,8 +1671,6 @@ class Hn96520WebRebot(Rebot):
         return id_lst
 
     def check_login(self):
-        # self.is_locked = True
-        # self.save()
         undone_order_url = "http://www.hn96520.com/member/changeselfinfo.aspx"
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
@@ -1733,33 +1692,6 @@ class Hn96520WebRebot(Rebot):
         self.cookies = "{}"
         self.save()
         return "OK"
-
-    @classmethod
-    def login_all(cls):
-        # 登陆所有预设账号
-        has_checked = {}
-        accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
-        for bot in cls.objects:
-            has_checked[bot.telephone] = 1
-            if bot.telephone not in accounts:
-                bot.modify(is_active=False)
-                continue
-            pwd = accounts[bot.telephone]
-            bot.modify(password=pwd[0])
-            bot.login()
-
-        for tele, (pwd, sign, userid) in accounts.items():
-            if tele in has_checked:
-                continue
-            bot = cls(is_active=True,
-                      is_locked=False,
-                      telephone=tele,
-                      password=pwd,
-                      sign=sign,
-                      userid=userid,
-                      )
-            bot.save()
-            bot.login()
 
 
 class CcwWebRebot(Rebot):
