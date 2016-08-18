@@ -4269,8 +4269,6 @@ sms_phone_list = ['13267109876', '15575101324', '18575593355']
 KF_ORDER_CT = 3
 DEFALUT_LIMIT_PAYCT = 20  # 默认20单就提示切换支付账号
 
-TOKEN = '303fed16373c61a9ee8bdc27f9b6ca4e'  # 代购token
-
 HOST = 'http://sdk.open.api.igexin.com/apiex.htm'
 AppID = "BRAvWtfxoz6Fvc4HaXciy"
 AppKey = "mHFHq6gxrm6E2lEMvXQpIA"

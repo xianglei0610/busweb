@@ -14,7 +14,7 @@ import copy
 import urllib2
 
 from datetime import datetime as dte, timedelta
-from app.utils import md5, create_validate_code
+from app.utils import create_validate_code, md5
 from app.constants import *
 from flask import render_template, request, redirect, url_for, jsonify, session, make_response, flash
 from flask.views import MethodView
@@ -69,19 +69,31 @@ class LoginInView(MethodView):
     def post(self):
         name = request.form.get("username")
         pwd = request.form.get("password")
-        session["username"] = name
-        session["password"] = pwd
-        code = request.form.get("validcode")
-        if code != session.get("img_valid_code"):
-            flash("验证码错误", "error")
-            return redirect(url_for('dashboard.login'))
-        try:
-            u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
-            flask_login.login_user(u)
-            return redirect(url_for('dashboard.index'))
-        except AdminUser.DoesNotExist:
-            flash("用户名或密码错误", "error")
-            return redirect(url_for('dashboard.login'))
+        if request.args.get("type", "") == "api":  # API登陆, 返回token
+            rds = get_redis("default")
+            try:
+                u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
+                tk = md5(str(time.time))
+                k = "token%s" % tk
+                rds.set(k, u.username)
+                rds.expire(k, 24*60*60)
+                return jsonify({"code": 1, "message": "登陆成功", "token": tk})
+            except AdminUser.DoesNotExist:
+                return jsonify({"code": 0, "message": "登陆失败"})
+        else:                                       # 网页登陆
+            session["username"] = name
+            session["password"] = pwd
+            code = request.form.get("validcode")
+            if not code or code != session.get("img_valid_code"):
+                flash("验证码错误", "error")
+                return redirect(url_for('dashboard.login'))
+            try:
+                u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
+                flask_login.login_user(u)
+                return redirect(url_for('dashboard.index'))
+            except AdminUser.DoesNotExist:
+                flash("用户名或密码错误", "error")
+                return redirect(url_for('dashboard.login'))
 
 
 class SubmitOrder(MethodView):
