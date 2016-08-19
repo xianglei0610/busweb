@@ -33,7 +33,7 @@ class AdminUser(db.Document):
     create_datetime = db.DateTimeField(default=dte.now)
     is_switch = db.IntField()
     yh_type = db.StringField(default="BOCB2C")
-    source_include = db.ListField(default=["yhzf", "zfb"])        # 该用户处理的源站
+    source_include = db.ListField(default=["yhzf", "zfb"])      # 该用户处理的源站
     is_close = db.BooleanField(default=False)
     is_removed = db.IntField(default=0)
 
@@ -62,7 +62,7 @@ class AdminUser(db.Document):
 
     @property
     def is_superuser(self):
-        if self.username in ["luojunping", "xiangleilei", "liuquan", "luocky", "august", 'chengxiaokang']:
+        if self.username in ["luojunping", "xiangleilei", "liuquan", "tangjiang"]:
             return True
         return False
 
