@@ -202,7 +202,7 @@ class Flow(BaseFlow):
                 'SchDate': line['drv_date'],
                 'SchTime': '',
                 'checkCode': code,
-                'StartStation': line.s_sta_name,
+                'StartStation': line.s_sta_id,
                 'SchDstNodeName': line['d_city_name'],
             }
             r = requests.post(url, headers=headers, cookies=cookies, data=data)
@@ -233,8 +233,7 @@ class Flow(BaseFlow):
             d_sta_name = y[3].get_text().strip()
             left_tickets = y[5].get_text().strip()
             # vehicle_type = y[6].get_text().strip()
-            drv_datetime = dte.strptime("%s %s" % (
-                drv_date, drv_time), "%Y-%m-%d %H:%M")
+            drv_datetime = dte.strptime("%s %s" % (drv_date, drv_time), "%Y-%m-%d %H:%M")
             line_id_args = {
                 "s_city_name": line.s_city_name,
                 "d_city_name": line.d_city_name,
