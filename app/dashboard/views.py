@@ -771,38 +771,33 @@ def dealing_order():
         qs = assign.dealing_orders(current_user).order_by("create_date_time")
     elif tab == "yichang":
         qs = Order.objects.filter(kefu_username=current_user.username, yc_status=YC_STATUS_ING)
-    locking = {}
-    dealing_seconds = {}
-#     is_close = False
-    for o in qs:
-        if rds.get(RK_ORDER_LOCKING % o.order_no):
-            locking[o.order_no] = 1
-        else:
-            locking[o.order_no] = 0
-        dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
-#     if not current_user.is_superuser and not current_user.is_close:
-#         for o in qs:
-#             if not o.kefu_assigntime:
-#                 continue
-#             warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
-#             if warn_time > 15*60:
-#                 is_close = True
-#                 break
-#         if is_close:
-#             current_user.modify(is_close=is_close, is_switch=0)
 
-    return render_template("dashboard/dealing.html",
-                            tab=tab,
-                            dealing_seconds=dealing_seconds,
-                            page=parse_page_data(qs),
-                            status_msg=STATUS_MSG,
-                            source_info=SOURCE_INFO,
-                            dealing_count=assign.waiting_lock_size()+assign.dealing_size(current_user),
-                            dealed_count=dealed_count,
-                            yichang_count=yichang_count,
-                            all_user=AdminUser.objects.filter(is_removed=0),
-                            locking=locking,
-                            )
+    if request.args.get("type", "") == "api":
+        lst = []
+        for o in qs:
+            d = {"order_no": o.order_no, "crawl_source": o.crawl_source}
+            lst.append(d)
+        return jsonify({"code":1, "message": "ok", "orders": lst})
+    else:
+        locking = {}
+        dealing_seconds = {}
+        for o in qs:
+            if rds.get(RK_ORDER_LOCKING % o.order_no):
+                locking[o.order_no] = 1
+            else:
+                locking[o.order_no] = 0
+            dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
+        return render_template("dashboard/dealing.html",
+                                tab=tab,
+                                dealing_seconds=dealing_seconds,
+                                page=parse_page_data(qs),
+                                status_msg=STATUS_MSG,
+                                source_info=SOURCE_INFO,
+                                dealing_count=assign.waiting_lock_size()+assign.dealing_size(current_user),
+                                dealed_count=dealed_count,
+                                yichang_count=yichang_count,
+                                all_user=AdminUser.objects.filter(is_removed=0),
+                                locking=locking)
 
 
 @dashboard.route('/users/switch', methods=['POST'])
