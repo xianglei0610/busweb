@@ -775,7 +775,7 @@ def dealing_order():
     if request.args.get("type", "") == "api":
         lst = []
         for o in qs:
-            d = {"order_no": o.order_no, "crawl_source": o.crawl_source}
+            d = {"order_no": o.order_no, "crawl_source": o.crawl_source, "status":o.status}
             lst.append(d)
         return jsonify({"code":1, "message": "ok", "orders": lst})
     else:
