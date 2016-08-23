@@ -220,6 +220,11 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
+        elif state == "已退款":
+            result_info.update({
+                "result_code": 3,
+                "result_msg": state,
+            })
         return result_info
 
     def do_refresh_line(self, line):
