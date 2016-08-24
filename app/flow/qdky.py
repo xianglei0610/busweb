@@ -397,7 +397,7 @@ class Flow(BaseFlow):
                     'ctl00$ContentPlaceHolder1$ImageButton1.y': '30',
                  }
                 r = rebot.http_post(pay_url, headers=headers, data=data, cookies=cookies)
-                order.modify(pay_channel='alipay')
+                order.modify(pay_channel='yh')
                 return {"flag": "html", "content": r.content}
         # 未登录
         if not is_login:
