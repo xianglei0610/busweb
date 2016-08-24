@@ -14,7 +14,7 @@ import copy
 import urllib2
 
 from datetime import datetime as dte, timedelta
-from app.utils import md5, create_validate_code
+from app.utils import create_validate_code, md5
 from app.constants import *
 from flask import render_template, request, redirect, url_for, jsonify, session, make_response, flash
 from flask.views import MethodView
@@ -69,19 +69,31 @@ class LoginInView(MethodView):
     def post(self):
         name = request.form.get("username")
         pwd = request.form.get("password")
-        session["username"] = name
-        session["password"] = pwd
-        code = request.form.get("validcode")
-        if code != session.get("img_valid_code"):
-            flash("验证码错误", "error")
-            return redirect(url_for('dashboard.login'))
-        try:
-            u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
-            flask_login.login_user(u)
-            return redirect(url_for('dashboard.index'))
-        except AdminUser.DoesNotExist:
-            flash("用户名或密码错误", "error")
-            return redirect(url_for('dashboard.login'))
+        if request.args.get("type", "") == "api":  # API登陆, 返回token
+            rds = get_redis("default")
+            try:
+                u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
+                tk = md5(str(time.time))
+                k = "token%s" % tk
+                rds.set(k, u.username)
+                rds.expire(k, 24*60*60)
+                return jsonify({"code": 1, "message": "登陆成功", "token": tk})
+            except AdminUser.DoesNotExist:
+                return jsonify({"code": 0, "message": "登陆失败"})
+        else:                                       # 网页登陆
+            session["username"] = name
+            session["password"] = pwd
+            code = request.form.get("validcode")
+            if not code or code != session.get("img_valid_code"):
+                flash("验证码错误", "error")
+                return redirect(url_for('dashboard.login'))
+            try:
+                u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
+                flask_login.login_user(u)
+                return redirect(url_for('dashboard.index'))
+            except AdminUser.DoesNotExist:
+                flash("用户名或密码错误", "error")
+                return redirect(url_for('dashboard.login'))
 
 
 class SubmitOrder(MethodView):
@@ -706,7 +718,9 @@ def user_list():
 @dashboard.route('/orders/my', methods=['GET'])
 @login_required
 def my_order():
-    return render_template("dashboard/my-order.html", tab=request.args.get("tab", "dealing"))
+    return render_template("dashboard/my-order.html",
+                           tab=request.args.get("tab", "dealing"),
+                           rfrom=request.args.get("rfrom", ""))
 
 
 @dashboard.route('/orders/dealing', methods=['GET'])
@@ -757,38 +771,33 @@ def dealing_order():
         qs = assign.dealing_orders(current_user).order_by("create_date_time")
     elif tab == "yichang":
         qs = Order.objects.filter(kefu_username=current_user.username, yc_status=YC_STATUS_ING)
-    locking = {}
-    dealing_seconds = {}
-#     is_close = False
-    for o in qs:
-        if rds.get(RK_ORDER_LOCKING % o.order_no):
-            locking[o.order_no] = 1
-        else:
-            locking[o.order_no] = 0
-        dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
-#     if not current_user.is_superuser and not current_user.is_close:
-#         for o in qs:
-#             if not o.kefu_assigntime:
-#                 continue
-#             warn_time = (dte.now()-o.kefu_assigntime).total_seconds()
-#             if warn_time > 15*60:
-#                 is_close = True
-#                 break
-#         if is_close:
-#             current_user.modify(is_close=is_close, is_switch=0)
 
-    return render_template("dashboard/dealing.html",
-                            tab=tab,
-                            dealing_seconds=dealing_seconds,
-                            page=parse_page_data(qs),
-                            status_msg=STATUS_MSG,
-                            source_info=SOURCE_INFO,
-                            dealing_count=assign.waiting_lock_size()+assign.dealing_size(current_user),
-                            dealed_count=dealed_count,
-                            yichang_count=yichang_count,
-                            all_user=AdminUser.objects.filter(is_removed=0),
-                            locking=locking,
-                            )
+    if request.args.get("type", "") == "api":
+        lst = []
+        for o in qs:
+            d = {"order_no": o.order_no, "crawl_source": o.crawl_source, "status":o.status}
+            lst.append(d)
+        return jsonify({"code":1, "message": "ok", "orders": lst})
+    else:
+        locking = {}
+        dealing_seconds = {}
+        for o in qs:
+            if rds.get(RK_ORDER_LOCKING % o.order_no):
+                locking[o.order_no] = 1
+            else:
+                locking[o.order_no] = 0
+            dealing_seconds[o.order_no] = (dte.now()-o.kefu_assigntime).total_seconds()
+        return render_template("dashboard/dealing.html",
+                                tab=tab,
+                                dealing_seconds=dealing_seconds,
+                                page=parse_page_data(qs),
+                                status_msg=STATUS_MSG,
+                                source_info=SOURCE_INFO,
+                                dealing_count=assign.waiting_lock_size()+assign.dealing_size(current_user),
+                                dealed_count=dealed_count,
+                                yichang_count=yichang_count,
+                                all_user=AdminUser.objects.filter(is_removed=0),
+                                locking=locking)
 
 
 @dashboard.route('/users/switch', methods=['POST'])

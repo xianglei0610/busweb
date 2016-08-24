@@ -54,7 +54,7 @@ class Flow(BaseFlow):
                 })
                 return lock_result
             errmsg = soup.select_one(".jump_mes h4").text
-            if u"该班次价格不存在" in errmsg or u"发车前2小时不售票" in errmsg:
+            if u"该班次价格不存在" in errmsg or u"发车前2小时不售票" in errmsg or u"超出人数限制" in errmsg:
                 self.close_line(line, reason=errmsg)
                 lock_result.update({
                     "result_code": 0,
@@ -219,6 +219,11 @@ class Flow(BaseFlow):
                 "result_msg": state,
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
+            })
+        elif state == "已退款":
+            result_info.update({
+                "result_code": 3,
+                "result_msg": state,
             })
         return result_info
 

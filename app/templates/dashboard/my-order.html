@@ -47,6 +47,9 @@
 {% block script_footer %}
 <script type="text/javascript">
     var auto_reload = true;
+    if ('{{rfrom}}' == "snm"){
+        auto_reload = false;
+    }
     $('.switch')['bootstrapSwitch']();
     var idInt = setInterval(function(){
         if(!auto_reload){
