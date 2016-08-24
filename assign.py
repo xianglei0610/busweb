@@ -4,7 +4,7 @@ import time
 
 from app.constants import *
 from app.utils import get_redis
-from app.models import Order
+from app.models import Order, AdminUser
 from datetime import datetime as dte
 
 
