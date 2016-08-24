@@ -1192,7 +1192,7 @@ class QdkyWebRebot(Rebot):
             'ctl00$ContentPlaceHolder1$checktxt2': '',
         }
         r = self.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(con_data))
-        
+
         soup = BeautifulSoup(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
@@ -1247,8 +1247,8 @@ class QdkyWebRebot(Rebot):
                     droped.add(phone)
         tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
-    
-    
+
+
 
     # 初始化帐号
     def login(self):
