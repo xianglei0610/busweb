@@ -43,23 +43,11 @@ SOURCE_FJKY = "fjky"
 SOURCE_QDKY = "qdky"    # 青岛客运
 
 
-PAY_TYPE_SOURCE = {
-    "zfb": [SOURCE_BUS100,
-            SOURCE_CTRIP,
-            SOURCE_CBD,
-            SOURCE_JSKY,
-            SOURCE_BABA,
-            SOURCE_TC,
-            SOURCE_KUAIBA,
-            SOURCE_CHANGTU,
-            SOURCE_JSDLKY,
-            SOURCE_ZJGSM,
-            SOURCE_WXSZ,
-            SOURCE_TZKY,
-            SOURCE_CQKY],
-    "zfb_wy": [SOURCE_SCQCP],
-    "yl": [SOURCE_GZQCP, SOURCE_BJKY, SOURCE_HEBKY, SOURCE_LNKY, SOURCE_E8S],
-}
+YH_TYPE_SOURCE = [SOURCE_BJKY, SOURCE_HEBKY, SOURCE_SCQCP,
+                  SOURCE_SZKY, SOURCE_ZHW, SOURCE_BUS365,
+                  SOURCE_GLCX, SOURCE_FJKY, SOURCE_CHANGTU,
+                  SOURCE_SD365, SOURCE_QDKY]
+
 
 SOURCE_INFO = {
     SOURCE_FJKY: {
@@ -4243,16 +4231,29 @@ SOURCE_INFO = {
         "name": "青岛客运",
         "website": 'http://ticket.qdjyjt.com/',
         "accounts": {
-            # "a1533870": ("123456"),
-            "a1707152": ("123456"),
-            "a1709250": ("123456"),
-            "a1705132": ("123456"),
-            "a1326710": ("123456"),
-            "a1708626": ("123456"),
-            "a1709513": ("123456"),
-            "a1709531": ("123456"),
-            "a1708003": ("123456"),
-            "a1709009": ("123456"),
+            # "a1533870": ("123456", ""),
+            "a1707152": ("123456", ""),
+            "a1709250": ("123456", ""),
+            "a1705132": ("123456", ""),
+            "a1326710": ("123456", ""),
+            "a1708626": ("123456", ""),
+            "a1709513": ("123456", ""),
+            "a1709531": ("123456", ""),
+            "a1708003": ("123456", ""),
+            "a1709009": ("123456", ""),
+            "96816046": ("123456", ""),
+            "90725085": ("123456", ""),
+            "76802017": ("123456", ""),
+            "kbl228246": ("123456", ""),
+            "rnxkitum9": ("123456", ""),
+            "c35390101": ("123456", ""),
+            "wm5230940": ("123456", ""),
+            "a82466857": ("123456", ""),
+            "pvowasnd6": ("123456", ""),
+            "n19223688": ("123456", ""),
+            "iz7094361": ("123456", ""),
+            "blg782217": ("123456", ""),
+            "ebfqkc394": ("123456", ""),
             }
     },
 }
@@ -4407,7 +4408,7 @@ RK_PROXY_IP_LNKY = "proxy:lnky"
 RK_PROXY_IP_E8S = "proxy:e8s"
 RK_PROXY_IP_HN96520 = "proxy:hn96520"
 RK_PROXY_IP_SD365 = "proxy:sd365"
-RK_PROXY_IP_QDKY= "proxy:qdky"
+RK_PROXY_IP_QDKY = "proxy:qdky"
 RK_PROXY_CUR_CQKY = "proxy:cqky:current"  # 当前使用的
 RK_PROXY_IP_CQKY_BLACK = "proxy:cqky:black:%s"  # 黑名单
 
@@ -4467,7 +4468,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_SD365: "您的%(amount)s张%(time)s %(start)s至%(end)s车票订购成功！请凭购票身份证和密码%(pcode)s取票",
     SOURCE_GLCX: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_FJKY: "您已成功购买%(time)s%(start)s-%(end)s的车票,本次购票取票号：%(no)s，取票密码：%(code)s。",
-    SOURCE_QDKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
+    SOURCE_QDKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和取票密码%(code)s取票,如需改签、退票请前往发车站的客运站按规定办理。",
 }
 
 CITY_NAME_TRANS = {
