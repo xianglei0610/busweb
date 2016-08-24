@@ -1063,7 +1063,6 @@ class QdkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
     ip = db.StringField(default="")
-    userid = db.StringField()
 
     # indexes索引, 'collections'
     meta = {
@@ -1130,7 +1129,6 @@ class QdkyWebRebot(Rebot):
             return ('-1', '找不到此班次')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        cli_data = {}
         cli_data = {
             '__EVENTTARGET': '',
             '__EVENTARGUMENT': '',
@@ -1248,9 +1246,6 @@ class QdkyWebRebot(Rebot):
         tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
 
-
-
-    # 初始化帐号
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
         self.last_login_time = dte.now()
@@ -1259,20 +1254,6 @@ class QdkyWebRebot(Rebot):
         self.cookies = "{}"
         self.save()
         return "OK"
-
-    @classmethod
-    def login_all(cls):
-        # 登陆所有预设账号
-        accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
-        rebot_log.info(accounts)
-        for tele, pwd in accounts.items():
-            bot = cls(is_active=True,
-                      is_locked=False,
-                      telephone=tele,
-                      password=pwd,
-                      )
-            bot.save()
-            bot.login()
 
 
 class FjkyAppRebot(Rebot):
