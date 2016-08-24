@@ -14,13 +14,14 @@ import random
 import urllib
 import re
 import time
+from bs4 import BeautifulSoup
+from lxml import etree
 
 from app.constants import *
 from datetime import datetime as dte, timedelta
-from bs4 import BeautifulSoup
-from lxml import etree
 from app.utils import get_redis
 from app import rebot_log
+
 
 
 class ProxyProducer(object):
@@ -506,6 +507,7 @@ class Bus365ProxyConsumer(ProxyConsumer):
             return False
         return True
 
+
 class HN96520ProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_HN96520
     name = "hn96520"
@@ -523,6 +525,7 @@ class HN96520ProxyConsumer(ProxyConsumer):
         except:
             return False
         return False
+
 
 class SD365ProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_SD365
@@ -542,6 +545,7 @@ class SD365ProxyConsumer(ProxyConsumer):
             return False
         return False
 
+
 class QDKYProxyConsumer(ProxyConsumer):
     PROXY_KEY = RK_PROXY_IP_QDKY
     name = "qdky"
@@ -550,12 +554,34 @@ class QDKYProxyConsumer(ProxyConsumer):
         url = "http://ticket.qdjyjt.com"
         try:
             ua = random.choice(BROWSER_USER_AGENT)
+            headers = {"User-Agent": ua,
+                       "Upgrade-Insecure-Requests": 1,
+                       }
+            proxies = {"http": "http://%s" % ipstr}
             r = requests.get(url,
-                             headers={"User-Agent": ua},
-                             timeout=30,
-                             proxies={"http": "http://%s" % ipstr})
+                             headers=headers,
+                             timeout=10,
+                             proxies=proxies)
             if u"青岛长途汽车售票网" in r.content:
-                return True
+                soup = BeautifulSoup(r.content, 'lxml')
+                state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+                valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+                data = {
+                    '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonLoginMemu',
+                    '__EVENTARGUMENT': '',
+                    '__VIEWSTATE': state,
+                    '__EVENTVALIDATION': valid,
+                    'ctl00$ContentPlaceHolder1$DropDownList3': '-1',
+                    'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
+                    'destination-id': '',
+                    'ctl00$ContentPlaceHolder1$mudizhan_id': '',
+                    'tripDate': '请选择',
+                    'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
+                    'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
+                }
+                r = requests.post(url, headers=headers, data=data, cookies=r.cookies,proxies=proxies)
+                if u"青岛长途汽车售票网" in r.content:
+                    return True
         except:
             return False
         return False

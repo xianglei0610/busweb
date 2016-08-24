@@ -1058,6 +1058,7 @@ class Rebot(db.Document):
                 continue
             return r
 
+
 class QdkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
@@ -1074,6 +1075,7 @@ class QdkyWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
+#         return '192.168.1.47:8888'
         rds = get_redis("default")
         ipstr = self.ip
         key = RK_PROXY_IP_QDKY
@@ -1085,6 +1087,7 @@ class QdkyWebRebot(Rebot):
 
     def clear_riders(self, riders={}):
         pass
+
     def add_riders(self, order):
         url = 'http://ticket.qdjyjt.com/'
         headers = {
@@ -1092,32 +1095,30 @@ class QdkyWebRebot(Rebot):
             'Content-Type': 'application/x-www-form-urlencoded',
         }
         cookies = json.loads(self.cookies)
-        v = self.check_login()
-        if not v:
-            return
+        res = self.check_login()
         line = order.line
-        data = {
+        sch_data = {
             '__EVENTTARGET': '',
             '__EVENTARGUMENT': '',
-            '__VIEWSTATE': v[1],
-            '__EVENTVALIDATION': v[2],
-            'ctl00$ContentPlaceHolder1$DropDownList3': line.extra_info['s_sta'],
+            '__VIEWSTATE': res[1],
+            '__EVENTVALIDATION': res[2],
+            'ctl00$ContentPlaceHolder1$DropDownList3': unicode(line.extra_info['s_station_name']),
             'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
-            'destination-id': line.d_sta_id,
-            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_sta_id,
-            'tripDate': line.drv_date,
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id': line.drv_date,
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': line.drv_date,
+            'destination-id': line.d_city_id,
+            'ctl00$ContentPlaceHolder1$mudizhan_id': '',
+            'tripDate': line.drv_date.replace('-', '/'),
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
             'ctl00$ContentPlaceHolder1$Button_1_cx': '车次查询',
         }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=data)
+        r = self.http_post(url, headers=headers, cookies=cookies, data=sch_data)
         soup = BeautifulSoup(r.content, "lxml")
         try:
             info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'}).find_all('tr')
         except:
             errmsg = soup.find_all('script')[-1].get_text()
             errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            return '2333', errmsg
+            return '-1', errmsg
         tbc = ''
         for y in info[1:]:
             z = y.find_all('td')
@@ -1126,41 +1127,40 @@ class QdkyWebRebot(Rebot):
             if bus_num == line.bus_num and drv_time == line.drv_time:
                 tbc = y.find('input', attrs={'id': True, 'value': '预订'}).get('name', '')
         if not tbc:
-            return ('2332', '找不到此班次')
+            return ('-1', '找不到此班次')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        data = {}
-        data = {
+        cli_data = {}
+        cli_data = {
             '__EVENTTARGET': '',
             '__EVENTARGUMENT': '',
-            '__VIEWSTATE': state,
             '__EVENTVALIDATION': valid,
             tbc: '预订',
             'ctl00$ContentPlaceHolder1$DropDownList3': '-1',
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
-            'destination-id': line.d_sta_id,
-            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_sta_id,
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': '1',
+            'destination-id': '',
+            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_city_id,
             'tripDate': '请选择',
             'ctl00$ContentPlaceHolder1$chengcheriqi_id': line.drv_date.replace('-', ''),
             'ctl00$ContentPlaceHolder1$chengcheriqi_id0': line.drv_date.replace('-', '/'),
+            '__VIEWSTATE': state,
         }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=data)
+        r = self.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(cli_data))
         soup = BeautifulSoup(r.content, "lxml")
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        x = order.contact_info
+        contact_info = order.contact_info
         try:
             info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
         except:
             errmsg = soup.find_all('script')[-1].get_text()
             errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            return '2333', errmsg
+            return '-1', errmsg
         for y in info[1:]:
             uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
-            if uid == x['id_number']:
+            if uid == contact_info['id_number']:
                 btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
                 return (btn, state, valid)
-        data = {}
         data = {
             '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonXiugai',
             '__EVENTARGUMENT': '',
@@ -1175,21 +1175,24 @@ class QdkyWebRebot(Rebot):
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
         btn = soup.find('input', attrs={'id': 'ContentPlaceHolder1_GridView1_btnInsert'}).get('name', '')
         btn = '$'.join(btn.split('$')[:-1])
-        data = {}
-        data = {
+        sex = u'男'
+        if int(contact_info['id_number'][-2])%2 == 0:
+            sex = u'女'
+        con_data = {
             '__EVENTTARGET': '',
             '__EVENTARGUMENT': '',
             '__VIEWSTATE': state,
             '__EVENTVALIDATION': valid,
             'ctl00$ContentPlaceHolder1$DropDownList1': '1',
-            '%s$txtname' %btn: x['name'],
-            '%s$drpsex' %btn: u'男',
-            '%s$txtsfz' %btn: x['id_number'],
-            '%s$txttel' %btn: x['telephone'],
-            '%s$btnInsert' %btn: u'添加',
+            '%s$txtname' % btn: contact_info['name'],
+            '%s$drpsex' % btn: sex,
+            '%s$txtsfz' % btn: contact_info['id_number'],
+            '%s$txttel' % btn: contact_info['telephone'],
+            '%s$btnInsert' % btn: u'添加',
             'ctl00$ContentPlaceHolder1$checktxt2': '',
         }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(data))
+        r = self.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(con_data))
+        
         soup = BeautifulSoup(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
@@ -1203,17 +1206,49 @@ class QdkyWebRebot(Rebot):
                 return (btn, state, valid)
 
     def check_login(self):
-        undone_order_url = 'http://ticket.qdjyjt.com/'
-        headers = {"User-Agent": self.user_agent}
+        url = 'http://ticket.qdjyjt.com/'
+        headers = {
+            'User-Agent': self.user_agent,
+            "Upgrade-Insecure-Requests": 1,
+        }
         cookies = json.loads(self.cookies)
-        r = self.http_get(undone_order_url, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, "lxml")
-        tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        if tel == self.telephone:
-            return 1,state,valid
+        try:
+            r = self.http_get(url, headers=headers, cookies=cookies)
+            soup = BeautifulSoup(r.content, "lxml")
+            tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
+            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            if self.telephone == tel:
+                return 1, state, valid
+            else:
+                self.modify(ip='')
+        except:
+            self.modify(ip='')
         return 0
+
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(
+            is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        if order:
+            for d in Order.objects.filter(status=14,
+                                          crawl_source=SOURCE_QDKY,
+                                          lock_datetime__gt=today) \
+                    .aggregate({
+                        "$group": {
+                            "_id": {"phone": "$source_account"},
+                            "count": {"$sum": "$ticket_amount"}}
+                    }):
+                cnt = d["count"]
+                phone = d["_id"]["phone"]
+                if cnt + int(order.ticket_amount) > 10:
+                    droped.add(phone)
+        tele = random.choice(list(all_accounts - droped))
+        return cls.objects.get(telephone=tele)
+    
+    
 
     # 初始化帐号
     def login(self):
