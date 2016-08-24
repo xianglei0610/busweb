@@ -74,7 +74,7 @@ def dequeue_wating_lock(user):
                 enqueue_wating_lock(order)
                 return None
         else:
-            snmpay_users = AdminUser.objects.filter(is_switch=True, username__startswith="snmpay")
+            snmpay_users = AdminUser.objects.filter(is_switch=True, is_close=False, username__startswith="snmpay")
             if order.crawl_source in ["cqky", "tongcheng", "xyjt", "tzky", "jsdlky"]:
                 if snmpay_users and not rds.get("snmpay_ignore:%s" % order.order_no):
                     enqueue_wating_lock(order)
