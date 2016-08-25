@@ -86,12 +86,14 @@ class Flow(BaseFlow):
             lock_result.update({
                 'result_code': 2,
                 "result_reason": '验证码错误',
+                "lock_info": {"fail_reason": 'input_code'},
             })
             return lock_result
         if u'验证码错误' in r.content.decode('utf-8'):
             lock_result.update({
                 'result_code': 2,
                 "result_reason": '验证码错误',
+                "lock_info": {"fail_reason": 'input_code'},
             })
             return lock_result
         data = {
@@ -381,8 +383,7 @@ class Flow(BaseFlow):
                         "headers": {"User-Agent": rebot.user_agent},
                         "valid_url": valid_url,
                     }
-                    key = "pay_login_info_%s_%s" % (
-                        order.order_no, order.source_account)
+                    key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                     session[key] = json.dumps(data)
                     return {"flag": "input_code", "content": ""}
 
