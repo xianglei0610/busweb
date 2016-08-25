@@ -106,7 +106,7 @@ class Flow(BaseFlow):
         r = rebot.http_post(url, headers=headers,
                             cookies=cookies, data=data, timeout=30)
         soup = bs(r.content, 'lxml')
-        errmsg = soup.find_all('script')[-1].get_text()
+        
         try:
             info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView3'}).find_all('tr')[1].find_all('td')
             order_no = info[1].get_text()
@@ -137,6 +137,10 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
+            try:
+                errmsg = soup.find_all('script')[-1].get_text()
+            except:
+                errmsg = ''
             if '车次错误,请您重新选择其他车次' in errmsg:
                 errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
             lock_result.update({
