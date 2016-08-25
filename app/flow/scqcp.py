@@ -538,7 +538,10 @@ class Flow(BaseFlow):
             if ret["body"].get('ticketLines', []):
                 raw = ret["body"].get('ticketLines', [])[0]
                 full_price = float(raw["fullPrice"])
-                service_price = float(raw["servicePrice"])
+                try:
+                    service_price = float(raw["servicePrice"])
+                except:
+                    service_price = 3.0
                 if service_price != float(3):
                     full_price = full_price + service_price - 3
                     service_price = 3

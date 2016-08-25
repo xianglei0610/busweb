@@ -376,7 +376,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['glcx'])
 
     # 青岛客运
-    sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['qdky'])
+    sched.add_cron_job(bus_crawl, hour=2, minute=0, args=['qdky'])
 
     # 深圳客运
     sched.add_cron_job(bus_crawl, hour=20, minute=0, args=['szky'])
