@@ -296,7 +296,14 @@ class Flow(BaseFlow):
             'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
             'ctl00$ContentPlaceHolder1$Button_1_cx': u'车次查询',
         })
-        r = rebot.http_post(url, data=data, headers=headers)
+        try:
+            r = rebot.http_post(url, data=data, headers=headers, timeout=8)
+        except:
+            now = dte.now()
+            result_info.update(result_msg="except_ok2", 
+                               update_attrs={"left_tickets": 5,
+                                             "refresh_datetime": now})
+            return result_info
         soup = bs(r.content, 'lxml')
         scl_list = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'})
         if scl_list:
