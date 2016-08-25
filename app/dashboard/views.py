@@ -73,7 +73,7 @@ class LoginInView(MethodView):
             rds = get_redis("default")
             try:
                 u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
-                tk = md5(str(time.time))
+                tk = md5(str(time.time()))
                 k = "token%s" % tk
                 rds.set(k, u.username)
                 rds.expire(k, 24*60*60)
