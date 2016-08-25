@@ -270,7 +270,7 @@ class Flow(BaseFlow):
         headers = {"User-Agent": rebot.user_agent,
                    "Content-Type": "application/x-www-form-urlencoded"}
         try:
-            r = rebot.http_get(url, headers=headers)
+            r = rebot.http_get(url, headers=headers, timeout=5)
             soup = bs(r.content, 'lxml')
             params = {
                 "__EVENTARGUMENT": soup.select("#__EVENTARGUMENT")[0].get("value"),
