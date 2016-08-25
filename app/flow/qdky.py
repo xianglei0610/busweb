@@ -108,26 +108,35 @@ class Flow(BaseFlow):
         r = rebot.http_post(url, headers=headers,
                             cookies=cookies, data=data, timeout=30)
         soup = bs(r.content, 'lxml')
+        order_no = ''
+        pay_money = 0
         try:
             info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView3'}).find_all('tr')[1].find_all('td')
             order_no = info[1].get_text()
             pay_money = float(info[7].get_text())
         except:
-            order_no = ''
-            pay_money = 0
+            try:
+                errmsg = soup.find_all('script')[-1].get_text()
+            except:
+                rebot.modify(ip='')
+                errmsg = '网络异常'
+            lock_result.update({
+                'result_code': 2,
+                "result_reason": errmsg,
+            })
+            return lock_result
         url = 'http://ticket.qdjyjt.com/FrontPay.aspx'
         r = rebot.http_get(url, headers=headers, cookies=cookies)
         soup = bs(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-
+        extra_info = {'pcode': tpass,
+                      'cookies': json.dumps(dict(cookies)),
+                      'state': state,
+                      'valid': valid
+                    }
         if order_no and r.ok and pay_money:
-            order.modify(extra_info={'pcode': tpass,
-                                     'cookies': json.dumps(dict(cookies)),
-                                     'state': state,
-                                     'valid': valid
-                                     }
-                         )
+            order.modify(extra_info=extra_info)
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             lock_result.update({
                 'result_code': 1,
@@ -141,7 +150,7 @@ class Flow(BaseFlow):
             try:
                 errmsg = soup.find_all('script')[-1].get_text()
             except:
-                errmsg = ''
+                errmsg = '网络异常2'
             if '车次错误,请您重新选择其他车次' in errmsg:
                 errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
             lock_result.update({
@@ -232,7 +241,7 @@ class Flow(BaseFlow):
             }
             code_list = []
             if pcode:
-                code_list.append(pcode)
+                code_list.append(str(pcode))
             else:
                 code_list.append('无需取票密码')
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_QDKY]
