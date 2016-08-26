@@ -245,7 +245,7 @@ SOURCE_INFO = {
     },
     SOURCE_SCQCP: {
         "name": "四川汽车票务网",
-        "website": "www.scqcp.com",
+        "website": "http://scqcp.com/",
         "limit_payct": 20,
         "accounts": {
             # telephone: {password, is_encrypt)
