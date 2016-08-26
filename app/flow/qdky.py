@@ -24,7 +24,7 @@ from app.models import QdkyWebRebot
 class Flow(BaseFlow):
     name = 'qdky'
 
-    def do_lock_ticket(self, order, valid_code=""):
+    def do_lock_ticket(self, order, valid_code="", state='', valid=''):
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
@@ -36,33 +36,59 @@ class Flow(BaseFlow):
             "pay_money": 0,
         }
         rebot = order.get_lock_rebot()
-        res = rebot.add_riders(order)
-        if res[0] == '-1':
+        add_info = self.request_add_riders(order, rebot, state, valid)
+        if add_info.get('error_code', ''):
             lock_result.update({
                 'result_code': 2,
-                'result_reason': res[1],
+                'result_reason': add_info.get('errmsg', ''),
             })
             return lock_result
+        res = self.send_lock_requests(order, rebot, add_info, valid_code)
+        lock_result.update({"lock_info": res})
+        if res.get('order_no', ''):
+            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+            lock_result.update({
+                'result_code': 1,
+                'raw_order_no': res['order_no'],
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                'pay_money': res['pay_money'],
+            })
+            return lock_result
+        else:
+            lock_result.update({
+                'result_code': 2,
+                "result_reason": res.get('result_reason', ''),
+            })
+            return lock_result
+
+    def send_lock_requests(self, order, rebot, add_info, valid_code):
         pk = len(order.riders)
-        tpass = random.randint(111111, 999999)
-        data = {
-            '__EVENTTARGET': '',
-            '__EVENTARGUMENT': '',
-            '__VIEWSTATE': res[1],
-            '__EVENTVALIDATION': res[2],
-            'ctl00$ContentPlaceHolder1$DropDownList1': pk,
-            'MyRadioButton': res[0],
-            'ctl00$ContentPlaceHolder1$GridView1$ctl%s$txtpwd' %(str(int(res[0])+2).zfill(2)): str(tpass),
-            'ctl00$ContentPlaceHolder1$checktxt2': valid_code,
-            'ctl00$ContentPlaceHolder1$show': u'提交订单',
-        }
         url = 'http://ticket.qdjyjt.com/'
+        res = {}
+        errmsg = ''
         cookies = json.loads(rebot.cookies)
         headers = {
             'User-Agent': rebot.user_agent,
             'Content-Type': 'application/x-www-form-urlencoded',
         }
+        headers['Referer'] = 'http://ticket.qdjyjt.com/'
+        headers['Host'] = 'ticket.qdjyjt.com'
+        tpass = random.randint(111111, 999999)
+        data = {
+            '__EVENTTARGET': '',
+            '__EVENTARGUMENT': '',
+            '__VIEWSTATE': add_info['state'],
+            '__EVENTVALIDATION': add_info['valid'],
+            'ctl00$ContentPlaceHolder1$DropDownList1': pk,
+            'MyRadioButton': add_info['btn'],
+            'ctl00$ContentPlaceHolder1$GridView1$ctl%s$txtpwd' % (str(int(add_info['btn'])+2).zfill(2)): str(tpass),
+            'ctl00$ContentPlaceHolder1$checktxt2': valid_code,
+            'ctl00$ContentPlaceHolder1$show': u'提交订单',
+        }
+        time.sleep(1)
         r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
+        cookies.update(dict(r.cookies))
         soup = bs(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
@@ -75,27 +101,30 @@ class Flow(BaseFlow):
             'ctl00$ContentPlaceHolder1$checktxt2': valid_code,
             'ctl00$ContentPlaceHolder1$collectPersonViewSubmitButton': u'确定',
         }
-        headers['Referer'] = 'http://ticket.qdjyjt.com/'
-        headers['Host'] = 'ticket.qdjyjt.com'
-        r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(data), timeout=30)
-        soup = bs(r.content, 'lxml')
         try:
+            time.sleep(1)
+            r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(data), timeout=30)
+            soup = bs(r.content, 'lxml')
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            try:
+                errmsg = soup.find_all('script')[-1].get_text()
+            except:
+                rebot.modify(ip='')
+                errmsg = '锁票 网络异常'
+            cookies.update(dict(r.cookies))
         except:
-            lock_result.update({
-                'result_code': 2,
-                "result_reason": '验证码错误',
-                "lock_info": {"fail_reason": 'input_code'},
+            res.update({
+                "result_reason": errmsg or '验证码错误',
+                "fail_type": errmsg or 'input_code',
             })
-            return lock_result
+            return res
         if u'验证码错误' in r.content.decode('utf-8'):
-            lock_result.update({
-                'result_code': 2,
+            res.update({
                 "result_reason": '验证码错误',
-                "lock_info": {"fail_reason": 'input_code'},
+                "fail_type": 'input_code',
             })
-            return lock_result
+            return res
         data = {
             '__EVENTTARGET': '',
             '__EVENTARGUMENT': '',
@@ -105,28 +134,31 @@ class Flow(BaseFlow):
             'RadioButtonUnpaid': '0',
             'ctl00$ContentPlaceHolder1$payButtonWaitConfirm': u'网银付款',
         }
-        r = rebot.http_post(url, headers=headers,
-                            cookies=cookies, data=data, timeout=30)
-        soup = bs(r.content, 'lxml')
         order_no = ''
         pay_money = 0
         try:
+            time.sleep(1)
+            r = rebot.http_post(url, headers=headers, cookies=cookies, data=data,timeout=30)
+            soup = bs(r.content, 'lxml')
             info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView3'}).find_all('tr')[1].find_all('td')
             order_no = info[1].get_text()
             pay_money = float(info[7].get_text())
-        except:
+            cookies.update(dict(r.cookies))
             try:
                 errmsg = soup.find_all('script')[-1].get_text()
             except:
                 rebot.modify(ip='')
-                errmsg = '网络异常'
-            lock_result.update({
-                'result_code': 2,
-                "result_reason": errmsg,
+                errmsg = '网银付款'
+        except:
+            res.update({
+                'result_reason': errmsg,
+                "fail_type": '网银付款',
             })
-            return lock_result
+            return res
+
         url = 'http://ticket.qdjyjt.com/FrontPay.aspx'
         r = rebot.http_get(url, headers=headers, cookies=cookies)
+        cookies.update(dict(r.cookies))
         soup = bs(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
@@ -134,35 +166,151 @@ class Flow(BaseFlow):
                       'cookies': json.dumps(dict(cookies)),
                       'state': state,
                       'valid': valid
-                    }
+                      }
         if order_no and r.ok and pay_money:
+            res.update({'order_no': order_no, "pay_money": pay_money})
             order.modify(extra_info=extra_info)
-            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
-            lock_result.update({
-                'result_code': 1,
-                'raw_order_no': order_no,
-                "expire_datetime": expire_time,
-                "source_account": rebot.telephone,
-                'pay_money': pay_money,
-            })
-            return lock_result
+            return res
         else:
             try:
                 errmsg = soup.find_all('script')[-1].get_text()
             except:
                 errmsg = '网络异常2'
-            if '车次错误,请您重新选择其他车次' in errmsg:
-                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            lock_result.update({
-                'result_code': 2,
-                "result_reason": errmsg,
+            res.update({
+                'result_reason': errmsg,
+                "fail_type": '最后付款',
             })
-            return lock_result
+            return res
+
+    def request_add_riders(self, order, rebot, state, valid):
+        contact_info = order.contact_info
+        cookies = json.loads(rebot.cookies)
+        url = 'http://ticket.qdjyjt.com/'
+        headers = {
+            'User-Agent': rebot.user_agent,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+        line = order.line
+        sch_data = {
+            '__EVENTTARGET': '',
+            '__EVENTARGUMENT': '',
+            '__VIEWSTATE': state,
+            '__EVENTVALIDATION': valid,
+            'ctl00$ContentPlaceHolder1$DropDownList3': unicode(line.extra_info['s_station_name']),
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
+            'destination-id': line.d_city_id,
+            'ctl00$ContentPlaceHolder1$mudizhan_id': '',
+            'tripDate': line.drv_date.replace('-', '/'),
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
+            'ctl00$ContentPlaceHolder1$Button_1_cx': '车次查询',
+        }
+        try:
+            r = rebot.http_post(url, headers=headers, cookies=cookies, data=sch_data)
+            soup = bs(r.content, "lxml")
+            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'}).find_all('tr')
+            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            cookies.update(dict(r.cookies))
+        except:
+            rebot.modify(ip='')
+            errmsg = soup.find_all('script')[-1].get_text()
+            errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+            return {'error_code': '1', "errmsg": "车次查询异常"+errmsg}
+        tbc = ''
+        for y in info[1:]:
+            z = y.find_all('td')
+            bus_num = z[1].get_text().strip()
+            drv_time = z[2].get_text().strip()
+            if bus_num == line.bus_num and drv_time == line.drv_time:
+                tbc = y.find('input', attrs={'id': True, 'value': '预订'}).get('name', '')
+        if not tbc:
+            return {'error_code': '2', "errmsg": "找不到此班次"}
+        time.sleep(0.5)
+        cli_data = {
+            '__EVENTTARGET': '',
+            '__EVENTARGUMENT': '',
+            '__EVENTVALIDATION': valid,
+            '__VIEWSTATE': state,
+            tbc: '预订',
+            'ctl00$ContentPlaceHolder1$DropDownList3': '-1',
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': '1',
+            'destination-id': '',
+            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_city_id,
+            'tripDate': '请选择',
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id': line.drv_date.replace('-', ''),
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': line.drv_date.replace('-', '/'),
+        }
+        try:
+            r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(cli_data))
+            cookies.update(dict(r.cookies))
+            soup = bs(r.content, "lxml")
+            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
+            for y in info[1:]:
+                uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
+                if uid == contact_info['id_number']:
+                    btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
+                    rebot.modify(cookies=json.dumps(cookies))
+                    return {"btn": btn, 'state': state, "valid": valid}
+        except:
+            rebot.modify(ip='')
+            errmsg = soup.find_all('script')[-1].get_text()
+            errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+            return {'error_code': '3', "errmsg": "预订"+errmsg}
+        data = {
+            '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonXiugai',
+            '__EVENTARGUMENT': '',
+            '__VIEWSTATE': state,
+            '__EVENTVALIDATION': valid,
+            'ctl00$ContentPlaceHolder1$DropDownList1': '1',
+            'ctl00$ContentPlaceHolder1$checktxt2': '',
+        }
+        time.sleep(0.5)
+        r = rebot.http_post(url, headers=headers, cookies=cookies, data=data)
+        cookies.update(dict(r.cookies))
+        soup = bs(r.content, "lxml")
+        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+        btn = soup.find('input', attrs={'id': 'ContentPlaceHolder1_GridView1_btnInsert'}).get('name', '')
+        btn = '$'.join(btn.split('$')[:-1])
+        sex = u'男'
+        if int(contact_info['id_number'][-2]) % 2 == 0:
+            sex = u'女'
+        con_data = {
+            '__EVENTTARGET': '',
+            '__EVENTARGUMENT': '',
+            '__VIEWSTATE': state,
+            '__EVENTVALIDATION': valid,
+            'ctl00$ContentPlaceHolder1$DropDownList1': '1',
+            '%s$txtname' % btn: contact_info['name'],
+            '%s$drpsex' % btn: sex,
+            '%s$txtsfz' % btn: contact_info['id_number'],
+            '%s$txttel' % btn: contact_info['telephone'],
+            '%s$btnInsert' % btn: u'添加',
+            'ctl00$ContentPlaceHolder1$checktxt2': '',
+        }
+        time.sleep(0.5)
+        r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(con_data))
+        cookies.update(dict(r.cookies))
+        soup = bs(r.content, 'lxml')
+        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+        x = order.contact_info
+        info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
+#         info1 = soup.find_all('script')[-1]
+        for y in info[1:]:
+            uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
+            if uid == x['id_number']:
+                btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
+                rebot.modify(cookies=json.dumps(cookies))
+                return {"btn": btn, 'state': state, "valid": valid}
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
-        v = rebot.check_login()
-        if not v:
+        res = rebot.check_login()
+        if not res:
             return
         url = 'http://ticket.qdjyjt.com/'
         cookies = json.loads(rebot.cookies)
@@ -173,8 +321,8 @@ class Flow(BaseFlow):
         data = {
             '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButton10',
             '__EVENTARGUMENT': '',
-            '__VIEWSTATE': v[1],
-            '__EVENTVALIDATION': v[2],
+            '__VIEWSTATE': res['state'],
+            '__EVENTVALIDATION': res['valid'],
             'ctl00$ContentPlaceHolder1$DropDownList3': '-1',
             'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
             'destination-id': '',
@@ -349,7 +497,10 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
-        is_login = rebot.test_login_status()
+        res = rebot.check_login()
+        is_login = False
+        if res and res.get('is_login', 0):
+            is_login = True
         if valid_code and not is_login: # 登录验证码
             key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
             info = json.loads(session[key])
@@ -387,17 +538,21 @@ class Flow(BaseFlow):
                 rebot.modify(cookies='{}', ip='')
         if is_login:
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-                fail_msg = ''
+                fail_type = ''
+                state = res.get("state", '')
+                valid = res.get('valid', '')
                 if valid_code:
-                    self.lock_ticket(order, valid_code=valid_code)
+                    self.lock_ticket(order, valid_code=valid_code, state=state,valid=valid)
                     order.reload()
-                    fail_msg = order.lock_info.get("fail_reason", "")
-                if not valid_code or fail_msg == "input_code":
+                    fail_type = order.lock_info.get("fail_type", "")
+                if not valid_code or not valid or fail_type == "input_code":
                     valid_url = 'http://ticket.qdjyjt.com/yzm.aspx'
                     data = {
                         "cookies": json.loads(rebot.cookies),
                         "headers": {"User-Agent": rebot.user_agent},
                         "valid_url": valid_url,
+                        'state': state,
+                        'valid': state,
                     }
                     key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
                     session[key] = json.dumps(data)
@@ -421,15 +576,22 @@ class Flow(BaseFlow):
                 return {"flag": "html", "content": r.content}
         # 未登录
         if not is_login:
+            state = res.get("state", '')
+            valid = res.get('valid', '')
             headers = {
-                'User-Agent': rebot.user_agent,
-                "Upgrade-Insecure-Requests": 1,
-            }
+                    'User-Agent': rebot.user_agent,
+                    "Upgrade-Insecure-Requests": 1,
+                    }
+            cookies = json.loads(rebot.cookies)
+            if not cookies:
+                cookies = {}
             url = 'http://ticket.qdjyjt.com/'
-            r = rebot.http_get(url, headers=headers)
-            soup = bs(r.content, 'lxml')
-            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            if not state or not valid:
+                r = rebot.http_get(url, headers=headers)
+                cookies.update(dict(r.cookies))
+                soup = bs(r.content, 'lxml')
+                state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+                valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
             data = {
                 '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonLoginMemu',
                 '__EVENTARGUMENT': '',
@@ -443,14 +605,14 @@ class Flow(BaseFlow):
                 'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
                 'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
             }
-            r = rebot.http_post(url, headers=headers, data=data, cookies=r.cookies)
+            r = rebot.http_post(url, headers=headers, data=data, cookies=cookies)
+            cookies.update(dict(r.cookies))
             soup = bs(r.content, 'lxml')
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-
             valid_url = 'http://ticket.qdjyjt.com/yzm.aspx'
             data = {
-                "cookies": {},
+                "cookies": cookies,
                 "headers": headers,
                 "valid_url": valid_url,
                 'state': state,

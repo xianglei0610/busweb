@@ -1088,120 +1088,7 @@ class QdkyWebRebot(Rebot):
         pass
 
     def add_riders(self, order):
-        url = 'http://ticket.qdjyjt.com/'
-        headers = {
-            'User-Agent': self.user_agent,
-            'Content-Type': 'application/x-www-form-urlencoded',
-        }
-        cookies = json.loads(self.cookies)
-        res = self.check_login()
-        line = order.line
-        sch_data = {
-            '__EVENTTARGET': '',
-            '__EVENTARGUMENT': '',
-            '__VIEWSTATE': res[1],
-            '__EVENTVALIDATION': res[2],
-            'ctl00$ContentPlaceHolder1$DropDownList3': unicode(line.extra_info['s_station_name']),
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
-            'destination-id': line.d_city_id,
-            'ctl00$ContentPlaceHolder1$mudizhan_id': '',
-            'tripDate': line.drv_date.replace('-', '/'),
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
-            'ctl00$ContentPlaceHolder1$Button_1_cx': '车次查询',
-        }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=sch_data)
-        soup = BeautifulSoup(r.content, "lxml")
-        try:
-            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'}).find_all('tr')
-        except:
-            errmsg = soup.find_all('script')[-1].get_text()
-            errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            return '-1', errmsg
-        tbc = ''
-        for y in info[1:]:
-            z = y.find_all('td')
-            bus_num = z[1].get_text().strip()
-            drv_time = z[2].get_text().strip()
-            if bus_num == line.bus_num and drv_time == line.drv_time:
-                tbc = y.find('input', attrs={'id': True, 'value': '预订'}).get('name', '')
-        if not tbc:
-            return ('-1', '找不到此班次')
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        cli_data = {
-            '__EVENTTARGET': '',
-            '__EVENTARGUMENT': '',
-            '__EVENTVALIDATION': valid,
-            tbc: '预订',
-            'ctl00$ContentPlaceHolder1$DropDownList3': '-1',
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '1',
-            'destination-id': '',
-            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_city_id,
-            'tripDate': '请选择',
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id': line.drv_date.replace('-', ''),
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': line.drv_date.replace('-', '/'),
-            '__VIEWSTATE': state,
-        }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(cli_data))
-        soup = BeautifulSoup(r.content, "lxml")
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        contact_info = order.contact_info
-        try:
-            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
-        except:
-            errmsg = soup.find_all('script')[-1].get_text()
-            errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            return '-1', errmsg
-        for y in info[1:]:
-            uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
-            if uid == contact_info['id_number']:
-                btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
-                return (btn, state, valid)
-        data = {
-            '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonXiugai',
-            '__EVENTARGUMENT': '',
-            '__VIEWSTATE': state,
-            '__EVENTVALIDATION': valid,
-            'ctl00$ContentPlaceHolder1$DropDownList1': '1',
-            'ctl00$ContentPlaceHolder1$checktxt2': '',
-        }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=data)
-        soup = BeautifulSoup(r.content, "lxml")
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        btn = soup.find('input', attrs={'id': 'ContentPlaceHolder1_GridView1_btnInsert'}).get('name', '')
-        btn = '$'.join(btn.split('$')[:-1])
-        sex = u'男'
-        if int(contact_info['id_number'][-2])%2 == 0:
-            sex = u'女'
-        con_data = {
-            '__EVENTTARGET': '',
-            '__EVENTARGUMENT': '',
-            '__VIEWSTATE': state,
-            '__EVENTVALIDATION': valid,
-            'ctl00$ContentPlaceHolder1$DropDownList1': '1',
-            '%s$txtname' % btn: contact_info['name'],
-            '%s$drpsex' % btn: sex,
-            '%s$txtsfz' % btn: contact_info['id_number'],
-            '%s$txttel' % btn: contact_info['telephone'],
-            '%s$btnInsert' % btn: u'添加',
-            'ctl00$ContentPlaceHolder1$checktxt2': '',
-        }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(con_data))
-
-        soup = BeautifulSoup(r.content, 'lxml')
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        x = order.contact_info
-        info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
-        info1 = soup.find_all('script')[-1]
-        for y in info[1:]:
-            uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
-            if uid == x['id_number']:
-                btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
-                return (btn, state, valid)
+        pass
 
     def check_login(self):
         url = 'http://ticket.qdjyjt.com/'
@@ -1210,19 +1097,24 @@ class QdkyWebRebot(Rebot):
             "Upgrade-Insecure-Requests": 1,
         }
         cookies = json.loads(self.cookies)
+        res = {}
         try:
             r = self.http_get(url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            res.update({"state": state, "valid": valid})
+            self.modify(cookies=json.dumps(cookies.update(dict(r.cookies))))
             if self.telephone == tel:
-                return 1, state, valid
+                res.update({"is_login": 1})
             else:
                 self.modify(ip='')
+                res.update({"is_login": 0})
+            return res
         except:
             self.modify(ip='')
-        return 0
+        return res
 
     @classmethod
     def get_one(cls, order=None):
