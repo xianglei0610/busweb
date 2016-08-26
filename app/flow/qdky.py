@@ -331,6 +331,7 @@ class Flow(BaseFlow):
             'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
             'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
         }
+        time.sleep(1)
         r = rebot.http_post(url, headers=headers, cookies=cookies, data=data)
         soup = bs(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
@@ -342,6 +343,7 @@ class Flow(BaseFlow):
             '__EVENTVALIDATION': valid,
             'ctl00$ContentPlaceHolder1$ButtonUnpaidOrderSearch': '订单明细查询',
         }
+        time.sleep(1)
         r = rebot.http_post(url, headers=headers, cookies=cookies, data=data)
         soup = bs(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
@@ -354,6 +356,7 @@ class Flow(BaseFlow):
             'ctl00$ContentPlaceHolder1$TextBox17': dte.now().strftime('%Y%m%d'),
             'ctl00$ContentPlaceHolder1$ButtonSearchPaidOrder': '按订单日期查询',
         }
+        time.sleep(1)
         r = rebot.http_post(url, headers=headers, cookies=cookies, data=data)
         soup = bs(r.content, 'lxml')
         info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewpaid'}).find_all('tr')
