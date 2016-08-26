@@ -107,11 +107,11 @@ class Flow(BaseFlow):
             else:
                 params[name]=value
 
-        kefu = AdminUser.objects.get(username=order.kefu_username)
-        # params["bankname"] = "ZHIFUBAO"  # 支付宝支付
-        # params["paytype"] = "3"  # 支付宝支付
-        params["paytype"] = "1"  # 支付宝支付
-        params["bankname"] = kefu.yh_type
+        params["bankname"] = "ZHIFUBAO"  # 支付宝支付
+        params["paytype"] = "3"  # 支付宝支付
+        # kefu = AdminUser.objects.get(username=order.kefu_username)
+        # params["paytype"] = "1"  # 支付宝支付
+        # params["bankname"] = kefu.yh_type
         params["member_name"] = order.contact_info["name"]
 
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
@@ -286,7 +286,7 @@ class Flow(BaseFlow):
                     elif k == "total_fee":
                         pay = float(v)
                 if no and order.pay_order_no != no:
-                    order.modify(pay_order_no=no, pay_money=pay, pay_channel='yh')
+                    order.modify(pay_order_no=no, pay_money=pay, pay_channel='alipay')
                 return {"flag": "url", "content": pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)

@@ -181,17 +181,17 @@ class Flow(BaseFlow):
         ret = self.send_order_request(order)
         state = ret['state']
         code = ret['pick_code']
-        if '已取消' in state:
-            result_info.update({
-                "result_code": 5,
-                "result_msg": state,
-            })
+        #if '已取消' in state:
+        #    result_info.update({
+        #        "result_code": 5,
+        #        "result_msg": state,
+        #    })
         # elif '失败' in state:  # 出现了单状态是失败, 但源站表示出票成功, 先注释掉
         #     result_info.update({
         #         "result_code": 2,
         #         "result_msg": state,
         #     })
-        elif '已付款确认' in state and code:
+        if '已付款确认' in state and code:
             no, site, raw_order = ret['pick_no'], ret[
                 'pick_site'], ret['raw_order']
             dx_info = {
