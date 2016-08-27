@@ -19,7 +19,7 @@ from datetime import datetime as dte
 from PIL import Image
 from lxml import etree
 from app.utils import md5
-
+from tasks import issued_callback
 
 class Flow(BaseFlow):
     name = "scqcp"
@@ -589,7 +589,12 @@ class Flow(BaseFlow):
             app_rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
             res = self.send_order_request_by_web(order, app_rebot)
             if res.get('drv_date', '') != order.drv_datetime.strftime("%Y-%m-%d %H:%M:%S"):
-                return {"flag": "error", "content": "时间不一致，不允许支付!"}    
+                errmsg = '时间不一致，不允许支付!'
+                self.close_line(order.line, reason=errmsg)
+                order.modify(status=STATUS_LOCK_FAIL)
+                order.on_lock_fail(reason=errmsg)
+                issued_callback.delay(order.order_no)
+                return {"flag": "error", "content": errmsg}
             r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
@@ -609,7 +614,7 @@ class Flow(BaseFlow):
             except:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
-                return {"flag": "error", "content": "请重试!"}    
+                return {"flag": "error", "content": "请重试!"}
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             cookies = json.loads(rebot.cookies)
             r = rebot.http_post(info_url, data=data, headers=headers, cookies=cookies,timeout=60)
