@@ -135,7 +135,7 @@ class Flow(BaseFlow):
             return lock_result
         else:
             code = 2
-            if "检票车站在班次途经站中不存在" in location:
+            if "检票车站在班次途经站中不存在" in location or u"车次剩票张数小于售票数" in location:
                 self.close_line(line, reason=location)
                 code = 0
             lock_result.update({
