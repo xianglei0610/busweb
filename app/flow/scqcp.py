@@ -556,7 +556,7 @@ class Flow(BaseFlow):
             else:  # 线路信息没查到
                 result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 3, "refresh_datetime": now})
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", bank='',**kwargs):
