@@ -47,6 +47,7 @@ YH_TYPE_SOURCE = [SOURCE_BJKY, SOURCE_HEBKY, SOURCE_SCQCP,
                   SOURCE_SZKY, SOURCE_ZHW, SOURCE_BUS365,
                   SOURCE_GLCX, SOURCE_FJKY, SOURCE_CHANGTU,
                   SOURCE_QDKY]
+SNMPAY_SOURCE = ["cqky", "tongcheng", "xyjt", "tzky", "jsdlky", "sd365", "lvtu100", "gdsw"]
 
 
 SOURCE_INFO = {
