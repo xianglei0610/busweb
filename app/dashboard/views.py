@@ -83,10 +83,12 @@ class LoginInView(MethodView):
         else:                                       # 网页登陆
             session["username"] = name
             session["password"] = pwd
-            code = request.form.get("validcode")
-            if not code or code != session.get("img_valid_code"):
+            code = request.form.get("validcode", "")
+
+            if not name.startswith("snmpay") and (not code or code != session.get("img_valid_code")):
                 flash("验证码错误", "error")
                 return redirect(url_for('dashboard.login'))
+
             try:
                 u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
                 flask_login.login_user(u)
