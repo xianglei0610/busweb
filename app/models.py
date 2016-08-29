@@ -1061,7 +1061,7 @@ class Rebot(db.Document):
 
 class QdkyWebRebot(Rebot):
     user_agent = db.StringField()
-    cookies = db.StringField()
+    cookies = db.StringField(default="{}")
     ip = db.StringField(default="")
 
     # indexes索引, 'collections'
@@ -1096,7 +1096,7 @@ class QdkyWebRebot(Rebot):
             'User-Agent': self.user_agent,
             "Upgrade-Insecure-Requests": 1,
         }
-        cookies = json.loads(self.cookies)
+        cookies = json.loads(self.cookies) or {}
         res = {}
         try:
             r = self.http_get(url, headers=headers, cookies=cookies)
@@ -1105,14 +1105,15 @@ class QdkyWebRebot(Rebot):
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
             res.update({"state": state, "valid": valid})
-            self.modify(cookies=json.dumps(cookies.update(dict(r.cookies))))
+            cookies.update(dict(r.cookies))
+            self.modify(cookies=json.dumps(cookies))
             if self.telephone == tel:
                 res.update({"is_login": 1})
             else:
                 self.modify(ip='')
                 res.update({"is_login": 0})
             return res
-        except:
+        except Exception, e:
             self.modify(ip='')
         return res
 

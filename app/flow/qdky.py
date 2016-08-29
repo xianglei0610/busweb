@@ -310,7 +310,7 @@ class Flow(BaseFlow):
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
         res = rebot.check_login()
-        if not res:
+        if not res or not res.get('is_login', 0):
             return
         url = 'http://ticket.qdjyjt.com/'
         cookies = json.loads(rebot.cookies)
@@ -501,10 +501,7 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
-        res = rebot.check_login()
         is_login = False
-        if res and res.get('is_login', 0):
-            is_login = True
         if valid_code and not is_login: # 登录验证码
             key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
             info = json.loads(session[key])
@@ -540,6 +537,9 @@ class Flow(BaseFlow):
                 is_login = True
             else:
                 rebot.modify(cookies='{}', ip='')
+        res = rebot.check_login()
+        if res and res.get('is_login', 0):
+            is_login = True
         if is_login:
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 fail_type = ''
@@ -586,9 +586,7 @@ class Flow(BaseFlow):
                     'User-Agent': rebot.user_agent,
                     "Upgrade-Insecure-Requests": 1,
                     }
-            cookies = json.loads(rebot.cookies)
-            if not cookies:
-                cookies = {}
+            cookies = json.loads(rebot.cookies) or {}
             url = 'http://ticket.qdjyjt.com/'
             if not state or not valid:
                 r = rebot.http_get(url, headers=headers)
