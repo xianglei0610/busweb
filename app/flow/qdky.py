@@ -524,19 +524,19 @@ class Flow(BaseFlow):
                 'Referer': 'http://ticket.qdjyjt.com/',
                 'Host': 'ticket.qdjyjt.com',
             })
-            r = rebot.http_post('http://ticket.qdjyjt.com/',
-                                data=urllib.urlencode(params),
-                                headers=custom_headers,
-                                # allow_redirects=False,
-                                cookies=cookies)
-            soup = bs(r.content, 'lxml')
-            tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
-            if rebot.telephone == tel:
-                cookies.update(dict(r.cookies))
-                rebot.modify(cookies=json.dumps(cookies))
-                is_login = True
-            else:
-                rebot.modify(cookies='{}', ip='')
+            url = 'http://ticket.qdjyjt.com/'
+            try:
+                r = rebot.http_post(url, data=urllib.urlencode(params),headers=custom_headers,cookies=cookies)
+                soup = bs(r.content, 'lxml')
+                tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
+                if rebot.telephone == tel:
+                    cookies.update(dict(r.cookies))
+                    rebot.modify(cookies=json.dumps(cookies))
+                    is_login = True
+                else:
+                    rebot.modify(cookies='{}', ip='')
+            except:
+                rebot.modify(ip='')
         res = rebot.check_login()
         if res and res.get('is_login', 0):
             is_login = True
