@@ -19,7 +19,7 @@ from datetime import datetime as dte
 from PIL import Image
 from lxml import etree
 from app.utils import md5
-
+from tasks import issued_callback
 
 class Flow(BaseFlow):
     name = "scqcp"
@@ -478,6 +478,7 @@ class Flow(BaseFlow):
                 "pick_no": [],
                 "pick_code": ret["body"].get('code', ''),
                 "order_no": ret["body"].get('webOrderId', ''),
+                "drv_date": ret["body"].get('drvDate', ''),
             }
 
     def do_refresh_line(self, line):
@@ -580,41 +581,20 @@ class Flow(BaseFlow):
             rebot.modify(ip='')
             return {"flag": "error", "content": "账号自动登陆失败，请再次重试!"}
 
-        # 验证码处理
-        # if not is_login:
-        #     if valid_code:
-        #         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-        #         data = json.loads(session[key])
-        #         code_url = data["valid_url"]
-        #         headers = data["headers"]
-        #         cookies = data["cookies"]
-        #         token = data["token"]
-        #     else:
-        #         login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
-        #         if new_headers.has_key('Content-Type'):
-        #             del new_headers['Content-Type']
-        #         r = rebot.http_get(login_form_url, headers=new_headers)
-        #         sel = etree.HTML(r.content)
-        #         cookies = dict(r.cookies)
-        #         code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
-        #         code_url = code_url.split('?')[0]+"?d=0.%s" % random.randint(1, 10000)
-        #         token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
-        #         r = rebot.http_get(code_url, headers=new_headers, cookies=cookies)
-        #         cookies.update(dict(r.cookies))
-        #         tmpIm = cStringIO.StringIO(r.content)
-        #         im = Image.open(tmpIm)
-        #         valid_code = pytesseract.image_to_string(im)
-
-        #     msg = rebot.login(valid_code=valid_code, token=token, headers=headers, cookies=cookies)
-        #     if msg == "OK":
-        #         is_login = True
-        #         rebot.modify(cookies=json.dumps(cookies))
-        # if is_login:
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()
 
         if order.status == STATUS_WAITING_ISSUE:
+            app_rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
+            res = self.send_order_request_by_web(order, app_rebot)
+            if res.get('drv_date', '') != order.drv_datetime.strftime("%Y-%m-%d %H:%M:%S"):
+                errmsg = '时间不一致，不允许支付!'
+                self.close_line(order.line, reason=errmsg)
+                order.modify(status=STATUS_LOCK_FAIL)
+                order.on_lock_fail(reason=errmsg)
+                issued_callback.delay(order.order_no)
+                return {"flag": "error", "content": errmsg}
             r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
             r_url = urllib2.urlparse.urlparse(r.url)
             if r_url.path in ["/error.html", "/error.htm"]:
@@ -634,7 +614,7 @@ class Flow(BaseFlow):
             except:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
-                return {"flag": "error", "content": "请重试!"}    
+                return {"flag": "error", "content": "请重试!"}
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             cookies = json.loads(rebot.cookies)
             r = rebot.http_post(info_url, data=data, headers=headers, cookies=cookies,timeout=60)
