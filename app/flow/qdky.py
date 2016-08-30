@@ -89,7 +89,6 @@ class Flow(BaseFlow):
         }
         time.sleep(1)
         r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
-        cookies.update(dict(r.cookies))
         soup = bs(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
@@ -236,7 +235,7 @@ class Flow(BaseFlow):
             '__VIEWSTATE': state,
             tbc: '预订',
             'ctl00$ContentPlaceHolder1$DropDownList3': '-1',
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '1',
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': line.extra_info['s_station_name'][0],
             'destination-id': '',
             'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_city_id,
             'tripDate': '请选择',
@@ -434,9 +433,7 @@ class Flow(BaseFlow):
             }
         except:
             now = dte.now()
-            result_info.update(result_msg="except_ok", 
-                               update_attrs={"left_tickets": 5,
-                                             "refresh_datetime": now})
+            result_info.update(result_msg="except_ok", update_attrs={"left_tickets": 5,"refresh_datetime": now})
             return result_info
         data = {}
         data.update(params)
@@ -454,9 +451,7 @@ class Flow(BaseFlow):
             r = rebot.http_post(url, data=data, headers=headers, timeout=8)
         except:
             now = dte.now()
-            result_info.update(result_msg="except_ok2", 
-                               update_attrs={"left_tickets": 5,
-                                             "refresh_datetime": now})
+            result_info.update(result_msg="except_ok2", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
         soup = bs(r.content, 'lxml')
         scl_list = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'})
