@@ -110,7 +110,7 @@ class Flow(BaseFlow):
             token = res.get('token', '')
         elif res.get('status', '') == 1:
             msg = res.get('msg', '')
-            if u'输入参数不对，请参考接口文档' in msg or u'维护升级' in msg or 'connect timed out' in msg:
+            if u'输入参数不对' in msg or u'维护升级' in msg or 'connect timed out' in msg or  u'网络错误' in msg:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
                 lock_result.update(result_code=2,
@@ -198,12 +198,11 @@ class Flow(BaseFlow):
                 })
                 return lock_result
 
-            for s in ["余票不足", "只能预售2小时之后的票", "余位不够", "已售完",
-                      "超出最大座位数","已停售",'不允许远程售票',"不在网上销售"]:
+            for s in ["余票不足", "2小时之后的票", "余位不够", "已售完",
+                      "超出最大座位数","已停售",'不允许远程售票',"不在网上销售",'不预售']:
                 if s in errmsg:
                     self.close_line(order.line, reason=errmsg)
                     break
-
             lock_result.update({
                 "result_code": 0,
                 "result_reason": ret['msg'],
@@ -227,7 +226,7 @@ class Flow(BaseFlow):
                 }
         url = "%s?%s" % (url, urllib.urlencode(params))
         try:
-            r = rebot.http_get(url, headers=new_headers, timeout=15)
+            r = rebot.http_get(url, headers=new_headers, timeout=40)
             sel = etree.HTML(r.content)
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
