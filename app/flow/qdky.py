@@ -379,6 +379,7 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
+        time.sleep(random.choice([3, 5, 10, 15, 20]))
         ret = self.send_order_request(order)
         #ret = {'state': '已付款订单', 'raw_order':order.raw_order_no}
         state = ret['state']
@@ -439,12 +440,12 @@ class Flow(BaseFlow):
         data.update(params)
         data.update({
             'ctl00$ContentPlaceHolder1$DropDownList3': unicode(line.extra_info['s_station_name']),
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': line.extra_info['s_station_name'][0],
             'destination-id': unicode(line.d_city_id),
-            'ctl00$ContentPlaceHolder1$mudizhan_id': '',
+            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_city_id,
             'tripDate': unicode(line.drv_date.replace('-', '/')),
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id': line.drv_date.replace('-', ''),
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': line.drv_date.replace('-', '/'),
             'ctl00$ContentPlaceHolder1$Button_1_cx': u'车次查询',
         })
         try:
