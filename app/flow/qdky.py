@@ -104,7 +104,6 @@ class Flow(BaseFlow):
         try:
             time.sleep(3)
             r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
-            print r.content
             soup = bs(r.content, 'lxml')
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
