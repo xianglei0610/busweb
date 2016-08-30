@@ -186,7 +186,7 @@ class Flow(BaseFlow):
                     })
                 return lock_result
             flag = False
-            for i in [u"执行方法GetSchSeatsNo出错"]:
+            for i in [u"执行方法GetSchSeatsNo出错",u'执行失败']:
                 if i in errmsg:
                     flag = True
                     break
