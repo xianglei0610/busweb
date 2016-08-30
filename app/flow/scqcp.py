@@ -489,13 +489,13 @@ class Flow(BaseFlow):
         if (line.drv_datetime-now).total_seconds() <= 150*60:
             result_info.update(result_msg="time in two hours ", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
-        try:
-            is_exist = self.do_refresh_line_list(line)
-        except:
-            is_exist = True
-        if not is_exist:
-            result_info.update(result_msg="list no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-            return result_info
+#         try:
+#             is_exist = self.do_refresh_line_list(line)
+#         except:
+#             is_exist = True
+#         if not is_exist:
+#             result_info.update(result_msg="list no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+#             return result_info
         content = {
                    "signId": line.extra_info["sign_id"],
                    "carryStaId": line.s_sta_id,
