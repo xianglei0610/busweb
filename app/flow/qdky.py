@@ -198,7 +198,7 @@ class Flow(BaseFlow):
             '__VIEWSTATE': state,
             '__EVENTVALIDATION': valid,
             'ctl00$ContentPlaceHolder1$DropDownList3': unicode(line.extra_info['s_station_name']),
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': line.extra_info['s_station_name'][0],
             'destination-id': line.d_city_id,
             'ctl00$ContentPlaceHolder1$mudizhan_id': '',
             'tripDate': line.drv_date.replace('-', '/'),
@@ -440,7 +440,7 @@ class Flow(BaseFlow):
         data.update(params)
         data.update({
             'ctl00$ContentPlaceHolder1$DropDownList3': unicode(line.extra_info['s_station_name']),
-            'ctl00$ContentPlaceHolder1$chengchezhan_id':line.extra_info['s_station_name'][0],
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': line.extra_info['s_station_name'][0],
             'destination-id': unicode(line.d_city_id),
             'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_city_id,
             'tripDate': unicode(line.drv_date.replace('-', '/')),
