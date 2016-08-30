@@ -71,6 +71,7 @@ class Flow(BaseFlow):
         headers = {
             'User-Agent': rebot.user_agent,
             'Content-Type': 'application/x-www-form-urlencoded',
+            "Upgrade-Insecure-Requests":"1"
         }
         headers['Referer'] = 'http://ticket.qdjyjt.com/'
         headers['Host'] = 'ticket.qdjyjt.com'
@@ -102,17 +103,18 @@ class Flow(BaseFlow):
             'ctl00$ContentPlaceHolder1$collectPersonViewSubmitButton': u'确定',
         }
         try:
-            time.sleep(1)
-            r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(data), timeout=30)
+            time.sleep(3)
+            r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
+            print r.content
             soup = bs(r.content, 'lxml')
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            cookies.update(dict(r.cookies))
             try:
                 errmsg = soup.find_all('script')[-1].get_text()
             except:
                 rebot.modify(ip='')
                 errmsg = '锁票 网络异常'
-            cookies.update(dict(r.cookies))
         except:
             res.update({
                 "result_reason": errmsg or '验证码错误',
