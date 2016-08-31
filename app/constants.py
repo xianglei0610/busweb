@@ -41,6 +41,7 @@ SOURCE_LVTU100 = "lvtu100"
 SOURCE_GLCX = "glcx"
 SOURCE_FJKY = "fjky"
 SOURCE_QDKY = "qdky"    # 青岛客运
+SOURCE_ANXINGBUS = "anxingbus"
 
 
 YH_TYPE_SOURCE = [SOURCE_BJKY, SOURCE_HEBKY, SOURCE_SCQCP,
@@ -51,6 +52,13 @@ SNMPAY_SOURCE = ["cqky", "tongcheng", "xyjt", "tzky", "jsdlky", "sd365", "lvtu10
 
 
 SOURCE_INFO = {
+    SOURCE_ANXINGBUS: {
+        "name": "安行巴士",
+        "website": "http://www.anxingbus.com/",
+        "accounts": {
+            "18025457649": ("123456", ""),
+        },
+    },
     SOURCE_FJKY: {
         "name": "福建客运",
         "website": "http://www.968980.cn/",
