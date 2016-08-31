@@ -36,6 +36,12 @@ class Flow(BaseFlow):
             "pay_money": 0,
         }
         rebot = order.get_lock_rebot()
+        if len(order.riders) > 3:
+            lock_result.update({
+                'result_code': 0,
+                'result_reason': '超过3位乘客，不允许下单',
+            })
+            return lock_result
         add_info = self.request_add_riders(order, rebot, state, valid)
         if add_info.get('error_code', ''):
             lock_result.update({
