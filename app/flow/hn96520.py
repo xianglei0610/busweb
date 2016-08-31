@@ -203,16 +203,12 @@ class Flow(BaseFlow):
         #         "result_msg": state,
         #     })
         if '已付款确认' in state and code:
-            no, site, raw_order = ret['pick_no'], ret[
-                'pick_site'], ret['raw_order']
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "code": code,
-                "no": no,
-                "site": site,
-                'raw_order': raw_order,
+                'raw_order': ret["raw_order"],
             }
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HN96520]
             code_list = ["%s" % (code)]
