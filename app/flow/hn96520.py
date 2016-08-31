@@ -138,7 +138,8 @@ class Flow(BaseFlow):
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
 
-        if random.randint(10) < 8:
+        # if random.randint(10) < 8:
+        if 0
             url = "http://61.163.88.138:8088/Order/GetOrderDetail?callback=json&OrderCode=%s&Sign=%s&_=%s" % (order.raw_order_no, rebot.sign2, int(time.time()*1000))
             headers = {
                 "User-Agent": rebot.user_agent,
