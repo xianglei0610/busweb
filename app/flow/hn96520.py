@@ -137,34 +137,44 @@ class Flow(BaseFlow):
 
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
-        sn = order.pay_order_no
-        sign = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-2]
-        userid = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-1]
-        username = order.source_account
-        password = md5(order.source_account_pass)
-        url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(username, password, sign, time.time())
-        headers = {
-            "User-Agent": rebot.user_agent,
-        }
-        r = rebot.http_get(url, headers=headers)
-        userid = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('UserId', '')
 
-        ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(userid, sign, time.time())
-        r = rebot.http_get(ourl, headers=headers, cookies=r.cookies)
-        info = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('OrderList', [])
-        for x in info:
-            ocode = x['OrderCode']
-            if sn == ocode:
-                pcode = x.get('Password', '')
-                state = x['OrderStatus']
+        if random.randint(10) < 8:
+            url = "http://61.163.88.138:8088/Order/GetOrderDetail?callback=json&OrderCode=%s&Sign=%s&_=%s" % (order.raw_order_no, rebot.sign2, int(time.time()*1000))
+            headers = {
+                "User-Agent": rebot.user_agent,
+            }
+            r = rebot.http_get(url, headers=headers)
+            info = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")])
+            detail = info["OrderMain"]
+            state = ""
+            if detail["OrderStatus"] == 1:
+                state = "已付款确认"
+            pcode = detail.get("Code", "")
+            sn = detail.get("Sn", "")
+        else:
+            sn = order.pay_order_no
+            userid = rebot.userid
+            username = order.source_account
+            password = md5(order.source_account_pass)
+            url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(username, password, rebot.sign, time.time())
+            headers = {
+                "User-Agent": rebot.user_agent,
+            }
+            r = rebot.http_get(url, headers=headers)
+            userid = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('UserId', '')
 
+            ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(userid, rebot.sign, time.time())
+            r = rebot.http_get(ourl, headers=headers, cookies=r.cookies)
+            info = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('OrderList', [])
+            for x in info:
+                ocode = x['OrderCode']
+                if sn == ocode:
+                    pcode = x.get('Password', '')
+                    state = x['OrderStatus']
         return {
             "state": state,
-            "pick_no": pcode,
             "pick_code": pcode,
-            "pick_site": '',
             'raw_order': sn,
-            "pay_money": 0.0,
         }
 
     # 刷新出票

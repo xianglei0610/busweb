@@ -942,11 +942,12 @@ class Rebot(db.Document):
             if bot.telephone not in accounts:
                 bot.modify(is_active=False)
                 continue
-            pwd, _ = accounts[bot.telephone]
+            pwd = accounts[bot.telephone][0]
             bot.modify(password=pwd)
             bot.login()
 
-        for tele, (pwd, openid) in accounts.items():
+        for tele, tinfo in accounts.items():
+            pwd = tinfo[0]
             if tele in has_checked:
                 continue
             bot = cls(is_active=True,
@@ -1490,9 +1491,9 @@ class WmcxWebRebot(Rebot):
 class Hn96520WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
-    memid = db.StringField()
     userid = db.StringField()
     sign = db.StringField()
+    sign2 = db.StringField()
     ip = db.StringField(default="")
 
     meta = {
@@ -1595,10 +1596,14 @@ class Hn96520WebRebot(Rebot):
     # 初始化帐号
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
+        pwd, sign1, userid, sign2= SOURCE_INFO[SOURCE_HN96520]["accounts"][self.telephone]
         self.last_login_time = dte.now()
         self.user_agent = ua
         self.is_active = True
         self.cookies = "{}"
+        self.sign = sign1
+        self.sign2 = sign2
+        self.userid = userid
         self.save()
         return "OK"
 
