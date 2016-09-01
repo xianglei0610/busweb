@@ -36,6 +36,12 @@ class Flow(BaseFlow):
             "pay_money": 0,
         }
         rebot = order.get_lock_rebot()
+        if len(order.riders) > 3:
+            lock_result.update({
+                'result_code': 0,
+                'result_reason': '超过3位乘客，不允许下单',
+            })
+            return lock_result
         add_info = self.request_add_riders(order, rebot, state, valid)
         if add_info.get('error_code', ''):
             lock_result.update({
@@ -71,6 +77,7 @@ class Flow(BaseFlow):
         headers = {
             'User-Agent': rebot.user_agent,
             'Content-Type': 'application/x-www-form-urlencoded',
+            "Upgrade-Insecure-Requests":"1"
         }
         headers['Referer'] = 'http://ticket.qdjyjt.com/'
         headers['Host'] = 'ticket.qdjyjt.com'
@@ -88,7 +95,6 @@ class Flow(BaseFlow):
         }
         time.sleep(1)
         r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
-        cookies.update(dict(r.cookies))
         soup = bs(r.content, 'lxml')
         state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
         valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
@@ -102,17 +108,17 @@ class Flow(BaseFlow):
             'ctl00$ContentPlaceHolder1$collectPersonViewSubmitButton': u'确定',
         }
         try:
-            time.sleep(1)
-            r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(data), timeout=30)
+            time.sleep(3)
+            r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
             soup = bs(r.content, 'lxml')
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            cookies.update(dict(r.cookies))
             try:
                 errmsg = soup.find_all('script')[-1].get_text()
             except:
                 rebot.modify(ip='')
                 errmsg = '锁票 网络异常'
-            cookies.update(dict(r.cookies))
         except:
             res.update({
                 "result_reason": errmsg or '验证码错误',
@@ -197,7 +203,7 @@ class Flow(BaseFlow):
             '__VIEWSTATE': state,
             '__EVENTVALIDATION': valid,
             'ctl00$ContentPlaceHolder1$DropDownList3': unicode(line.extra_info['s_station_name']),
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': line.extra_info['s_station_name'][0],
             'destination-id': line.d_city_id,
             'ctl00$ContentPlaceHolder1$mudizhan_id': '',
             'tripDate': line.drv_date.replace('-', '/'),
@@ -234,7 +240,7 @@ class Flow(BaseFlow):
             '__VIEWSTATE': state,
             tbc: '预订',
             'ctl00$ContentPlaceHolder1$DropDownList3': '-1',
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '1',
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': line.extra_info['s_station_name'][0],
             'destination-id': '',
             'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_city_id,
             'tripDate': '请选择',
@@ -310,7 +316,7 @@ class Flow(BaseFlow):
     def send_order_request(self, order):
         rebot = order.get_lock_rebot()
         res = rebot.check_login()
-        if not res:
+        if not res or not res.get('is_login', 0):
             return
         url = 'http://ticket.qdjyjt.com/'
         cookies = json.loads(rebot.cookies)
@@ -378,6 +384,7 @@ class Flow(BaseFlow):
             "pick_code_list": [],
             "pick_msg_list": [],
         }
+        time.sleep(random.choice([3, 5, 10, 15, 20]))
         ret = self.send_order_request(order)
         #ret = {'state': '已付款订单', 'raw_order':order.raw_order_no}
         state = ret['state']
@@ -432,29 +439,25 @@ class Flow(BaseFlow):
             }
         except:
             now = dte.now()
-            result_info.update(result_msg="except_ok", 
-                               update_attrs={"left_tickets": 5,
-                                             "refresh_datetime": now})
+            result_info.update(result_msg="except_ok", update_attrs={"left_tickets": 5,"refresh_datetime": now})
             return result_info
         data = {}
         data.update(params)
         data.update({
             'ctl00$ContentPlaceHolder1$DropDownList3': unicode(line.extra_info['s_station_name']),
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
+            'ctl00$ContentPlaceHolder1$chengchezhan_id': line.extra_info['s_station_name'][0],
             'destination-id': unicode(line.d_city_id),
-            'ctl00$ContentPlaceHolder1$mudizhan_id': '',
+            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_city_id,
             'tripDate': unicode(line.drv_date.replace('-', '/')),
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id': line.drv_date.replace('-', ''),
+            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': line.drv_date.replace('-', '/'),
             'ctl00$ContentPlaceHolder1$Button_1_cx': u'车次查询',
         })
         try:
             r = rebot.http_post(url, data=data, headers=headers, timeout=8)
         except:
             now = dte.now()
-            result_info.update(result_msg="except_ok2", 
-                               update_attrs={"left_tickets": 5,
-                                             "refresh_datetime": now})
+            result_info.update(result_msg="except_ok2", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
         soup = bs(r.content, 'lxml')
         scl_list = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'})
@@ -501,10 +504,7 @@ class Flow(BaseFlow):
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", **kwargs):
         rebot = order.get_lock_rebot()
-        res = rebot.check_login()
         is_login = False
-        if res and res.get('is_login', 0):
-            is_login = True
         if valid_code and not is_login: # 登录验证码
             key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
             info = json.loads(session[key])
@@ -527,19 +527,22 @@ class Flow(BaseFlow):
                 'Referer': 'http://ticket.qdjyjt.com/',
                 'Host': 'ticket.qdjyjt.com',
             })
-            r = rebot.http_post('http://ticket.qdjyjt.com/',
-                                data=urllib.urlencode(params),
-                                headers=custom_headers,
-                                # allow_redirects=False,
-                                cookies=cookies)
-            soup = bs(r.content, 'lxml')
-            tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
-            if rebot.telephone == tel:
-                cookies.update(dict(r.cookies))
-                rebot.modify(cookies=json.dumps(cookies))
-                is_login = True
-            else:
-                rebot.modify(cookies='{}', ip='')
+            url = 'http://ticket.qdjyjt.com/'
+            try:
+                r = rebot.http_post(url, data=urllib.urlencode(params),headers=custom_headers,cookies=cookies)
+                soup = bs(r.content, 'lxml')
+                tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
+                if rebot.telephone == tel:
+                    cookies.update(dict(r.cookies))
+                    rebot.modify(cookies=json.dumps(cookies))
+                    is_login = True
+                else:
+                    rebot.modify(cookies='{}', ip='')
+            except:
+                rebot.modify(ip='')
+        res = rebot.check_login()
+        if res and res.get('is_login', 0):
+            is_login = True
         if is_login:
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 fail_type = ''
@@ -586,9 +589,7 @@ class Flow(BaseFlow):
                     'User-Agent': rebot.user_agent,
                     "Upgrade-Insecure-Requests": 1,
                     }
-            cookies = json.loads(rebot.cookies)
-            if not cookies:
-                cookies = {}
+            cookies = json.loads(rebot.cookies) or {}
             url = 'http://ticket.qdjyjt.com/'
             if not state or not valid:
                 r = rebot.http_get(url, headers=headers)

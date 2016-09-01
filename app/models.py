@@ -942,11 +942,12 @@ class Rebot(db.Document):
             if bot.telephone not in accounts:
                 bot.modify(is_active=False)
                 continue
-            pwd, _ = accounts[bot.telephone]
+            pwd = accounts[bot.telephone][0]
             bot.modify(password=pwd)
             bot.login()
 
-        for tele, (pwd, openid) in accounts.items():
+        for tele, tinfo in accounts.items():
+            pwd = tinfo[0]
             if tele in has_checked:
                 continue
             bot = cls(is_active=True,
@@ -1061,7 +1062,7 @@ class Rebot(db.Document):
 
 class QdkyWebRebot(Rebot):
     user_agent = db.StringField()
-    cookies = db.StringField()
+    cookies = db.StringField(default="{}")
     ip = db.StringField(default="")
 
     # indexes索引, 'collections'
@@ -1096,7 +1097,7 @@ class QdkyWebRebot(Rebot):
             'User-Agent': self.user_agent,
             "Upgrade-Insecure-Requests": 1,
         }
-        cookies = json.loads(self.cookies)
+        cookies = json.loads(self.cookies) or {}
         res = {}
         try:
             r = self.http_get(url, headers=headers, cookies=cookies)
@@ -1105,14 +1106,15 @@ class QdkyWebRebot(Rebot):
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
             res.update({"state": state, "valid": valid})
-            self.modify(cookies=json.dumps(cookies.update(dict(r.cookies))))
+            cookies.update(dict(r.cookies))
+            self.modify(cookies=json.dumps(cookies))
             if self.telephone == tel:
                 res.update({"is_login": 1})
             else:
                 self.modify(ip='')
                 res.update({"is_login": 0})
             return res
-        except:
+        except Exception, e:
             self.modify(ip='')
         return res
 
@@ -1489,9 +1491,9 @@ class WmcxWebRebot(Rebot):
 class Hn96520WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
-    memid = db.StringField()
     userid = db.StringField()
     sign = db.StringField()
+    sign2 = db.StringField()
     ip = db.StringField(default="")
 
     meta = {
@@ -1594,10 +1596,14 @@ class Hn96520WebRebot(Rebot):
     # 初始化帐号
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
+        pwd, sign1, userid, sign2= SOURCE_INFO[SOURCE_HN96520]["accounts"][self.telephone]
         self.last_login_time = dte.now()
         self.user_agent = ua
         self.is_active = True
         self.cookies = "{}"
+        self.sign = sign1
+        self.sign2 = sign2
+        self.userid = userid
         self.save()
         return "OK"
 

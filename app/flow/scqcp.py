@@ -14,7 +14,7 @@ import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import ScqcpAppRebot, ScqcpWebRebot
+from app.models import ScqcpAppRebot, ScqcpWebRebot, Line
 from datetime import datetime as dte
 from PIL import Image
 from lxml import etree
@@ -110,7 +110,7 @@ class Flow(BaseFlow):
             token = res.get('token', '')
         elif res.get('status', '') == 1:
             msg = res.get('msg', '')
-            if u'输入参数不对，请参考接口文档' in msg or u'维护升级' in msg or 'connect timed out' in msg:
+            if u'输入参数不对' in msg or u'维护升级' in msg or u'调用车站接口' in msg or  u'网络错误' in msg:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
                 lock_result.update(result_code=2,
@@ -186,7 +186,7 @@ class Flow(BaseFlow):
                     })
                 return lock_result
             flag = False
-            for i in [u"执行方法GetSchSeatsNo出错"]:
+            for i in [u"执行方法GetSchSeatsNo出错",u'执行失败']:
                 if i in errmsg:
                     flag = True
                     break
@@ -198,12 +198,11 @@ class Flow(BaseFlow):
                 })
                 return lock_result
 
-            for s in ["余票不足", "只能预售2小时之后的票", "余位不够", "已售完",
-                      "超出最大座位数","已停售",'不允许远程售票',"不在网上销售"]:
+            for s in ["余票不足", "2小时之后的票", "余位不够", "已售完",
+                      "超出最大座位数","已停售",'不允许远程售票',"不在网上销售",'不预售']:
                 if s in errmsg:
                     self.close_line(order.line, reason=errmsg)
                     break
-
             lock_result.update({
                 "result_code": 0,
                 "result_reason": ret['msg'],
@@ -227,7 +226,7 @@ class Flow(BaseFlow):
                 }
         url = "%s?%s" % (url, urllib.urlencode(params))
         try:
-            r = rebot.http_get(url, headers=new_headers, timeout=15)
+            r = rebot.http_get(url, headers=new_headers, timeout=40)
             sel = etree.HTML(r.content)
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
@@ -490,7 +489,13 @@ class Flow(BaseFlow):
         if (line.drv_datetime-now).total_seconds() <= 150*60:
             result_info.update(result_msg="time in two hours ", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
-
+#         try:
+#             is_exist = self.do_refresh_line_list(line)
+#         except:
+#             is_exist = True
+#         if not is_exist:
+#             result_info.update(result_msg="list no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+#             return result_info
         content = {
                    "signId": line.extra_info["sign_id"],
                    "carryStaId": line.s_sta_id,
@@ -561,6 +566,67 @@ class Flow(BaseFlow):
             result_info.update(result_msg="exception_ok2", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         return result_info
 
+    def do_refresh_line_list(self, line):
+        content = {
+                   "ridingDate": line.drv_date,
+                   "stopName": line.d_city_name,
+                   "cityId": line.s_city_id,
+                   "cityName": line.s_city_name
+                   }
+        api = "queryByCity"
+        params = {}
+        params.update(content)
+        md5_key = "sdkjfgweysdgfvgvehbfhsdfgvbwjehfsdf"
+        params.update({"key": md5_key})
+
+        def get_md5_sign(params):
+            ks = params.keys()
+            ks.sort()
+            rlt = ''
+            for k in ks:
+                if params[k] == None or len(params[k]) == 0:
+                    continue
+                rlt = rlt+"&%s=%s" % (k, params[k])
+            return md5(rlt[1:]).upper()
+        sign = get_md5_sign(params)
+        url = "http://inner.cdqcp.com/ticket"
+        fp = {"head": {
+                 "sign": sign,
+                 "server": api,
+                 "token": "04b8cef68ef4f2d785150eb671999834",
+                 "ip": "192.168.3.153",
+                 "version": "1.5.1",
+                 "signType": "MD5"
+                 },
+              "body": content
+              }
+        rebot = ScqcpAppRebot.get_one()
+        headers = {
+            "User-Agent": 'okhttp/3.2.0',
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        r = rebot.http_post(url, data=json.dumps(fp), headers=headers, timeout=7)
+        res = r.json()
+        is_exist = False
+        for d in res['body']["ticketLines"]:
+            drv_datetime = dte.strptime(d["drvDateTime"], "%Y-%m-%d %H:%M")
+            line_id_args = {
+                "s_city_name": line.s_city_name,
+                "d_city_name": line.d_city_name,
+                "s_sta_name": d["carryStaName"],
+                "d_sta_name": d["stopName"],
+                "crawl_source": line.crawl_source,
+                "drv_datetime": drv_datetime,
+            }
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+            try:
+                obj = Line.objects.get(line_id=line_id)
+            except Line.DoesNotExist:
+                continue
+            if line_id == line.line_id:
+                is_exist = True
+        return is_exist
+
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", bank='',**kwargs):
         rebot = order.get_lock_rebot()
         headers = rebot.http_header()
@@ -598,10 +664,10 @@ class Flow(BaseFlow):
                 issued_callback.delay(order.order_no)
                 return {"flag": "error", "content": errmsg}
             r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
-            r_url = urllib2.urlparse.urlparse(r.url)
-            if r_url.path in ["/error.html", "/error.htm"]:
-                self.lock_ticket_retry(order)
-                return {"flag": "error", "content": ''}
+#             r_url = urllib2.urlparse.urlparse(r.url)
+#             if r_url.path in ["/error.html", "/error.htm"]:
+#                 self.lock_ticket_retry(order)
+#                 return {"flag": "error", "content": ''}
             sel = etree.HTML(r.content)
             plateform = pay_channel
             try:

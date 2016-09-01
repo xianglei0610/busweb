@@ -80,14 +80,26 @@ def bus_crawl(crawl_source, province_id = None, crawl_kwargs={}):
         res = requests.post(url, data=data)
         res_lst.append("%s: %s" % (url, res.content))
 
-    # subject = "bus_crawl(%s, province_id=%s, crawl_kwargs=%s) " % (crawl_source, province_id, json.dumps(crawl_kwargs, ensure_ascii=False))
-    # html_body = subject + '</br>' + 'result:</br>%s' % "</br>".join(res_lst)
-    # send_email(subject,
-    #         app.config["MAIL_USERNAME"],
-    #         ADMINS,
-    #         "",
-    #         html_body)
 
+@check()
+def refresh_order_fail_rate():
+    from app.models import OpenStation
+    from tasks import async_send_email
+    today_str = dte.now().strftime("%Y-%m-%d")
+    body = ''
+    subject = '下单失败率高'
+    for obj in OpenStation.objects.all():
+        if not (obj.close_status & STATION_CLOSE_YZCX):
+            res = obj.day_order_count[today_str]
+            fail_ct = res['fail']
+            total_ct = res['total']
+            if obj.crawl_source:
+                if total_ct >= 3:
+                    fail_rate = fail_ct/float(total_ct)
+                    if fail_rate > 0.8:
+                        body += "源站: %s,<br/> 车站: %s,<br/>失败率:%s ,<br/><br/>" % (SOURCE_INFO[obj.crawl_source]['name'],obj.sta_name,"%.2f%%" %(fail_rate*100))
+    if body:
+        async_send_email(subject, body)
 
 @check()
 def delete_source_riders():
@@ -436,6 +448,9 @@ def main():
 
     # 定时刷新站统计信息
     sched.add_interval_job(refresh_station, minutes=20)
+    
+    #发送订单失败邮件
+    sched.add_interval_job(refresh_order_fail_rate, minutes=30)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
