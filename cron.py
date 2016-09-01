@@ -450,7 +450,7 @@ def main():
     sched.add_interval_job(refresh_station, minutes=20)
     
     #发送订单失败邮件
-    sched.add_interval_job(refresh_order_fail_rate(), minutes=30)
+    sched.add_interval_job(refresh_order_fail_rate, minutes=30)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
