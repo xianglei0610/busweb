@@ -95,7 +95,7 @@ def refresh_order_fail_rate():
             total_ct = res['total']
             if obj.crawl_source:
                 if total_ct >= 3:
-                    rate = fail_ct/float(total_ct)
+                    rate = (total_ct-fail_ct)/float(total_ct)
                     if rate < 0.8:
                         body += "源站: %s,<br/> 车站: %s,<br/>失败率:%s ,<br/><br/>" % (SOURCE_INFO[obj.crawl_source]['name'],obj.sta_name,"%.2f%%" %(rate*100))
     if body:
