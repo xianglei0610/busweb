@@ -93,7 +93,6 @@ def refresh_order_fail_rate():
             res = obj.day_order_count[today_str]
             fail_ct = res['fail']
             total_ct = res['total']
-            total_ct = 5
             if obj.crawl_source:
                 if total_ct > 3:
                     rate = fail_ct/total_ct
