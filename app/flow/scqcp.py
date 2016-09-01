@@ -664,10 +664,10 @@ class Flow(BaseFlow):
                 issued_callback.delay(order.order_no)
                 return {"flag": "error", "content": errmsg}
             r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
-            r_url = urllib2.urlparse.urlparse(r.url)
-            if r_url.path in ["/error.html", "/error.htm"]:
-                self.lock_ticket_retry(order)
-                return {"flag": "error", "content": ''}
+#             r_url = urllib2.urlparse.urlparse(r.url)
+#             if r_url.path in ["/error.html", "/error.htm"]:
+#                 self.lock_ticket_retry(order)
+#                 return {"flag": "error", "content": ''}
             sel = etree.HTML(r.content)
             plateform = pay_channel
             try:
