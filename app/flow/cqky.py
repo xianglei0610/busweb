@@ -451,19 +451,6 @@ class Flow(BaseFlow):
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
-            # is_login = rebot.test_login_status()
-            # if not is_login and valid_code:
-            #     key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-            #     if key in session:
-            #         info = json.loads(session[key])
-            #         headers = info["headers"]
-            #         cookies = info["cookies"]
-            #         msg = rebot.login(valid_code=valid_code, headers=headers, cookies=cookies)
-            #         if msg == "OK":
-            #             is_login = True
-            #         elif msg == "invalid_pwd":
-            #             rebot.modify(is_active=False)
-            #             rebot = order.change_lock_rebot()
             self.lock_ticket(order)
         order.reload()
         rebot = order.get_lock_rebot()

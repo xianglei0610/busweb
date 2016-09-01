@@ -15,7 +15,7 @@ from flask import json
 from lxml import etree
 from bs4 import BeautifulSoup
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter, vcode_anxing
 from app.utils import vcode_glcx
 from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
@@ -2888,6 +2888,100 @@ class CTripRebot(Rebot):
         response = urllib2.urlopen(request, qstr, timeout=30)
         ret = json.loads(response.read())
         return ret
+
+
+class AnxingWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked", "ip"],
+        "collection": "anxingweb_rebot",
+    }
+    crawl_source = SOURCE_ANXING
+    is_for_lock = True
+
+    def http_headers(self):
+        return {
+            "Ax-Zh": "www.anxingbus.com",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": "http://www.anxingbus.com/Home/Index",
+            "User-Agent": self.user_agent,
+        }
+
+    def login(self):
+        login_form = "http://www.anxingbus.com/"
+        valid_url = "http://www.anxingbus.com/Validate.ashx"
+        headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        r = self.http_get(login_form, headers=headers)
+        soup = BeautifulSoup(r.content, "lxml")
+        page_token = soup.find("input", attrs={"name":"__RequestVerificationToken"}).get("value")
+        cookies = dict(r.cookies)
+
+        for i in range(3):
+            r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            if "image" not in r.headers.get('content-type'):
+                self.modify(ip="")
+            else:
+                break
+        cookies.update(dict(r.cookies))
+        valid_code = vcode_anxing(r.content)
+
+        ret = "fail"
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", "") or self.user_agent,
+                "Referer": login_form,
+                "Origin": login_form,
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
+            params = {
+                "__RequestVerificationToken": page_token,
+                "oldUrl": "http://www.anxingbus.com/Home/Index",
+                "loginuser": self.telephone,
+                "loginpwd": self.password,
+                "logincode": valid_code,
+            }
+            login_url = "http://www.anxingbus.com/account/login"
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            res = r.json()
+            success = res.get("isSuccess", False)
+            if success:     # 登陆成功
+                cookies.update(dict(r.cookies))
+                self.modify(cookies=json.dumps(cookies), is_active=True)
+                if res["IsLogin"]:
+                    ret = "OK"
+                else:
+                    ret = "check_fail"
+            else:
+                msg = res["Message"]
+                if u"验证码不正确" in msg:
+                    ret = "invalid_code"
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active = True
+            self.cookies = "{}"
+            self.save()
+            ret = "create"
+        rebot_log.info("[anxing_login]%s, result:%s", self.telephone, ret)
+        return ret
+
+    def check_login(self):
+        user_url = "http://www.anxingbus.com/Member/My"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        r = self.http_get(user_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        try:
+            username = soup.select("#formMember table tr")[0].select("td")[1].text.strip()
+            if username == self.telephone:
+                return 1
+        except:
+            pass
+        return 0
 
 
 class CqkyWebRebot(Rebot):

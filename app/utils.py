@@ -40,6 +40,38 @@ def vcode_cqky(img_content):
     return code
 
 
+def vcode_anxing(im_content):
+    def _denoising(im):
+        im = im.convert('L')
+        data = im.getdata()
+        w,h = im.size
+        for x in xrange(1,w-1):
+            for y in xrange(1,h-1):
+                mid_pixel = data[w*y+x]
+                im.putpixel((x,y), 0 if mid_pixel<255  else 255)
+
+        data = im.getdata()
+        for x in xrange(1,w-1):
+            for y in xrange(1,h-1):
+                mid_pixel = data[w*y+x]
+                if mid_pixel == 0: #找出上下左右四个方向像素点像素值
+                    top_pixel = data[w*(y-1)+x] and 255
+                    left_pixel = data[w*y+(x-1)] and 255
+                    down_pixel = data[w*(y+1)+x] and 255
+                    right_pixel = data[w*y+(x+1)] and 255
+                    if mid_pixel == 0 and (top_pixel+left_pixel+down_pixel+right_pixel) in [255*3, 255*4]:
+                        im.putpixel((x,y), 255)
+        return im
+
+    ims = cStringIO.StringIO(im_content)
+    im = Image.open(ims)
+    im = _denoising(im)
+    code = image_to_string(im, lang='axbs200', config="-psm 7")
+
+    # 把一些特殊符号去掉
+    return "".join(filter(lambda c: ord("A")<=ord(c)<=ord("Z") or ord("a")<=ord(c)<=ord("z") or ord("1")<=ord(c)<=ord("9"), code))
+
+
 def vcode_scqcp(img_content):
     ims = cStringIO.StringIO(img_content)
     im = Image.open(ims)
