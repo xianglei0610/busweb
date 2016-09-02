@@ -54,7 +54,7 @@ class Flow(BaseFlow):
                 })
                 return lock_result
             errmsg = soup.select_one(".jump_mes h4").text
-            if u"该班次价格不存在" in errmsg or u"发车前2小时不售票" in errmsg or u"超出人数限制" in errmsg:
+            if u"该班次价格不存在" in errmsg or u"发车前2小时不售票" in errmsg or u"超出人数限制" in errmsg or u"车次剩票张数小于售票数" in errmsg:
                 self.close_line(line, reason=errmsg)
                 lock_result.update({
                     "result_code": 0,
@@ -107,11 +107,11 @@ class Flow(BaseFlow):
             else:
                 params[name]=value
 
-        kefu = AdminUser.objects.get(username=order.kefu_username)
-        # params["bankname"] = "ZHIFUBAO"  # 支付宝支付
-        # params["paytype"] = "3"  # 支付宝支付
-        params["paytype"] = "1"  # 支付宝支付
-        params["bankname"] = kefu.yh_type
+        params["bankname"] = "ZHIFUBAO"  # 支付宝支付
+        params["paytype"] = "3"  # 支付宝支付
+        # kefu = AdminUser.objects.get(username=order.kefu_username)
+        # params["paytype"] = "1"  # 支付宝支付
+        # params["bankname"] = kefu.yh_type
         params["member_name"] = order.contact_info["name"]
 
         url = 'http://www.36565.cn/?c=tkt3&a=payt'
@@ -135,7 +135,7 @@ class Flow(BaseFlow):
             return lock_result
         else:
             code = 2
-            if "检票车站在班次途经站中不存在" in location:
+            if "检票车站在班次途经站中不存在" in location or u"车次剩票张数小于售票数" in location:
                 self.close_line(line, reason=location)
                 code = 0
             lock_result.update({
@@ -220,6 +220,11 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
+        elif state == "已退款":
+            result_info.update({
+                "result_code": 3,
+                "result_msg": state,
+            })
         return result_info
 
     def do_refresh_line(self, line):
@@ -281,7 +286,7 @@ class Flow(BaseFlow):
                     elif k == "total_fee":
                         pay = float(v)
                 if no and order.pay_order_no != no:
-                    order.modify(pay_order_no=no, pay_money=pay, pay_channel='yh')
+                    order.modify(pay_order_no=no, pay_money=pay, pay_channel='alipay')
                 return {"flag": "url", "content": pay_url}
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)

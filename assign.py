@@ -4,7 +4,7 @@ import time
 
 from app.constants import *
 from app.utils import get_redis
-from app.models import Order
+from app.models import Order, AdminUser
 from datetime import datetime as dte
 
 
@@ -18,14 +18,12 @@ def enqueue_wating_lock(order):
     val = "%s_%s" % (order.order_no, int(time.time()*1000))
 
     if (line.drv_datetime-now).total_seconds() <= 3*60*60+20:       # 3个小时内的车优先处理
-        if order.crawl_source in [SOURCE_BJKY, SOURCE_HEBKY, SOURCE_SCQCP,
-                                  SOURCE_SZKY, SOURCE_ZHW, SOURCE_BUS365, SOURCE_GLCX,SOURCE_FJKY, SOURCE_CHANGTU, SOURCE_SD365]: # 银行支付
+        if order.crawl_source in YH_TYPE_SOURCE: # 银行支付
             rds.lpush(RK_ORDER_QUEUE_YH2, val)
         else:
             rds.lpush(RK_ORDER_QUEUE_ZFB2, val)
     else:
-        if order.crawl_source in [SOURCE_BJKY, SOURCE_HEBKY,SOURCE_SCQCP,
-                                  SOURCE_SZKY, SOURCE_ZHW, SOURCE_BUS365, SOURCE_GLCX,SOURCE_FJKY, SOURCE_CHANGTU, SOURCE_SD365]: # 银行支付
+        if order.crawl_source in YH_TYPE_SOURCE: # 银行支付
             rds.lpush(RK_ORDER_QUEUE_YH, val)
         else:
             rds.lpush(RK_ORDER_QUEUE_ZFB, val)
@@ -67,7 +65,21 @@ def dequeue_wating_lock(user):
 
     if val:
         no, t = val.split("_")
-        return Order.objects.get(order_no=no)
+        order = Order.objects.get(order_no=no)
+        # if "snmpay" in user.username:
+        #     if order.crawl_source not in SNMPAY_SOURCE:
+        #         enqueue_wating_lock(order)
+        #         return None
+        #     elif rds.get("snmpay_ignore:%s" % order.order_no):
+        #         enqueue_wating_lock(order)
+        #         return None
+        # else:
+        #     snmpay_users = AdminUser.objects.filter(is_switch=True, is_close=False, username__startswith="snmpay")
+        #     if order.crawl_source in SNMPAY_SOURCE:
+        #         if snmpay_users and not rds.get("snmpay_ignore:%s" % order.order_no):
+        #             enqueue_wating_lock(order)
+        #             return None
+        return order
     return None
 
 

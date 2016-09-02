@@ -14,12 +14,12 @@ import re
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
-from app.models import ScqcpAppRebot, ScqcpWebRebot
+from app.models import ScqcpAppRebot, ScqcpWebRebot, Line
 from datetime import datetime as dte
 from PIL import Image
 from lxml import etree
 from app.utils import md5
-
+from tasks import issued_callback
 
 class Flow(BaseFlow):
     name = "scqcp"
@@ -110,7 +110,7 @@ class Flow(BaseFlow):
             token = res.get('token', '')
         elif res.get('status', '') == 1:
             msg = res.get('msg', '')
-            if u'输入参数不对，请参考接口文档' in msg or u'维护升级' in msg or 'connect timed out' in msg:
+            if u'输入参数不对' in msg or u'维护升级' in msg or u'调用车站接口' in msg or  u'网络错误' in msg:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
                 lock_result.update(result_code=2,
@@ -186,7 +186,7 @@ class Flow(BaseFlow):
                     })
                 return lock_result
             flag = False
-            for i in [u"执行方法GetSchSeatsNo出错"]:
+            for i in [u"执行方法GetSchSeatsNo出错",u'执行失败']:
                 if i in errmsg:
                     flag = True
                     break
@@ -198,11 +198,11 @@ class Flow(BaseFlow):
                 })
                 return lock_result
 
-            for s in ["余票不足", "只能预售2小时之后的票", "余位不够", "已售完","超出最大座位数","已停售",'不允许远程售票']:
+            for s in ["余票不足", "2小时之后的票", "余位不够", "已售完",
+                      "超出最大座位数","已停售",'不允许远程售票',"不在网上销售",'不预售']:
                 if s in errmsg:
                     self.close_line(order.line, reason=errmsg)
                     break
-
             lock_result.update({
                 "result_code": 0,
                 "result_reason": ret['msg'],
@@ -226,7 +226,7 @@ class Flow(BaseFlow):
                 }
         url = "%s?%s" % (url, urllib.urlencode(params))
         try:
-            r = rebot.http_get(url, headers=new_headers, timeout=15)
+            r = rebot.http_get(url, headers=new_headers, timeout=40)
             sel = etree.HTML(r.content)
             token = sel.xpath('//form[@id="ticket_with_insurant"]/input[@name="token"]/@value')[0]
             return {"status": 0, 'token': token}
@@ -477,6 +477,7 @@ class Flow(BaseFlow):
                 "pick_no": [],
                 "pick_code": ret["body"].get('code', ''),
                 "order_no": ret["body"].get('webOrderId', ''),
+                "drv_date": ret["body"].get('drvDate', ''),
             }
 
     def do_refresh_line(self, line):
@@ -488,7 +489,13 @@ class Flow(BaseFlow):
         if (line.drv_datetime-now).total_seconds() <= 150*60:
             result_info.update(result_msg="time in two hours ", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
-
+#         try:
+#             is_exist = self.do_refresh_line_list(line)
+#         except:
+#             is_exist = True
+#         if not is_exist:
+#             result_info.update(result_msg="list no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+#             return result_info
         content = {
                    "signId": line.extra_info["sign_id"],
                    "carryStaId": line.s_sta_id,
@@ -537,7 +544,10 @@ class Flow(BaseFlow):
             if ret["body"].get('ticketLines', []):
                 raw = ret["body"].get('ticketLines', [])[0]
                 full_price = float(raw["fullPrice"])
-                service_price = float(raw["servicePrice"])
+                try:
+                    service_price = float(raw["servicePrice"])
+                except:
+                    service_price = 3.0
                 if service_price != float(3):
                     full_price = full_price + service_price - 3
                     service_price = 3
@@ -550,9 +560,72 @@ class Flow(BaseFlow):
                 result_info.update(result_msg="ok", update_attrs=info)
             else:  # 线路信息没查到
                 result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        elif ret.get("head", {}).get('statusCode', '') in ['9999']:
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 3, "refresh_datetime": now})
         else:
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="exception_ok2", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         return result_info
+
+    def do_refresh_line_list(self, line):
+        content = {
+                   "ridingDate": line.drv_date,
+                   "stopName": line.d_city_name,
+                   "cityId": line.s_city_id,
+                   "cityName": line.s_city_name
+                   }
+        api = "queryByCity"
+        params = {}
+        params.update(content)
+        md5_key = "sdkjfgweysdgfvgvehbfhsdfgvbwjehfsdf"
+        params.update({"key": md5_key})
+
+        def get_md5_sign(params):
+            ks = params.keys()
+            ks.sort()
+            rlt = ''
+            for k in ks:
+                if params[k] == None or len(params[k]) == 0:
+                    continue
+                rlt = rlt+"&%s=%s" % (k, params[k])
+            return md5(rlt[1:]).upper()
+        sign = get_md5_sign(params)
+        url = "http://inner.cdqcp.com/ticket"
+        fp = {"head": {
+                 "sign": sign,
+                 "server": api,
+                 "token": "04b8cef68ef4f2d785150eb671999834",
+                 "ip": "192.168.3.153",
+                 "version": "1.5.1",
+                 "signType": "MD5"
+                 },
+              "body": content
+              }
+        rebot = ScqcpAppRebot.get_one()
+        headers = {
+            "User-Agent": 'okhttp/3.2.0',
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        r = rebot.http_post(url, data=json.dumps(fp), headers=headers, timeout=7)
+        res = r.json()
+        is_exist = False
+        for d in res['body']["ticketLines"]:
+            drv_datetime = dte.strptime(d["drvDateTime"], "%Y-%m-%d %H:%M")
+            line_id_args = {
+                "s_city_name": line.s_city_name,
+                "d_city_name": line.d_city_name,
+                "s_sta_name": d["carryStaName"],
+                "d_sta_name": d["stopName"],
+                "crawl_source": line.crawl_source,
+                "drv_datetime": drv_datetime,
+            }
+            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+            try:
+                obj = Line.objects.get(line_id=line_id)
+            except Line.DoesNotExist:
+                continue
+            if line_id == line.line_id:
+                is_exist = True
+        return is_exist
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay", bank='',**kwargs):
         rebot = order.get_lock_rebot()
@@ -576,46 +649,25 @@ class Flow(BaseFlow):
             rebot.modify(ip='')
             return {"flag": "error", "content": "账号自动登陆失败，请再次重试!"}
 
-        # 验证码处理
-        # if not is_login:
-        #     if valid_code:
-        #         key = "pay_login_info_%s_%s" % (order.order_no, order.source_account)
-        #         data = json.loads(session[key])
-        #         code_url = data["valid_url"]
-        #         headers = data["headers"]
-        #         cookies = data["cookies"]
-        #         token = data["token"]
-        #     else:
-        #         login_form_url = "http://scqcp.com/login/index.html?%s"%time.time()
-        #         if new_headers.has_key('Content-Type'):
-        #             del new_headers['Content-Type']
-        #         r = rebot.http_get(login_form_url, headers=new_headers)
-        #         sel = etree.HTML(r.content)
-        #         cookies = dict(r.cookies)
-        #         code_url = sel.xpath("//img[@id='txt_check_code']/@src")[0]
-        #         code_url = code_url.split('?')[0]+"?d=0.%s" % random.randint(1, 10000)
-        #         token = sel.xpath("//input[@id='csrfmiddlewaretoken1']/@value")[0]
-        #         r = rebot.http_get(code_url, headers=new_headers, cookies=cookies)
-        #         cookies.update(dict(r.cookies))
-        #         tmpIm = cStringIO.StringIO(r.content)
-        #         im = Image.open(tmpIm)
-        #         valid_code = pytesseract.image_to_string(im)
-
-        #     msg = rebot.login(valid_code=valid_code, token=token, headers=headers, cookies=cookies)
-        #     if msg == "OK":
-        #         is_login = True
-        #         rebot.modify(cookies=json.dumps(cookies))
-        # if is_login:
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         order.reload()
 
         if order.status == STATUS_WAITING_ISSUE:
+            app_rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
+            res = self.send_order_request_by_web(order, app_rebot)
+            if res.get('drv_date', '') != order.drv_datetime.strftime("%Y-%m-%d %H:%M:%S"):
+                errmsg = '时间不一致，不允许支付!'
+                self.close_line(order.line, reason=errmsg)
+                order.modify(status=STATUS_LOCK_FAIL)
+                order.on_lock_fail(reason=errmsg)
+                issued_callback.delay(order.order_no)
+                return {"flag": "error", "content": errmsg}
             r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
-            r_url = urllib2.urlparse.urlparse(r.url)
-            if r_url.path in ["/error.html", "/error.htm"]:
-                self.lock_ticket_retry(order)
-                return {"flag": "error", "content": ''}
+#             r_url = urllib2.urlparse.urlparse(r.url)
+#             if r_url.path in ["/error.html", "/error.htm"]:
+#                 self.lock_ticket_retry(order)
+#                 return {"flag": "error", "content": ''}
             sel = etree.HTML(r.content)
             plateform = pay_channel
             try:
@@ -630,7 +682,7 @@ class Flow(BaseFlow):
             except:
                 rebot.modify(ip="")
                 rebot.modify(cookies="{}")
-                return {"flag": "error", "content": "请重试!"}    
+                return {"flag": "error", "content": "请重试!"}
             info_url = "http://scqcp.com:80/ticketOrder/middlePay.html"
             cookies = json.loads(rebot.cookies)
             r = rebot.http_post(info_url, data=data, headers=headers, cookies=cookies,timeout=60)

@@ -34,8 +34,99 @@ class Flow(BaseFlow):
         else:
             return 0
 
-    # 锁票
     def do_lock_ticket(self, order, valid_code=""):
+        return self.do_lock_ticket_wap(order, valid_code)
+
+    def do_lock_ticket_wap(self, order, valid_code=""):
+        lock_result = {
+            "lock_info": {},
+            "source_account": order.source_account,
+            "result_code": 0,
+            "result_reason": "",
+            "pay_url": "",
+            "raw_order_no": "",
+            "expire_datetime": "",
+            "pay_money": 0,
+        }
+        rebot = order.get_lock_rebot()
+        is_login = rebot.test_login_status()
+        if not is_login:
+            for i in range(3):
+                if rebot.login() == "OK":
+                    is_login = True
+                    break
+                rebot = order.change_lock_rebot()
+
+        riders = rebot.add_riders(order)
+        if len(riders) != len(order.riders):
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": "[系统]添加乘客出错",
+                "source_account": rebot.telephone,
+            })
+            return lock_result
+
+        line = order.line
+        lock_url = "http://m.hn96520.com/Home/Payorder"
+        params = {
+            "globalcode":line.extra_info["g"],
+            "descode": line.extra_info["t"],
+            "busdate": line.extra_info["date"],
+            "busofnum": line.extra_info["bc"],
+            "takemanids": ",".join(riders)+",",
+        }
+        cookies = json.loads(rebot.cookies)
+        headers = {'User-Agent': rebot.user_agent}
+        r = rebot.http_get("%s?%s" % (lock_url, urllib.urlencode(params)), headers=headers, cookies=cookies)
+        soup = bs(r.content, "lxml")
+        el_orderid = soup.select_one("#ordersn")
+        if soup.find("title").text == u"用户登录":
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": "未登录",
+                "source_account": rebot.telephone,
+            })
+            return lock_result
+
+        if el_orderid:
+            raw_order = el_orderid.text.strip()
+            pay_money = float(soup.select_one("#totalmoney").text.strip().lstrip("￥"))
+            expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
+            pay_params = {}
+            try:
+                pay_msg =  re.findall(r"BC.click\(([\s\S]*)\}\);", soup.select("script")[5].text)[0]
+            except:
+                pay_msg =  re.findall(r"BC.click\(([\s\S]*)\}\);", r.content)[0]
+            pay_msg = pay_msg[:pay_msg.index("})")+1].replace("//","#").replace("/**", "#").replace("*/", "#").replace("*", "#")
+            pay_params = eval(pay_msg)
+            pay_params["appId"] = re.findall(r"appId=(\S+)", soup.select_one("#spay-script").get("src"))[0]
+            pay_params["callback"] = "BC.cbs.r0.f"
+            pay_params["return_url"] = pay_params["return_url"].replace("#", "//")
+            lock_result.update({
+                'result_code': 1,
+                'raw_order_no': raw_order,
+                "expire_datetime": expire_time,
+                "source_account": rebot.telephone,
+                "pay_money": pay_money,
+                "lock_info":  {"pay_params": json.dumps(pay_params)}
+            })
+            return lock_result
+        else:
+            try:
+                msg = soup.select_one(".am-page-result-brief").text
+            except:
+                msg = ""
+            if "错误代码：333" in msg:
+                rebot = order.change_lock_rebot()
+            lock_result.update({
+                'result_code': 2,
+                "result_reason": msg,
+                "source_account": rebot.telephone,
+            })
+            return lock_result
+
+
+    def do_lock_ticket_web(self, order, valid_code=""):
         lock_result = {
             "lock_info": {},
             "source_account": order.source_account,
@@ -135,36 +226,47 @@ class Flow(BaseFlow):
             })
             return lock_result
 
-    def send_order_request(self, order):
+    def send_order_request(self, order, by="wap"):
         rebot = order.get_lock_rebot()
-        sn = order.pay_order_no
-        sign = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-2]
-        userid = SOURCE_INFO.get('hn96520').get('accounts').get(order.source_account)[-1]
-        username = order.source_account
-        password = md5(order.source_account_pass)
-        url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(username, password, sign, time.time())
-        headers = {
-            "User-Agent": rebot.user_agent,
-        }
-        r = rebot.http_get(url, headers=headers)
-        userid = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('UserId', '')
 
-        ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(userid, sign, time.time())
-        r = rebot.http_get(ourl, headers=headers, cookies=r.cookies)
-        info = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('OrderList', [])
-        for x in info:
-            ocode = x['OrderCode']
-            if sn == ocode:
-                pcode = x.get('Password', '')
-                state = x['OrderStatus']
+        if by == "wap":
+            url = "http://m.hn96520.com/PersonCenter/OrderDetail?ordersn=%s&isSuccess=True" % order.raw_order_no
+            cookies = json.loads(rebot.cookies)
+            headers = {'User-Agent': rebot.user_agent}
+            r = rebot.http_get(url, headers=headers, cookies=cookies)
+            soup = bs(r.content, "lxml")
+            state = soup.select(".orderTime span")[1].text
+            sn = order.raw_order_no
+            pcode = ""
+            for o in soup.select(".orderFu"):
+                lst = re.findall(u"取票密码: (\d+)", o.text.strip())
+                if lst:
+                    pcode = lst[0]
+                    break
+        else:
+            sn = order.pay_order_no
+            userid = rebot.userid
+            username = order.source_account
+            password = md5(order.source_account_pass)
+            url = 'http://61.163.88.138:8088/auth?UserName={0}&Password={1}&Sign={2}&_={3}&callback=jsonp1'.format(username, password, rebot.sign, time.time())
+            headers = {
+                "User-Agent": rebot.user_agent,
+            }
+            r = rebot.http_get(url, headers=headers)
+            userid = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('UserId', '')
 
+            ourl = 'http://61.163.88.138:8088/Order/GetMyOrders?UserId={0}&Sign={1}&_={2}&callback=jsonp1'.format(userid, rebot.sign, time.time())
+            r = rebot.http_get(ourl, headers=headers, cookies=r.cookies)
+            info = json.loads(r.content[r.content.index("(") + 1: r.content.rindex(")")]).get('OrderList', [])
+            for x in info:
+                ocode = x['OrderCode']
+                if sn == ocode:
+                    pcode = x.get('Password', '')
+                    state = x['OrderStatus']
         return {
             "state": state,
-            "pick_no": pcode,
             "pick_code": pcode,
-            "pick_site": '',
             'raw_order': sn,
-            "pay_money": 0.0,
         }
 
     # 刷新出票
@@ -178,30 +280,26 @@ class Flow(BaseFlow):
         if not self.need_refresh_issue(order):
             result_info.update(result_msg="状态未变化")
             return result_info
-        ret = self.send_order_request(order)
+        ret = self.send_order_request(order, by="wap")
         state = ret['state']
         code = ret['pick_code']
-        if '已取消' in state:
-            result_info.update({
-                "result_code": 5,
-                "result_msg": state,
-            })
+        #if '已取消' in state:
+        #    result_info.update({
+        #        "result_code": 5,
+        #        "result_msg": state,
+        #    })
         # elif '失败' in state:  # 出现了单状态是失败, 但源站表示出票成功, 先注释掉
         #     result_info.update({
         #         "result_code": 2,
         #         "result_msg": state,
         #     })
-        elif '已付款确认' in state and code:
-            no, site, raw_order = ret['pick_no'], ret[
-                'pick_site'], ret['raw_order']
+        if '已付款确认' in state and code:
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
                 "code": code,
-                "no": no,
-                "site": site,
-                'raw_order': raw_order,
+                'raw_order': ret["raw_order"],
             }
             dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HN96520]
             code_list = ["%s" % (code)]
@@ -280,7 +378,35 @@ class Flow(BaseFlow):
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
 
+    def get_pay_page_wap(self, order, session=None, valid_code="", bank="", pay_channel="alipay", **kwargs):
+        rebot = order.get_lock_rebot()
+        is_login = rebot.test_login_status()
+        if not is_login:
+            for i in range(3):
+                if rebot.login() == "OK":
+                    is_login = True
+                    break
+        if not is_login:
+            return {"flag": "error", "content": "账号自动登陆失败，请再次重试!"}
+
+        if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
+            self.lock_ticket(order)
+        if order.status == STATUS_WAITING_ISSUE:
+            pay_params = order.lock_info.get("pay_params", "")
+            if not pay_params:
+                return {"flag": "error", "content": "支付页面打开失败,请联系技术解决!"}
+            cookies = json.loads(rebot.cookies)
+            headers = {'User-Agent': rebot.user_agent}
+            r = rebot.http_get("https://jspay-hz.beecloud.cn/2/rest/jsbutton/ALI_WEB?para=%s" % order.lock_info.get("pay_params", ""), headers=headers, cookies=cookies)
+            dstr = r.content[r.content.index("(")+1:r.content.rindex(")")]
+            res = json.loads(dstr)
+            pay_url = "%s?%s" % (res["url"], urllib.urlencode(res["param"]))
+            return {"flag": "url", "content": pay_url}
+
+
     def get_pay_page(self, order, session=None, valid_code="", bank="", pay_channel="alipay", **kwargs):
+        return self.get_pay_page_wap(order, session, valid_code, bank, pay_channel, **kwargs)
+
         rebot = order.get_lock_rebot()
         is_login = rebot.test_login_status()
 

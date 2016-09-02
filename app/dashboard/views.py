@@ -73,7 +73,7 @@ class LoginInView(MethodView):
             rds = get_redis("default")
             try:
                 u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
-                tk = md5(str(time.time))
+                tk = md5(str(time.time()))
                 k = "token%s" % tk
                 rds.set(k, u.username)
                 rds.expire(k, 24*60*60)
@@ -83,10 +83,12 @@ class LoginInView(MethodView):
         else:                                       # 网页登陆
             session["username"] = name
             session["password"] = pwd
-            code = request.form.get("validcode")
-            if not code or code != session.get("img_valid_code"):
+            code = request.form.get("validcode", "")
+
+            if not name.startswith("snmpay") and (not code or code != session.get("img_valid_code")):
                 flash("验证码错误", "error")
                 return redirect(url_for('dashboard.login'))
+
             try:
                 u = AdminUser.objects.get(username=name, password=md5(pwd), is_removed=0)
                 flask_login.login_user(u)
@@ -915,5 +917,7 @@ def make_fail(order_no):
         return jsonify({"code": 0, "msg":"内容不能为空"})
     order.add_trace(OT_REMARK, "%s：%s" % (current_user.username, content))
     order.modify(status=5)
+    now = dte.now()
+    order.line.modify(left_tickets=0, update_datetime=now, refresh_datetime=now)
     issued_callback.delay(order.order_no)
     return jsonify({"code": 1, "msg": "修改成功"})

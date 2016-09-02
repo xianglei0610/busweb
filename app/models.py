@@ -15,7 +15,7 @@ from flask import json
 from lxml import etree
 from bs4 import BeautifulSoup
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter, vcode_anxing, vcode_hnwap
 from app.utils import vcode_glcx
 from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
@@ -942,11 +942,12 @@ class Rebot(db.Document):
             if bot.telephone not in accounts:
                 bot.modify(is_active=False)
                 continue
-            pwd, _ = accounts[bot.telephone]
+            pwd = accounts[bot.telephone][0]
             bot.modify(password=pwd)
             bot.login()
 
-        for tele, (pwd, openid) in accounts.items():
+        for tele, tinfo in accounts.items():
+            pwd = tinfo[0]
             if tele in has_checked:
                 continue
             bot = cls(is_active=True,
@@ -1058,11 +1059,11 @@ class Rebot(db.Document):
                 continue
             return r
 
+
 class QdkyWebRebot(Rebot):
     user_agent = db.StringField()
-    cookies = db.StringField()
+    cookies = db.StringField(default="{}")
     ip = db.StringField(default="")
-    userid = db.StringField()
 
     # indexes索引, 'collections'
     meta = {
@@ -1074,6 +1075,7 @@ class QdkyWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
+#         return '192.168.1.47:8888'
         rds = get_redis("default")
         ipstr = self.ip
         key = RK_PROXY_IP_QDKY
@@ -1085,137 +1087,59 @@ class QdkyWebRebot(Rebot):
 
     def clear_riders(self, riders={}):
         pass
+
     def add_riders(self, order):
+        pass
+
+    def check_login(self):
         url = 'http://ticket.qdjyjt.com/'
         headers = {
             'User-Agent': self.user_agent,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            "Upgrade-Insecure-Requests": 1,
         }
-        cookies = json.loads(self.cookies)
-        v = self.check_login()
-        if not v:
-            return
-        line = order.line
-        data = {
-            '__EVENTTARGET': '',
-            '__EVENTARGUMENT': '',
-            '__VIEWSTATE': v[1],
-            '__EVENTVALIDATION': v[2],
-            'ctl00$ContentPlaceHolder1$DropDownList3': line.extra_info['s_sta'],
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
-            'destination-id': line.d_sta_id,
-            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_sta_id,
-            'tripDate': line.drv_date,
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id': line.drv_date,
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': line.drv_date,
-            'ctl00$ContentPlaceHolder1$Button_1_cx': '车次查询',
-        }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=data)
-        soup = BeautifulSoup(r.content, "lxml")
+        cookies = json.loads(self.cookies) or {}
+        res = {}
         try:
-            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'}).find_all('tr')
-        except:
-            errmsg = soup.find_all('script')[-1].get_text()
-            errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            return '2333', errmsg
-        tbc = ''
-        for y in info[1:]:
-            z = y.find_all('td')
-            bus_num = z[1].get_text().strip()
-            drv_time = z[2].get_text().strip()
-            if bus_num == line.bus_num and drv_time == line.drv_time:
-                tbc = y.find('input', attrs={'id': True, 'value': '预订'}).get('name', '')
-        if not tbc:
-            return ('2332', '找不到此班次')
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        data = {}
-        data = {
-            '__EVENTTARGET': '',
-            '__EVENTARGUMENT': '',
-            '__VIEWSTATE': state,
-            '__EVENTVALIDATION': valid,
-            tbc: '预订',
-            'ctl00$ContentPlaceHolder1$DropDownList3': '-1',
-            'ctl00$ContentPlaceHolder1$chengchezhan_id': '',
-            'destination-id': line.d_sta_id,
-            'ctl00$ContentPlaceHolder1$mudizhan_id': line.d_sta_id,
-            'tripDate': '请选择',
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id': line.drv_date.replace('-', ''),
-            'ctl00$ContentPlaceHolder1$chengcheriqi_id0': line.drv_date.replace('-', '/'),
-        }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=data)
-        soup = BeautifulSoup(r.content, "lxml")
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        x = order.contact_info
-        try:
-            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
-        except:
-            errmsg = soup.find_all('script')[-1].get_text()
-            errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            return '2333', errmsg
-        for y in info[1:]:
-            uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
-            if uid == x['id_number']:
-                btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
-                return (btn, state, valid)
-        data = {}
-        data = {
-            '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonXiugai',
-            '__EVENTARGUMENT': '',
-            '__VIEWSTATE': state,
-            '__EVENTVALIDATION': valid,
-            'ctl00$ContentPlaceHolder1$DropDownList1': '1',
-            'ctl00$ContentPlaceHolder1$checktxt2': '',
-        }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=data)
-        soup = BeautifulSoup(r.content, "lxml")
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        btn = soup.find('input', attrs={'id': 'ContentPlaceHolder1_GridView1_btnInsert'}).get('name', '')
-        btn = '$'.join(btn.split('$')[:-1])
-        data = {}
-        data = {
-            '__EVENTTARGET': '',
-            '__EVENTARGUMENT': '',
-            '__VIEWSTATE': state,
-            '__EVENTVALIDATION': valid,
-            'ctl00$ContentPlaceHolder1$DropDownList1': '1',
-            '%s$txtname' %btn: x['name'],
-            '%s$drpsex' %btn: u'男',
-            '%s$txtsfz' %btn: x['id_number'],
-            '%s$txttel' %btn: x['telephone'],
-            '%s$btnInsert' %btn: u'添加',
-            'ctl00$ContentPlaceHolder1$checktxt2': '',
-        }
-        r = self.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(data))
-        soup = BeautifulSoup(r.content, 'lxml')
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        x = order.contact_info
-        info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
-        info1 = soup.find_all('script')[-1]
-        for y in info[1:]:
-            uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
-            if uid == x['id_number']:
-                btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
-                return (btn, state, valid)
+            r = self.http_get(url, headers=headers, cookies=cookies)
+            soup = BeautifulSoup(r.content, "lxml")
+            tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
+            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            res.update({"state": state, "valid": valid})
+            cookies.update(dict(r.cookies))
+            self.modify(cookies=json.dumps(cookies))
+            if self.telephone == tel:
+                res.update({"is_login": 1})
+            else:
+                self.modify(ip='')
+                res.update({"is_login": 0})
+            return res
+        except Exception, e:
+            self.modify(ip='')
+        return res
 
-    def check_login(self):
-        undone_order_url = 'http://ticket.qdjyjt.com/'
-        headers = {"User-Agent": self.user_agent}
-        cookies = json.loads(self.cookies)
-        r = self.http_get(undone_order_url, headers=headers, cookies=cookies)
-        soup = BeautifulSoup(r.content, "lxml")
-        tel = soup.find('a', attrs={'id': 'ContentPlaceHolder1_LinkButtonLoginMemu'}).get_text().strip()
-        state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-        valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-        if tel == self.telephone:
-            return 1,state,valid
-        return 0
+    @classmethod
+    def get_one(cls, order=None):
+        today = dte.now().strftime("%Y-%m-%d")
+        all_accounts = set(cls.objects.filter(
+            is_active=True, is_locked=False).distinct("telephone"))
+        droped = set()
+        if order:
+            for d in Order.objects.filter(status=14,
+                                          crawl_source=SOURCE_QDKY,
+                                          lock_datetime__gt=today) \
+                    .aggregate({
+                        "$group": {
+                            "_id": {"phone": "$source_account"},
+                            "count": {"$sum": "$ticket_amount"}}
+                    }):
+                cnt = d["count"]
+                phone = d["_id"]["phone"]
+                if cnt + int(order.ticket_amount) > 10:
+                    droped.add(phone)
+        tele = random.choice(list(all_accounts - droped))
+        return cls.objects.get(telephone=tele)
 
-    # 初始化帐号
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
         self.last_login_time = dte.now()
@@ -1224,20 +1148,6 @@ class QdkyWebRebot(Rebot):
         self.cookies = "{}"
         self.save()
         return "OK"
-
-    @classmethod
-    def login_all(cls):
-        # 登陆所有预设账号
-        accounts = SOURCE_INFO[cls.crawl_source]["accounts"]
-        rebot_log.info(accounts)
-        for tele, pwd in accounts.items():
-            bot = cls(is_active=True,
-                      is_locked=False,
-                      telephone=tele,
-                      password=pwd,
-                      )
-            bot.save()
-            bot.login()
 
 
 class FjkyAppRebot(Rebot):
@@ -1577,13 +1487,132 @@ class WmcxWebRebot(Rebot):
         return self.check_login_by_resp(resp)
 
 
-# 代理ip, is_locked
+class Hn96520WapRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked", "ip"],
+        "collection": "hnwap_rebot",
+    }
+    crawl_source = SOURCE_HN96520
+    is_for_lock = True
+
+    def login(self):
+        headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        valid_url = "http://m.hn96520.com/PersonCenter/CheckCode?ID=1"
+        cookies = json.loads(self.cookies)
+        for i in range(3):
+            r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            if "image" not in r.headers.get('content-type'):
+                self.modify(ip="")
+            else:
+                break
+        cookies.update(r.cookies)
+        valid_code = vcode_hnwap(r.content)
+
+        ret = "fail"
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", "") or self.user_agent,
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
+            params = {
+                "UserID": self.telephone,
+                "Password": self.password,
+                "CheckCode": valid_code,
+            }
+            login_url = "http://m.hn96520.com/PersonCenter/LoginIn"
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            res = r.json()
+            success = res.get("result", False)
+            if success:     # 登陆成功
+                cookies.update(dict(r.cookies))
+                self.modify(cookies=json.dumps(cookies), is_active=True)
+                ret = "OK"
+            else:
+                msg = res["message"]
+                if u"验证码错误" in msg:
+                    ret = "invalid_code"
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active = True
+            self.cookies = "{}"
+            self.save()
+            ret = "create"
+        rebot_log.info("[hnwap_login]%s, result:%s", self.telephone, ret)
+        return ret
+
+    def check_login(self):
+        user_url = "http://m.hn96520.com/PersonCenter/Index?+%s" % time.time()
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        r = self.http_get(user_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        try:
+            username = soup.select_one("#tel").text.strip()
+            if username == self.telephone:
+                return 1
+        except:
+            pass
+        return 0
+
+    def get_all_riders(self):
+        headers = {
+            'User-Agent': self.user_agent,
+            "Referer": "http://m.hn96520.com/PersonCenter/Index",
+            "Upgrade-Insecure-Requests":1,
+        }
+        cookies = json.loads(self.cookies)
+        r = self.http_get("http://m.hn96520.com/PersonCenter/Takeman", headers=headers, cookies=cookies)
+        data = {}
+        for s in re.findall(r"modify\(\'(\S+)\'\)", r.content):
+            lst = s.split("*")
+            takemanid, cardid = lst[0], lst[3]
+            data[cardid] = takemanid
+        return data
+
+    def add_riders(self, order):
+        headers = {'User-Agent': self.user_agent,}
+        cookies = json.loads(self.cookies)
+        all_riders = self.get_all_riders()
+
+        id_lst = []
+        for rider in order.riders:
+            idcard = rider["id_number"]
+            if idcard in all_riders:
+                id_lst.append(all_riders[idcard])
+            else:
+                url = "http://m.hn96520.com/Home/AppdentTakeman?newname=%s&newtel=%s&newcardid=%s" % (rider["name"], rider["telephone"], rider["id_number"])
+                r = self.http_get(url, headers=headers, cookies=cookies, allow_redirects=False)
+                mlst= re.findall(r"msg=(\d+)", r.content)
+                if mlst:
+                    id_lst.append(mlst[0])
+        return id_lst
+
+    def clear_riders(self):
+        is_login = self.test_login_status()
+        if not is_login:
+            return
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        for idcard, tid in self.get_all_riders().iteritems():
+            delurl = "http://m.hn96520.com/PersonCenter/DeleteTakeman?takemanid=%s" % tid
+            try:
+                r = self.http_get(delurl, headers=headers, cookies=cookies)
+            except:
+                pass
+
+
 class Hn96520WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
-    memid = db.StringField()
     userid = db.StringField()
     sign = db.StringField()
+    sign2 = db.StringField()
     ip = db.StringField(default="")
 
     meta = {
@@ -1591,7 +1620,7 @@ class Hn96520WebRebot(Rebot):
         "collection": "hn96520web_rebot",
     }
     crawl_source = SOURCE_HN96520
-    is_for_lock = True
+    is_for_lock = False
 
     @property
     def proxy_ip(self):
@@ -1686,10 +1715,14 @@ class Hn96520WebRebot(Rebot):
     # 初始化帐号
     def login(self):
         ua = random.choice(BROWSER_USER_AGENT)
+        pwd, sign1, userid, sign2= SOURCE_INFO[SOURCE_HN96520]["accounts"][self.telephone]
         self.last_login_time = dte.now()
         self.user_agent = ua
         self.is_active = True
         self.cookies = "{}"
+        self.sign = sign1
+        self.sign2 = sign2
+        self.userid = userid
         self.save()
         return "OK"
 
@@ -2980,6 +3013,100 @@ class CTripRebot(Rebot):
         response = urllib2.urlopen(request, qstr, timeout=30)
         ret = json.loads(response.read())
         return ret
+
+
+class AnxingWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked", "ip"],
+        "collection": "anxingweb_rebot",
+    }
+    crawl_source = SOURCE_ANXING
+    is_for_lock = True
+
+    def http_headers(self):
+        return {
+            "Ax-Zh": "www.anxingbus.com",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": "http://www.anxingbus.com/Home/Index",
+            "User-Agent": self.user_agent,
+        }
+
+    def login(self):
+        login_form = "http://www.anxingbus.com/"
+        valid_url = "http://www.anxingbus.com/Validate.ashx"
+        headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        r = self.http_get(login_form, headers=headers)
+        soup = BeautifulSoup(r.content, "lxml")
+        page_token = soup.find("input", attrs={"name":"__RequestVerificationToken"}).get("value")
+        cookies = dict(r.cookies)
+
+        for i in range(3):
+            r = self.http_get(valid_url, headers=headers, cookies=cookies)
+            if "image" not in r.headers.get('content-type'):
+                self.modify(ip="")
+            else:
+                break
+        cookies.update(dict(r.cookies))
+        valid_code = vcode_anxing(r.content)
+
+        ret = "fail"
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", "") or self.user_agent,
+                "Referer": login_form,
+                "Origin": login_form,
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
+            params = {
+                "__RequestVerificationToken": page_token,
+                "oldUrl": "http://www.anxingbus.com/Home/Index",
+                "loginuser": self.telephone,
+                "loginpwd": self.password,
+                "logincode": valid_code,
+            }
+            login_url = "http://www.anxingbus.com/account/login"
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            res = r.json()
+            success = res.get("isSuccess", False)
+            if success:     # 登陆成功
+                cookies.update(dict(r.cookies))
+                self.modify(cookies=json.dumps(cookies), is_active=True)
+                if res["IsLogin"]:
+                    ret = "OK"
+                else:
+                    ret = "check_fail"
+            else:
+                msg = res["Message"]
+                if u"验证码不正确" in msg:
+                    ret = "invalid_code"
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active = True
+            self.cookies = "{}"
+            self.save()
+            ret = "create"
+        rebot_log.info("[anxing_login]%s, result:%s", self.telephone, ret)
+        return ret
+
+    def check_login(self):
+        user_url = "http://www.anxingbus.com/Member/My"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        r = self.http_get(user_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        try:
+            username = soup.select("#formMember table tr")[0].select("td")[1].text.strip()
+            if username == self.telephone:
+                return 1
+        except:
+            pass
+        return 0
 
 
 class CqkyWebRebot(Rebot):
