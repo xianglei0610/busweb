@@ -73,13 +73,21 @@ class Flow(BaseFlow):
             "descode": line.extra_info["t"],
             "busdate": line.extra_info["date"],
             "busofnum": line.extra_info["bc"],
-            "takemanids": ",".join(riders),
+            "takemanids": ",".join(riders)+",",
         }
         cookies = json.loads(rebot.cookies)
         headers = {'User-Agent': rebot.user_agent}
         r = rebot.http_get("%s?%s" % (lock_url, urllib.urlencode(params)), headers=headers, cookies=cookies)
         soup = bs(r.content, "lxml")
         el_orderid = soup.select_one("#ordersn")
+        if soup.find("title").text == u"用户登录":
+            lock_result.update({
+                "result_code": 2,
+                "result_reason": "未登录",
+                "source_account": rebot.telephone,
+            })
+            return lock_result
+
         if el_orderid:
             raw_order = el_orderid.text.strip()
             pay_money = float(soup.select_one("#totalmoney").text.strip().lstrip("￥"))
@@ -87,14 +95,13 @@ class Flow(BaseFlow):
             pay_params = {}
             try:
                 pay_msg =  re.findall(r"BC.click\(([\s\S]*)\}\);", soup.select("script")[5].text)[0]
-                pay_msg = pay_msg[:pay_msg.index("})")+1].replace("//","#").replace("/**", "#").replace("*/", "#").replace("*", "#")
-                pay_params = eval(pay_msg)
-                pay_params["appId"] = re.findall(r"appId=(\S+)", soup.select_one("#spay-script").get("src"))[0]
-                pay_params["callback"] = "BC.cbs.r0.f"
-                pay_params["return_url"] = pay_params["return_url"].replace("#", "//")
-            except Exception, e:
-                print e
-                pass
+            except:
+                pay_msg =  re.findall(r"BC.click\(([\s\S]*)\}\);", r.content)[0]
+            pay_msg = pay_msg[:pay_msg.index("})")+1].replace("//","#").replace("/**", "#").replace("*/", "#").replace("*", "#")
+            pay_params = eval(pay_msg)
+            pay_params["appId"] = re.findall(r"appId=(\S+)", soup.select_one("#spay-script").get("src"))[0]
+            pay_params["callback"] = "BC.cbs.r0.f"
+            pay_params["return_url"] = pay_params["return_url"].replace("#", "//")
             lock_result.update({
                 'result_code': 1,
                 'raw_order_no': raw_order,
@@ -105,9 +112,15 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
+            try:
+                msg = soup.select_one(".am-page-result-brief").text
+            except:
+                msg = ""
+            if "错误代码：333" in msg:
+                rebot = order.change_lock_rebot()
             lock_result.update({
                 'result_code': 2,
-                "result_reason": "",
+                "result_reason": msg,
                 "source_account": rebot.telephone,
             })
             return lock_result
@@ -375,6 +388,7 @@ class Flow(BaseFlow):
                     break
         if not is_login:
             return {"flag": "error", "content": "账号自动登陆失败，请再次重试!"}
+
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             self.lock_ticket(order)
         if order.status == STATUS_WAITING_ISSUE:

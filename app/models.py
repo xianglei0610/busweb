@@ -1500,27 +1500,22 @@ class Hn96520WapRebot(Rebot):
     is_for_lock = True
 
     def login(self):
-        login_form = "http://m.hn96520.com/PersonCenter/Login?callback=/Home/Preorder"
-        valid_url = "http://m.hn96520.com/PersonCenter/CheckCode?ID=1"
         headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
-        r = self.http_get(login_form, headers=headers)
-        cookies = dict(r.cookies)
-
+        valid_url = "http://m.hn96520.com/PersonCenter/CheckCode?ID=1"
+        cookies = json.loads(self.cookies)
         for i in range(3):
             r = self.http_get(valid_url, headers=headers, cookies=cookies)
             if "image" not in r.headers.get('content-type'):
                 self.modify(ip="")
             else:
                 break
-        cookies.update(dict(r.cookies))
+        cookies.update(r.cookies)
         valid_code = vcode_hnwap(r.content)
 
         ret = "fail"
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
-                "Referer": login_form,
-                "Origin": login_form,
                 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             }
             params = {
@@ -1552,7 +1547,7 @@ class Hn96520WapRebot(Rebot):
         return ret
 
     def check_login(self):
-        user_url = "http://m.hn96520.com/PersonCenter/Index"
+        user_url = "http://m.hn96520.com/PersonCenter/Index?+%s" % time.time()
         headers = {"User-Agent": self.user_agent}
         cookies = json.loads(self.cookies)
         r = self.http_get(user_url, headers=headers, cookies=cookies)
@@ -1566,7 +1561,11 @@ class Hn96520WapRebot(Rebot):
         return 0
 
     def get_all_riders(self):
-        headers = {'User-Agent': self.user_agent,}
+        headers = {
+            'User-Agent': self.user_agent,
+            "Referer": "http://m.hn96520.com/PersonCenter/Index",
+            "Upgrade-Insecure-Requests":1,
+        }
         cookies = json.loads(self.cookies)
         r = self.http_get("http://m.hn96520.com/PersonCenter/Takeman", headers=headers, cookies=cookies)
         data = {}
