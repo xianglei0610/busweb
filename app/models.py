@@ -923,14 +923,7 @@ class Rebot(db.Document):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        key = "proxy:%s" % self.crawl_source
-        if ipstr and rds.sismember(key, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(key)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ""
 
     @classmethod
     def login_all(cls):
@@ -1499,17 +1492,15 @@ class Hn96520WapRebot(Rebot):
     crawl_source = SOURCE_HN96520
     is_for_lock = True
 
+    @property
+    def proxy_ip(self):
+        return ""
+
     def login(self):
         headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
         valid_url = "http://m.hn96520.com/PersonCenter/CheckCode?ID=1"
-        cookies = json.loads(self.cookies)
-        for i in range(3):
-            r = self.http_get(valid_url, headers=headers, cookies=cookies)
-            if "image" not in r.headers.get('content-type'):
-                self.modify(ip="")
-            else:
-                break
-        cookies.update(r.cookies)
+        r = self.http_get(valid_url, headers=headers)
+        cookies = dict(r.cookies)
         valid_code = vcode_hnwap(r.content)
 
         ret = "fail"
@@ -1543,7 +1534,7 @@ class Hn96520WapRebot(Rebot):
             self.cookies = "{}"
             self.save()
             ret = "create"
-        rebot_log.info("[hnwap_login]%s, result:%s", self.telephone, ret)
+        rebot_log.info("[hnwap_login]%s, result:%s, valid_code:%s", self.telephone, ret, valid_code)
         return ret
 
     def check_login(self):
@@ -1579,6 +1570,7 @@ class Hn96520WapRebot(Rebot):
         headers = {'User-Agent': self.user_agent,}
         cookies = json.loads(self.cookies)
         all_riders = self.get_all_riders()
+        # self.clear_riders()
 
         id_lst = []
         for rider in order.riders:
