@@ -72,6 +72,62 @@ def vcode_anxing(im_content):
     return "".join(filter(lambda c: ord("A")<=ord(c)<=ord("Z") or ord("a")<=ord(c)<=ord("z") or ord("1")<=ord(c)<=ord("9"), code))
 
 
+def vcode_hnwap(im_content):
+    def _denoising(im):
+        data = im.getdata()
+        w,h = im.size
+        for x in range(0, w):
+            for y in xrange(0,5):
+                im.putpixel((x,y), (255,255,255))
+
+            for y in xrange(h-5,h):
+                im.putpixel((x,y), (255,255,255))
+
+        for y in range(0, h):
+            for x in xrange(0,6):
+                im.putpixel((x,y), (255,255,255))
+
+            for x in xrange(w-6, w):
+                im.putpixel((x,y), (255,255,255))
+
+        data = im.getdata()
+        for x in range(5, w-5):
+            for y in range(5, h-5):
+                r, g, b= data[w*y+x]
+                if r>200 or g>200 or b>200:
+                    im.putpixel((x,y), (255,255,255))
+
+        im = im.convert('L')
+        data = im.getdata()
+        w,h = im.size
+        for x in xrange(1,w-1):
+            for y in xrange(1,h-1):
+                mid_pixel = data[w*y+x]
+                im.putpixel((x,y), 0 if mid_pixel<160  else 255)
+
+        for i in range(2):
+            data = im.getdata()
+            for x in range(5, w-5):
+                for y in range(5, h-5):
+                    mid_pixel = data[w*y+x]
+                    if mid_pixel == 0: #找出上下左右四个方向像素点像素值
+                        top_pixel = data[w*(y-1)+x] and 255
+                        left_pixel = data[w*y+(x-1)] and 255
+                        down_pixel = data[w*(y+1)+x] and 255
+                        right_pixel = data[w*y+(x+1)] and 255
+                        if mid_pixel == 0 and (top_pixel+left_pixel+down_pixel+right_pixel) in [255*4]:
+                            im.putpixel((x,y), 255)
+        im = im.resize((100, 40), Image.ANTIALIAS)
+        return im
+
+    ims = cStringIO.StringIO(im_content)
+    im = Image.open(ims)
+    im = _denoising(im)
+    code = image_to_string(im, lang='hn96520_wap', config="-psm 7")
+
+    # 把一些特殊符号去掉
+    return "".join(filter(lambda c: ord("1")<=ord(c)<=ord("9"), code))
+
 def vcode_scqcp(img_content):
     ims = cStringIO.StringIO(img_content)
     im = Image.open(ims)
