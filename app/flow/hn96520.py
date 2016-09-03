@@ -116,10 +116,14 @@ class Flow(BaseFlow):
                 msg = soup.select_one(".am-page-result-brief").text
             except:
                 msg = ""
+            code = 2
             if "错误代码：333" in msg:
                 rebot = order.change_lock_rebot()
+            if u"班次已经停班" in msg or "可售票额不足" in msg:
+                code = 0
+                self.close_line(order.line, msg)
             lock_result.update({
-                'result_code': 2,
+                'result_code': code,
                 "result_reason": msg,
                 "source_account": rebot.telephone,
             })
