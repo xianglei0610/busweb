@@ -430,17 +430,17 @@ def main():
     sched.add_interval_job(crawl_proxy_ip181, minutes=10)
 
     sched.add_interval_job(check_proxy, minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["hn96520"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["sd365"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["qdky"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=2)
+    sched.add_interval_job(check_consumer_proxy, args=["hn96520"], minutes=2)
+    sched.add_interval_job(check_consumer_proxy, args=["sd365"], minutes=2)
+    sched.add_interval_job(check_consumer_proxy, args=["qdky"], minutes=2)
     # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=2)
     # sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
     #sched.add_interval_job(check_consumer_proxy, args=["lnky"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["e8s"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["bus365"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=2)
+    # sched.add_interval_job(check_consumer_proxy, args=["bus365"], minutes=2)
 
 
     #(补救措施) 定时刷新状态
@@ -448,7 +448,7 @@ def main():
 
     # 定时刷新站统计信息
     sched.add_interval_job(refresh_station, minutes=20)
-    
+
     #发送订单失败邮件
     sched.add_interval_job(refresh_order_fail_rate, minutes=30)
 
