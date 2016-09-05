@@ -42,16 +42,24 @@ SOURCE_GLCX = "glcx"
 SOURCE_FJKY = "fjky"
 SOURCE_QDKY = "qdky"    # 青岛客运
 SOURCE_ANXING = "anxing"    # 安行巴士
+SOURCE_HAINKY = "hainky"
 
 
 YH_TYPE_SOURCE = [SOURCE_BJKY, SOURCE_HEBKY, SOURCE_SCQCP,
                   SOURCE_SZKY, SOURCE_ZHW, SOURCE_BUS365,
                   SOURCE_GLCX, SOURCE_FJKY, SOURCE_CHANGTU,
-                  SOURCE_QDKY]
+                  SOURCE_QDKY, SOURCE_HAINKY]
 SNMPAY_SOURCE = ["cqky", "tongcheng", "xyjt", "tzky", "jsdlky", "sd365", "lvtu100", "gdsw"]
 
 
 SOURCE_INFO = {
+    SOURCE_HAINKY: {
+        "name": "海南海汽",
+        "website": "http://www.0898hq.com/eTicket/",
+        "accounts": {
+            "13267109876": ("123456", ""),
+        },
+    },
     SOURCE_ANXING: {
         "name": "安行巴士",
         "website": "http://www.anxingbus.com/",
@@ -4477,6 +4485,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_GLCX: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_FJKY: "您已成功购买%(time)s%(start)s-%(end)s的车票,本次购票取票号：%(no)s，取票密码：%(code)s。",
     SOURCE_QDKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和取票密码%(code)s取票,如需改签、退票请前往客运站按规定办理。",
+    SOURCE_HAINKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和取票密码%(code)s取票,如需改签、退票请前往客运站按规定办理。",
 }
 
 CITY_NAME_TRANS = {

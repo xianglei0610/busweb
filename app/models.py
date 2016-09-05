@@ -1060,6 +1060,39 @@ class Rebot(db.Document):
             return r
 
 
+class HainkyWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "hainkyweb_rebot",
+    }
+    crawl_source = SOURCE_HAINKY
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         if ipstr and rds.sismember(RK_PROXY_IP_HAINKY, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(RK_PROXY_IP_HAINKY)
+#         self.modify(ip=ipstr)
+#         return ipstr
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        self.last_login_time = dte.now()
+        self.user_agent = ua
+        self.is_active = True
+        self.cookies = "{}"
+        self.save()
+        return "OK"
+
+
 class QdkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
