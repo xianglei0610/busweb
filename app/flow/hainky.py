@@ -89,7 +89,7 @@ class Flow(BaseFlow):
         url = "http://www.0898hq.com/eTicket/QueryRegu.aspx"
         params = {
             "czbh": line.s_sta_id,
-            "mdzh": line.extra_info['end']['zmbh'],
+            "mdzh": line.d_city_id,
             "fcrq": line.drv_date,
             "fcsj": '00:00-23:59',
             "buyNum": '1'
@@ -116,7 +116,7 @@ class Flow(BaseFlow):
         params = {
                 "czbh": line.s_sta_id,
                 "ccbh": line.bus_num,
-                "mdzh": line.extra_info['end']['zmbh'],
+                "mdzh": line.d_city_id,
                 "cxbh": res['cxbh'],
                 "fcrq": line.drv_date,
                 "buynum": order.ticket_amount,
@@ -270,7 +270,7 @@ class Flow(BaseFlow):
         rebot = HainkyWebRebot.get_one()
         headers = rebot.http_header()
         data = {
-            "ddzm": line.extra_info['end']['zdmc'],
+            "ddzm": line.d_city_name,
             "fcrq": line.drv_date,
             "fcsj_e": "24:00",
             "fcsj_b": "00:00",
