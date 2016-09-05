@@ -137,6 +137,7 @@ class Flow(BaseFlow):
         except:
             errorMsg = '联系人姓名转换错误'
             res = {"status": 0, 'msg': errorMsg}
+            return res
         data = {
             "UserName": order.contact_info['name'].encode('gb2312'), 
             'IDCardType': u'身份证'.encode('gb2312'),  
@@ -157,12 +158,10 @@ class Flow(BaseFlow):
             if oid:
                 pay_url = "http://www.0898hq.com"+location_url
                 r = rebot.http_get(pay_url, headers=headers)
-                print r.content.decode('gbk', 'ignore')
                 sel = etree.HTML(r.content)
                 order_no = sel.xpath('//input[@id="OrderNo"]/@value')[0]
                 order.modify(extra_info={'pcode': tpass})
                 res = {"status": 1, "pay_url": pay_url, 'pay_order_id': oid[0],"order_no":order_no}
-                print res
             elif errorMsg:
                 res = {"status": 0, 'msg': errorMsg}
         return res
@@ -170,7 +169,6 @@ class Flow(BaseFlow):
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
         detail_url = "http://www.0898hq.com/eTicket/OrderDetail.aspx?oid=%s&sid=%s"%(order.raw_order_no,order.contact_info['id_number'])
         headers = {'User-Agent': random.choice(BROWSER_USER_AGENT)}
-        print detail_url
         r = rebot.http_get(detail_url, headers=headers)
         ret = r.content.decode('gbk', "ignore")
         if u'错误订单号，订单不存在' in ret:
@@ -233,10 +231,8 @@ class Flow(BaseFlow):
                 headers = {'User-Agent': random.choice(BROWSER_USER_AGENT)}
                 ret = self.send_orderDetail_request(rebot, order=order)
                 order_status = ret["order_status"]
-                print order_status
                 if order_status in ('未支付',):
                     union_url = "http://www.0898hq.com/eTicket/Pay2ChinaUnion.aspx?oid=%s" % order.lock_info['pay_order_id']
-                    print union_url
                     r = rebot.http_get(union_url, headers=headers)
                     res = r.content.decode('gbk', 'ignore')
                     if u'错误订单号，订单不存在' in res:
