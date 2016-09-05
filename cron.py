@@ -417,8 +417,11 @@ def main():
 
     #fjky
     sched.add_cron_job(bus_crawl, hour=14, minute=30, args=['fjky'], kwargs={"crawl_kwargs":{"city": "南平市,宁德市,福安市,福鼎市,古田县,光泽县,,霞浦县,政和县,周宁县,柘荣县"}})
-    sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['fjky'], kwargs={"crawl_kwargs":{"city": "建阳市,建瓯市,明溪县,屏南县,浦城县,邵武市,寿宁县,顺昌县,松溪县,武夷山市"}})
-
+    sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['fjky'], kwargs={"crawl_kwargs":{"city": "建阳市,建瓯市,明溪县,屏南县,浦城县,邵武市,寿宁县,顺昌县,松溪县,武夷山市,"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['fjky'], kwargs={"crawl_kwargs":{"city": "厦门市"}})
+    
+    #海南海汽
+    sched.add_cron_job(bus_crawl, hour=1, minute=30, args=['hainky'])
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
