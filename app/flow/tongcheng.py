@@ -138,6 +138,8 @@ class Flow(BaseFlow):
             code = 0
             if u"此线路服务费不可用" in desc or u"此线路暂不可预订,请选择其他出发站或线路" in desc or "请重新查询线路后再预订" in desc:
                 code = 2
+            if u"已暂停网售" in desc:
+                self.close_line(order.line, desc)
             lock_result.update({
                 "result_code": code,
                 "result_reason": desc,

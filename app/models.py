@@ -15,7 +15,7 @@ from flask import json
 from lxml import etree
 from bs4 import BeautifulSoup
 from app import db
-from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter, vcode_anxing
+from app.utils import md5, getRedisObj, get_redis, trans_js_str, vcode_cqky, vcode_scqcp, sha1, get_pinyin_first_litter, vcode_anxing, vcode_hnwap
 from app.utils import vcode_glcx
 from app import rebot_log, line_log, order_log
 from app.proxy import get_proxy
@@ -923,14 +923,7 @@ class Rebot(db.Document):
 
     @property
     def proxy_ip(self):
-        rds = get_redis("default")
-        ipstr = self.ip
-        key = "proxy:%s" % self.crawl_source
-        if ipstr and rds.sismember(key, ipstr):
-            return ipstr
-        ipstr = rds.srandmember(key)
-        self.modify(ip=ipstr)
-        return ipstr
+        return ""
 
     @classmethod
     def login_all(cls):
@@ -1520,7 +1513,125 @@ class WmcxWebRebot(Rebot):
         return self.check_login_by_resp(resp)
 
 
-# 代理ip, is_locked
+class Hn96520WapRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked", "ip"],
+        "collection": "hnwap_rebot",
+    }
+    crawl_source = SOURCE_HN96520
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def login(self):
+        headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        valid_url = "http://m.hn96520.com/PersonCenter/CheckCode?ID=1"
+        r = self.http_get(valid_url, headers=headers)
+        cookies = dict(r.cookies)
+        valid_code = vcode_hnwap(r.content)
+
+        ret = "fail"
+        if valid_code:
+            headers = {
+                "User-Agent": headers.get("User-Agent", "") or self.user_agent,
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            }
+            params = {
+                "UserID": self.telephone,
+                "Password": self.password,
+                "CheckCode": valid_code,
+            }
+            login_url = "http://m.hn96520.com/PersonCenter/LoginIn"
+            r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
+            res = r.json()
+            success = res.get("result", False)
+            if success:     # 登陆成功
+                cookies.update(dict(r.cookies))
+                self.modify(cookies=json.dumps(cookies), is_active=True)
+                ret = "OK"
+            else:
+                msg = res["message"]
+                if u"验证码错误" in msg:
+                    ret = "invalid_code"
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active = True
+            self.cookies = "{}"
+            self.save()
+            ret = "create"
+        rebot_log.info("[hnwap_login]%s, result:%s, valid_code:%s", self.telephone, ret, valid_code)
+        return ret
+
+    def check_login(self):
+        user_url = "http://m.hn96520.com/PersonCenter/Index?+%s" % time.time()
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        r = self.http_get(user_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        try:
+            username = soup.select_one("#tel").text.strip()
+            if username == self.telephone:
+                return 1
+        except:
+            pass
+        return 0
+
+    def get_all_riders(self):
+        headers = {
+            'User-Agent': self.user_agent,
+            "Referer": "http://m.hn96520.com/PersonCenter/Index",
+            "Upgrade-Insecure-Requests":1,
+        }
+        cookies = json.loads(self.cookies)
+        r = self.http_get("http://m.hn96520.com/PersonCenter/Takeman", headers=headers, cookies=cookies)
+        data = {}
+        for s in re.findall(r"modify\(\'(\S+)\'\)", r.content):
+            lst = s.split("*")
+            takemanid, cardid = lst[0], lst[3]
+            data[cardid] = takemanid
+        return data
+
+    def add_riders(self, order):
+        headers = {'User-Agent': self.user_agent,}
+        cookies = json.loads(self.cookies)
+        all_riders = self.get_all_riders()
+        # self.clear_riders()
+
+        id_lst = []
+        for rider in order.riders:
+            idcard = rider["id_number"]
+            if idcard in all_riders:
+                id_lst.append(all_riders[idcard])
+            else:
+                url = "http://m.hn96520.com/Home/AppdentTakeman?newname=%s&newtel=%s&newcardid=%s" % (rider["name"], rider["telephone"], rider["id_number"])
+                r = self.http_get(url, headers=headers, cookies=cookies, allow_redirects=False)
+                mlst= re.findall(r"msg=(\d+)", r.content)
+                if mlst:
+                    id_lst.append(mlst[0])
+        return id_lst
+
+    def clear_riders(self):
+        is_login = self.test_login_status()
+        if not is_login:
+            return
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        for idcard, tid in self.get_all_riders().iteritems():
+            delurl = "http://m.hn96520.com/PersonCenter/DeleteTakeman?takemanid=%s" % tid
+            try:
+                r = self.http_get(delurl, headers=headers, cookies=cookies)
+            except:
+                pass
+
+
 class Hn96520WebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField()
@@ -1534,7 +1645,7 @@ class Hn96520WebRebot(Rebot):
         "collection": "hn96520web_rebot",
     }
     crawl_source = SOURCE_HN96520
-    is_for_lock = True
+    is_for_lock = False
 
     @property
     def proxy_ip(self):
