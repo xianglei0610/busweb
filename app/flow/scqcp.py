@@ -674,7 +674,7 @@ class Flow(BaseFlow):
             r_url = urllib2.urlparse.urlparse(r.url)
             params = urlparse.parse_qs(r_url.query, True)
             errorMsg = params.get('errorMsg', [])
-            if errorMsg and "车票已过期" in errorMsg[0]:
+            if errorMsg and "车票已过期" in errorMsg[0].decode('utf8'):
                 msg = '车票已过期'
                 self.lock_ticket_retry(order, reason=msg)
                 return {"flag": "error", "content": '请重试!'}
