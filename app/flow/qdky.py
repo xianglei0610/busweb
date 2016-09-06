@@ -230,8 +230,11 @@ class Flow(BaseFlow):
             cookies.update(dict(r.cookies))
         except:
             rebot.modify(ip='')
-            errmsg = soup.find_all('script')[-1].get_text()
-            errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+            try:
+                errmsg = soup.find_all('script')[-1].get_text()
+                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+            except:
+                errmsg = ''
             return {'error_code': '1', "errmsg": "车次查询异常"+errmsg}
         tbc = ''
         for y in info[1:]:
@@ -272,8 +275,11 @@ class Flow(BaseFlow):
                     return {"btn": btn, 'state': state, "valid": valid}
         except:
             rebot.modify(ip='')
-            errmsg = soup.find_all('script')[-1].get_text()
-            errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+            try:
+                errmsg = soup.find_all('script')[-1].get_text()
+                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+            except:
+                errmsg = ''
             return {'error_code': '3', "errmsg": "预订"+errmsg}
         data = {
             '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonXiugai',
