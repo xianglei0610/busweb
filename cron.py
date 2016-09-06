@@ -417,7 +417,16 @@ def main():
 
     #fjky
     sched.add_cron_job(bus_crawl, hour=14, minute=30, args=['fjky'], kwargs={"crawl_kwargs":{"city": "南平市,宁德市,福安市,福鼎市,古田县,光泽县,,霞浦县,政和县,周宁县,柘荣县"}})
-    sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['fjky'], kwargs={"crawl_kwargs":{"city": "建阳市,建瓯市,明溪县,屏南县,浦城县,邵武市,寿宁县,顺昌县,松溪县,武夷山市"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=0, args=['fjky'], kwargs={"crawl_kwargs":{"city": "建阳市,建瓯市,明溪县,屏南县,浦城县,邵武市,寿宁县,顺昌县,松溪县,武夷山市,"}})
+    sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['fjky'], kwargs={"crawl_kwargs":{"city": "厦门市"}})
+
+    #海南海汽
+    sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['hainky'])
+
+    # 安行巴士
+    sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['anxingbus'], kwargs={"crawl_kwargs":{"province": "安徽"}})
+    sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['anxingbus'], kwargs={"crawl_kwargs":{"province": "上海"}})
+    sched.add_cron_job(bus_crawl, hour=3, minute=0, args=['anxingbus'], kwargs={"crawl_kwargs":{"province": "江苏"}})
 
 
     # 代理ip相关
@@ -430,17 +439,17 @@ def main():
     sched.add_interval_job(crawl_proxy_ip181, minutes=10)
 
     sched.add_interval_job(check_proxy, minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["hn96520"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["sd365"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["qdky"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=2)
+    sched.add_interval_job(check_consumer_proxy, args=["hn96520"], minutes=2)
+    sched.add_interval_job(check_consumer_proxy, args=["sd365"], minutes=2)
+    sched.add_interval_job(check_consumer_proxy, args=["qdky"], minutes=2)
     # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=2)
     # sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
     #sched.add_interval_job(check_consumer_proxy, args=["lnky"], minutes=1)
     # sched.add_interval_job(check_consumer_proxy, args=["e8s"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=1)
-    sched.add_interval_job(check_consumer_proxy, args=["bus365"], minutes=1)
+    sched.add_interval_job(check_consumer_proxy, args=["changtu"], minutes=2)
+    # sched.add_interval_job(check_consumer_proxy, args=["bus365"], minutes=2)
 
 
     #(补救措施) 定时刷新状态
@@ -448,7 +457,7 @@ def main():
 
     # 定时刷新站统计信息
     sched.add_interval_job(refresh_station, minutes=20)
-    
+
     #发送订单失败邮件
     sched.add_interval_job(refresh_order_fail_rate, minutes=30)
 
