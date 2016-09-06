@@ -427,6 +427,8 @@ class Flow(BaseFlow):
         rebot = order.get_lock_rebot()
 
         if order.status == STATUS_WAITING_ISSUE:
+            if (dte.now()-order.lock_datetime).seconds > 15*60:
+                return {"flag": "error", "content": "超过15分钟未支付，不允许支付"}
             orderInfo = self.send_order_request(rebot, order)
             if orderInfo:
                 if orderInfo['IsAgainPay'] != 1:
