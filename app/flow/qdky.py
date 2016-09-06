@@ -62,11 +62,12 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
-            if '已经使用此身份证预订过' in res["msg"]:
+            print res
+            if '已经使用此身份证预订过' in res.get('result_reason', ''):
                 lock_result.update({
                         "result_code": 0,
                         "source_account": rebot.telephone,
-                        "result_reason": res["msg"],
+                        "result_reason": res.get('result_reason', ''),
                     })
                 return lock_result
             lock_result.update({
