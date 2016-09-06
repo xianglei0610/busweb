@@ -139,6 +139,41 @@ def vcode_scqcp(img_content):
     return code
 
 
+def vcode_gzdlky(im_content):
+    "广州道路客运"
+    def _denoising(im):
+        im = im.convert('L')
+        data = im.getdata()
+        w,h = im.size
+        for x in xrange(0,w):
+            for y in xrange(0,h):
+                mid_pixel = data[w*y+x]
+                if x in [0, w-1] or y in [0, h-1]:
+                    im.putpixel((x,y), 255)
+                else:
+                    im.putpixel((x,y), 0 if mid_pixel<200  else 255)
+
+        data = im.getdata()
+        for x in xrange(0,w):
+            for y in xrange(0,h):
+                mid_pixel = data[w*y+x]
+                if mid_pixel == 0:
+                    top_pixel = data[w*(y-1)+x] and 255
+                    left_pixel = data[w*y+(x-1)] and 255
+                    down_pixel = data[w*(y+1)+x] and 255
+                    right_pixel = data[w*y+(x+1)] and 255
+                    if mid_pixel == 0 and (top_pixel+left_pixel+down_pixel+right_pixel) in [255*3, 255*4]:
+                        im.putpixel((x,y), 255)
+
+        im = im.resize((100, 40), Image.ANTIALIAS)
+        return im
+    ims = cStringIO.StringIO(im_content)
+    im = Image.open(ims)
+    im = _denoising(im)
+    code = image_to_string(im, lang='gz', config="-psm 7")
+    return code
+
+
 def vcode_zhw():
     url = 'http://www.zhwsbs.gov.cn:9013/jsps/shfw/checkCode.jsp'
     for x in xrange(5):

@@ -43,6 +43,7 @@ SOURCE_FJKY = "fjky"
 SOURCE_QDKY = "qdky"    # 青岛客运
 SOURCE_ANXING = "anxing"    # 安行巴士
 SOURCE_HAINKY = "hainky"
+SOURCE_ZUOCHE = "zuoche"
 
 
 YH_TYPE_SOURCE = [SOURCE_BJKY, SOURCE_HEBKY, SOURCE_SCQCP,
@@ -63,6 +64,13 @@ SOURCE_INFO = {
     SOURCE_ANXING: {
         "name": "安行巴士",
         "website": "http://www.anxingbus.com/",
+        "accounts": {
+            "18025457649": ("123456", ""),
+        },
+    },
+    SOURCE_ZUOCHE: {
+        "name": "坐车网",
+        "website": "http://www.zuoche.com/",
         "accounts": {
             "18025457649": ("123456", ""),
         },
