@@ -229,7 +229,8 @@ def main():
 
     # 巴巴快巴
     # sched.add_cron_job(bus_crawl, hour=22, minute=10, args=['baba'], kwargs={"crawl_kwargs":{"province": "安徽"}})
-    # sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['baba'], kwargs={"crawl_kwargs":{"province": "江苏"}})
+    sched.add_cron_job(bus_crawl, hour=18, minute=10, args=['baba'], kwargs={"crawl_kwargs":{"province": "江苏"}})
+    sched.add_cron_job(bus_crawl, hour=20, minute=10, args=['baba'], kwargs={"crawl_kwargs":{"province": "上海"}})
 
     # 方便网
     # sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['fangbian'], kwargs={"crawl_kwargs":{"province": "山东"}})
