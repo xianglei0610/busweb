@@ -207,9 +207,6 @@ class Flow(BaseFlow):
         if "startProvince" not in line.extra_info:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
-        if line.drv_date<"2016-09-07" and line.d_city_name=="杭州" and line.s_city_name=="黄山":
-            result_info.update(result_msg="杭州G20", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-            return result_info
 
         line_url = "http://api.lvtu100.com/products/getgoods"
         rebot = Lvtu100AppRebot.get_one()
