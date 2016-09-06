@@ -254,11 +254,11 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif state in ["出票异常", "出票失败待退款"]:
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
+#         elif state in ["出票异常", "出票失败待退款"]:
+#             result_info.update({
+#                 "result_code": 2,
+#                 "result_msg": state,
+#             })
         elif state=="购票成功":
             no, code, site = ret["pick_no"], ret["pick_code"], ret["pick_site"]
             dx_info = {

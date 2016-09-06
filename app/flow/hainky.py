@@ -268,7 +268,7 @@ class Flow(BaseFlow):
         }
         now = dte.now()
         rebot = HainkyWebRebot.get_one()
-        headers = rebot.http_header()
+        headers = {'User-Agent': random.choice(BROWSER_USER_AGENT)}
         data = {
             "ddzm": line.d_city_name,
             "fcrq": line.drv_date,
