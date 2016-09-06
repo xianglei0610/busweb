@@ -671,7 +671,13 @@ class Flow(BaseFlow):
                 self.lock_ticket_retry(order, reason=msg)
                 return {"flag": "error", "content": '请重试!'}
             r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
-#             r_url = urllib2.urlparse.urlparse(r.url)
+            r_url = urllib2.urlparse.urlparse(r.url)
+            params = urlparse.parse_qs(r_url.query, True)
+            errorMsg = params.get('errorMsg', [])
+            if errorMsg and "车票已过期" in errorMsg[0]:
+                msg = '车票已过期'
+                self.lock_ticket_retry(order, reason=msg)
+                return {"flag": "error", "content": '请重试!'}
 #             if r_url.path in ["/error.html", "/error.htm"]:
 #                 self.lock_ticket_retry(order)
 #                 return {"flag": "error", "content": ''}
