@@ -62,6 +62,13 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
+            if '已经使用此身份证预订过' in res["msg"]:
+                lock_result.update({
+                        "result_code": 0,
+                        "source_account": rebot.telephone,
+                        "result_reason": res["msg"],
+                    })
+                return lock_result
             lock_result.update({
                 'result_code': 2,
                 "result_reason": res.get('result_reason', ''),
@@ -152,6 +159,7 @@ class Flow(BaseFlow):
             cookies.update(dict(r.cookies))
             try:
                 errmsg = soup.find_all('script')[-1].get_text()
+                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
             except:
                 rebot.modify(ip='')
                 errmsg = '网银付款'
@@ -180,6 +188,7 @@ class Flow(BaseFlow):
         else:
             try:
                 errmsg = soup.find_all('script')[-1].get_text()
+                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
             except:
                 errmsg = '网络异常2'
             res.update({
