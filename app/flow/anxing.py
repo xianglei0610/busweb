@@ -87,7 +87,7 @@ class Flow(BaseFlow):
         else:
             errmsg = res["Message"]
             code = 2
-            if u"锁票异常" in errmsg:
+            if u"锁票异常" in errmsg or u"剩余座位数不足" in errmsg:
                 self.close_line(order.line, reason=errmsg)
                 code = 0
             lock_result.update({
