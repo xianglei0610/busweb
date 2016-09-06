@@ -489,13 +489,13 @@ class Flow(BaseFlow):
         if (line.drv_datetime-now).total_seconds() <= 150*60:
             result_info.update(result_msg="time in two hours ", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
-#         try:
-#             is_exist = self.do_refresh_line_list(line)
-#         except:
-#             is_exist = True
-#         if not is_exist:
-#             result_info.update(result_msg="list no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-#             return result_info
+        try:
+            is_exist = self.do_refresh_line_list(line)
+        except:
+            is_exist = True
+        if not is_exist:
+            result_info.update(result_msg="list no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            return result_info
         content = {
                    "signId": line.extra_info["sign_id"],
                    "carryStaId": line.s_sta_id,
@@ -567,9 +567,12 @@ class Flow(BaseFlow):
         return result_info
 
     def do_refresh_line_list(self, line):
+        is_exist = False
+        if not line.extra_info.get('end', {}):
+            return is_exist
         content = {
                    "ridingDate": line.drv_date,
-                   "stopName": line.d_city_name,
+                   "stopName": line.extra_info['end']['city_name'],
                    "cityId": line.s_city_id,
                    "cityName": line.s_city_name
                    }
@@ -607,7 +610,6 @@ class Flow(BaseFlow):
         }
         r = rebot.http_post(url, data=json.dumps(fp), headers=headers, timeout=7)
         res = r.json()
-        is_exist = False
         for d in res['body']["ticketLines"]:
             drv_datetime = dte.strptime(d["drvDateTime"], "%Y-%m-%d %H:%M")
             line_id_args = {
@@ -656,13 +658,18 @@ class Flow(BaseFlow):
         if order.status == STATUS_WAITING_ISSUE:
             app_rebot = ScqcpAppRebot.objects.get(telephone=order.source_account)
             res = self.send_order_request_by_web(order, app_rebot)
-            if res.get('drv_date', '') != order.drv_datetime.strftime("%Y-%m-%d %H:%M:%S"):
-                errmsg = '时间不一致，不允许支付!'
-                self.close_line(order.line, reason=errmsg)
-                order.modify(status=STATUS_LOCK_FAIL)
-                order.on_lock_fail(reason=errmsg)
-                issued_callback.delay(order.order_no)
-                return {"flag": "error", "content": errmsg}
+            if res:
+                if res.get('drv_date', '') != order.drv_datetime.strftime("%Y-%m-%d %H:%M:%S"):
+                    errmsg = '时间不一致，不允许支付!'
+                    self.close_line(order.line, reason=errmsg)
+                    order.modify(status=STATUS_LOCK_FAIL)
+                    order.on_lock_fail(reason=errmsg)
+                    issued_callback.delay(order.order_no)
+                    return {"flag": "error", "content": errmsg}
+            else:
+                msg = 'web未获取到支付信息'
+                self.lock_ticket_retry(order, reason=msg)
+                return {"flag": "error", "content": '请重试!'}
             r = rebot.http_get(order.pay_url, headers=new_headers, cookies=json.loads(rebot.cookies),timeout=30)
 #             r_url = urllib2.urlparse.urlparse(r.url)
 #             if r_url.path in ["/error.html", "/error.htm"]:
