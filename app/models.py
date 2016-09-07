@@ -1513,6 +1513,111 @@ class WmcxWebRebot(Rebot):
         return self.check_login_by_resp(resp)
 
 
+class ZuocheWapRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked", "ip"],
+        "collection": "zuochewap_rebot",
+    }
+    crawl_source = SOURCE_ZUOCHE
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ""
+
+    def login(self):
+        headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
+        url = "http://xqt.zuoche.com/xqt/login.jspx"
+        params = {
+            "op": "login",
+            "ref": "/xqt/mine.jspx",
+            "cookieuser": 1,
+            "uname": self.telephone,
+            "upassword": self.password,
+        }
+        r = self.http_get("%s?%s" % (url, urllib.urlencode(params)), headers=headers)
+        res = r.json()
+        print res
+        if res.get("isok", False):
+            cookies = dict(r.cookies)
+            self.modify(cookies=json.dumps(cookies), is_active=True)
+            ret = "OK"
+        else:
+            ua = random.choice(BROWSER_USER_AGENT)
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.is_active = True
+            self.cookies = "{}"
+            self.save()
+            ret = "fail"
+        return ret
+
+    def check_login(self):
+        user_url = "http://xqt.zuoche.com/xqt/mine.jspx"
+        headers = {"User-Agent": self.user_agent}
+        cookies = json.loads(self.cookies)
+        r = self.http_get(user_url, headers=headers, cookies=cookies)
+        soup = BeautifulSoup(r.content, "lxml")
+        try:
+
+            username = soup.select_one(".icon_header").find_next_sibling().text.strip()
+            if username == self.telephone:
+                return 1
+        except Exception, e:
+            print e
+            pass
+        return 0
+
+    def get_all_riders(self):
+        headers = {
+            'User-Agent': self.user_agent,
+        }
+        cookies = json.loads(self.cookies)
+        r = self.http_get("http://xqt.zuoche.com/xqt/aj_contacts.jspx?", headers=headers, cookies=cookies)
+        res = r.json()
+        data = {}
+        for d in res:
+            data[d["cardNo"]] = d["id"]
+        return data
+
+    def add_riders(self, order):
+        headers = {'User-Agent': self.user_agent,}
+        cookies = json.loads(self.cookies)
+        all_riders = self.get_all_riders()
+
+        id_lst = []
+        for rider in order.riders:
+            idcard = rider["id_number"]
+            if idcard in all_riders:
+                id_lst.append(all_riders[idcard])
+            else:
+                url = "http://xqt.zuoche.com/xqt/aj_addcontct.jspx?id=&name=%s&cardNo=%s&mobile=%s" % (rider["name"], rider["id_number"], rider["telephone"])
+                r = self.http_get(url, headers=headers, cookies=cookies)
+                res = r.json()
+                if res.get("fail", False):
+                    continue
+                id_lst.append(res["id"])
+        return id_lst
+
+    def clear_riders(self):
+        pass
+        # is_login = self.test_login_status()
+        # if not is_login:
+        #     return
+        # headers = {"User-Agent": self.user_agent}
+        # cookies = json.loads(self.cookies)
+        # for idcard, tid in self.get_all_riders().iteritems():
+        #     delurl = "http://m.hn96520.com/PersonCenter/DeleteTakeman?takemanid=%s" % tid
+        #     try:
+        #         r = self.http_get(delurl, headers=headers, cookies=cookies)
+        #     except:
+        #         pass
+
+
 class Hn96520WapRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
