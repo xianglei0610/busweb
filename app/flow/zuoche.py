@@ -178,9 +178,9 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers)
             res = r.json()
             if res["isCanBuy"]:
-                result_info.update(result_msg="error_default", update_attrs={"left_tickets": 10, "refresh_datetime": now})
+                result_info.update(result_msg="ok", update_attrs={"left_tickets": 10, "refresh_datetime": now})
             else:
                 result_info.update(result_msg="error_default", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-        except:
+        except Exception, e:
             result_info.update(result_msg="error_default", update_attrs={"left_tickets": 4, "refresh_datetime": now})
         return result_info
