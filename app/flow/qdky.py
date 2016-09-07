@@ -62,7 +62,6 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
-            print res
             if '已经使用此身份证预订过' in res.get('result_reason', ''):
                 lock_result.update({
                         "result_code": 0,
