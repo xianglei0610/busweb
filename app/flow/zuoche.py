@@ -104,26 +104,23 @@ class Flow(BaseFlow):
             result_info.update(result_msg="状态未变化")
             return result_info
         detail = self.send_order_request(order)
-        state = detail["state"]
-        try:
-            if u"已出票" in state:
-                dx_info = {
-                    "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                    "start": order.line.s_sta_name,
-                    "end": order.line.d_sta_name,
-                    "code": pick_code,
-                    'raw_order': order.raw_order_no,
-                }
-                dx_tmpl = DUAN_XIN_TEMPL[SOURCE_GDSW]
-                pick_msg = dx_tmpl % dx_info
-                result_info.update({
-                    "result_code": 1,
-                    "result_msg": status_msg,
-                    "pick_code_list": [pick_code],
-                    "pick_msg_list": [pick_msg],
-                })
-        except Exception, e:
-            pass
+        state, pick_code = detail["state"], detail["pick_code"]
+        if u"交易完成" in state:
+            dx_info = {
+                "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
+                "start": order.line.s_sta_name,
+                "end": order.line.d_sta_name,
+                "code": pick_code,
+                'raw_order': order.raw_order_no,
+            }
+            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_ZUOCHE]
+            pick_msg = dx_tmpl % dx_info
+            result_info.update({
+                "result_code": 1,
+                "result_msg": state,
+                "pick_code_list": [pick_code],
+                "pick_msg_list": [pick_msg],
+            })
         return result_info
 
     def send_order_request(self, order):
@@ -135,12 +132,15 @@ class Flow(BaseFlow):
         try:
             raw_order = re.findall(ur"\(订单号 (\S+)\)", unicode(soup.select_one(".title").text))[0]
             state = soup.select_one(".order_other_info").find("div").text
+            pick_code = ""
             pay_money = float(unicode(soup.select_one(".amount .pay").text).strip().lstrip(u"支付金额：").strip().rstrip(u"元"))
             if order.raw_order_no != raw_order:
                 order.modify(raw_order_no=raw_order, pay_money=pay_money)
+            if "交易完成" in state:
+                pick_code = re.findall(ur"取票密码：(\d+)", soup.select_one(".password").text)[0]
         except Exception, e:
-            state, raw_order= "", ""
-        return {"state": state, "raw_order": raw_order}
+            state, raw_order, pick_code = "", "", ""
+        return {"state": state, "raw_order": raw_order, "pick_code": pick_code}
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
