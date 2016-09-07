@@ -75,6 +75,11 @@ class Flow(BaseFlow):
                     "result_reason": errmsg,
                 })
                 return lock_result
+
+            for s in ["不允许网上售票"]:
+                if s in errmsg:
+                    self.close_line(order.line, reason=errmsg)
+                    break
             lock_result.update({
                 "result_code": 0,
                 "result_reason": res.get('msg', '') or res,
@@ -131,6 +136,10 @@ class Flow(BaseFlow):
                 continue
             k, v = k[0], v[0] if v else ""
             init_data[k] = v
+        if not init_data:
+            errorMsg = sel.xpath('//p/text()')[0]
+            res = {"status": 0, 'msg': errorMsg}
+            return res
         tpass = str(random.randint(111111, 999999))
         try:
             order.contact_info['name'].encode('gb2312')
@@ -175,9 +184,11 @@ class Flow(BaseFlow):
             state = '订单过期'
             return {"order_status": state}
         soup = BeautifulSoup(ret, "lxml")
-        state = soup.find('table', attrs={'class': 'tb_style1'}).find('tbody').find('tr').find_all('td')[4].get_text()
+        state = soup.find_all('table', attrs={'class': 'tb_style1'})[0].find('tbody').find('tr').find_all('td')[4].get_text()
+        seat_no = soup.find_all('table', attrs={'class': 'tb_style1'})[1].find('tbody').find('tr').find_all('td')[7].get_text()
         return {
             "order_status": state,
+            "seat_no": seat_no
         }
 
     def do_refresh_issue(self, order):
@@ -192,17 +203,17 @@ class Flow(BaseFlow):
         state = ret["order_status"]
         pcode = order.extra_info.get("pcode", '')
         order_status_mapping = {
-                "订单过期": "订单过期",
-                "已购票": "购票成功",
+                u"订单过期": u"订单过期",
+                u"已支付": u"购票成功",
                 }
-
-        if state in ["已购票"]: #"出票成功":
+        if state in [u"已支付"]: #"出票成功":
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
                 "start": "%s(%s)" % (order.line.s_city_name, order.line.s_sta_name),
                 "end": order.line.d_sta_name,
                 'raw_order': order.raw_order_no,
-                "code": pcode
+                "code": pcode,
+                "seat_no": ret['seat_no']
             }
             code_list = []
             if pcode:
@@ -213,11 +224,11 @@ class Flow(BaseFlow):
             msg_list = [dx_tmpl % dx_info]
             result_info.update({
                 "result_code": 1,
-                "result_msg": state,
+                "result_msg": order_status_mapping[state],
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
-#         elif state in ["订单过期"]:
+#         elif state in [u"订单过期"]:
 #             result_info.update({
 #                 "result_code": 2,
 #                 "result_msg": order_status_mapping[state],
