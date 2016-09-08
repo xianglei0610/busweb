@@ -261,8 +261,6 @@ class Flow(object):
         if line.s_sta_name == u"无锡华东城":
             return False
 
-        if line.drv_date<"2016-09-09" and u"杭州" in line.d_city_name:
-            return False
         return True
 
     def refresh_line(self, line, force=False):
