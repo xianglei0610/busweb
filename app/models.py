@@ -1067,7 +1067,7 @@ class ShkyzzWebRebot(Rebot):
 
     @property
     def proxy_ip(self):
-        return '192.168.1.50:8888'
+        return ''
 #         rds = get_redis("default")
 #         ipstr = self.ip
 #         if ipstr and rds.sismember(RK_PROXY_IP_SHKYZZ, ipstr):
