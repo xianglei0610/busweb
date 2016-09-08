@@ -1053,6 +1053,81 @@ class Rebot(db.Document):
             return r
 
 
+class ShkyzzWebRebot(Rebot):
+    user_agent = db.StringField()
+    cookies = db.StringField(default="{}")
+    ip = db.StringField(default="")
+
+    meta = {
+        "indexes": ["telephone", "is_active", "is_locked"],
+        "collection": "shkyzzweb_rebot",
+    }
+    crawl_source = SOURCE_SHKYZZ
+    is_for_lock = True
+
+    @property
+    def proxy_ip(self):
+        return ''
+#         rds = get_redis("default")
+#         ipstr = self.ip
+#         if ipstr and rds.sismember(RK_PROXY_IP_SHKYZZ, ipstr):
+#             return ipstr
+#         ipstr = rds.srandmember(RK_PROXY_IP_SHKYZZ)
+#         self.modify(ip=ipstr)
+#         return ipstr
+
+    def http_header(self, ua=""):
+        return {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": self.user_agent or ua,
+        }
+
+    def login(self):
+        ua = random.choice(BROWSER_USER_AGENT)
+        header = self.http_header(ua)
+        data = {
+            "memberForm.loginUserType": "older",
+            "moduleName": "root",
+            "memberForm.password": self.password,
+            "memberForm.loginName": self.telephone,
+            "__checkbox_memberForm.isSavePwd": "true",
+            "method:login": '登  录',
+            "memberForm.isSavePwd": "true"
+        }
+        login_url = "http://www.zxjt.sh.cn/memberAction.action"
+        r = self.http_post(login_url, data=data, headers=header)
+        cookies = dict(r.cookies)
+        if self.telephone == cookies.get('userName', ''):
+            self.last_login_time = dte.now()
+            self.user_agent = ua
+            self.cookies = json.dumps(dict(r.cookies))
+            self.is_active = True
+            self.save()
+            return "OK"
+        else:
+            return "fail"
+
+    def check_login(self):
+        url = 'http://www.zxjt.sh.cn/memberAction!toBasicInfo'
+        headers = {
+            'User-Agent': self.user_agent,
+            "Upgrade-Insecure-Requests": "1",
+            "Host": "www.zxjt.sh.cn",
+            "Referer": "http://www.zxjt.sh.cn/orderAction!myOrder"
+        }
+        cookies = json.loads(self.cookies) or {}
+        try:
+            r = self.http_get(url, headers=headers,cookies=cookies)
+            if self.telephone in r.content:
+                return 1
+            else:
+                return 0
+        except Exception, e:
+            self.modify(ip='')
+        return 0
+
+
 class HainkyWebRebot(Rebot):
     user_agent = db.StringField()
     cookies = db.StringField(default="{}")
