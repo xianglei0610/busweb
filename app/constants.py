@@ -44,6 +44,7 @@ SOURCE_QDKY = "qdky"    # 青岛客运
 SOURCE_ANXING = "anxing"    # 安行巴士
 SOURCE_HAINKY = "hainky"
 SOURCE_ZUOCHE = "zuoche"
+SOURCE_SHKYZZ = "shkyzz"
 
 
 YH_TYPE_SOURCE = [SOURCE_BJKY, SOURCE_HEBKY, SOURCE_SCQCP,
@@ -54,6 +55,13 @@ SNMPAY_SOURCE = ["cqky", "tongcheng", "xyjt", "tzky", "jsdlky", "sd365", "lvtu10
 
 
 SOURCE_INFO = {
+    SOURCE_SHKYZZ: {
+        "name": "上海客运总站",
+        "website": "http://www.zxjt.sh.cn/",
+        "accounts": {
+            "13267109876": ("123456", ""),
+        },
+    },
     SOURCE_HAINKY: {
         "name": "海南海汽",
         "website": "http://www.0898hq.com/eTicket/",
