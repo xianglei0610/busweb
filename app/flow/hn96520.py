@@ -119,7 +119,7 @@ class Flow(BaseFlow):
             code = 2
             if "错误代码：333" in msg:
                 rebot = order.change_lock_rebot()
-            if u"班次已经停班" in msg or "可售票额不足" in msg:
+            if u"已经停班" in msg or "可售票额不足" in msg:
                 code = 0
                 self.close_line(order.line, msg)
             lock_result.update({
