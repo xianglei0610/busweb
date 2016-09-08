@@ -148,8 +148,8 @@ class Flow(BaseFlow):
             res = {"status": 0, 'msg': errorMsg}
             return res
         data = {
-            "UserName": order.contact_info['name'].encode('gb2312'), 
-            'IDCardType': u'身份证'.encode('gb2312'),  
+            "UserName": order.contact_info['name'].encode('gb2312'),
+            'IDCardType': u'身份证'.encode('gb2312'),
             "IDCardNo": order.contact_info['id_number'],
             "TPwd": tpass,
             "TPwdConfirm": tpass,
@@ -260,7 +260,7 @@ class Flow(BaseFlow):
                         k, v = k[0], v[0] if v else ""
                         params[k] = v
                     pay_money = float(params['TransAmt'])/100.0
-                    order.update(pay_money=pay_money, pay_channel='yh')
+                    order.modify(pay_money=pay_money, pay_channel='yh')
                     return {"flag": "url", "content": union_url}
                 elif order_status in ('订单过期',):
                     errmsg = u'订单过期'
