@@ -145,12 +145,13 @@ class Flow(BaseFlow):
                 "fail_type": errmsg or 'input_code',
             })
             return res
-        if errmsg:
-            res.update({
-                "result_reason": errmsg or '验证码错误',
-                "fail_type": u'确定',
-            })
-            return res
+        print 'test----------',errmsg
+#         if errmsg:
+#             res.update({
+#                 "result_reason": errmsg or '验证码错误',
+#                 "fail_type": u'确定',
+#             })
+#             return res
         if u'验证码错误' in r.content.decode('utf-8'):
             res.update({
                 "result_reason": '验证码错误',
@@ -242,10 +243,18 @@ class Flow(BaseFlow):
         try:
             r = rebot.http_post(url, headers=headers, cookies=cookies, data=sch_data)
             soup = bs(r.content, "lxml")
-            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'}).find_all('tr')
-            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-            cookies.update(dict(r.cookies))
+            try:
+                info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'}).find_all('tr')
+                state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+                valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+                cookies.update(dict(r.cookies))
+            except:
+                try:
+                    errmsg = soup.find_all('script')[-1].get_text()
+                    errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+                except:
+                    errmsg = '请重试,添加乘客异常'
+                return {'error_code': '3', "errmsg": "车次查询1:"+errmsg}
         except:
             rebot.modify(ip='')
             try:
@@ -253,7 +262,7 @@ class Flow(BaseFlow):
                 errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
             except:
                 errmsg = '请重试,添加乘客异常'
-            return {'error_code': '1', "errmsg": "车次查询:"+errmsg}
+            return {'error_code': '1', "errmsg": "车次查询2:"+errmsg}
         tbc = ''
         for y in info[1:]:
             z = y.find_all('td')
