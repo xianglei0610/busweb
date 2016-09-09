@@ -136,17 +136,16 @@ def ident_generator():
 
 def create_name():
     username_list = []
-    count = 8
-    for i in range(10):
+    count = 7
+    for i in range(30):
         letter_count = random.randint(0, count)
-        shuzi_count = 8-letter_count
+        shuzi_count = 7-letter_count
         letter = ''.join(random.sample(['z','y','x','w','v','u','t','s','r','q','p','o','n','m','l','k','j','i','h','g','f','e','d','c','b','a'], letter_count))
         shuzi = str(random.randint(10**shuzi_count, 10**(shuzi_count+1)-1))
         username = letter + shuzi
         if username not in username_list:
             username_list.append(username)
     return username_list
-
 
 
 def qdky_account(headers, cookies, state, valid):
@@ -163,15 +162,10 @@ def qdky_account(headers, cookies, state, valid):
                     "Host":"ticket.qdjyjt.com"})
     for usename in username_list:
         data = {"userName": usename}
-        proxies = {
-                'http': 'http://192.168.1.47:8888',
-                'https': 'http://192.168.1.47:8888',
-            }
         headers.update({"X-Requested-With" : "XMLHttpRequest",
                         'Content-Type': 'application/json; charset=utf-8'})
         res = requests.post(check_url, data=json.dumps(data), headers=headers,
-                            cookies=cookies,proxies=proxies)
-        print 1111111111,res.content
+                            cookies=cookies)
         res = res.json()
         if res.get('d', '') == 'ok':
             data = {
@@ -201,7 +195,7 @@ def qdky_account(headers, cookies, state, valid):
 
             register_url = "http://ticket.qdjyjt.com/register.aspx"
             res = requests.post(register_url, data=data,
-                                cookies=cookies, headers=reg_headers,proxies=proxies)
+                                cookies=cookies, headers=reg_headers)
             if "验证码错误" not in res.content and "afterregister();" in res.content:
                 check_list.append(usename)
                 print '"%s": ("123456", ""),' % (usename) 

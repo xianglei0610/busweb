@@ -40,7 +40,7 @@ class Flow(BaseFlow):
 
         line = order.line
         cookies = json.loads(rebot.cookies)
-        # 增加乘客k
+        # 增加乘客
         for r in [order.contact_info]+order.riders:
             params = {
                 "idcard": r["id_number"],

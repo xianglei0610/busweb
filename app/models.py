@@ -36,6 +36,7 @@ class AdminUser(db.Document):
     source_include = db.ListField(default=["yhzf", "zfb"])      # 该用户处理的源站
     is_close = db.BooleanField(default=False)
     is_removed = db.IntField(default=0)
+    status_check_info =  db.DictField()
 
     meta = {
         "indexes": [
@@ -62,6 +63,8 @@ class AdminUser(db.Document):
 
     @property
     def is_superuser(self):
+        if "snmpay" in self.username:
+            return True
         if self.username in ["luojunping", "xiangleilei", "liuquan", "tangjiang"]:
             return True
         return False

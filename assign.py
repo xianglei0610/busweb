@@ -66,6 +66,9 @@ def dequeue_wating_lock(user):
     if val:
         no, t = val.split("_")
         order = Order.objects.get(order_no=no)
+        if order.crawl_source == "wxsz" and user.username != "snmpay01":
+            enqueue_wating_lock(order)
+            return None
         # if "snmpay" in user.username:
         #     if order.crawl_source not in SNMPAY_SOURCE:
         #         enqueue_wating_lock(order)

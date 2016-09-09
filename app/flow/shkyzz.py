@@ -185,6 +185,7 @@ class Flow(BaseFlow):
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
         detail_url = "http://www.zxjt.sh.cn/orderAction!orderDetail?orderRecForm.orderRecId=%s" % order.raw_order_no
+        res = {}
         headers = {
             "Charset": "UTF-8",
             "User-Agent": rebot.user_agent,
@@ -195,11 +196,30 @@ class Flow(BaseFlow):
         r = rebot.http_get(detail_url, headers=headers, cookies=cookies)
         content = r.content
         soup = BeautifulSoup(content, "lxml")
-        state = soup.find('div', attrs={'class': 'hyzx_right'}).find('table').find('tr').find_all('td')[1].get_text()
+        state = soup.find('div', attrs={'class': 'hyzx_right'}).find('table').find_all('tr')[0].find_all('td')[1].get_text()
         order_status = state.encode("utf-8").split('：')[1]
-        return {
-            "order_status": order_status,
-        }
+        res.update({"order_status": order_status,})
+        if order_status != '待领票':
+            return res
+        else:
+            photo_url = "http://www.kyzz.com.cn/orderAction!toSelfPhoto?orderRecForm.orderRecId=%s" % order.raw_order_no
+            cookies = json.loads(rebot.cookies)
+            r = rebot.http_get(photo_url, headers=headers, cookies=cookies)
+            content = r.content
+            soup = BeautifulSoup(content, "lxml")
+            pcode = soup.find('div', attrs={'id': 'printDiv'}).find('p').get_text()
+            pcode = pcode.encode("utf-8").split('：')[1]
+            check_no = soup.find('div', attrs={'id': 'printDiv'}).find('table').find_all('tr')[2].find_all('td')[1].get_text()
+            check_no = check_no.encode("utf-8").split('：')[1]
+            address = soup.find('div', attrs={'id': 'printDiv'}).find('table').find_all('tr')[3].find_all('td')[1].get_text()
+            address = address.encode("utf-8").split('：')[1]
+            seat_no = soup.find('div', attrs={'id': 'printDiv'}).find('table').find_all('tr')[4].find_all('td')[0].get_text()
+            seat_no = seat_no.encode("utf-8").split('：')[1]
+            res.update({"pcode": pcode,
+                        'check_no': check_no,
+                        'address': address,
+                        "seat_no": seat_no})
+            return res
 
     def do_refresh_issue(self, order):
         result_info = {
@@ -213,23 +233,33 @@ class Flow(BaseFlow):
         state = ret["order_status"]
         order_status_mapping = {
                 "订单过期": u"订单过期",
-                "已支付": u"购票成功",
+                "待领票": u"购票成功",
+                "正在出票":u'正在出票'
                 }
-        if state in ["已支付"]: #"出票成功":
+        if state in ["待领票"]: #"出票成功":
             dx_info = {
                 "time": order.drv_datetime.strftime("%Y-%m-%d %H:%M"),
-                "start": "%s(%s)" % (order.line.s_city_name, order.line.s_sta_name),
+                "start": order.line.s_sta_name,
                 "end": order.line.d_sta_name,
-                'raw_order': order.raw_order_no,
+                "seat_no": ret['seat_no'],
+                "check_no": ret['check_no'],
+                'code': ret['pcode'],
+                "address": ret['address']
             }
             code_list = []
-            dx_tmpl = DUAN_XIN_TEMPL[SOURCE_HAINKY]
+            code_list.append(ret['pcode'])
+            dx_tmpl = DUAN_XIN_TEMPL[order.line.s_sta_name]
             msg_list = [dx_tmpl % dx_info]
             result_info.update({
                 "result_code": 1,
                 "result_msg": order_status_mapping[state],
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
+            })
+        elif state == "正在出票":
+            result_info.update({
+                "result_code": 4,
+                "result_msg": order_status_mapping[state],
             })
 #         elif state in [u"订单过期"]:
 #             result_info.update({
@@ -249,30 +279,33 @@ class Flow(BaseFlow):
 
         def _get_page(rebot):
             if order.status == STATUS_WAITING_ISSUE:
-                headers = {
+                ret = self.send_orderDetail_request(rebot, order=order)
+                order_status = ret["order_status"]
+                if order_status in ('支付中','未支付'):
+                    headers = {
                            'User-Agent': rebot.user_agent,
                            "Host": "www.zxjt.sh.cn",
                            "Referer": "http://www.zxjt.sh.cn/orderAction!myOrder",
                            "Upgrade-Insecure-Requests": "1",
-                           }
-                order_url = "http://www.zxjt.sh.cn/orderAction!orderToPayById?orderRecForm.orderRecId=%s"%order.raw_order_no
-                cookies = json.loads(rebot.cookies)
-                r = rebot.http_get(order_url, headers=headers, cookies=cookies)
-                res = r.content
-                sel = etree.HTML(res)
-                params = {}
-                for s in sel.xpath("//form//input"):
-                    k, v = s.xpath("@name"), s.xpath("@value")
-                    if not k:
-                        continue
-                    k, v = k[0], v[0] if v else ""
-                    params[k] = v
-                pay_money = params['orderRecForm.orderAmount']
-                order.modify(pay_money=float(pay_money), pay_channel='alipay')
-                headers.update({"Referer": order_url})
-                pay_url = 'http://www.zxjt.sh.cn/orderAction.action'
-                r = rebot.http_post(pay_url, data=params, headers=headers, cookies=cookies)
-                return {"flag": "html", "content": r.content}
+                        }
+                    order_url = "http://www.zxjt.sh.cn/orderAction!orderToPayById?orderRecForm.orderRecId=%s"%order.raw_order_no
+                    cookies = json.loads(rebot.cookies)
+                    r = rebot.http_get(order_url, headers=headers, cookies=cookies)
+                    res = r.content
+                    sel = etree.HTML(res)
+                    params = {}
+                    for s in sel.xpath("//form//input"):
+                        k, v = s.xpath("@name"), s.xpath("@value")
+                        if not k:
+                            continue
+                        k, v = k[0], v[0] if v else ""
+                        params[k] = v
+                    pay_money = params['orderRecForm.orderAmount']
+                    order.modify(pay_money=float(pay_money), pay_channel='alipay')
+                    headers.update({"Referer": order_url})
+                    pay_url = 'http://www.zxjt.sh.cn/orderAction.action'
+                    r = rebot.http_post(pay_url, data=params, headers=headers, cookies=cookies)
+                    return {"flag": "html", "content": r.content}
             return {"flag": "error", "content": "订单已支付成功或者失效"}
         if order.status in (STATUS_WAITING_LOCK, STATUS_LOCK_RETRY):
             self.lock_ticket(order)

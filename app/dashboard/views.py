@@ -858,7 +858,7 @@ dashboard.add_url_rule("/orders/<order_no>/yichang", view_func=YiChangeOP.as_vie
 dashboard.add_url_rule("/lines/<line_id>/submit", view_func=SubmitOrder.as_view('submit_order'))
 
 
-@dashboard.route('/users/config', methods=["POST"])
+@dashboard.route('/users/config', methods=["POST", "GET"])
 @superuser_required
 def user_config():
     params = request.values.to_dict()
@@ -883,6 +883,15 @@ def user_config():
             user.modify(is_close=True)
             access_log.info("[open_account] %s 开启账号: %s ", current_user.username, user.username)
             return jsonify({"code": 1, "msg": "账号%s关闭成功" % user.username})
+    elif action == u"refresh":
+        user = AdminUser.objects.get(username=params["username"])
+        info = {
+            "dt": dte.now(),
+            "yue": float(params.get("yue", 0)),
+            "yuebao": float(params.get("yuebao", 0)),
+        }
+        user.update(status_check_info=info)
+        return jsonify({"code": 1, "msg": "执行成功"})
     return jsonify({"code": 0, "msg": "执行失败"})
 
 
