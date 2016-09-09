@@ -303,8 +303,9 @@ class Flow(BaseFlow):
                         return {"btn": btn, 'state': state, "valid": valid}
             except:
                 try:
-                    errmsg = soup.find_all('script')[-1].get_text()
-                    errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+                    errmsg = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
+                    if errmsg:
+                        errmsg=errmsg[0]
                 except:
                     errmsg = '请重试,添加乘客异常'
                 return {'error_code': '3', "errmsg": "预订1:"+errmsg}
