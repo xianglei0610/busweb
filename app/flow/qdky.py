@@ -69,6 +69,14 @@ class Flow(BaseFlow):
                         "result_reason": res.get('result_reason', ''),
                     })
                 return lock_result
+            if "未付款订单" in res.get('result_reason', ''):
+                new_rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": new_rebot.telephone,
+                    "result_reason": str(rebot.telephone) + res.get('result_reason', ''),
+                })
+                return lock_result
             lock_result.update({
                 'result_code': 2,
                 "result_reason": res.get('result_reason', ''),
@@ -133,6 +141,12 @@ class Flow(BaseFlow):
                 "fail_type": errmsg or 'input_code',
             })
             return res
+        if errmsg:
+            res.update({
+                "result_reason": errmsg or '验证码错误',
+                "fail_type": u'确定',
+            })
+            return res
         if u'验证码错误' in r.content.decode('utf-8'):
             res.update({
                 "result_reason": '验证码错误',
@@ -163,11 +177,11 @@ class Flow(BaseFlow):
                 errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
             except:
                 rebot.modify(ip='')
-                errmsg = '网银付款'
+                errmsg = u'网银付款'
         except:
             res.update({
                 'result_reason': errmsg,
-                "fail_type": '网银付款',
+                "fail_type": u'网银付款',
             })
             return res
 
