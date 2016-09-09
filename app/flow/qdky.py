@@ -44,10 +44,14 @@ class Flow(BaseFlow):
             return lock_result
         add_info = self.request_add_riders(order, rebot, state, valid)
         if add_info.get('error_code', ''):
-            lock_result.update({
-                'result_code': 2,
-                'result_reason': add_info.get('errmsg', ''),
-            })
+            if "未支付" in add_info.get('errmsg', ''):
+                new_rebot = order.change_lock_rebot()
+                lock_result.update({
+                    "result_code": 2,
+                    "source_account": new_rebot.telephone,
+                    "result_reason": str(rebot.telephone) + add_info.get('errmsg', ''),
+                })
+                return lock_result
             return lock_result
         res = self.send_lock_requests(order, rebot, add_info, valid_code)
         lock_result.update({"lock_info": res})
@@ -278,15 +282,23 @@ class Flow(BaseFlow):
             r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(cli_data))
             cookies.update(dict(r.cookies))
             soup = bs(r.content, "lxml")
-            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
-            for y in info[1:]:
-                uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
-                if uid == contact_info['id_number']:
-                    btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
-                    rebot.modify(cookies=json.dumps(cookies))
-                    return {"btn": btn, 'state': state, "valid": valid}
+            try:
+                state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+                valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+                info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
+                for y in info[1:]:
+                    uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
+                    if uid == contact_info['id_number']:
+                        btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
+                        rebot.modify(cookies=json.dumps(cookies))
+                        return {"btn": btn, 'state': state, "valid": valid}
+            except:
+                try:
+                    errmsg = soup.find_all('script')[-1].get_text()
+                    errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
+                except:
+                    errmsg = '请重试,添加乘客异常'
+                return {'error_code': '3', "errmsg": "预订1:"+errmsg}
         except:
             rebot.modify(ip='')
             try:
@@ -294,7 +306,7 @@ class Flow(BaseFlow):
                 errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
             except:
                 errmsg = '请重试,添加乘客异常'
-            return {'error_code': '3', "errmsg": "预订:"+errmsg}
+            return {'error_code': '3', "errmsg": "预订2:"+errmsg}
         data = {
             '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonXiugai',
             '__EVENTARGUMENT': '',
