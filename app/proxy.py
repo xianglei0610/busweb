@@ -537,7 +537,7 @@ class SD365ProxyConsumer(ProxyConsumer):
             ua = random.choice(BROWSER_USER_AGENT)
             r = requests.get(url,
                              headers={"User-Agent": ua},
-                             timeout=9,
+                             timeout=3,
                              proxies={"http": "http://%s" % ipstr})
             if u"365汽车票" in r.content:
                 return True
@@ -560,7 +560,7 @@ class QDKYProxyConsumer(ProxyConsumer):
             proxies = {"http": "http://%s" % ipstr}
             r = requests.get(url,
                              headers=headers,
-                             timeout=10,
+                             timeout=4,
                              proxies=proxies)
             if u"青岛长途汽车售票网" in r.content:
                 soup = BeautifulSoup(r.content, 'lxml')

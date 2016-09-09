@@ -85,8 +85,12 @@ class Flow(BaseFlow):
                 "lock_info": ret,
             })
         else:
+            code = 2
+            if "班次已售罄" in errmsg:
+                code = 0
+                self.close_line(order.line, reason=errmsg)
             lock_result.update({
-                "result_code": 2,
+                "result_code": code,
                 "result_reason": errmsg,
                 "source_account": rebot.telephone,
             })
