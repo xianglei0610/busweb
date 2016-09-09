@@ -48,8 +48,7 @@ class Flow(BaseFlow):
                 new_rebot = order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
-                    "source_account": new_rebot.telephone,
-                    "result_reason": str(rebot.telephone) + add_info.get('errmsg', ''),
+                    "result_reason": add_info.get('errmsg', ''),
                 })
                 return lock_result
             return lock_result
@@ -126,32 +125,21 @@ class Flow(BaseFlow):
             'ctl00$ContentPlaceHolder1$checktxt2': valid_code,
             'ctl00$ContentPlaceHolder1$collectPersonViewSubmitButton': u'确定',
         }
+        time.sleep(3)
+        r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
+        soup = bs(r.content, 'lxml')
         try:
-            time.sleep(3)
-            r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
-            soup = bs(r.content, 'lxml')
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
             valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
             cookies.update(dict(r.cookies))
-            try:
-                errmsg = soup.find_all('script')[-1].get_text()
-                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            except:
-                rebot.modify(ip='')
-                errmsg = '锁票 网络异常'
         except:
-            res.update({
-                "result_reason": errmsg or '验证码错误',
-                "fail_type": errmsg or 'input_code',
-            })
-            return res
-        print 'test----------',errmsg
-#         if errmsg:
-#             res.update({
-#                 "result_reason": errmsg or '验证码错误',
-#                 "fail_type": u'确定',
-#             })
-#             return res
+            errmsg = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
+            if errmsg:
+                res.update({
+                    'result_reason': errmsg[0],
+                    "fail_type": u'确定',
+                })
+                return res
         if u'验证码错误' in r.content.decode('utf-8'):
             res.update({
                 "result_reason": '验证码错误',
@@ -169,26 +157,23 @@ class Flow(BaseFlow):
         }
         order_no = ''
         pay_money = 0
+        time.sleep(1)
+
+        r = rebot.http_post(url, headers=headers, cookies=cookies, data=data,timeout=30)
+        soup = bs(r.content, 'lxml')
         try:
-            time.sleep(1)
-            r = rebot.http_post(url, headers=headers, cookies=cookies, data=data,timeout=30)
-            soup = bs(r.content, 'lxml')
             info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView3'}).find_all('tr')[1].find_all('td')
             order_no = info[1].get_text()
             pay_money = float(info[7].get_text())
             cookies.update(dict(r.cookies))
-            try:
-                errmsg = soup.find_all('script')[-1].get_text()
-                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            except:
-                rebot.modify(ip='')
-                errmsg = u'网银付款'
         except:
-            res.update({
-                'result_reason': errmsg,
-                "fail_type": u'网银付款',
-            })
-            return res
+            errmsg = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
+            if errmsg:
+                res.update({
+                    'result_reason': errmsg[0],
+                    "fail_type": u'网银付款',
+                })
+                return res
 
         url = 'http://ticket.qdjyjt.com/FrontPay.aspx'
         r = rebot.http_get(url, headers=headers, cookies=cookies)
@@ -206,16 +191,13 @@ class Flow(BaseFlow):
             order.modify(extra_info=extra_info)
             return res
         else:
-            try:
-                errmsg = soup.find_all('script')[-1].get_text()
-                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            except:
-                errmsg = '网络异常2'
-            res.update({
-                'result_reason': errmsg,
-                "fail_type": '最后付款',
-            })
-            return res
+            errmsg = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
+            if errmsg:
+                res.update({
+                    'result_reason': errmsg[0],
+                    "fail_type": '最后付款',
+                })
+                return res
 
     def request_add_riders(self, order, rebot, state, valid):
         contact_info = order.contact_info
@@ -243,26 +225,22 @@ class Flow(BaseFlow):
         try:
             r = rebot.http_post(url, headers=headers, cookies=cookies, data=sch_data)
             soup = bs(r.content, "lxml")
-            try:
-                info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'}).find_all('tr')
-                state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-                valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-                cookies.update(dict(r.cookies))
-            except:
-                try:
-                    errmsg = soup.find_all('script')[-1].get_text()
-                    errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-                except:
-                    errmsg = '请重试,添加乘客异常'
-                return {'error_code': '3', "errmsg": "车次查询1:"+errmsg}
         except:
             rebot.modify(ip='')
-            try:
-                errmsg = soup.find_all('script')[-1].get_text()
-                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            except:
+            return {'error_code': '3', "errmsg": "车次查询网络异常"}
+        try:
+            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridViewbc'}).find_all('tr')
+            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            cookies.update(dict(r.cookies))
+        except:
+            errmsg = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
+            if errmsg:
+                errmsg = errmsg[0]
+            else:
                 errmsg = '请重试,添加乘客异常'
-            return {'error_code': '1', "errmsg": "车次查询2:"+errmsg}
+            return {'error_code': '3', "errmsg": "车次查询:"+errmsg}
+
         tbc = ''
         for y in info[1:]:
             z = y.find_all('td')
@@ -289,34 +267,29 @@ class Flow(BaseFlow):
         }
         try:
             r = rebot.http_post(url, headers=headers, cookies=cookies, data=urllib.urlencode(cli_data))
-            cookies.update(dict(r.cookies))
             soup = bs(r.content, "lxml")
-            try:
-                state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
-                valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
-                info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
-                for y in info[1:]:
-                    uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
-                    if uid == contact_info['id_number']:
-                        btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
-                        rebot.modify(cookies=json.dumps(cookies))
-                        return {"btn": btn, 'state': state, "valid": valid}
-            except:
-                try:
-                    errmsg = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
-                    if errmsg:
-                        errmsg=errmsg[0]
-                except:
-                    errmsg = '请重试,添加乘客异常'
-                return {'error_code': '3', "errmsg": "预订1:"+errmsg}
         except:
             rebot.modify(ip='')
-            try:
-                errmsg = soup.find_all('script')[-1].get_text()
-                errmsg = re.findall(r'\'\S+\'', errmsg)[0].split("'")[1]
-            except:
+            return {'error_code': '3', "errmsg": "预订 网络异常"}
+        try:
+            cookies.update(dict(r.cookies))
+            state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
+            valid = soup.find('input', attrs={'id': '__EVENTVALIDATION'}).get('value', '')
+            info = soup.find('table', attrs={'id': 'ContentPlaceHolder1_GridView1'}).find_all('tr')
+            for y in info[1:]:
+                uid = y.find_all('span', attrs={'id': re.compile(r'ContentPlaceHolder1_GridView1_Label\S+')})[2].get_text().strip()
+                if uid == contact_info['id_number']:
+                    btn = y.find('input', attrs={'name': 'MyRadioButton', 'onclick': 'getRadio()'}).get('value', '')
+                    rebot.modify(cookies=json.dumps(cookies))
+                    return {"btn": btn, 'state': state, "valid": valid}
+        except:
+            errmsg = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
+            if errmsg:
+                errmsg = errmsg[0]
+            else:
                 errmsg = '请重试,添加乘客异常'
-            return {'error_code': '3', "errmsg": "预订2:"+errmsg}
+            return {'error_code': '3', "errmsg": "预订:"+errmsg}
+
         data = {
             '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$LinkButtonXiugai',
             '__EVENTARGUMENT': '',
