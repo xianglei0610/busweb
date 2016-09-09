@@ -4539,16 +4539,8 @@ RK_OPEN_STATION = "station:%s:%s"
 RK_DAY_LINE_STAT = "line:stat:%s:%s"
 
 
-ASSIGN_FLAG = False  # 是否开启源站和账号分流
-
-ASSIGN_ACCOUNT = {
-    'cqky': ['cqky'],
-    'yinlian': ['bjky', 'lnky']
-}
-
 
 # 短信模版
-
 DUAN_XIN_TEMPL = {
     SOURCE_SCQCP: "您已购买%(time)s%(start)s至%(end)s的汽车票%(amount)s张，取票验证码%(code)s，请在发车时间前乘车",
     SOURCE_BUS100: "温馨提醒：您有%(amount)s张汽车票，出发日期：%(time)s；行程：%(start)s-%(end)s；订单号：%(order)s；%(ticketPassword)s请在发车前两小时内凭乘车人身份证取票。祝您旅途愉快！",
@@ -4591,6 +4583,8 @@ DUAN_XIN_TEMPL = {
     SOURCE_QDKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和取票密码%(code)s取票,如需改签、退票请前往客运站按规定办理。",
     SOURCE_HAINKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,凭座位号%(seat_no)s,订单号和取票密码%(code)s取票,如需改签、退票请前往客运站按规定办理。",
     SOURCE_ZUOCHE: "购票成功,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭身份证原件、取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
+    u"上海长途客运总站":"购票成功,发车时间：%(time)s,%(start)s(%(address)s)-%(end)s,座位号%(seat_no)s,请凭身份证原件到车站直接检票上车，检票口:%(check_no)s,无需取票。若需报销凭证请至服务台索取(编号:%(code)s)。",
+    u'上海芷新太平洋站':"购票成功,发车时间：%(time)s,%(start)s(%(address)s)-%(end)s,座位号%(seat_no)s,请至少提前半小时至乘车站凭身份证原件或取票密码%(code)s取票。",
 }
 
 CITY_NAME_TRANS = {
@@ -4601,18 +4595,6 @@ CITY_NAME_TRANS = {
     u"重庆主城": "重庆",
 }
 
-PAY_ACCOUNTS = [
-    "441744343@qq.com",
-    "125083788@qq.com",
-    "lipigpig@foxmail.com",
-    "abc87765928@163.com",
-    "weishenm66@foxmail.com",
-    "teq021ula@foxmail.com",
-    "372048470@qq.com",
-    "onmyfish@126.com",
-    "6217007200039300143",
-    "6217582000021706858",
-]
 
 
 DG_BANK = {
