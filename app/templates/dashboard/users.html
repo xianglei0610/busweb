@@ -50,6 +50,8 @@
                     <th>接单类型</th>
                     <th>允许/禁止接单</th>
                     <th>创建时间</th>
+                    <th>余额</th>
+                    <th>上次刷新</th>
                 </tr>
             </thead>
 
@@ -74,6 +76,8 @@
                         </div>
                     </td>
                     <td>{{d.create_datetime|format_datetime}}</td>
+                    <td>余额:{{d.status_check_info["yue"] or 0}}元,余额宝: {{d.status_check_info["yuebao"] or 0}}元</td>
+                    <td>{{d.status_check_info["dt"]|format_datetime}}</td>
                 </tr>
                 {% endfor %}
             </tbody>
