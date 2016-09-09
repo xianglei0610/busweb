@@ -432,6 +432,8 @@ def main():
     sched.add_cron_job(bus_crawl, hour=23, minute=0, args=['anxingbus'], kwargs={"crawl_kwargs":{"province": "上海"}})
     sched.add_cron_job(bus_crawl, hour=3, minute=0, args=['anxingbus'], kwargs={"crawl_kwargs":{"province": "江苏"}})
 
+    #上海客运总站
+    sched.add_cron_job(bus_crawl, hour=16, minute=0, args=['shkyzz'])
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
