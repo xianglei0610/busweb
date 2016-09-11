@@ -124,6 +124,7 @@ class Flow(BaseFlow):
         }
         time.sleep(3)
         r = rebot.http_post(url, headers=headers, cookies=cookies, data=data, timeout=30)
+        result = r.content
         soup = bs(r.content, 'lxml')
         try:
             state = soup.find('input', attrs={'id': '__VIEWSTATE'}).get('value', '')
@@ -188,7 +189,7 @@ class Flow(BaseFlow):
             order.modify(extra_info=extra_info)
             return res
         else:
-            errmsg = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
+            errmsg = re.findall(r"<script>alert\('(.+)'\)</script>", result)
             if errmsg:
                 res.update({
                     'result_reason': errmsg[0],
