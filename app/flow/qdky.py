@@ -44,14 +44,11 @@ class Flow(BaseFlow):
             return lock_result
         add_info = self.request_add_riders(order, rebot, state, valid)
         if add_info.get('error_code', ''):
-            if "未支付" in add_info.get('errmsg', ''):
-                new_rebot = order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
                     "result_reason": add_info.get('errmsg', ''),
                 })
                 return lock_result
-            return lock_result
         res = self.send_lock_requests(order, rebot, add_info, valid_code)
         lock_result.update({"lock_info": res})
         if res.get('order_no', ''):
