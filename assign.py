@@ -66,22 +66,22 @@ def dequeue_wating_lock(user):
     if val:
         no, t = val.split("_")
         order = Order.objects.get(order_no=no)
-        if order.crawl_source == "wxsz" and user.username != "snmpay01":
-            enqueue_wating_lock(order)
-            return None
-        # if "snmpay" in user.username:
-        #     if order.crawl_source not in SNMPAY_SOURCE:
-        #         enqueue_wating_lock(order)
-        #         return None
-        #     elif rds.get("snmpay_ignore:%s" % order.order_no):
-        #         enqueue_wating_lock(order)
-        #         return None
-        # else:
-        #     snmpay_users = AdminUser.objects.filter(is_switch=True, is_close=False, username__startswith="snmpay")
-        #     if order.crawl_source in SNMPAY_SOURCE:
-        #         if snmpay_users and not rds.get("snmpay_ignore:%s" % order.order_no):
-        #             enqueue_wating_lock(order)
-        #             return None
+        # if order.crawl_source == "wxsz" and user.username != "snmpay01":
+        #     enqueue_wating_lock(order)
+        #     return None
+        if "snmpay" in user.username:
+            if order.crawl_source not in SNMPAY_SOURCE:
+                enqueue_wating_lock(order)
+                return None
+            elif rds.get("snmpay_ignore:%s" % order.order_no):
+                enqueue_wating_lock(order)
+                return None
+        else:
+            snmpay_users = AdminUser.objects.filter(is_switch=True, is_close=False, username__startswith="snmpay")
+            if order.crawl_source in SNMPAY_SOURCE:
+                if snmpay_users and not rds.get("snmpay_ignore:%s" % order.order_no):
+                    enqueue_wating_lock(order)
+                    return None
         return order
     return None
 
