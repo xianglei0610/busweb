@@ -464,8 +464,8 @@ class Flow(BaseFlow):
                 "Referer": "http://www.96096kp.com/TicketMain.aspx",
                 "Origin": "http://www.96096kp.com",
             }
-            # r = requests.get(base_url, headers=headers)
-            r = rebot.http_get(base_url, headers=headers)
+            r = requests.get(base_url, headers=headers)
+            #r = rebot.http_get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
             headers.update({"Referer": "http://www.96096kp.com/GoodsDetail.aspx"})
@@ -483,8 +483,8 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$Hidden2": "",
                 "pageNum": ""
             }
-            r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
-            # r = requests.post(base_url, data=urllib.urlencode(params), headers=headers,)
+             #r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
+            r = requests.post(base_url, data=urllib.urlencode(params), headers=headers,)
             order.update(pay_channel='alipay')
             return {"flag": "html", "content": r.content}
         return {"flag": "error", "content": "锁票失败,请重试!"}
