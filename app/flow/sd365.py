@@ -15,6 +15,23 @@ from app.models import Sd365WebRebot, AdminUser
 class Flow(BaseFlow):
     name = 'sd365'
 
+    def check_lock_fail(self, text):
+        fail = [
+            "检票车站在班次途经站中不存在",
+            "车次剩票张数小于售票数",
+            "该班次减班",
+            "订票张数超出剩余可售票数",
+            "小时不售票",
+            "未找到班次",
+            "该班次价格不存在",
+            "发车前2小时不售票",
+            "超出人数限制",
+        ]
+        for m in fail:
+            if m in text:
+                return True
+        return False
+
     def do_lock_ticket(self, order):
         lock_result = {
             "lock_info": {},
@@ -54,7 +71,7 @@ class Flow(BaseFlow):
                 })
                 return lock_result
             errmsg = soup.select_one(".jump_mes h4").text
-            if u"该班次价格不存在" in errmsg or u"发车前2小时不售票" in errmsg or u"超出人数限制" in errmsg or u"车次剩票张数小于售票数" in errmsg:
+            if self.check_lock_fail(errmsg):
                 self.close_line(line, reason=errmsg)
                 lock_result.update({
                     "result_code": 0,
@@ -135,19 +152,9 @@ class Flow(BaseFlow):
             return lock_result
         else:
             code = 2
-            fail = [
-                "检票车站在班次途经站中不存在",
-                "车次剩票张数小于售票数",
-                "该班次减班",
-                "订票张数超出剩余可售票数",
-                "小时不售票",
-                "未找到班次",
-            ]
-            for m in fail:
-                if m in location:
-                    self.close_line(line, reason=location)
-                    code = 0
-                    break
+            if self.check_lock_fail(location):
+                self.close_line(line, reason=location)
+                code = 0
             lock_result.update({
                 'result_code': code,
                 "result_reason": location,
