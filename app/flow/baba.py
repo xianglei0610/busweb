@@ -243,26 +243,26 @@ class Flow(BaseFlow):
             return result_info
         ret = self.send_order_request(order)
         state = ret["state"]
-        if state == "支付超时作废":
-            result_info.update({
-                "result_code": 5,
-                "result_msg": state,
-            })
-        elif state == "已作废":
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
-        elif state == "待出票":
+        # if state == "支付超时作废":
+        #     result_info.update({
+        #         "result_code": 5,
+        #         "result_msg": state,
+        #     })
+        # elif state == "已作废":
+        #     result_info.update({
+        #         "result_code": 2,
+        #         "result_msg": state,
+        #     })
+        if state == "待出票":
             result_info.update({
                 "result_code": 4,
                 "result_msg": state,
             })
-#         elif state in ["出票异常", "出票失败待退款"]:
-#             result_info.update({
-#                 "result_code": 2,
-#                 "result_msg": state,
-#             })
+        elif state in ["出票失败待退款"]:
+            result_info.update({
+                "result_code": 2,
+                "result_msg": state,
+            })
         elif state=="购票成功":
             no, code, site = ret["pick_no"], ret["pick_code"], ret["pick_site"]
             dx_info = {
