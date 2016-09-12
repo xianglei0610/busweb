@@ -34,6 +34,8 @@ COMPANY_TO_SOURCE = {
     "上海天雅物联网科技有限公司": SOURCE_LVTU100,
     "安徽恒生皖美网络科技有限公司": SOURCE_WMCX,
     "贵州大迈科技有限公司": SOURCE_GZQCP,
+    "上海长途汽车客运总站有限公司": SOURCE_SHKYZZ,
+    "广州浩宁智能设备有限公司": SOURCE_ZUOCHE,
 }
 
 def parse_alipay_record(f):
