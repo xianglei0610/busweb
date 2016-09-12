@@ -327,7 +327,10 @@ class Flow(BaseFlow):
                         params[k] = v
                     if not params:
                         msg = sel.xpath('//div[@class="Booking_material"]/div[@class="tab_top"]/p[2]/text()')
-                        print 111111111, msg
+                        if msg:
+                            order.modify(status=STATUS_LOCK_RETRY)
+                            order.on_lock_retry(reason=msg[0])
+                            return {"flag": "error", "content": '支付错误'}
                     pay_money = params['orderRecForm.orderAmount']
                     order.modify(pay_money=float(pay_money), pay_channel='alipay')
                     headers.update({"Referer": order_url})
