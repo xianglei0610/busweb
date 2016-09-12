@@ -64,6 +64,7 @@ class Flow(BaseFlow):
                 })
                 return lock_result
             else:
+                code = 0
                 self.close_line(order.line, reason=msg)
                 lock_result.update({
                     "result_code": code,
