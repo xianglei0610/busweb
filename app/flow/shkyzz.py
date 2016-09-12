@@ -53,6 +53,15 @@ class Flow(BaseFlow):
                     "source_account": rebot.telephone,
                     "pay_money": 0,
                     })
+
+        def _check_fail(msg):
+            lst = [
+                u"售票不足",
+            ]
+            for s in lst:
+                if s in msg:
+                    return True
+            return False
         if res.get('order_no', ''):
             expire_time = dte.now()+datetime.timedelta(seconds=30*60)
             lock_result.update({
@@ -63,6 +72,13 @@ class Flow(BaseFlow):
                 "expire_datetime": expire_time,
                 "lock_info": res
             })
+        elif _check_fail(res.get("msg", '')):
+                self.close_line(order.line, reason=res["msg"])
+                lock_result.update({
+                    "result_code": 0,
+                    "source_account": rebot.telephone,
+                    "result_reason": res["msg"],
+                })
         else:
             lock_result.update({
                 "result_code": 2,
@@ -181,7 +197,14 @@ class Flow(BaseFlow):
             content = content.decode('utf8')
         sel = etree.HTML(content)
         order_no = sel.xpath('//form[@id="orderRecForm"]//input[@name="orderRecForm.orderRecId"]/@value')
-        return {"order_no": order_no[0]}
+        if order_no:
+            return {"order_no": order_no[0]}
+        else:
+            msg = sel.xpath('//div[@class="Booking_material"]/div[@class="tab_top"]/p[2]/text()')
+            if msg:
+                return {"msg": msg[0]}
+            else:
+                return {"msg": "[系统]未知错误"}
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
         detail_url = "http://www.zxjt.sh.cn/orderAction!orderDetail?orderRecForm.orderRecId=%s" % order.raw_order_no
@@ -292,6 +315,8 @@ class Flow(BaseFlow):
                     cookies = json.loads(rebot.cookies)
                     r = rebot.http_get(order_url, headers=headers, cookies=cookies)
                     res = r.content
+                    if not isinstance(res, unicode):
+                        res = res.decode('utf8')
                     sel = etree.HTML(res)
                     params = {}
                     for s in sel.xpath("//form//input"):
@@ -300,6 +325,9 @@ class Flow(BaseFlow):
                             continue
                         k, v = k[0], v[0] if v else ""
                         params[k] = v
+                    if not params:
+                        msg = sel.xpath('//div[@class="Booking_material"]/div[@class="tab_top"]/p[2]/text()')
+                        print 111111111, msg
                     pay_money = params['orderRecForm.orderAmount']
                     order.modify(pay_money=float(pay_money), pay_channel='alipay')
                     headers.update({"Referer": order_url})
