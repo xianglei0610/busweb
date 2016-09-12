@@ -64,10 +64,7 @@ class Flow(BaseFlow):
                 })
                 return lock_result
             else:
-                code = 2
-                if "已售罄" in msg or "车站好像出错了" in msg:
-                    code = 0
-                    self.close_line(orer.line, reason=msg)
+                self.close_line(orer.line, reason=msg)
                 lock_result.update({
                     "result_code": code,
                     "result_reason": msg,
