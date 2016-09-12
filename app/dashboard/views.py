@@ -893,6 +893,7 @@ def user_config():
             "dt": dte.now(),
             "yue": float(params.get("yue", 0)),
             "yuebao": float(params.get("yuebao", 0)),
+            "account": params.get("account", "")
         }
         user.update(status_check_info=info)
         return jsonify({"code": 1, "msg": "执行成功"})
