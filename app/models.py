@@ -5082,7 +5082,7 @@ class SzkyWebRebot(Rebot):
                     }):
                 cnt = d["count"]
                 phone = d["_id"]["phone"]
-                if cnt >= 7:
+                if cnt >= 10:
                     droped.add(phone)
         tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
