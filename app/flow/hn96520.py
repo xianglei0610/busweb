@@ -405,6 +405,7 @@ class Flow(BaseFlow):
             dstr = r.content[r.content.index("(")+1:r.content.rindex(")")]
             res = json.loads(dstr)
             pay_url = "%s?%s" % (res["url"], urllib.urlencode(res["param"]))
+            pay_url = pay_url.replace("??", "?")
             return {"flag": "url", "content": pay_url}
 
 

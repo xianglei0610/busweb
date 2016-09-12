@@ -132,7 +132,7 @@ def import_alipay_record(filename):
         order = match_alipay_order(trade_info)
         site = trade_info["交易对方"]
         trade_status = trade_info["交易状态"]
-        if site in ["深圳市一二三零八网络科技有限公司", "深圳市哈巴科技有限公司(*圳市哈巴科技有限公司)", "深圳市哈巴科技有限公司"]:
+        if site in ["深圳市一二三零八网络科技有限公司", "深圳市哈巴科技有限公司(*圳市哈巴科技有限公司)", "深圳市哈巴科技有限公司", "天弘基金管理有限公司"]:
             continue
         if not order:
             if trade_status not in ["交易关闭", "等待付款"]:
