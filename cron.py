@@ -425,7 +425,7 @@ def main():
     sched.add_cron_job(bus_crawl, hour=15, minute=30, args=['fjky'], kwargs={"crawl_kwargs":{"city": "厦门市"}})
 
     #海南海汽
-    sched.add_cron_job(bus_crawl, hour=1, minute=0, args=['hainky'])
+    sched.add_cron_job(bus_crawl, hour=17, minute=0, args=['hainky'])
 
     # 安行巴士
     sched.add_cron_job(bus_crawl, hour=21, minute=0, args=['anxingbus'], kwargs={"crawl_kwargs":{"province": "安徽"}})
