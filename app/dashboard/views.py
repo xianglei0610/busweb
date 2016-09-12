@@ -802,6 +802,7 @@ def dealing_order():
                                 dealed_count=dealed_count,
                                 yichang_count=yichang_count,
                                 all_user=AdminUser.objects.filter(is_removed=0),
+                                pay_status_msg = PAY_STATUS_MSG,
                                 locking=locking)
 
 
