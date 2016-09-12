@@ -656,7 +656,7 @@ def order_pay(order_no):
         return render_template('dashboard/error.html', title="出票结束", message="订单已经 %s, 不需要操作" % STATUS_MSG[order.status])
     if order.kefu_username != current_user.username:
         return render_template('dashboard/error.html', title="禁止支付", message="请先要%s把单转给你再支付" % order.kefu_username)
-    if order.status == 3 and (dte.now() - order.lock_datetime).total_seconds() < 8*60:
+    if order.status == 3 and (dte.now() - order.lock_datetime).total_seconds() > 8*60:
         return render_template('dashboard/error.html', title="禁止支付", message="锁票时间超过8分钟不允许支付")
 
     rds = get_redis("order")
