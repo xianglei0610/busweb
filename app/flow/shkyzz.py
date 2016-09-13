@@ -73,7 +73,7 @@ class Flow(BaseFlow):
                 "expire_datetime": expire_time,
                 "lock_info": res
             })
-            async_clear_rider.delay(self.name, rebot.telephone)
+#             async_clear_rider.delay(self.name, rebot.telephone)
         elif _check_fail(res.get("msg", '')):
                 self.close_line(order.line, reason=res["msg"])
                 lock_result.update({
