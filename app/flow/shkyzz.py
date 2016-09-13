@@ -257,7 +257,8 @@ class Flow(BaseFlow):
         order_status_mapping = {
                 "订单过期": u"订单过期",
                 "待领票": u"购票成功",
-                "正在出票":u'正在出票'
+                "正在出票":u'正在出票',
+                "已支付":u"已支付，暂时未出票"
                 }
         if state in ["待领票"]: #"出票成功":
             dx_info = {
@@ -279,7 +280,7 @@ class Flow(BaseFlow):
                 "pick_code_list": code_list,
                 "pick_msg_list": msg_list,
             })
-        elif state == "正在出票":
+        elif state in ["正在出票","已支付"]:
             result_info.update({
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
