@@ -64,7 +64,7 @@ class Flow(BaseFlow):
                 self.request_clear_shopcart(rebot)
             elif errmsg:
                 if "余票数不足" in errmsg[0]:
-                    self.close_line(order.line, reason=errmsg)
+                    self.close_line(order.line, reason=errmsg[0])
                 lock_result.update(result_code=0,
                                     source_account=rebot.telephone,
                                     result_reason='add_shopcart1'+errmsg[0],
@@ -159,6 +159,8 @@ class Flow(BaseFlow):
                 ret = ret.decode('utf-8')
             sel = etree.HTML(ret)
             errmsg = sel.xpath('//*[@id="addOneTicket"]/ul/li[2]/div[3]/span/text()')
+            if errmsg:
+                return errmsg
         return errmsg
 
     def request_query_shopcart(self, rebot):
