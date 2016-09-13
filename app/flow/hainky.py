@@ -243,7 +243,7 @@ class Flow(BaseFlow):
                 ret = self.send_orderDetail_request(rebot, order=order)
                 order_status = ret["order_status"]
                 if order_status in ('未支付',):
-                    union_url = "http://www.0898hq.com/eTicket/Pay2ChinaUnion.aspx?oid=%s" % order.lock_info['pay_order_id']
+                    union_url = "http://www.0898hq.com/eTicket/Pay2ChinaUnion.aspx?oid=%s" % urllib.quote(order.lock_info['pay_order_id'])
                     r = rebot.http_get(union_url, headers=headers)
                     res = r.content.decode('gbk', 'ignore')
                     if u'错误订单号，订单不存在' in res:
