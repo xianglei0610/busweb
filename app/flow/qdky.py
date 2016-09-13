@@ -62,24 +62,35 @@ class Flow(BaseFlow):
             })
             return lock_result
         else:
-            if '已经使用此身份证预订过' in res.get('result_reason', ''):
+            errmsg = res.get('result_reason', '')
+            if '所剩车票数量小于' in errmsg:
+                self.close_line(order.line, reason=errmsg)
+                lock_result.update({
+                    "result_code": 0,
+                    "result_reason": errmsg,
+                    "pay_url": "",
+                    "raw_order_no": "",
+                    "expire_datetime": "",
+                })
+                return lock_result
+            if '已经使用此身份证预订过' in errmsg:
                 lock_result.update({
                         "result_code": 0,
                         "source_account": rebot.telephone,
-                        "result_reason": res.get('result_reason', ''),
+                        "result_reason": errmsg,
                     })
                 return lock_result
-            if "未付款订单" in res.get('result_reason', ''):
+            if "未付款订单" in errmsg:
                 new_rebot = order.change_lock_rebot()
                 lock_result.update({
                     "result_code": 2,
                     "source_account": new_rebot.telephone,
-                    "result_reason": str(rebot.telephone) + res.get('result_reason', ''),
+                    "result_reason": str(rebot.telephone) + errmsg,
                 })
                 return lock_result
             lock_result.update({
                 'result_code': 2,
-                "result_reason": res.get('result_reason', ''),
+                "result_reason": errmsg,
             })
             return lock_result
 
