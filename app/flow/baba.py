@@ -356,74 +356,106 @@ class Flow(BaseFlow):
             "update_attrs": {},
         }
         now = dte.now()
-        line_url = "http://s4mdata.bababus.com:80/app/v5/ticket/busList.htm"
         params = {
-            "content":{
-                "pageSize": 1025,
-                "beginCityName": line.s_city_name,
-                "currentPage": 1,
-                "endCityName": line.d_city_name,
-                "leaveDate": line.drv_date,
-                "beginCityId": line.s_city_id,
-                "endCityId": line.d_city_id,
-            },
-            "common": {
-                "pushToken": "864895020513527",
-                "channelVer": "BabaBus",
-                "usId": "",
-                "appId": "com.hundsun.InternetSaleTicket",
-                "appVer": "1.4.0",
-                "loginStatus": "0",
-                "imei": "864895020513527",
-                "mobileVer": "6.0",
-                "terminalType": "1",
-                "platformCode": "01",
-                "phone": "",
-            },
-            "key": ""
+            "startPlace":line.s_city_name,
+            "endPlace": line.d_city_name,
+            "sbId": line.extra_info["sbId"],
+            "stId": line.extra_info["stId"],
+            "depotId": line.extra_info["depotId"],
+            "busId": line.bus_num,
+            "leaveDate": line.drv_date,
+            "beginStationId": line.s_sta_id,
+            "endStationId": line.d_sta_id or "$bus.endStationId",
+            "endStationName": line.d_sta_name,
+            "beginStationName": line.s_sta_name,
+            "leaveTime": line.drv_time,
+            "fullPrice": line.full_price,
         }
-        ua = random.choice(MOBILE_USER_AGENG)
-        headers = {"User-Agent": ua}
+
+        check_url = "http://www.bababus.com/ticket/checkBuyTicket.htm"
         try:
-            r = requests.post(line_url, data=json.dumps(params), headers=headers)
+            r = requests.post(check_url,
+                              data=urllib.urlencode(params),
+                              headers={"User-Agent": random.choice(BROWSER_USER_AGENT), "Content-Type": "application/x-www-form-urlencoded"})
             res = r.json()
         except:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
-        if res["returnNo"] != "0000":
-            result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-            return result_info
 
-        update_attrs = {}
-        for d in res["content"]["busList"]:
-            drv_datetime = dte.strptime("%s %s" % (d["leaveDate"], d["leaveTime"]), "%Y-%m-%d %H:%M")
-            line_id_args = {
-                "s_city_name": line.s_city_name,
-                "d_city_name": line.d_city_name,
-                "s_sta_name": d["beginStation"],
-                "d_sta_name": d["endStation"],
-                "crawl_source": line.crawl_source,
-                "drv_datetime": drv_datetime,
-            }
-            line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
-            try:
-                obj = Line.objects.get(line_id=line_id)
-            except Line.DoesNotExist:
-                continue
-            extra_info = {"depotName": d.get("depotName", ""), "sbId": d["sbId"], "stId": d["stId"], "depotId": d["depotId"]}
-            info = {
-                "full_price": float(d["fullPrice"]),
-                "fee": 0,
-                "left_tickets": int(d["remainCount"]),
-                "refresh_datetime": now,
-                "extra_info": extra_info,
-            }
-            if line_id == line.line_id:
-                update_attrs = info
-            else:
-                obj.update(**info)
-        if not update_attrs:
-            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+        if not res["success"]:
+            result_info.update(result_msg="fail", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
-            result_info.update(result_msg="ok", update_attrs=update_attrs)
+            result_info.update(result_msg="ok", update_attrs={"left_tickets": 10, "refresh_datetime": now})
         return result_info
+
+         #line_url = "http://s4mdata.bababus.com:80/app/v5/ticket/busList.htm"
+         #params = {
+         #    "content":{
+         #        "pageSize": 1025,
+         #        "beginCityName": line.s_city_name,
+         #        "currentPage": 1,
+         #        "endCityName": line.d_city_name,
+         #        "leaveDate": line.drv_date,
+         #        "beginCityId": line.s_city_id,
+         #        "endCityId": line.d_city_id,
+         #    },
+         #    "common": {
+         #        "pushToken": "864895020513527",
+         #        "channelVer": "BabaBus",
+         #        "usId": "",
+         #        "appId": "com.hundsun.InternetSaleTicket",
+         #        "appVer": "1.4.0",
+         #        "loginStatus": "0",
+         #        "imei": "864895020513527",
+         #        "mobileVer": "6.0",
+         #        "terminalType": "1",
+         #        "platformCode": "01",
+         #        "phone": "",
+         #    },
+         #    "key": ""
+         #}
+         #ua = random.choice(MOBILE_USER_AGENG)
+         #headers = {"User-Agent": ua}
+         #try:
+         #    r = requests.post(line_url, data=json.dumps(params), headers=headers)
+         #    res = r.json()
+         #except:
+         #    result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+         #    return result_info
+         #if res["returnNo"] != "0000":
+         #    result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+         #    return result_info
+
+         #update_attrs = {}
+         #for d in res["content"]["busList"]:
+         #    drv_datetime = dte.strptime("%s %s" % (d["leaveDate"], d["leaveTime"]), "%Y-%m-%d %H:%M")
+         #    line_id_args = {
+         #        "s_city_name": line.s_city_name,
+         #        "d_city_name": line.d_city_name,
+         #        "s_sta_name": d["beginStation"],
+         #        "d_sta_name": d["endStation"],
+         #        "crawl_source": line.crawl_source,
+         #        "drv_datetime": drv_datetime,
+         #    }
+         #    line_id = md5("%(s_city_name)s-%(d_city_name)s-%(drv_datetime)s-%(s_sta_name)s-%(d_sta_name)s-%(crawl_source)s" % line_id_args)
+         #    try:
+         #        obj = Line.objects.get(line_id=line_id)
+         #    except Line.DoesNotExist:
+         #        continue
+         #    extra_info = {"depotName": d.get("depotName", ""), "sbId": d["sbId"], "stId": d["stId"], "depotId": d["depotId"]}
+         #    info = {
+         #        "full_price": float(d["fullPrice"]),
+         #        "fee": 0,
+         #        "left_tickets": int(d["remainCount"]),
+         #        "refresh_datetime": now,
+         #        "extra_info": extra_info,
+         #    }
+         #    if line_id == line.line_id:
+         #        update_attrs = info
+         #    else:
+         #        obj.update(**info)
+         #if not update_attrs:
+         #    result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+         #else:
+         #    result_info.update(result_msg="ok", update_attrs=update_attrs)
+         #return result_info
