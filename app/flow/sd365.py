@@ -26,6 +26,7 @@ class Flow(BaseFlow):
             "该班次价格不存在",
             "发车前2小时不售票",
             "超出人数限制",
+            "票源不足"
         ]
         for m in fail:
             if m in text:
