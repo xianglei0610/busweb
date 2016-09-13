@@ -52,7 +52,7 @@ YH_TYPE_SOURCE = [SOURCE_BJKY, SOURCE_HEBKY, SOURCE_SCQCP,
                   SOURCE_GLCX, SOURCE_FJKY, SOURCE_CHANGTU,
                   SOURCE_QDKY, SOURCE_HAINKY]
 # SNMPAY_SOURCE = ["cqky", "tongcheng", "xyjt", "tzky", "jsdlky", "sd365", "lvtu100", "gdsw", "hn96520"]
-SNMPAY_SOURCE = ["cqky", "tongcheng", "xyjt", "tzky", "jsdlky", "sd365", "hn96520", "baba",'shkyzz']
+SNMPAY_SOURCE = ["cqky", "tongcheng", "xyjt", "tzky", "jsdlky", "sd365", "hn96520", "baba",'shkyzz', "lvtu100", "zuoche"]
 
 
 SOURCE_INFO = {
