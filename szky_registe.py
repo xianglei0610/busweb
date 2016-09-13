@@ -146,7 +146,7 @@ def start():
         r = requests.get(url, headers={"User-Agent": "Chrome3.8"})
         name_list.extend(re.findall(r"/name/(\S+).html", r.content))
 
-    for i in range(20):
+    for i in range(40):
         tele = createPhone()
         idcard = ident_generator()
         name = random.choice(list(set(name_list)))
