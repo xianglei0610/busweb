@@ -467,6 +467,8 @@ class Flow(BaseFlow):
                 if line_id == line.line_id:
                     update_attrs = info
                 else:
+                    if obj.left_tickets == 0:
+                        continue
                     obj.update(**info)
         if not update_attrs and not bjky_flag:
             s_sta_name = line.s_sta_name
