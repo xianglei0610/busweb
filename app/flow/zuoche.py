@@ -55,6 +55,15 @@ class Flow(BaseFlow):
             })
             return lock_result
 
+        # 开车时间检查
+        if line.extra_info["id"].split(",")[0].split("$")[1] != line.drv_datetime.strftime("%Y%m%d%H%M"):
+            lock_result.update({
+                "result_code": 2,
+                "source_account": rebot.telephone,
+                "result_reason": u"[系统]开车时间不一致",
+            })
+            return lock_result
+
         headers = {"User-Agent": rebot.user_agent,}
         passengers = []
         the_pick = 0
