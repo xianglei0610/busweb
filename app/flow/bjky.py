@@ -287,6 +287,7 @@ class Flow(BaseFlow):
         if is_login:
             if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
                 self.lock_ticket(order)
+            order.reload()
 
             if order.status == STATUS_WAITING_ISSUE:
                 cookies = json.loads(rebot.cookies)
@@ -362,7 +363,7 @@ class Flow(BaseFlow):
                 rebot.modify(cookies=json.dumps(cookies), is_active=True, last_login_time=dte.now(), user_agent=headers.get("User-Agent", ""))
                 if order.status == STATUS_LOCK_RETRY:
                     self.lock_ticket(order)
-
+                order.reload()
                 if order.status == STATUS_WAITING_ISSUE:
                     pay_url = "http://e2go.com.cn/TicketOrder/Repay/"+order.lock_info['order_id']
                     r = rebot.http_get(pay_url, headers={"User-Agent": rebot.user_agent}, cookies=cookies)
@@ -466,6 +467,8 @@ class Flow(BaseFlow):
                 if line_id == line.line_id:
                     update_attrs = info
                 else:
+                    if obj.left_tickets == 0:
+                        continue
                     obj.update(**info)
         if not update_attrs and not bjky_flag:
             s_sta_name = line.s_sta_name

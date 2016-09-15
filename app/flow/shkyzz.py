@@ -13,6 +13,7 @@ from app.flow.base import Flow as BaseFlow
 from app.models import ShkyzzWebRebot, Line
 from datetime import datetime as dte
 from app.utils import md5
+from tasks import async_clear_rider
 
 
 class Flow(BaseFlow):
@@ -72,6 +73,7 @@ class Flow(BaseFlow):
                 "expire_datetime": expire_time,
                 "lock_info": res
             })
+#             async_clear_rider.delay(self.name, rebot.telephone)
         elif _check_fail(res.get("msg", '')):
                 self.close_line(order.line, reason=res["msg"])
                 lock_result.update({

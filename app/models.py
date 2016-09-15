@@ -1152,6 +1152,49 @@ class ShkyzzWebRebot(Rebot):
         tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
 
+    def clear_riders(self):
+        is_login = self.test_login_status()
+        if not is_login:
+            return
+        headers = {
+            "Charset": "UTF-8",
+            "User-Agent": self.user_agent,
+            "Upgrade-Insecure-Requests": "1"
+        }
+        cookies = json.loads(self.cookies)
+        main_url = 'http://www.zxjt.sh.cn/receiverAction!toMain'
+        try:
+            r = requests.get(main_url, headers=headers, cookies=cookies)
+            soup = BeautifulSoup(r.content, "lxml")
+            memberId = soup.find('input', attrs={'id': 'memberId'}).get('value','')
+        except:
+            return
+        headers = {
+            "Charset": "UTF-8",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "User-Agent": self.user_agent,
+            "Referer": "http://www.zxjt.sh.cn/receiverAction!toMain",
+            "X-Requested-With": "XMLHttpRequest",
+        }
+        cookies = json.loads(self.cookies)
+        all_url = "http://www.zxjt.sh.cn/ajax/receiverJsonAction!searchReceiverByOrder"
+        try:
+            data = {"receiverForm.memberId": memberId}
+            r = self.http_post(all_url, data=data, headers=headers, cookies=cookies)
+            res = r.json()
+        except:
+            return
+        receiverList = res.get('receiverList',[])
+        for i in receiverList:
+            delurl = "http://www.zxjt.sh.cn/receiverAction!delete"
+            try:
+                data = {"receiverForm.memberReceiverId":i['memberReceiverId']}
+                r = self.http_post(delurl, data=data, headers=headers, cookies=cookies)
+                if '保存成功' in r.content:
+                    print "OK"
+            except:
+                pass
+
 
 class HainkyWebRebot(Rebot):
     user_agent = db.StringField()

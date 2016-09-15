@@ -76,7 +76,7 @@ class Flow(BaseFlow):
                 })
                 return lock_result
 
-            for s in ["不允许网上售票"]:
+            for s in ["不允许网上售票",'班次访问错误']:
                 if s in errmsg:
                     self.close_line(order.line, reason=errmsg)
                     break
@@ -328,6 +328,8 @@ class Flow(BaseFlow):
                 if line_id == line.line_id:
                     update_attrs = info
                 else:
+                    if obj.left_tickets == 0:
+                        continue
                     obj.update(**info)
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
