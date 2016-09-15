@@ -347,8 +347,9 @@ class Flow(BaseFlow):
                 update_attrs = info
             else:
                 obj.update(**info)
+
         if not update_attrs:
-            result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="responseisnull", update_attrs={"left_tickets": 5, "refresh_datetime": now})
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
         return result_info
