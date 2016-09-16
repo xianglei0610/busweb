@@ -102,6 +102,27 @@ def refresh_order_fail_rate():
         async_send_email(subject, body)
 
 @check()
+def check_autopay():
+    from app.models import AdminUser
+    from tasks import async_send_email
+    users = AdminUser.objects.filter(is_close=False, username__startswith="snmpay") + AdminUser.objects.filter(is_close=False, username__in=["luojunping2"])
+    for u in users:
+        if not u.status_check_info:
+            continue
+        dt = u.status_check_info["dt"]
+        if (dte.now() - dt).total_seconds() > 60:
+            # 支付宝掉线了
+            subject = "支付宝掉线-%s" % u.username
+            body = subject + "<br/>" + str(dte)
+            async_send_email(subject, body)
+        money = u.status_check_info.get("yue", 0) + u.status_check_info.get("yuebao", 0)
+        if money < 50000:
+            # 没钱了
+            subject = "支付宝余额不足-%s" % u.username
+            body = subject + "<br/>" + str(dte)
+            async_send_email(subject, body)
+
+@check()
 def delete_source_riders():
     """
     删除源站乘客信息
@@ -466,6 +487,9 @@ def main():
 
     #发送订单失败邮件
     sched.add_interval_job(refresh_order_fail_rate, minutes=30)
+
+    # 自动支付账号定时检查
+    sched.add_interval_job(check_autopay, minutes=2)
 
     # 其他
     sched.add_cron_job(delete_source_riders, hour=22, minute=40)
