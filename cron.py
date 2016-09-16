@@ -105,7 +105,8 @@ def refresh_order_fail_rate():
 def check_autopay():
     from app.models import AdminUser
     from tasks import async_send_email
-    users = AdminUser.objects.filter(is_close=False, username__startswith="snmpay") + AdminUser.objects.filter(is_close=False, username__in=["luojunping2"])
+    qs = AdminUser.objects.filter(is_close=False)
+    users = list(qs.filter(username__startswith="snmpay")) + list(qs.filter(username__in=["luojunping2"]))
     for u in users:
         if not u.status_check_info:
             continue
@@ -116,7 +117,7 @@ def check_autopay():
             body = subject + "<br/>" + str(dte)
             async_send_email(subject, body)
         money = u.status_check_info.get("yue", 0) + u.status_check_info.get("yuebao", 0)
-        if money < 50000:
+        if money < 5000:
             # 没钱了
             subject = "支付宝余额不足-%s" % u.username
             body = subject + "<br/>" + str(dte)
