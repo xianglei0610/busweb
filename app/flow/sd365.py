@@ -28,6 +28,7 @@ class Flow(BaseFlow):
             "超出人数限制",
             "票源不足",
             "停止售票",
+            "班次信息不存在",
         ]
         for m in fail:
             if m in text:
