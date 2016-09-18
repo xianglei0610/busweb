@@ -111,16 +111,16 @@ def check_autopay():
         if not u.status_check_info:
             continue
         dt = u.status_check_info["dt"]
-        if (dte.now() - dt).total_seconds() > 60:
+        if (dte.now() - dt).total_seconds() > 90:
             # 支付宝掉线了
-            subject = "支付宝掉线-%s" % u.username
-            body = subject + "<br/>" + str(dte)
+            subject = "支付宝失联-%s" % u.username
+            body = subject + "<br/>" + str(dte.now())
             async_send_email(subject, body)
         money = u.status_check_info.get("yue", 0) + u.status_check_info.get("yuebao", 0)
         if money < 5000:
             # 没钱了
             subject = "支付宝余额不足-%s" % u.username
-            body = subject + "<br/>" + str(dte)
+            body = subject + "<br/>" + str(dte.now())
             async_send_email(subject, body)
 
 @check()
