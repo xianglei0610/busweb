@@ -236,6 +236,7 @@ class Flow(BaseFlow):
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
         rebot = order.get_lock_rebot()
         is_login = rebot.test_login_status()
+        valid_code = valid_code or "ab3c"
         if not is_login and valid_code:
             info = json.loads(session["pay_login_info"])
             headers = info["headers"]
