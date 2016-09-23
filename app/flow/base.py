@@ -267,7 +267,7 @@ class Flow(object):
         """
         线路信息刷新主流程, 不用子类重写
         """
-        line_log.info("[refresh-start] line:%s %s, left_tickets:%s ", line.crawl_source, line.line_id, line.left_tickets)
+        line_log.info("[refresh-start] city: %s, line:%s %s, left_tickets:%s ", line.s_city_name, line.crawl_source, line.line_id, line.left_tickets)
         if not self.valid_line(line):
             line.modify(left_tickets=0, refresh_datetime=dte.now())
             line_log.info("[refresh-result] line:%s %s, invalid line", line.crawl_source, line.line_id)
