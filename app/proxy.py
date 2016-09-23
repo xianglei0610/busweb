@@ -37,7 +37,8 @@ class ProxyProducer(object):
     def crawl_from_kuaidaili(self):
         add_cnt = 0
         for i in range(1, 10):
-            url = "http://www.kuaidaili.com/free/inha/%s/" % i
+            # url = "http://www.kuaidaili.com/free/inha/%s/" % i
+            url = "http://www.kuaidaili.com/free/intr/%s/" % i
             try:
                 r = requests.get(url, timeout=10)
             except:
