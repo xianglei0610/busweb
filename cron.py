@@ -116,12 +116,14 @@ def check_autopay():
             subject = "支付宝失联-%s" % u.username
             body = subject + "<br/>" + str(dte.now())
             async_send_email(subject, body)
+            break
         money = u.status_check_info.get("yue", 0) + u.status_check_info.get("yuebao", 0)
         if money < 5000:
             # 没钱了
             subject = "支付宝余额不足-%s" % u.username
             body = subject + "<br/>" + str(dte.now())
             async_send_email(subject, body)
+            break
 
 @check()
 def delete_source_riders():
