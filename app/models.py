@@ -1684,7 +1684,6 @@ class ZuocheWapRebot(Rebot):
         }
         r = self.http_get("%s?%s" % (url, urllib.urlencode(params)), headers=headers)
         res = r.json()
-        print res
         if res.get("isok", False):
             cookies = dict(r.cookies)
             self.modify(cookies=json.dumps(cookies), is_active=True)

@@ -191,9 +191,13 @@ class Flow(BaseFlow):
             r = rebot.http_get(url, headers=headers)
             res = r.json()
             if res["isCanBuy"]:
-                result_info.update(result_msg="ok", update_attrs={"left_tickets": 10, "refresh_datetime": now})
+                cookies = json.loads(rebot.cookies)
+                r = rebot.http_get("http://xqt.zuoche.com/xqt/forder.jspx?id=%s" % line.extra_info["id"], headers=headers, cookies=cookies)
+                left_tickets = int(re.findall(r"余票：(\d+)", r.content)[0])
+                result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now})
             else:
                 result_info.update(result_msg="error_default", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         except Exception, e:
             result_info.update(result_msg="error_default", update_attrs={"left_tickets": 4, "refresh_datetime": now})
+
         return result_info
