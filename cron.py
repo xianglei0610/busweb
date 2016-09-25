@@ -116,12 +116,14 @@ def check_autopay():
             subject = "支付宝失联-%s" % u.username
             body = subject + "<br/>" + str(dte.now())
             async_send_email(subject, body)
+            break
         money = u.status_check_info.get("yue", 0) + u.status_check_info.get("yuebao", 0)
         if money < 5000:
             # 没钱了
             subject = "支付宝余额不足-%s" % u.username
             body = subject + "<br/>" + str(dte.now())
             async_send_email(subject, body)
+            break
 
 @check()
 def delete_source_riders():
@@ -171,6 +173,15 @@ def crawl_proxy_haodaili():
     data = {}
     cnt = proxy_producer.crawl_from_haodaili()
     data["haodaili"] = cnt
+    return data
+
+
+@check(run_in_local=False)
+def crawl_proxy_kuaidaili():
+    from app.proxy import proxy_producer
+    data = {}
+    cnt = proxy_producer.crawl_from_kuaidaili()
+    data["kuaidaili"] = cnt
     return data
 
 @check(run_in_local=False)
@@ -459,6 +470,7 @@ def main():
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
+    sched.add_interval_job(crawl_proxy_kuaidaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=10)
     # sched.add_interval_job(crawl_proxy_66ip, minutes=10)
     # sched.add_interval_job(crawl_proxy_xici, minutes=10)
