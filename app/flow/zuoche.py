@@ -146,12 +146,13 @@ class Flow(BaseFlow):
             raw_order = re.findall(ur"\(订单号 (\S+)\)", unicode(soup.select_one(".title").text))[0]
             state = soup.select_one(".order_other_info").find("div").text
             pick_code = ""
-            pay_money = float(unicode(soup.select_one(".amount .pay").text).strip().lstrip(u"支付金额：").strip().rstrip(u"元"))
+            pay_money = float(unicode(soup.select_one(".amount .pay").text).strip().lstrip(u"支付金额：").strip().rstrip(u"元").replace(",", ""))
             if order.raw_order_no != raw_order:
                 order.modify(raw_order_no=raw_order, pay_money=pay_money)
             if "交易完成" in state:
                 pick_code = re.findall(ur"取票密码：(\d+)", soup.select_one(".password").text)[0]
         except Exception, e:
+            print e
             state, raw_order, pick_code = "", "", ""
         return {"state": state, "raw_order": raw_order, "pick_code": pick_code}
 
