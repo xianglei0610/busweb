@@ -282,7 +282,7 @@ class Flow(BaseFlow):
                 errmsg = errmsg.text
                 result_info.update(result_msg=errmsg, update_attrs={"left_tickets": 0, "refresh_datetime": now})
             else:
-                result_info.update(result_msg="exception_ok1", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                result_info.update(result_msg="exception_ok1", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
             try:
                 left_tickets = int(soup.select_one("#leftnum").text)
