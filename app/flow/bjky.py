@@ -87,19 +87,17 @@ class Flow(BaseFlow):
                                 source_account=new_rebot.telephone,
                                 result_reason=rebot.telephone+":购物车中数量和购票人数不相同")
             return lock_result
-        try:
-            res = self.request_create_order(order, rebot)
-        except Exception, e:
-            order_log.info("[lock-error] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-            res = self.request_create_order(order, rebot)
+        res = self.request_create_order(order, rebot)
         if res['order_no']:
             res['order_no'] = res['order_no'][0]
             res['order_id'] = res['pay_url'][0].split('/')[-1]
-        lock_result = {
+            res['pay_money'] = float(res['pay_money'][0].split(u'¥')[1])
+        else:
+            res = self.request_create_order(order, rebot)
+        lock_result.update({
             "lock_info": res,
             "source_account": rebot.telephone,
-            "pay_money": order.line.real_price()*order.ticket_amount,
-        }
+            })
         if res['order_no']:
             order_no = res['order_no']
             expire_time = dte.now()+datetime.timedelta(seconds=60*24)
@@ -109,9 +107,16 @@ class Flow(BaseFlow):
                 "pay_url": '',
                 "raw_order_no": order_no,
                 "expire_datetime": expire_time,
-                "lock_info": res
+                "lock_info": res,
+                "pay_money": res['pay_money']
             })
         else:
+            if not res['order_no']:
+                lock_result.update(result_code=0,
+                                   source_account=rebot.telephone,
+                                   result_reason='锁票失败'
+                                   )
+                return lock_result
             lock_result.update({
                 "result_code": 0,
                 "result_reason": res,
@@ -200,7 +205,8 @@ class Flow(BaseFlow):
         sel = etree.HTML(content)
         order_no = sel.xpath('//div[@class="orderContainer"]/div[@class="importantBox orderTip"]/strong/text()')
         pay_url = sel.xpath('//a[@id="payLink"]/@href')
-        res = {"order_no": order_no, 'pay_url': pay_url}
+        pay_money = sel.xpath('//div[@class="orderContainer"]/div[@class="shoppingCartSummary"]/span/span/text()')
+        res = {"order_no": order_no, 'pay_url': pay_url,'pay_money':pay_money}
         return res
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
