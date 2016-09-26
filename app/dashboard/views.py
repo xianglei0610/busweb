@@ -222,7 +222,7 @@ class ModifyOrderStatusOP(MethodView):
         action = request.form.get("action", "set")
         if order.status in [STATUS_ISSUE_SUCC, STATUS_ISSUE_ING, STATUS_LOCK_FAIL]:
             return jsonify({"code": 0, "msg": "%s不允许修改"%STATUS_MSG[order.status]})
-        if desc:
+        if not desc:
             return jsonify({"code": 0, "msg": "描述不能为空"})
         print STATUS_MSG[order.status]
         print STATUS_MSG[status]
