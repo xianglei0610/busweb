@@ -541,6 +541,9 @@ class Flow(BaseFlow):
                             }
                             update_attrs = info
         if not update_attrs:
+            if not bjky_flag:
+                result_info.update(result_msg="except_ok2", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                return result_info
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
