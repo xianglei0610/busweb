@@ -4848,6 +4848,7 @@ OT_REMARK = 12  # 增加备注内容
 OT_YICHANG = 13  # 设为异常
 OT_YICHANG2 = 14  # 解除异常
 OT_CHECK_RAW_ORDER = 15
+OT_MODIFY_ORDER_STATUS = 16 #修改订单状态
 
 OT_MSG = {
     OT_CREATED: "创建订单",
@@ -4865,6 +4866,7 @@ OT_MSG = {
     OT_YICHANG: "设为异常",
     OT_YICHANG2: "解除异常",
     OT_CHECK_RAW_ORDER: "源单校准",
+    OT_MODIFY_ORDER_STATUS: "修改订单状态"
 }
 
 
