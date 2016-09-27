@@ -77,9 +77,9 @@ def match_alipay_order(trade_info):
     trade_no = trade_info["交易号"]
     trade_status = trade_info["交易状态"]
     name= trade_info["商品名称"]
+    crawl_source = COMPANY_TO_SOURCE.get(site, "")
 
     # 通过商户订单号匹配
-    crawl_source = COMPANY_TO_SOURCE.get(site, "")
     if callable(crawl_source):
         crawl_source = crawl_source(name)
     try:
@@ -89,38 +89,48 @@ def match_alipay_order(trade_info):
     except Order.DoesNotExist:
         order = None
 
-    #if not order:
-    #    # 通过金额和下单时间匹配,应该避免走到这一步,因为有可能匹配到多个或者匹配错
-    #    for i in range(1, 10):
-    #        qs = Order.objects.filter(order_price=pay_money,
-    #                                  crawl_source=crawl_source,
-    #                                lock_datetime__gte=pay_datetime-timedelta(seconds=i*60),
-    #                                lock_datetime__lte=pay_datetime+timedelta(seconds=i*60))
-    #        qs = qs.filter(db.Q(pay_trade_no="")|db.Q(pay_trade_no=None)|db.Q(pay_trade_no=trade_no))
-    #        qs.order_by("lock_datetime")
-    #        if qs:
-    #            try:
-    #                has_matched = Order.objects.get(db.Q(pay_trade_no=trade_no)| \
-    #                                                db.Q(refund_trade_no=trade_no),
-    #                                                crawl_source=crawl_source)
-    #            except Order.DoesNotExist:
-    #                has_matched = None
-    #            lst = []
-    #            for i in qs:
-    #                if has_matched and has_matched.order_no != i.order_no:
-    #                    continue
-    #                lst.append(i)
+    if not order and crawl_source == "zuoche":
+        name = name.lstrip("退款-")
+        name_split = name.split(" ")
+        for i in range(1, 3):
+            # "商品名称": "2016-09-30 12:00:00 广州汽车客运站-惠东城南汽车客运站，3 张。"
+            drv_datetime = dte.strptime("%s %s" % (name_split[0], name_split[1]),"%Y-%m-%d %H:%M:%S")
+            ticket_amount = int(name_split[2].split("，")[1].strip())
+            s_sta_name, d_sta_name = name_split[2].split("，")[0].split("-")[0], name_split[2].split("，")[0].split("-")[1]
+            s_sta_name, d_sta_name = unicode(s_sta_name), unicode(d_sta_name)
 
-    #            for i in lst:
-    #                if i.status == 14 and trade_status == "交易成功":
-    #                    order = i
-    #                    break
-    #                elif i.status in [13, 6] and trade_status == "退款成功":
-    #                    order = i
-    #                    break
+            qs = Order.objects.filter(ticket_amount=ticket_amount,
+                                      drv_datetime=drv_datetime,
+                                      crawl_source=crawl_source,
+                                      starting_name__endswith=s_sta_name,
+                                      destination_name__endswith=d_sta_name,
+                                      lock_datetime__gte=pay_datetime-timedelta(seconds=i*60),
+                                      lock_datetime__lte=pay_datetime+timedelta(seconds=i*60))
+            qs = qs.filter(db.Q(pay_trade_no="")|db.Q(pay_trade_no=None)|db.Q(pay_trade_no=trade_no))
+            qs.order_by("lock_datetime")
+            if qs:
+                try:
+                    has_matched = Order.objects.get(db.Q(pay_trade_no=trade_no)| \
+                                                    db.Q(refund_trade_no=trade_no),
+                                                    crawl_source=crawl_source)
+                except Order.DoesNotExist:
+                    has_matched = None
+                lst = []
+                for i in qs:
+                    if has_matched and has_matched.order_no != i.order_no:
+                        continue
+                    lst.append(i)
 
-    #            if not order and lst:
-    #                order = lst[0]
+                for i in lst:
+                    if i.status == 14 and trade_status == "交易成功":
+                        order = i
+                        break
+                    elif i.status in [13, 6] and trade_status == "退款成功":
+                        order = i
+                        break
+
+                if not order and lst:
+                    order = lst[0]
     return order
 
 
