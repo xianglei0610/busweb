@@ -112,7 +112,7 @@ class Flow(BaseFlow):
             })
         else:
             if not res['order_no']:
-                lock_result.update(result_code=0,
+                lock_result.update(result_code=2,
                                    source_account=rebot.telephone,
                                    result_reason='锁票失败'
                                    )
