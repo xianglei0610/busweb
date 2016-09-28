@@ -191,17 +191,16 @@ class Flow(BaseFlow):
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
                 self.do_refresh_issue(order)
-                # url = "http://xqt.zuoche.com/xqt/pay.jspx?id=%s" % order.lock_info["id"]
                 url = "http://xq.zuoche.com/xqweb/pay.jspx?id=%s&paytype=other&payval=alipay" % order.lock_info["id"]
-                # url = http://xq.zuoche.com/xqweb/pay.jspx?id=SnsOrder%240c952de107df70b8-ea74&paytype=other&payval=alipay
-                return {"flag": "url", "content": url}
                 headers = {"User-Agent": rebot.user_agent}
                 cookies = json.loads(rebot.cookies)
                 try:
                     r = rebot.http_get(url, headers=headers, cookies=cookies)
                     soup = BeautifulSoup(r.content, "lxml")
-                    pay_url = soup.find("img", attrs={"alt":"支付宝"}).parent.get("href")
-                    r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+                    trade_no= soup.find("input", attrs={"name": "out_trade_no"}).get("value")
+                    pay_money = float(soup.find("input", attrs={"name": "total_fee"}).get("value"))
+                    if order.pay_money != pay_money or order.pay_order_no != trade_no:
+                        order.modify(pay_money=pay_money, pay_order_no=trade_no, pay_channel="alipay")
                     return {"flag": "html", "content": r.content}
                 except:
                     return {"flag": "error", "content": r.content}
