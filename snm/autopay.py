@@ -352,9 +352,9 @@ def pay(driver, order_info):
     except Exception, e:
         print e
         return
-
     try:
-        if "cashiersu18" in driver.current_url or "cashiergtj" in driver.current_url or "cashierzth" in driver.current_url:
+
+        if "cashiersu18" in driver.current_url or "cashiergtj" in driver.current_url or "cashierzth" in driver.current_url or 'cashierzui' in driver.current_url:
             pay_pc(driver, order_info)
         elif "mclient" in driver.current_url or "wappaygw" in driver.current_url:
             pay_wap(driver, order_info)
