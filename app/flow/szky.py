@@ -576,6 +576,8 @@ class Flow(BaseFlow):
                     if line_id == line.line_id:
                         update_attrs = info
                     else:
+                        if obj.left_tickets == 0:
+                            continue
                         obj.update(**info)
         except:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
@@ -646,6 +648,8 @@ class Flow(BaseFlow):
                 if line_id == line.line_id:
                     update_attrs = info
                 else:
+                    if obj.left_tickets == 0:
+                        continue
                     obj.update(**info)
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
