@@ -16,7 +16,7 @@ def main():
         # "luojunping2": ("luojunping2", "luocky", "a13267109876@sohu.com", "xll12308", "a12308"),
         "snmpay04": ("snmpay04", "snmpay004", "kuo86106@qq.com", "luke12308", "300l02"),
         "snmpay05": ("snmpay05", "snmpay005", "xianglei0610@163.com", "xl12308", "123081"),
-        "snmpay06": ("snmpay06", "snmpay006", "xianglei0610@sina.com", "xll12308", "123082"),
+        "snmpay06": ("snmpay06", "snmpay006", "xianglei0610@sina.com", "xll12308", "123081"),
     }
     args = account_info[account]
 

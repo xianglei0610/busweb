@@ -65,7 +65,7 @@ class Flow(BaseFlow):
             elif errmsg:
                 if "余票数不足" in errmsg[0]:
                     self.close_line(order.line, reason=errmsg[0])
-                lock_result.update(result_code=0,
+                lock_result.update(result_code=2,
                                     source_account=rebot.telephone,
                                     result_reason='add_shopcart1'+errmsg[0],
                                     lock_info={'result_reason': errmsg[0]})
@@ -74,7 +74,7 @@ class Flow(BaseFlow):
         if shopcartct == '0':
             errmsg = self.request_add_shopcart(order, rebot)
             if errmsg:
-                lock_result.update(result_code=0,
+                lock_result.update(result_code=2,
                                     source_account=rebot.telephone,
                                     result_reason='add_shopcart2'+errmsg[0],
                                     lock_info={'result_reason': errmsg[0]})
@@ -118,7 +118,7 @@ class Flow(BaseFlow):
                                    )
                 return lock_result
             lock_result.update({
-                "result_code": 0,
+                "result_code": 2,
                 "result_reason": res,
                 "pay_url": "",
                 "raw_order_no": "",
