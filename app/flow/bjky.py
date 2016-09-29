@@ -65,7 +65,7 @@ class Flow(BaseFlow):
             elif errmsg:
                 if "余票数不足" in errmsg[0]:
                     self.close_line(order.line, reason=errmsg[0])
-                lock_result.update(result_code=0,
+                lock_result.update(result_code=2,
                                     source_account=rebot.telephone,
                                     result_reason='add_shopcart1'+errmsg[0],
                                     lock_info={'result_reason': errmsg[0]})
@@ -74,7 +74,7 @@ class Flow(BaseFlow):
         if shopcartct == '0':
             errmsg = self.request_add_shopcart(order, rebot)
             if errmsg:
-                lock_result.update(result_code=0,
+                lock_result.update(result_code=2,
                                     source_account=rebot.telephone,
                                     result_reason='add_shopcart2'+errmsg[0],
                                     lock_info={'result_reason': errmsg[0]})
@@ -118,7 +118,7 @@ class Flow(BaseFlow):
                                    )
                 return lock_result
             lock_result.update({
-                "result_code": 0,
+                "result_code": 2,
                 "result_reason": res,
                 "pay_url": "",
                 "raw_order_no": "",
@@ -135,7 +135,7 @@ class Flow(BaseFlow):
                 "StopString": line.extra_info['ArrivingStopJson']
                 }
         select_url = "http://e2go.com.cn/TicketOrder/SelectSchedule"
-        r = rebot.http_post(select_url, data=data, headers=headers, cookies=cookies)
+        r = rebot.http_post(select_url, data=data, headers=headers, cookies=cookies,timeout=60)
         cookies.update(dict(r.cookies))
         ret = r.content
         rebot.modify(cookies=json.dumps(cookies))
@@ -158,7 +158,7 @@ class Flow(BaseFlow):
                 "SellInsurance": "false",
                 "WithChild": "false",
             }
-            r = rebot.http_post(add_shopcart_url, data=data, headers=headers, cookies=cookies)
+            r = rebot.http_post(add_shopcart_url, data=data, headers=headers, cookies=cookies,timeout=60)
             ret = r.content
             if not isinstance(ret, unicode):
                 ret = ret.decode('utf-8')
@@ -172,7 +172,7 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         url = "http://e2go.com.cn/TicketOrder/ShoppingCart"
-        r = rebot.http_get(url, headers=headers, cookies=cookies)
+        r = rebot.http_get(url, headers=headers, cookies=cookies,timeout=60)
         ret = r.content
         if not isinstance(ret, unicode):
             ret = ret.decode('utf-8')
@@ -185,7 +185,7 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         clear_url = 'http://e2go.com.cn/TicketOrder/ClearShoppingCart'
-        r = rebot.http_get(clear_url, headers=headers, cookies=cookies)
+        r = rebot.http_get(clear_url, headers=headers, cookies=cookies,timeout=60)
         ret = r.content
         if not isinstance(ret, unicode):
             ret = ret.decode('utf-8')
@@ -198,7 +198,7 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         order_url = 'http://e2go.com.cn/TicketOrder/Order'
-        r = rebot.http_post(order_url, headers=headers, cookies=cookies)
+        r = rebot.http_post(order_url, headers=headers, cookies=cookies,timeout=60)
         content = r.content
         if not isinstance(content, unicode):
             content = content.decode('utf-8')

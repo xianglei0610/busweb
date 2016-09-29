@@ -244,7 +244,7 @@ def parse_page_data(qs):
     params = request.values.to_dict()
     page = int(params.get("page", 1))
     page_size = int(params.get("page_size", 20))
-    if params.get('tab', '') =='yichang':
+    if params.get('tab', '') in ['yichang', "dealing"]:
         page_size = 100
     page_num = int(math.ceil(total*1.0/page_size))
     skip = (page-1)*page_size
