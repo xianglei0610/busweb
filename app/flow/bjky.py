@@ -198,7 +198,7 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         order_url = 'http://e2go.com.cn/TicketOrder/Order'
-        r = rebot.http_post(order_url, headers=headers, cookies=cookies)
+        r = rebot.http_post(order_url, headers=headers, cookies=cookies,timeout=60)
         content = r.content
         if not isinstance(content, unicode):
             content = content.decode('utf-8')
