@@ -1147,7 +1147,7 @@ class ShkyzzWebRebot(Rebot):
                     }):
                 cnt = d["count"]
                 phone = d["_id"]["phone"]
-                if cnt + int(order.ticket_amount) > 5:
+                if cnt + int(order.ticket_amount) > 7:
                     droped.add(phone)
         tele = random.choice(list(all_accounts - droped))
         return cls.objects.get(telephone=tele)
