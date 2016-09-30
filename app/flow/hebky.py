@@ -68,7 +68,7 @@ class Flow(BaseFlow):
             })
         else:
             errmsg = res['values']['result'].replace("\r\n", " ")
-            for s in ["剩余座位数不足"]:
+            for s in ["剩余座位数不足",'下单失败，请稍后再试']:
                 if s in errmsg:
                     self.close_line(line, reason=errmsg)
                     break
@@ -361,6 +361,8 @@ class Flow(BaseFlow):
                 if line_id == line.line_id:
                     update_attrs = info
                 else:
+                    if obj.left_tickets == 0:
+                        continue
                     obj.update(**info)
         if not update_attrs:
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
