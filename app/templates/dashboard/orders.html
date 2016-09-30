@@ -220,8 +220,12 @@
                     {{item.kefu_username}}
                 </td>
                 <td>
-                    <br />
+                    <br/>
                     <span class="{%if item.status==14%}text-success{%elif item.status in [4, 7]%}text-warning{%elif item.status == 12%}text-primar{%else%}text-danger{%endif%}">{{status_msg[item.status|string]}}</span>
+                    {%if current_user.is_superuser and item.status in (3,4,7,) %}
+                    	<br/>
+                    	<a data-trigger="modal" href="/orders/{{item.order_no}}/modify_order_status?action=set" data-title="修改状态">修改</a>
+                	{%endif%}
                 </td>
                 <td>
                     <a data-trigger="modal" href="/orders/{{item.order_no}}/traces" data-title="订单追踪列表" class="btn" style="padding:0px;">追踪</a><br/>
@@ -231,11 +235,12 @@
                     <a data-trigger="modal" href="/orders/{{item.order_no}}/yichang?action=del" data-title="解除异常">解除异常</a>
                     {%endif%}<br/>
                     {%if item.status == 3%}
-                    <a  href="/orders/{{item.order_no}}/refresh" >刷新</a>
-                    {%endif%}
+		                    <a  href="/orders/{{item.order_no}}/refresh" >刷新</a>
+		            {%endif%}
+                    <!--
                     {%if current_user.is_superuser and item.status in (7,) %}
                     	<a href="javascript:;" class="make-fail" pk="{{item.order_no}}">确认失败</a><br/>
-                	{%endif%}
+                	{%endif%} -->
             </tr>
             {%endfor%}
         </tbody>

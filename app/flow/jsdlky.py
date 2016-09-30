@@ -301,7 +301,8 @@ class Flow(BaseFlow):
         # }
         line_url = "http://58.213.132.28/weixin/proxy/queryBus"
         req_data = {
-            "ewx": "ROxgn80ecZQrWIzo4Ca89MVgGD4LZ9pGp0PNwOwzlC6k0r9EcmpJGpyt37mOv9LBoJezNz1rYtIUczw7Ed2BjjOiiPlA0H2f2C9TnO+qdJo=",
+            # "ewx": "ROxgn80ecZQrWIzo4Ca89MVgGD4LZ9pGp0PNwOwzlC6k0r9EcmpJGpyt37mOv9LBoJezNz1rYtIUczw7Ed2BjjOiiPlA0H2f2C9TnO+qdJo=",
+            "ewx": "6bjHP03wFIudTp+CXaQoQGwT2PvT3J0CDFbE4FwZ02KMMNcwsVKN6Ab0vbAMwsN0ochYbOMtaa+s/zbq84qvm6HPxOtoklekf6rww16xwzk=",
             "drive_date": line.drv_datetime.strftime("%Y%m%d"),
             "rst_name": line.s_sta_name,
             "dst_name": line.d_city_name,
@@ -309,15 +310,18 @@ class Flow(BaseFlow):
         now = dte.now()
         rebot = JsdlkyWebRebot.get_one()
         url = "%s?%s" % (line_url, urllib.urlencode(req_data))
-        try:
-            r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)}, timeout=10)
-            res = r.json()
-        except:
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
-            return result_info
+        for i in range(3):
+            try:
+                r = rebot.http_get(url, headers={"User-Agent": random.choice(MOBILE_USER_AGENG)}, timeout=10)
+                res = r.json()
+            except:
+                result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                return result_info
+            if res["rtn_code"] == "00":
+                break
+
         if res["rtn_code"] != "00":
-            # result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
-            result_info.update(result_msg="errorsponse_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            result_info.update(result_msg="errorsponse_ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
 
         update_attrs = {}

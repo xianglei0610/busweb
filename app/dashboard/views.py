@@ -196,12 +196,55 @@ class YiChangeOP(MethodView):
             return jsonify({"code":1, "msg": "设置异常执行成功"})
 
 
+class ModifyOrderStatusOP(MethodView):
+    @login_required
+    def get(self, order_no):
+        order = Order.objects.get_or_404(order_no=order_no)
+        action = request.args.get("action", "set")
+        ORDER_STATUS_MSG = {
+#             0: "全部订单",
+#             STATUS_WAITING_ISSUE: "等待付款",
+#             STATUS_WAITING_LOCK: "等待下单",
+            STATUS_ISSUE_FAIL: "出票失败",
+            STATUS_LOCK_FAIL: "下单失败",
+#             STATUS_ISSUE_SUCC: "出票成功",
+#             STATUS_GIVE_BACK: "源站已退款",
+#             STATUS_ISSUE_ING: "正在出票",
+            STATUS_LOCK_RETRY: "下单重试",
+        }
+        return render_template('dashboard/order-status.html', status_msg=ORDER_STATUS_MSG, order=order, action=action)
+
+    @login_required
+    def post(self, order_no):
+        order = Order.objects.get_or_404(order_no=order_no)
+        status = int(request.form.get("status"))
+        desc = request.form.get("desc",'')
+        action = request.form.get("action", "set")
+        if order.status in [STATUS_ISSUE_SUCC, STATUS_ISSUE_ING, STATUS_LOCK_FAIL]:
+            return jsonify({"code": 0, "msg": "%s不允许修改"%STATUS_MSG[order.status]})
+        if not desc and status != STATUS_LOCK_FAIL:
+            return jsonify({"code": 0, "msg": "描述不能为空"})
+        print STATUS_MSG[order.status]
+        print STATUS_MSG[status]
+        msg = "%s修改订单状态:%s=>%s 描述:%s" % (current_user.username,STATUS_MSG[order.status], STATUS_MSG[status], desc)
+        order.add_trace(OT_MODIFY_ORDER_STATUS, msg)
+        order.modify(status=status)
+        if status in [STATUS_LOCK_FAIL, STATUS_ISSUE_FAIL]:
+            now = dte.now()
+            if status == STATUS_LOCK_FAIL:
+                order.line.modify(left_tickets=0, update_datetime=now, refresh_datetime=now)
+            issued_callback.delay(order.order_no)
+            return jsonify({"code": 1, "msg": "修改订单状态成功"})
+        access_log.info("[modify_order_status] %s", msg)
+        return jsonify({"code":1, "msg": "修改订单状态成功"})
+
+
 def parse_page_data(qs):
     total = qs.count()
     params = request.values.to_dict()
     page = int(params.get("page", 1))
     page_size = int(params.get("page_size", 20))
-    if params.get('tab', '') =='yichang':
+    if params.get('tab', '') in ['yichang', "dealing"]:
         page_size = 100
     page_num = int(math.ceil(total*1.0/page_size))
     skip = (page-1)*page_size
@@ -860,6 +903,7 @@ def fangbian_callback():
 dashboard.add_url_rule("/login", view_func=LoginInView.as_view('login'))
 dashboard.add_url_rule("/orders/<order_no>/yichang", view_func=YiChangeOP.as_view('yichang'))
 dashboard.add_url_rule("/lines/<line_id>/submit", view_func=SubmitOrder.as_view('submit_order'))
+dashboard.add_url_rule("/orders/<order_no>/modify_order_status", view_func=ModifyOrderStatusOP.as_view('modify_order_status'))
 
 
 @dashboard.route('/users/config', methods=["POST", "GET"])

@@ -6,6 +6,7 @@ import json
 import urllib
 import datetime
 import re
+import time
 
 from app.constants import *
 from app.flow.base import Flow as BaseFlow
@@ -65,25 +66,48 @@ class Flow(BaseFlow):
             return lock_result
 
         headers = {"User-Agent": rebot.user_agent,}
+        # passengers = []
+        # the_pick = 0
+        # for i, r in enumerate(order.riders):
+        #     passengers.append({"name": r["name"], "mobile": r["telephone"], "cardNo": r["id_number"], "id": id_info[i]})
+        #     if r["id_number"] == order.contact_info["id_number"]:
+        #         the_pick = i
+
         passengers = []
         the_pick = 0
         for i, r in enumerate(order.riders):
-            passengers.append({"name": r["name"], "mobile": r["telephone"], "cardNo": r["id_number"], "id": id_info[i]})
+            istakeuser = False
             if r["id_number"] == order.contact_info["id_number"]:
-                the_pick = i
+                istakeuser = True
+            passengers.append({"name": r["name"], "mobile": r["telephone"], "idcard": r["id_number"], "istakeuser": istakeuser, "issaveview": False})
+
+        # params = {
+        #     "id": line.extra_info["id"],
+        #     "passengers": json.dumps(passengers),
+        #     "takeuser": json.dumps(passengers[the_pick]),
+        #     "vouchar": 0,
+        #     "couponid": "",
+        # }
+
         params = {
-            "id": line.extra_info["id"],
-            "passengers": json.dumps(passengers),
-            "takeuser": json.dumps(passengers[the_pick]),
-            "vouchar": 0,
+            "goid": line.extra_info["id"],
+            "bid": "",
+            "goInsurance": "",
+            "backInsurance": "",
+            "gopassengers": json.dumps(passengers),
+            "backpassengers": "",
             "couponid": "",
+            "vouchar": 0,
+            "ran": int(time.time()*1000),
         }
-        url = "http://xqt.zuoche.com/xqt/sorder.jspx?%s" % urllib.urlencode(params)
+
+        # url = "http://xqt.zuoche.com/xq/sorder.jspx?%s" % urllib.urlencode(params)
+        url = "http://xqt.zuoche.com/xqweb/sorder.jspx?%s" % urllib.urlencode(params)
         r = rebot.http_get(url, headers=headers, cookies=cookies)
         ret = r.json()
 
         errmsg = ret["msg"]
-        if ret.get("state", "") == "ok":
+        if ret.get("isok", False):
             expire_time = dte.now()+datetime.timedelta(seconds=2*60)
             lock_result.update({
                 "result_code": 1,
@@ -146,12 +170,13 @@ class Flow(BaseFlow):
             raw_order = re.findall(ur"\(订单号 (\S+)\)", unicode(soup.select_one(".title").text))[0]
             state = soup.select_one(".order_other_info").find("div").text
             pick_code = ""
-            pay_money = float(unicode(soup.select_one(".amount .pay").text).strip().lstrip(u"支付金额：").strip().rstrip(u"元"))
+            pay_money = float(unicode(soup.select_one(".amount .pay").text).strip().lstrip(u"支付金额：").strip().rstrip(u"元").replace(",", ""))
             if order.raw_order_no != raw_order:
                 order.modify(raw_order_no=raw_order, pay_money=pay_money)
             if "交易完成" in state:
                 pick_code = re.findall(ur"取票密码：(\d+)", soup.select_one(".password").text)[0]
         except Exception, e:
+            print e
             state, raw_order, pick_code = "", "", ""
         return {"state": state, "raw_order": raw_order, "pick_code": pick_code}
 
@@ -166,14 +191,16 @@ class Flow(BaseFlow):
                 self.lock_ticket(order)
             if order.status == STATUS_WAITING_ISSUE:
                 self.do_refresh_issue(order)
-                url = "http://xqt.zuoche.com/xqt/pay.jspx?id=%s" % order.lock_info["id"]
+                url = "http://xq.zuoche.com/xqweb/pay.jspx?id=%s&paytype=other&payval=alipay" % order.lock_info["id"]
                 headers = {"User-Agent": rebot.user_agent}
                 cookies = json.loads(rebot.cookies)
                 try:
                     r = rebot.http_get(url, headers=headers, cookies=cookies)
                     soup = BeautifulSoup(r.content, "lxml")
-                    pay_url = soup.find("img", attrs={"alt":"支付宝"}).parent.get("href")
-                    r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+                    trade_no= soup.find("input", attrs={"name": "out_trade_no"}).get("value")
+                    pay_money = float(soup.find("input", attrs={"name": "total_fee"}).get("value"))
+                    if order.pay_money != pay_money or order.pay_order_no != trade_no:
+                        order.modify(pay_money=pay_money, pay_order_no=trade_no, pay_channel="alipay")
                     return {"flag": "html", "content": r.content}
                 except:
                     return {"flag": "error", "content": r.content}

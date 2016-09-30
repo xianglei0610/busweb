@@ -63,9 +63,11 @@ class Flow(BaseFlow):
             if "购物车中已经存在发车日期" in errmsg[0]:
                 self.request_clear_shopcart(rebot)
             elif errmsg:
+                result_code = 2
                 if "余票数不足" in errmsg[0]:
                     self.close_line(order.line, reason=errmsg[0])
-                lock_result.update(result_code=0,
+                    result_code =0
+                lock_result.update(result_code=result_code,
                                     source_account=rebot.telephone,
                                     result_reason='add_shopcart1'+errmsg[0],
                                     lock_info={'result_reason': errmsg[0]})
@@ -74,7 +76,7 @@ class Flow(BaseFlow):
         if shopcartct == '0':
             errmsg = self.request_add_shopcart(order, rebot)
             if errmsg:
-                lock_result.update(result_code=0,
+                lock_result.update(result_code=2,
                                     source_account=rebot.telephone,
                                     result_reason='add_shopcart2'+errmsg[0],
                                     lock_info={'result_reason': errmsg[0]})
@@ -87,19 +89,17 @@ class Flow(BaseFlow):
                                 source_account=new_rebot.telephone,
                                 result_reason=rebot.telephone+":购物车中数量和购票人数不相同")
             return lock_result
-        try:
-            res = self.request_create_order(order, rebot)
-        except Exception, e:
-            order_log.info("[lock-error] order: %s,account:%s lock request error %s", order.order_no, rebot.telephone,e)
-            res = self.request_create_order(order, rebot)
+        res = self.request_create_order(order, rebot)
         if res['order_no']:
             res['order_no'] = res['order_no'][0]
             res['order_id'] = res['pay_url'][0].split('/')[-1]
-        lock_result = {
+            res['pay_money'] = float(res['pay_money'][0].split(u'¥')[1])
+        else:
+            res = self.request_create_order(order, rebot)
+        lock_result.update({
             "lock_info": res,
             "source_account": rebot.telephone,
-            "pay_money": order.line.real_price()*order.ticket_amount,
-        }
+            })
         if res['order_no']:
             order_no = res['order_no']
             expire_time = dte.now()+datetime.timedelta(seconds=60*24)
@@ -109,11 +109,18 @@ class Flow(BaseFlow):
                 "pay_url": '',
                 "raw_order_no": order_no,
                 "expire_datetime": expire_time,
-                "lock_info": res
+                "lock_info": res,
+                "pay_money": res['pay_money']
             })
         else:
+            if not res['order_no']:
+                lock_result.update(result_code=2,
+                                   source_account=rebot.telephone,
+                                   result_reason='锁票失败'
+                                   )
+                return lock_result
             lock_result.update({
-                "result_code": 0,
+                "result_code": 2,
                 "result_reason": res,
                 "pay_url": "",
                 "raw_order_no": "",
@@ -130,7 +137,7 @@ class Flow(BaseFlow):
                 "StopString": line.extra_info['ArrivingStopJson']
                 }
         select_url = "http://e2go.com.cn/TicketOrder/SelectSchedule"
-        r = rebot.http_post(select_url, data=data, headers=headers, cookies=cookies)
+        r = rebot.http_post(select_url, data=data, headers=headers, cookies=cookies,timeout=60)
         cookies.update(dict(r.cookies))
         ret = r.content
         rebot.modify(cookies=json.dumps(cookies))
@@ -153,7 +160,7 @@ class Flow(BaseFlow):
                 "SellInsurance": "false",
                 "WithChild": "false",
             }
-            r = rebot.http_post(add_shopcart_url, data=data, headers=headers, cookies=cookies)
+            r = rebot.http_post(add_shopcart_url, data=data, headers=headers, cookies=cookies,timeout=60)
             ret = r.content
             if not isinstance(ret, unicode):
                 ret = ret.decode('utf-8')
@@ -167,7 +174,7 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         url = "http://e2go.com.cn/TicketOrder/ShoppingCart"
-        r = rebot.http_get(url, headers=headers, cookies=cookies)
+        r = rebot.http_get(url, headers=headers, cookies=cookies,timeout=60)
         ret = r.content
         if not isinstance(ret, unicode):
             ret = ret.decode('utf-8')
@@ -180,7 +187,7 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         clear_url = 'http://e2go.com.cn/TicketOrder/ClearShoppingCart'
-        r = rebot.http_get(clear_url, headers=headers, cookies=cookies)
+        r = rebot.http_get(clear_url, headers=headers, cookies=cookies,timeout=60)
         ret = r.content
         if not isinstance(ret, unicode):
             ret = ret.decode('utf-8')
@@ -193,14 +200,15 @@ class Flow(BaseFlow):
         headers = rebot.http_header()
         cookies = json.loads(rebot.cookies)
         order_url = 'http://e2go.com.cn/TicketOrder/Order'
-        r = rebot.http_post(order_url, headers=headers, cookies=cookies)
+        r = rebot.http_post(order_url, headers=headers, cookies=cookies,timeout=60)
         content = r.content
         if not isinstance(content, unicode):
             content = content.decode('utf-8')
         sel = etree.HTML(content)
         order_no = sel.xpath('//div[@class="orderContainer"]/div[@class="importantBox orderTip"]/strong/text()')
         pay_url = sel.xpath('//a[@id="payLink"]/@href')
-        res = {"order_no": order_no, 'pay_url': pay_url}
+        pay_money = sel.xpath('//div[@class="orderContainer"]/div[@class="shoppingCartSummary"]/span/span/text()')
+        res = {"order_no": order_no, 'pay_url': pay_url,'pay_money':pay_money}
         return res
 
     def send_orderDetail_request(self, rebot, order=None, lock_info=None):
@@ -541,6 +549,9 @@ class Flow(BaseFlow):
                             }
                             update_attrs = info
         if not update_attrs:
+            if not bjky_flag:
+                result_info.update(result_msg="except_ok2", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+                return result_info
             result_info.update(result_msg="no line info", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         else:
             result_info.update(result_msg="ok", update_attrs=update_attrs)
