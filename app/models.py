@@ -797,13 +797,13 @@ class Order(db.Document):
             return
         self.add_trace(OT_ISSUE_FAIL, "出票失败 原因：%s" % reason)
 
-        from tasks import issue_fail_send_email
-        r = getRedisObj()
-        key = RK_ISSUE_FAIL_COUNT % self.crawl_source
-        r.sadd(key, self.order_no)
-        order_ct = r.scard(key)
-        if order_ct > ISSUE_FAIL_WARNING:
-            issue_fail_send_email.delay(key)
+#         from tasks import issue_fail_send_email
+#         r = getRedisObj()
+#         key = RK_ISSUE_FAIL_COUNT % self.crawl_source
+#         r.sadd(key, self.order_no)
+#         order_ct = r.scard(key)
+#         if order_ct > ISSUE_FAIL_WARNING:
+#             issue_fail_send_email.delay(key)
 
     def on_issueing(self, reason=""):
         if self.status != STATUS_ISSUE_ING:
