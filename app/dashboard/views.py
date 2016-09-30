@@ -222,7 +222,7 @@ class ModifyOrderStatusOP(MethodView):
         action = request.form.get("action", "set")
         if order.status in [STATUS_ISSUE_SUCC, STATUS_ISSUE_ING, STATUS_LOCK_FAIL]:
             return jsonify({"code": 0, "msg": "%s不允许修改"%STATUS_MSG[order.status]})
-        if not desc and status != STATUS_LOCK_FAIL:
+        if not desc and status != STATUS_LOCK_RETRY:
             return jsonify({"code": 0, "msg": "描述不能为空"})
         msg = "%s修改订单状态:%s=>%s 描述:%s" % (current_user.username,STATUS_MSG[order.status], STATUS_MSG[status], desc)
         order.add_trace(OT_MODIFY_ORDER_STATUS, msg)
