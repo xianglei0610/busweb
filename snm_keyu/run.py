@@ -8,6 +8,8 @@ def main():
     account = sys.argv[1]
     account_info = {
         "snmpay01": ("snmpaykeyu01", "snmpay001", "keyu_1@qq.com", "keyu86988695", "869886"),
+        "snmpay02": ("snmpaykeyu02", "snmpay001", "tianshanhuayuan@qq.com", "keyu86988695", "869886"),
+        "snmpay03": ("snmpaykeyu03", "snmpay001", "lvduwanhe@qq.com", "keyu86988695", "869886"),
         #"snmpay02": ("snmpaykeyu02", "snmpay002", "lipigpig@foxmail.com", "luke12308", "300102"),
         #"snmpay03": ("snmpaykeyu03", "snmpay003", "onmyfish@126.com", "luke12308", "300102"),
     }
