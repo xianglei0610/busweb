@@ -226,8 +226,18 @@ class Flow(BaseFlow):
             if d["orderno"] == order.raw_order_no:
                 detail = d
                 break
-        if order.order_no == "2016091157716178":
-            detail = {"orderstatus": "成功", "ticketsecret": "220624"}
+        if order.order_no == "2016093053688435":
+            ticketsecret = '150290'
+        elif order.order_no == "2016093007245858":
+            ticketsecret = '160028'
+        elif order.order_no == "2016093034552124":
+            ticketsecret = '148125'
+        elif order.order_no == "2016093011144725":
+            ticketsecret = '153270'
+        elif order.order_no == '2016093045203498':
+            ticketsecret = '122516'
+        if not detail and order.order_no in ['2016093053688435',"2016093007245858","2016093034552124","2016093011144725",'2016093045203498']:
+            detail = {"orderstatus": "成功", "ticketsecret": ticketsecret}    
 
         if not detail:
             result_info.update(result_msg="未查到已完成订单")
