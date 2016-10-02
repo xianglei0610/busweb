@@ -119,7 +119,7 @@ class Flow(BaseFlow):
             })
         else:
             code = 2
-            if "班次已售罄" in errmsg or "座位不足" in errmsg:
+            if "班次已售罄" in errmsg or "座位不足" in errmsg or "锁票失败" in errmsg:
                 code = 0
                 self.close_line(order.line, reason=errmsg)
             lock_result.update({
