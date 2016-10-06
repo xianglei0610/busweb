@@ -573,7 +573,8 @@ def starting_config():
         site_list = Line.objects.filter(s_city_name__startswith=obj.city.city_name, s_sta_name=obj.sta_name).distinct("crawl_source")
         data = {k: 1000/(len(site_list)) for k in site_list}
         data.update(obj.source_weight)
-        data[site] = int(params["value"])
+        if not site:
+            data[site] = int(params["value"])
         obj.modify(source_weight=data)
         obj.clear_cache()
         return jsonify({"code": 1, "msg": "修改权重成功" })

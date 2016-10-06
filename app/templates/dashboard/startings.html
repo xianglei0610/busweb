@@ -117,7 +117,9 @@
                     <td>
                         {% if item.source_weight%}
                             {% for k, v in item.source_weight.items()%}
+                            {%if k%}
                             {{source_info[k]["name"]}}: <a href="#" data-value="{{v}}" id="weight" class="sel-weight" data-type="select" data-pk="{{item.id}}_{{k}}" data-url="/startings/set" data-title="权重">{{v}}</a> <br/>
+                            {%endif%}
                             {% endfor %}
                         {% else %}
                             <a href="#" data-value="default" id="weight" class="sel-weight" data-type="select" data-pk="{{item.id}}_" data-url="/startings/set" data-title="权重">默认</a>
