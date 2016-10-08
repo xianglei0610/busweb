@@ -119,7 +119,7 @@ class Flow(BaseFlow):
             })
         else:
             code = 2
-            if "班次已售罄" in errmsg or "座位不足" in errmsg:
+            if "班次已售罄" in errmsg or "座位不足" in errmsg or "锁票失败" in errmsg:
                 code = 0
                 self.close_line(order.line, reason=errmsg)
             lock_result.update({
@@ -220,11 +220,13 @@ class Flow(BaseFlow):
             if res["isCanBuy"]:
                 cookies = json.loads(rebot.cookies)
                 r = rebot.http_get("http://xqt.zuoche.com/xqt/forder.jspx?id=%s" % line.extra_info["id"], headers=headers, cookies=cookies)
-                left_tickets = int(re.findall(r"余票：(\d+)", r.content)[0])
-                result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "refresh_datetime": now})
+                price, left_tickets = re.findall(r"￥(\S+) 余票：(\d+)", BeautifulSoup(r.content, "lxml").select_one(".price").text.strip().encode("utf-8"))[0]
+                price, left_tickets = float(price.replace(",", "")), int(left_tickets)
+                result_info.update(result_msg="ok", update_attrs={"left_tickets": left_tickets, "full_price": price, "refresh_datetime": now})
             else:
                 result_info.update(result_msg="error_default", update_attrs={"left_tickets": 0, "refresh_datetime": now})
         except Exception, e:
+            print e
             result_info.update(result_msg="error_default", update_attrs={"left_tickets": 4, "refresh_datetime": now})
 
         return result_info

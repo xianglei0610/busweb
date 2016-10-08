@@ -10,7 +10,7 @@ def main():
         # "snmpay01": ("snmpay01", "snmpay001", "kuo86106@qq.com", "luocky12308", "300l01"),
         # "snmpay01": ("snmpay01", "snmpay001", "lipigpig@foxmail.com", "luocky12308", "300101"),
         "snmpay01": ("snmpay01", "snmpay001", "a13267109876@sohu.com", "xl12308", "b12308"),
-        "snmpay02": ("snmpay02", "snmpay002", "lipigpig@foxmail.com", "luocky12308", "300101"),
+        "snmpay02": ("snmpay02", "snmpay002", "lipigpig@foxmail.com", "luke12308", "300102"),
         "snmpay03": ("snmpay03", "snmpay003", "onmyfish@126.com", "luke12308", "300102"),
         "luojunping2": ("luojunping2", "luocky", "onmyfish@126.com", "luke12308", "300102"),
         "snmpay04": ("snmpay04", "snmpay004", "kuo86106@qq.com", "luke12308", "300l02"),
