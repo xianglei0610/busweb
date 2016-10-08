@@ -213,7 +213,6 @@ class Flow(BaseFlow):
                 "end": order.line.d_sta_name,
                 'raw_order': order.raw_order_no,
                 "code": pcode,
-                "seat_no": ret['seat_no']
             }
             code_list = []
             if pcode:
