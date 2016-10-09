@@ -392,10 +392,14 @@ def check_alipay_status(driver):
             url = "https://my.alipay.com/portal/i.htm"
             driver.get(url)
             yue = float(driver.find_element_by_css_selector(".i-assets-balance-amount .amount").text)
-            yuebao = float(driver.find_element_by_css_selector("#J-assets-mfund-amount .amount").text)
+            try:
+                yuebao = float(driver.find_element_by_css_selector(".i-assets-mFund-amount .amount").text)
+            except:
+                yuebao = float(driver.find_element_by_css_selector("#J-assets-mfund-amount .amount").text)
             account = driver.alipay_account
             username = driver.dashboard_account
         driver.alipay_online = True
         requests.get(DASHBOARD_URL+"/users/config?type=api&action=refresh&username=%s&account=%s&yue=%s&yuebao=%s" % (username, account, yue, yuebao), headers={"token": driver.dashboard_token}, timeout=30)
-    except:
+    except Exception, e:
+        print e
         driver.alipay_online = False

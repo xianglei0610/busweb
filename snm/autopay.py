@@ -32,7 +32,7 @@ def create_driver(dashboard_account, dashboard_password, alipay_account, alipay_
         driver = webdriver.Chrome(executable_path="./chromedriver")
         # driver = webdriver.Firefox()
     # page timeout
-    driver.set_page_load_timeout(90)
+    driver.set_page_load_timeout(30)
 
     driver.dashboard_account = dashboard_account
     driver.dashboard_password = dashboard_password
@@ -139,7 +139,7 @@ def login_dashboard_api(driver):
 
 def refresh_orders(driver):
     if not driver.alipay_online:
-        # print "支付宝不在线，不刷新订单"
+        print "支付宝不在线，不刷新订单"
         return []
     try:
         r = requests.get(DASHBOARD_URL+"/orders/dealing?type=api", headers={"token": driver.dashboard_token}, timeout=30)
@@ -373,7 +373,7 @@ def check_alipay_status(driver):
     if not hasattr(driver, "last_check_time"):
         driver.last_check_time =  dte.now()
 
-    if (dte.now() - driver.last_check_time).total_seconds() < 20:
+    if (dte.now() - driver.last_check_time).total_seconds() < 30:
         return
     driver.last_check_time = dte.now()
 
@@ -394,5 +394,6 @@ def check_alipay_status(driver):
             username = driver.dashboard_account
         driver.alipay_online = True
         requests.get(DASHBOARD_URL+"/users/config?type=api&action=refresh&username=%s&account=%s&yue=%s&yuebao=%s" % (username, account, yue, yuebao), headers={"token": driver.dashboard_token}, timeout=30)
-    except:
+    except Exception, e:
+        print e
         driver.alipay_online = False
