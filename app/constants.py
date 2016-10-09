@@ -4949,7 +4949,7 @@ DUAN_XIN_TEMPL = {
     SOURCE_GLCX: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和车站订单号取票,如需改签、退票请前往发车站的客运站按规定办理。",
     SOURCE_FJKY: "您已成功购买%(time)s%(start)s-%(end)s的车票,本次购票取票号：%(no)s，取票密码：%(code)s。",
     SOURCE_QDKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时至乘车站凭身份证和取票密码%(code)s取票,如需改签、退票请前往客运站按规定办理。",
-    SOURCE_HAINKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,凭座位号%(seat_no)s,订单号和取票密码%(code)s取票,如需改签、退票请前往客运站按规定办理。",
+    SOURCE_HAINKY: "车站订单号：%(raw_order)s,发车时间：%(time)s,%(start)s-%(end)s,凭订单号和取票密码%(code)s取票,如需改签、退票请前往客运站按规定办理。",
     SOURCE_ZUOCHE: "购票成功,发车时间：%(time)s,%(start)s-%(end)s,请至少提前半小时(节假日请提前一小时以上)至乘车站凭身份证原件、取票密码(%(code)s)取票,如需改签、退票请前往始发客运站按规定办理。",
     u"上海长途客运总站":"购票成功,发车时间：%(time)s,%(start)s(%(address)s)-%(end)s,座位号%(seat_no)s,请凭身份证原件到车站直接检票上车，检票口:%(check_no)s,无需取票。若需报销凭证请至服务台索取(编号:%(code)s)。",
     u'上海芷新太平洋站':"购票成功,发车时间：%(time)s,%(start)s(%(address)s)-%(end)s,座位号%(seat_no)s,请至少提前半小时至乘车站凭身份证原件或取票密码%(code)s取票。",
