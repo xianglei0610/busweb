@@ -301,8 +301,7 @@ class Flow(BaseFlow):
         # }
         line_url = "http://58.213.132.28/weixin/proxy/queryBus"
         req_data = {
-            # "ewx": "ROxgn80ecZQrWIzo4Ca89MVgGD4LZ9pGp0PNwOwzlC6k0r9EcmpJGpyt37mOv9LBoJezNz1rYtIUczw7Ed2BjjOiiPlA0H2f2C9TnO+qdJo=",
-            "ewx": "6bjHP03wFIudTp+CXaQoQGwT2PvT3J0CDFbE4FwZ02KMMNcwsVKN6Ab0vbAMwsN0ochYbOMtaa+s/zbq84qvm6HPxOtoklekf6rww16xwzk=",
+            "ewx": "Q5YGlfiOcg6pRhpEQS5zVPwba/CIBUZTO4j6Yu7IVKiGOYlGOnIhsP94Fci1Sxd5bSrnHfQ7yCI9CbrCBxfM2LZ0/mqpGGZc6sH7RyYxqGQ=",
             "drive_date": line.drv_datetime.strftime("%Y%m%d"),
             "rst_name": line.s_sta_name,
             "dst_name": line.d_city_name,
@@ -321,7 +320,7 @@ class Flow(BaseFlow):
                 break
 
         if res["rtn_code"] != "00":
-            result_info.update(result_msg="errorsponse_ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
+            result_info.update(result_msg="errorsponse_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
             return result_info
 
         update_attrs = {}
