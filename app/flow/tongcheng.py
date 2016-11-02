@@ -619,8 +619,8 @@ class Flow(BaseFlow):
 
         update_attrs = {}
         for d in res["body"]["schedule"]:
-            if not d["coachNo"]:
-                continue
+            # if not d["coachNo"]:
+            #     continue
             if d["canBooking"]:
                 left = int(d["ticketLeft"]) or 15
             else:
