@@ -172,7 +172,9 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        rebot = order.get_lock_rebot(rebot_cls=TCWebRebot)
+        #rebot = order.get_lock_rebot(rebot_cls=TCWebRebot)
+        rebot = order.get_lock_rebot(rebot_cls=TCAppRebot)
+        rebot = TCWebRebot.objects.get(telephone=rebot.telephone)
 
         is_login = rebot.test_login_status()
         if not is_login:
@@ -216,6 +218,10 @@ class Flow(BaseFlow):
                     "dptTime": line.drv_time,
                     "ticketPrice": line.full_price,
                     "OptionType": 1,
+
+                    "agentType": 1,
+                    "agentNo": 0,
+                    "scheduleNo": ""
                 }
             ],
             "ContactInfo": {
@@ -608,7 +614,7 @@ class Flow(BaseFlow):
         }
         try:
             r = rebot.http_post(url, "getbusschedule", data)
-        except:
+        except Exception, e:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
             return result_info
         res = r.json()
@@ -619,8 +625,8 @@ class Flow(BaseFlow):
 
         update_attrs = {}
         for d in res["body"]["schedule"]:
-            if not d["coachNo"]:
-                continue
+            # if not d["coachNo"]:
+            #     continue
             if d["canBooking"]:
                 left = int(d["ticketLeft"]) or 15
             else:
