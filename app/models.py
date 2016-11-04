@@ -405,26 +405,7 @@ class Line(db.Document):
     def check_compatible_lines(self, reload=False):
         if not reload and self.compatible_lines:
             return self.compatible_lines
-        if self.s_province == "重庆":
-            # 重庆省网，方便网
-            if self.crawl_source == SOURCE_CQKY:
-                trans = {"重庆主城": "重庆"}
-                tar_source = SOURCE_FB
-            elif self.crawl_source == SOURCE_FB:
-                trans = {"重庆": "重庆主城"}
-                tar_source = SOURCE_CQKY
-            try:
-                ob = Line.objects.get(crawl_source=tar_source,
-                                      s_city_name=trans.get(self.s_city_name, self.s_city_name),
-                                      d_city_name=trans.get(self.d_city_name, self.d_city_name),
-                                      s_sta_name=self.s_sta_name,
-                                      d_sta_name=self.d_sta_name,
-                                      drv_datetime=self.drv_datetime)
-                self.modify(compatible_lines={self.crawl_source: self.line_id, tar_source: ob.line_id})
-            except Line.DoesNotExist:
-                self.modify(compatible_lines={self.crawl_source: self.line_id})
-            return self.compatible_lines
-        elif self.s_province == "山东":
+        if self.s_province == "山东":
             # 畅途出发城市不带市, 畅途目的城市与365差距大
             qs = Line.objects.filter(s_city_name__startswith=self.s_city_name.rstrip(u"市"),
                                      s_sta_name=self.s_sta_name,
