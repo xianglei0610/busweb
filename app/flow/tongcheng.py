@@ -628,7 +628,7 @@ class Flow(BaseFlow):
             # if not d["coachNo"]:
             #     continue
             if d["canBooking"]:
-                left = int(d["ticketLeft"]) or 15
+                left = max(int(d["ticketLeft"]), 0) or 15
             else:
                 left = 0
             drv_datetime = dte.strptime("%s %s" % (d["dptDate"], d["dptTime"]), "%Y-%m-%d %H:%M")
