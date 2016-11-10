@@ -174,7 +174,8 @@ class Flow(BaseFlow):
             if order.raw_order_no != raw_order:
                 order.modify(raw_order_no=raw_order, pay_money=pay_money)
             if "交易完成" in state:
-                pick_code = re.findall(ur"取票密码：(\d+)", soup.select_one(".password").text)[0]
+                pick_code = re.findall(ur"取票密码：(\d+)", soup.select_one(".password").text)
+                pick_code = pick_code[0] if pick_code else ""
         except Exception, e:
             print e
             state, raw_order, pick_code = "", "", ""
