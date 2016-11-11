@@ -148,9 +148,11 @@ class Flow(BaseFlow):
         return lock_result
 
     def do_lock_ticket(self, order):
-        order.line.refresh(force=1)
-        #return self.do_lock_ticket_by_web(order)
-        return self.do_lock_ticket_by_app(order)
+        # order.line.refresh(force=1)
+        if order.line.s_province in ["湖北"]:
+            return self.do_lock_ticket_by_web(order)
+        else:
+            return self.do_lock_ticket_by_app(order)
         # line = order.line
         # if line.s_city_name in ["南通", "镇江", "无锡", "苏州"]:
         #     return self.do_lock_ticket_by_web(order)
@@ -170,7 +172,9 @@ class Flow(BaseFlow):
             "expire_datetime": "",
             "pay_money": 0,
         }
-        rebot = order.get_lock_rebot(rebot_cls=TCWebRebot)
+        #rebot = order.get_lock_rebot(rebot_cls=TCWebRebot)
+        rebot = order.get_lock_rebot(rebot_cls=TCAppRebot)
+        rebot = TCWebRebot.objects.get(telephone=rebot.telephone)
 
         is_login = rebot.test_login_status()
         if not is_login:
@@ -214,6 +218,10 @@ class Flow(BaseFlow):
                     "dptTime": line.drv_time,
                     "ticketPrice": line.full_price,
                     "OptionType": 1,
+
+                    "agentType": 1,
+                    "agentNo": 0,
+                    "scheduleNo": ""
                 }
             ],
             "ContactInfo": {
@@ -606,7 +614,7 @@ class Flow(BaseFlow):
         }
         try:
             r = rebot.http_post(url, "getbusschedule", data)
-        except:
+        except Exception, e:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
             return result_info
         res = r.json()
@@ -617,10 +625,10 @@ class Flow(BaseFlow):
 
         update_attrs = {}
         for d in res["body"]["schedule"]:
-            if not d["coachNo"]:
-                continue
+            # if not d["coachNo"]:
+            #     continue
             if d["canBooking"]:
-                left = int(d["ticketLeft"]) or 15
+                left = max(int(d["ticketLeft"]), 0) or 15
             else:
                 left = 0
             drv_datetime = dte.strptime("%s %s" % (d["dptDate"], d["dptTime"]), "%Y-%m-%d %H:%M")

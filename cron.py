@@ -177,6 +177,14 @@ def crawl_proxy_haodaili():
 
 
 @check(run_in_local=False)
+def crawl_proxy_mimiip():
+    from app.proxy import proxy_producer
+    data = {}
+    cnt = proxy_producer.crawl_from_mimiip()
+    data["mimiip"] = cnt
+    return data
+
+@check(run_in_local=False)
 def crawl_proxy_kuaidaili():
     from app.proxy import proxy_producer
     data = {}
@@ -470,6 +478,7 @@ def main():
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
+    sched.add_interval_job(crawl_proxy_mimiip, minutes=7)
     sched.add_interval_job(crawl_proxy_kuaidaili, minutes=6)
     sched.add_interval_job(crawl_proxy_samair, minutes=10)
     # sched.add_interval_job(crawl_proxy_66ip, minutes=10)
