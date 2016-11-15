@@ -212,14 +212,16 @@ class Flow(BaseFlow):
         r = requests.get(detail_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
         no, code ,site = "", "", ""
-        for tag in soup.select(".details_taketicket .details_passenger_num"):
-            s = tag.get_text().strip()
-            if s.startswith("取票号:"):
-                no = s.lstrip("取票号:")
-            elif s.startswith("取票密码:"):
-                code = s.lstrip("取票密码:")
-            elif s.startswith("取票地点:"):
-                site = s.lstrip("取票地点:")
+        header = [o.text.strip() for o in soup.find(attrs={"class": "table_ticket_infor order_center"}).select("th")]
+        data = [o.text.strip() for o in soup.find(attrs={"class": "table_ticket_infor order_center"}).select("tr")[1].select("td")]
+        for i in range(len(header)):
+            name, value  = header[i], data[i]
+            if name == "取票订单号":
+                no = value
+            elif name == "密码":
+                code = value
+            elif name == "取票地点":
+                site = value
         pay_money = float(eval(re.findall(r"(\d+.\d)",soup.select_one(".order_Aprice").text)[0]))
         state = soup.select(".re_pay_success")[0].get_text().strip()
         return {
