@@ -212,8 +212,12 @@ class Flow(BaseFlow):
         r = requests.get(detail_url, headers=headers, cookies=cookies)
         soup = BeautifulSoup(r.content, "lxml")
         no, code ,site = "", "", ""
-        header = [o.text.strip() for o in soup.find(attrs={"class": "table_ticket_infor order_center"}).select("th")]
-        data = [o.text.strip() for o in soup.find(attrs={"class": "table_ticket_infor order_center"}).select("tr")[1].select("td")]
+
+        try:
+            header = [o.text.strip() for o in soup.find(attrs={"class": "table_ticket_infor order_center"}).select("th")]
+            data = [o.text.strip() for o in soup.find(attrs={"class": "table_ticket_infor order_center"}).select("tr")[1].select("td")]
+        except:
+            header, data = [], []
         for i in range(len(header)):
             name, value  = header[i], data[i]
             if name == "取票订单号":
