@@ -93,15 +93,15 @@ class Flow(BaseFlow):
             pay_money = float(soup.select_one("#totalmoney").text.strip().lstrip("￥"))
             expire_time = dte.now() + datetime.timedelta(seconds=15 * 60)
             pay_params = {}
-            try:
-                pay_msg =  re.findall(r"BC.click\(([\s\S]*)\}\);", soup.select("script")[5].text)[0]
-            except:
-                pay_msg =  re.findall(r"BC.click\(([\s\S]*)\}\);", r.content)[0]
-            pay_msg = pay_msg[:pay_msg.index("})")+1].replace("//","#").replace("/**", "#").replace("*/", "#").replace("*", "#")
-            pay_params = eval(pay_msg)
-            pay_params["appId"] = re.findall(r"appId=(\S+)", soup.select_one("#spay-script").get("src"))[0]
-            pay_params["callback"] = "BC.cbs.r0.f"
-            pay_params["return_url"] = pay_params["return_url"].replace("#", "//")
+            # try:
+            #     pay_msg =  re.findall(r"BC.click\(([\s\S]*)\}\);", soup.select("script")[5].text)[0]
+            # except:
+            #     pay_msg =  re.findall(r"BC.click\(([\s\S]*)\}\);", r.content)[0]
+            # pay_msg = pay_msg[:pay_msg.index("})")+1].replace("//","#").replace("/**", "#").replace("*/", "#").replace("*", "#")
+            # pay_params = eval(pay_msg)
+            # pay_params["appId"] = re.findall(r"appId=(\S+)", soup.select_one("#spay-script").get("src"))[0]
+            # pay_params["callback"] = "BC.cbs.r0.f"
+            # pay_params["return_url"] = pay_params["return_url"].replace("#", "//")
             lock_result.update({
                 'result_code': 1,
                 'raw_order_no': raw_order,
@@ -401,12 +401,20 @@ class Flow(BaseFlow):
                 return {"flag": "error", "content": "支付页面打开失败,请联系技术解决!"}
             cookies = json.loads(rebot.cookies)
             headers = {'User-Agent': rebot.user_agent}
-            r = rebot.http_get("https://jspay-hz.beecloud.cn/2/rest/jsbutton/ALI_WEB?para=%s" % order.lock_info.get("pay_params", ""), headers=headers, cookies=cookies)
-            dstr = r.content[r.content.index("(")+1:r.content.rindex(")")]
-            res = json.loads(dstr)
-            pay_url = "%s?%s" % (res["url"], urllib.urlencode(res["param"]))
-            pay_url = pay_url.replace("??", "?")
-            return {"flag": "url", "content": pay_url}
+            pay_url = "http://m.hn96520.com/Home/BeeCloudPay?sn=%s" % order.raw_order_no
+            r = rebot.http_get(pay_url, headers=headers, cookies=cookies)
+            # dstr = r.content[r.content.index("(")+1:r.content.rindex(")")]
+            # res = json.loads(dstr)
+            # pay_url = "%s?%s" % (res["url"], urllib.urlencode(res["param"]))
+            # pay_url = pay_url.replace("??", "?")
+
+            data = self.extract_alipay(r.content)
+            pay_money = float(data["total_fee"])
+            trade_no = data["out_trade_no"]
+            if order.pay_money != pay_money or order.pay_order_no != trade_no:
+                order.modify(pay_money=pay_money, pay_order_no=trade_no, pay_channel='alipay')
+            return {"flag": "html", "content": r.content}
+            #return {"flag": "url", "content": pay_url}
 
 
     def get_pay_page(self, order, session=None, valid_code="", bank="", pay_channel="alipay", **kwargs):
