@@ -224,7 +224,7 @@ class Flow(BaseFlow):
         state = soup.find('div', attrs={'class': 'hyzx_right'}).find('table').find_all('tr')[0].find_all('td')[1].get_text()
         order_status = state.encode("utf-8").split('：')[1]
         res.update({"order_status": order_status,})
-        if order_status not in ['待领票', "已领票"]:
+        if order_status not in ['待领票', "已领票","购票暂时失败且未退款"]:
             return res
         else:
             photo_url = "http://www.kyzz.com.cn/orderAction!toSelfPhoto?orderRecForm.orderRecId=%s" % order.raw_order_no
@@ -261,7 +261,8 @@ class Flow(BaseFlow):
                 "待领票": u"购票成功",
                 "已领票": u"购票成功",
                 "正在出票":u'正在出票',
-                "已支付":u"已支付，暂时未出票"
+                "已支付":u"已支付，暂时未出票",
+                "购票暂时失败且未退款":'购票暂时失败且未退款'
                 }
         if state in ["待领票", "已领票"]: #"出票成功":
             dx_info = {
@@ -288,11 +289,11 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": order_status_mapping[state],
             })
-#         elif state in [u"订单过期"]:
-#             result_info.update({
-#                 "result_code": 2,
-#                 "result_msg": order_status_mapping[state],
-#             })
+        elif state in ["购票暂时失败且未退款"]:
+            result_info.update({
+                "result_code": 2,
+                "result_msg": order_status_mapping[state],
+            })
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
