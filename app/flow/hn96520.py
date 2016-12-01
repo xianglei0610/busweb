@@ -335,7 +335,7 @@ class Flow(BaseFlow):
             info = soup.find('table', attrs={'class': 'resulttb'}).find_all('tbody', attrs={'class': 'rebody'})
         except:
             result_info = {}
-            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 5, "refresh_datetime": now})
+            result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 0, "refresh_datetime": now})
             return result_info
         crawl_source = "hn96520"
         now = dte.now()
