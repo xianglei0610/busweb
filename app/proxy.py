@@ -36,22 +36,18 @@ class ProxyProducer(object):
 
     def crawl_from_kuaidaili(self):
         add_cnt = 0
-        for i in range(1, 10):
-            # url = "http://www.kuaidaili.com/free/inha/%s/" % i
-            url = "http://www.kuaidaili.com/free/intr/%s/" % i
-            try:
-                r = requests.get(url, timeout=10)
-            except:
-                continue
-            soup = BeautifulSoup(r.content, "lxml")
-            for s in soup.select(".table tr")[1:]:
-                td_lst = s.findAll("td")
-                ip, port = td_lst[0].text.strip(), td_lst[1].text.strip()
-                ipstr = "%s:%s" % (ip, port)
-                if self.valid_proxy(ipstr):
-                    rebot_log.info("[crawl_from_kuaidaili] %s", ipstr)
-                    self.add_proxy(ipstr)
-                    add_cnt += 1
+        url = "http://dev.kuaidaili.com/api/getproxy/?orderid=938100440311431&num=200&area=%E4%B8%AD%E5%9B%BD&b_pcchrome=1&b_pcie=1&b_pcff=1&protocol=1&method=2&an_an=1&an_ha=1&sep=2"
+        try:
+            r = requests.get(url, timeout=10)
+        except:
+            return
+        for s in r.content.split("\n"):
+            ipstr = s.strip()
+            print ipstr
+            if self.valid_proxy(ipstr):
+                rebot_log.info("[crawl_from_kuaidaili] %s", ipstr)
+                self.add_proxy(ipstr)
+                add_cnt += 1
         return add_cnt
 
     def crawl_from_haodaili(self):
