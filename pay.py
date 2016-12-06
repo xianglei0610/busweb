@@ -16,6 +16,7 @@ COMPANY_TO_SOURCE = {
     "北京二两科技有限公司": SOURCE_KUAIBA,
     "重庆市公路客运联网售票中心有限公司": SOURCE_CQKY,
     "同程国际旅行社有限公司": SOURCE_TC,
+    "苏州创旅天下信息技术有限公司": SOURCE_TC,
     "四川倍施特科技股份有限公司": SOURCE_SCQCP,
     "江苏长运交通科技有限公司": SOURCE_JSKY,
     "苏州世纪飞越网络信息有限公司": SOURCE_WXSZ,
