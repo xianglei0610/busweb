@@ -214,6 +214,16 @@ def pay_pc(driver, order_info):
                         break
                 except Exception, e:
                     break
+    else:
+        for i in range(30):
+            time.sleep(1)
+            if "cashierReturn" in driver.current_url:
+                url = driver.find_element_by_id("J_redirectUrl").get_attribute("value")
+                try:
+                    driver.get(url)
+                    break
+                except:
+                    print "回调页面访问错误", url
 
 def login_pay_wap(driver, order_info):
     try:
