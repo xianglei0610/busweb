@@ -24,7 +24,7 @@ from app.utils import get_redis
 from app.decorators import superuser_required
 from app.models import Order, Line, AdminUser, OpenStation, OpenCity
 from app.flow import get_flow
-from tasks import async_lock_ticket, issued_callback
+from tasks import async_lock_ticket, issued_callback, async_send_email
 from app import order_log, db, access_log
 
 
@@ -683,6 +683,10 @@ def change_kefu():
     assign.remove_dealing(order, current_user)
     order.add_trace(OT_TRANSFER, "%s 将订单转给 %s" % (current_user.username, target.username))
     msg = "成功转给%s" % target.username
+
+    if "snmpay" in current_user.username and target.username == "luojunping":
+        subject = "异常单转入(%s=>%s): %s %s, " % (current_user.username, target.username, order.crawl_source, order.order_no)
+        async_send_email(subject, subject)
     return jsonify({"code": 1, "msg": msg})
 
 
