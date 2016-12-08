@@ -122,6 +122,8 @@ class Flow(BaseFlow):
             if u"已经停班" in msg or "可售票额不足" in msg:
                 code = 0
                 self.close_line(order.line, msg)
+            elif u"乘车人身份证当天已经使用" in msg:
+                code = 0
             lock_result.update({
                 'result_code': code,
                 "result_reason": msg,
