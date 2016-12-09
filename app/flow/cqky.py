@@ -484,6 +484,9 @@ class Flow(BaseFlow):
                 "pageNum": ""
             }
             r = rebot.http_post(base_url, data=urllib.urlencode(params), headers=headers,)
+            if r.status_code == 404:
+                rebot.modify(ip='')
+                return {"flag": "error", "content": "请重试!"}
             #r = requests.post(base_url, data=urllib.urlencode(params), headers=headers,)
             order.update(pay_channel='alipay')
             return {"flag": "html", "content": r.content}
