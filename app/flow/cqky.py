@@ -181,11 +181,11 @@ class Flow(BaseFlow):
     def request_lock(self, order, rebot, sta_mode=1):
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/User/CommitGoods.aspx",
+            "Referer": "http://61.186.245.210/User/CommitGoods.aspx",
         }
         cookies = json.loads(rebot.cookies)
         if sta_mode == 1:
-            base_url = "http://www.96096kp.com/CommitGoods.aspx"
+            base_url = "http://61.186.245.210/CommitGoods.aspx"
             r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
@@ -212,7 +212,7 @@ class Flow(BaseFlow):
                 "ctl00$FartherMain$NavigationControl1$hideIsSubmit": "true",
             }
         else:
-            base_url = "http://www.96096kp.com/OrderConfirm.aspx"
+            base_url = "http://61.186.245.210/OrderConfirm.aspx"
             r = rebot.http_get(base_url, headers=headers, cookies=cookies)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
@@ -253,11 +253,11 @@ class Flow(BaseFlow):
         """
         获取购物车条目
         """
-        base_url = "http://www.96096kp.com/UserData/ShopCart.aspx"
+        base_url = "http://61.186.245.210/UserData/ShopCart.aspx"
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/TicketMain.aspx",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://61.186.245.210/TicketMain.aspx",
+            "Origin": "http://61.186.245.210",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
@@ -274,11 +274,11 @@ class Flow(BaseFlow):
         """
         删除购物车
         """
-        base_url = "http://www.96096kp.com/UserData/ShopCart.aspx"
+        base_url = "http://61.186.245.210/UserData/ShopCart.aspx"
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/TicketMain.aspx",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://61.186.245.210/TicketMain.aspx",
+            "Origin": "http://61.186.245.210",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
@@ -297,11 +297,11 @@ class Flow(BaseFlow):
         加入购物车
         """
         line = order.line
-        base_url = "http://www.96096kp.com/UserData/ShopCart.aspx"
+        base_url = "http://61.186.245.210/UserData/ShopCart.aspx"
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/TicketMain.aspx",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://61.186.245.210/TicketMain.aspx",
+            "Origin": "http://61.186.245.210",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
@@ -339,7 +339,7 @@ class Flow(BaseFlow):
         """
             车站状态
         """
-        base_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
+        base_url = "http://61.186.245.210/UserData/UserCmd.aspx"
         params = {
             "SchStationCode": line.s_sta_id,
             "SchStationName": line.s_sta_name,
@@ -347,8 +347,8 @@ class Flow(BaseFlow):
         }
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/TicketMain.aspx",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://61.186.245.210/TicketMain.aspx",
+            "Origin": "http://61.186.245.210",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
@@ -393,7 +393,7 @@ class Flow(BaseFlow):
         return result_info
 
     def send_order_request(self, rebot, order):
-        base_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
+        base_url = "http://61.186.245.210/UserData/UserCmd.aspx"
         params = {
             "isCheck": "false",
             "ValidateCode": "",
@@ -406,8 +406,8 @@ class Flow(BaseFlow):
         }
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/TicketMain.aspx",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://61.186.245.210/TicketMain.aspx",
+            "Origin": "http://61.186.245.210",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         def my_trans_js_str(s):
@@ -458,17 +458,17 @@ class Flow(BaseFlow):
         if order.status == STATUS_WAITING_ISSUE:
             self.check_raw_order_no(order)
             order.reload()
-            base_url = "http://www.96096kp.com/GoodsDetail.aspx"
+            base_url = "http://61.186.245.210/GoodsDetail.aspx"
             headers = {
                 "User-Agent": rebot.user_agent,
-                "Referer": "http://www.96096kp.com/TicketMain.aspx",
-                "Origin": "http://www.96096kp.com",
+                "Referer": "http://61.186.245.210/TicketMain.aspx",
+                "Origin": "http://61.186.245.210",
             }
             #r = requests.get(base_url, headers=headers)
             r = rebot.http_get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
-            headers.update({"Referer": "http://www.96096kp.com/GoodsDetail.aspx"})
+            headers.update({"Referer": "http://61.186.245.210/GoodsDetail.aspx"})
             params ={
                 "__VIEWSTATE": soup.select("#__VIEWSTATE")[0].get("value"),
                 "__EVENTVALIDATION": soup.select("#__EVENTVALIDATION")[0].get("value"),
@@ -491,8 +491,8 @@ class Flow(BaseFlow):
 
         # if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
         #     cookies = {}
-        #     login_form = "http://www.96096kp.com/CusLogin.aspx"
-        #     valid_url = "http://www.96096kp.com/ValidateCode.aspx?_=%s" % random.randint(1, 10000)
+        #     login_form = "http://61.186.245.210/CusLogin.aspx"
+        #     valid_url = "http://61.186.245.210/ValidateCode.aspx?_=%s" % random.randint(1, 10000)
         #     headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
         #     r = rebot.http_get(login_form, headers=headers, cookies=cookies)
         #     cookies.update(dict(r.cookies))
@@ -510,7 +510,7 @@ class Flow(BaseFlow):
             "result_msg": "",
             "update_attrs": {},
         }
-        line_url = "http://www.96096kp.com/UserData/MQCenterSale.aspx"
+        line_url = "http://61.186.245.210/UserData/MQCenterSale.aspx"
         params = {
             "StartStation": line.s_city_name,
             "WaitStationCode": "",
@@ -528,8 +528,8 @@ class Flow(BaseFlow):
         }
         headers = {
             "User-Agent": random.choice(BROWSER_USER_AGENT),
-            "Referer": "http://www.96096kp.com",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://61.186.245.210",
+            "Origin": "http://61.186.245.210",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         rebot = CqkyWebRebot.get_one()
@@ -599,7 +599,7 @@ class Flow(BaseFlow):
         if other.order_no == order.order_no:
             return
         rebot = order.get_lock_rebot()
-        base_url = "http://www.96096kp.com/UserData/UserCmd.aspx"
+        base_url = "http://61.186.245.210/UserData/UserCmd.aspx"
         params = {
             "isCheck": "false",
             "ValidateCode": "",
@@ -612,8 +612,8 @@ class Flow(BaseFlow):
         }
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://www.96096kp.com/TicketMain.aspx",
-            "Origin": "http://www.96096kp.com",
+            "Referer": "http://61.186.245.210/TicketMain.aspx",
+            "Origin": "http://61.186.245.210",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         cookies = json.loads(rebot.cookies)
