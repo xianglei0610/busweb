@@ -313,7 +313,7 @@ class CqkyProxyConsumer(ProxyConsumer):
         if rds.get(key):
             return False
 
-        line_url = "http://113.204.53.134/UserData/MQCenterSale.aspx"
+        line_url = "http://www.96096kp.cn/UserData/MQCenterSale.aspx"
         tomorrow = dte.now() + timedelta(days=1)
         params = {
             "StartStation": "重庆主城",
@@ -332,8 +332,8 @@ class CqkyProxyConsumer(ProxyConsumer):
         }
         headers = {
             "User-Agent": random.choice(BROWSER_USER_AGENT),
-            "Referer": "http://113.204.53.134",
-            "Origin": "http://113.204.53.134",
+            "Referer": "http://www.96096kp.cn",
+            "Origin": "http://www.96096kp.cn",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
         try:

@@ -3461,8 +3461,8 @@ class CqkyWebRebot(Rebot):
             cookies = {}
         vcode_flag = False
         if not valid_code:
-            login_form = "http://113.204.53.134/CusLogin.aspx"
-            valid_url = "http://113.204.53.134/ValidateCode.aspx"
+            login_form = "http://www.96096kp.cn/CusLogin.aspx"
+            valid_url = "http://www.96096kp.cn/ValidateCode.aspx"
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
             r = self.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
@@ -3480,8 +3480,8 @@ class CqkyWebRebot(Rebot):
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
-                "Referer": "http://113.204.53.134/CusLogin.aspx",
-                "Origin": "http://113.204.53.134",
+                "Referer": "http://www.96096kp.cn/CusLogin.aspx",
+                "Origin": "http://www.96096kp.cn",
                 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             }
             params = {
@@ -3491,7 +3491,7 @@ class CqkyWebRebot(Rebot):
                 "loginValid": valid_code,
                 "cmd": "Login",
             }
-            login_url = "http://113.204.53.134/UserData/UserCmd.aspx"
+            login_url = "http://www.96096kp.cn/UserData/UserCmd.aspx"
             r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
             res = json.loads(trans_js_str(r.content))
             success = res.get("success", True)
@@ -3523,11 +3523,11 @@ class CqkyWebRebot(Rebot):
         return ret
 
     def check_login(self):
-        user_url = "http://113.204.53.134/UpdateMember.aspx"
+        user_url = "http://www.96096kp.cn/UpdateMember.aspx"
         headers = {
             "User-Agent": self.user_agent,
-            "Referer": "http://113.204.53.134/TicketMain.aspx",
-            "Origin": "http://113.204.53.134",
+            "Referer": "http://www.96096kp.cn/TicketMain.aspx",
+            "Origin": "http://www.96096kp.cn",
         }
         cookies = json.loads(self.cookies)
         r = self.http_get(user_url, headers=headers, cookies=cookies)

@@ -2285,7 +2285,7 @@ SOURCE_INFO = {
     SOURCE_CQKY: {
         "name": "重庆客运",
         "limit_payct": 100,
-        "website": "http://113.204.53.134/",
+        "website": "http://www.96096kp.cn/",
         "accounts": {
             "15552206642": ("123456", ""),
             "15309926634": ("123456", ""),
