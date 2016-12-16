@@ -277,8 +277,24 @@ class Flow(BaseFlow):
                         "Referer":"http://www.968980.cn/com/yxd/pris/wsgp/atoPayPage.action",
                         "Upgrade-Insecure-Requests":"1"
                         })
-                print headers
                 r = requests.post(pay_url, data=params, headers=headers, cookies=cookies)
+                ret = r.content
+                if not isinstance(ret, unicode):
+                    ret = ret.decode('utf-8')
+                sel = etree.HTML(ret)
+                params = {}
+                for s in sel.xpath("//form[@id='wsgp_unionpay_req_form']//input"):
+                    k, v = s.xpath("@name"), s.xpath("@value")
+                    k, v = k[0], v[0] if v else ""
+                    params[k] = v
+                url = "https://unionpaysecure.com/api/Pay.action"
+                headers.update({
+                    "Host":"unionpaysecure.com",
+                    "Origin":"http://www.968980.cn",
+                    "Referer":"http://www.968980.cn/com/yxd/pris/payment/payOnline.action",
+                    "Upgrade-Insecure-Requests":"1"
+                })
+                r = requests.post(url, headers=headers, cookies=cookies, data=params)
                 order.update(pay_channel='yh')
                 return {"flag": "html", "content": r.content}
 
