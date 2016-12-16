@@ -478,13 +478,13 @@ def main():
 
     # 代理ip相关
     sched.add_interval_job(crawl_proxy_haodaili, minutes=6)
-    sched.add_interval_job(crawl_proxy_mimiip, minutes=7)
+    # sched.add_interval_job(crawl_proxy_mimiip, minutes=7)
     sched.add_interval_job(crawl_proxy_kuaidaili, minutes=6)
-    sched.add_interval_job(crawl_proxy_samair, minutes=10)
+    # sched.add_interval_job(crawl_proxy_samair, minutes=10)
     # sched.add_interval_job(crawl_proxy_66ip, minutes=10)
     # sched.add_interval_job(crawl_proxy_xici, minutes=10)
     sched.add_interval_job(crawl_proxy_zdaye, minutes=3)
-    sched.add_interval_job(crawl_proxy_kxdaili, minutes=5)
+    # sched.add_interval_job(crawl_proxy_kxdaili, minutes=5)
     sched.add_interval_job(crawl_proxy_ip181, minutes=10)
 
     sched.add_interval_job(check_proxy, minutes=1)
