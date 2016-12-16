@@ -270,6 +270,14 @@ class Flow(BaseFlow):
 #                     "payCompanyCode": "002",
 #                     "payAmount": payAmount
 #                     }
+
+                headers.update({
+                        "Host":"www.968980.cn",
+                        "Origin":"http://www.968980.cn",
+                        "Referer":"http://www.968980.cn/com/yxd/pris/wsgp/atoPayPage.action",
+                        "Upgrade-Insecure-Requests":"1"
+                        })
+                print headers
                 r = requests.post(pay_url, data=params, headers=headers, cookies=cookies)
                 order.update(pay_channel='yh')
                 return {"flag": "html", "content": r.content}
