@@ -491,7 +491,7 @@ def main():
     sched.add_interval_job(check_consumer_proxy, args=["cqky"], minutes=2)
     sched.add_interval_job(check_consumer_proxy, args=["hn96520"], minutes=2)
     sched.add_interval_job(check_consumer_proxy, args=["sd365"], minutes=2)
-#     sched.add_interval_job(check_consumer_proxy, args=["qdky"], minutes=2)
+    sched.add_interval_job(check_consumer_proxy, args=["tongcheng"], minutes=2)
     # sched.add_interval_job(check_consumer_proxy, args=["cbd"], minutes=1)
 #     sched.add_interval_job(check_consumer_proxy, args=["scqcp"], minutes=2)
     # sched.add_interval_job(check_consumer_proxy, args=["bjky"], minutes=1)
