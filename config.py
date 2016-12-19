@@ -26,6 +26,7 @@ class Config:
     CELERY_TASK_SERIALIZER = 'pickle'
     CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
     CELERY_IMPORTS=("tasks")
+    BROKER_TRANSPORT_OPTIONS = {'socket_timeout': 50}
 
     PERMANENT_SESSION_LIFETIME = 30 * 60   # session有效期
 
