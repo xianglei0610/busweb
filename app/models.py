@@ -3557,7 +3557,7 @@ class TCAppRebot(Rebot):
     crawl_source = SOURCE_TC
     is_for_lock = True
 
-    def http_post(self, url, service_name, data):
+    def http_post(self, url, service_name, data, proxies={}):
         stime = str(int(time.time() * 1000))
         account_id = "c26b007f-c89e-431a-b8cc-493becbdd8a2"
         version = "20111128102912"
@@ -3603,7 +3603,7 @@ class TCAppRebot(Rebot):
             "Content-Type": "application/json",
             "User-Agent": "okhttp/2.5.0",
         }
-        r = requests.post(url, data=body, headers=headers)
+        r = requests.post(url, data=body, headers=headers, proxies=proxies)
         return r
 
     def login(self):

@@ -387,12 +387,10 @@ class TongChengProxyConsumer(ProxyConsumer):
         url = "http://tcmobileapi.17usoft.com/bus/QueryHandler.ashx"
         try:
             r = rebot.http_post(url, "getbusdestinations", {"city": "苏州"}, proxies={"http": "http://%s" % ipstr})
-        except:
+        except Exception, e:
             return False
         if r.status_code == 200:
-            print 1111111111
             return True
-        print 222222222222
         return False
 
 
