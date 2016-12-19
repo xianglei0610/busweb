@@ -155,16 +155,16 @@ class Flow(BaseFlow):
                 "result_code": 4,
                 "result_msg": state,
             })
-        elif state=="已取消":
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
-        elif state==4:
-            result_info.update({
-                "result_code": 2,
-                "result_msg": state,
-            })
+        # elif state=="已取消":
+        #     result_info.update({
+        #         "result_code": 2,
+        #         "result_msg": state,
+        #     })
+        # elif state==4:
+        #     result_info.update({
+        #         "result_code": 2,
+        #         "result_msg": state,
+        #     })
         return result_info
 
     def get_pay_page(self, order, valid_code="", session=None, pay_channel="alipay" ,**kwargs):
