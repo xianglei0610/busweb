@@ -23,7 +23,6 @@ from app.utils import get_redis
 from app import rebot_log
 
 
-
 class ProxyProducer(object):
 
     def __init__(self):
@@ -383,18 +382,18 @@ class TongChengProxyConsumer(ProxyConsumer):
     name = "tongcheng"
 
     def valid_proxy(self, ipstr):
-        url = "http://www.ly.com/"
+        from app.models import TCAppRebot
+        rebot = TCAppRebot.get_one()
+        url = "http://tcmobileapi.17usoft.com/bus/QueryHandler.ashx"
         try:
-            ua = random.choice(BROWSER_USER_AGENT)
-            r = requests.get(url,
-                             headers={"User-Agent": ua},
-                             timeout=2,
-                             proxies={"http": "http://%s" % ipstr})
+            r = rebot.http_post(url, "getbusdestinations", {"city": "苏州"}, proxies={"http": "http://%s" % ipstr})
         except:
             return False
-        if r.status_code != 200 or "同程旅游" not in r.content:
-            return False
-        return True
+        if r.status_code == 200:
+            print 1111111111
+            return True
+        print 222222222222
+        return False
 
 
 class CBDProxyConsumer(ProxyConsumer):
@@ -629,16 +628,16 @@ if "proxy_list" not in globals():
 
     proxy_list[CqkyProxyConsumer.name] = CqkyProxyConsumer()
     proxy_list[TongChengProxyConsumer.name] = TongChengProxyConsumer()
-    proxy_list[CBDProxyConsumer.name] = CBDProxyConsumer()
+    # proxy_list[CBDProxyConsumer.name] = CBDProxyConsumer()
     proxy_list[ScqcpProxyConsumer.name] = ScqcpProxyConsumer()
     proxy_list[BjkyProxyConsumer.name] = BjkyProxyConsumer()
-    proxy_list[LnkyProxyConsumer.name] = LnkyProxyConsumer()
-    proxy_list[E8sProxyConsumer.name] = E8sProxyConsumer()
+    # proxy_list[LnkyProxyConsumer.name] = LnkyProxyConsumer()
+    # proxy_list[E8sProxyConsumer.name] = E8sProxyConsumer()
     proxy_list[ChangtuProxyConsumer.name] = ChangtuProxyConsumer()
-    proxy_list[Bus365ProxyConsumer.name] = Bus365ProxyConsumer()
+    # proxy_list[Bus365ProxyConsumer.name] = Bus365ProxyConsumer()
     proxy_list[HN96520ProxyConsumer.name] = HN96520ProxyConsumer()
     proxy_list[SD365ProxyConsumer.name] = SD365ProxyConsumer()
-    proxy_list[QDKYProxyConsumer.name] = QDKYProxyConsumer()
+    # proxy_list[QDKYProxyConsumer.name] = QDKYProxyConsumer()
 
     for name, obj in proxy_list.items():
         proxy_producer.registe_consumer(obj)
