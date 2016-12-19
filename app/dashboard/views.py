@@ -685,8 +685,12 @@ def change_kefu():
     msg = "成功转给%s" % target.username
 
     if "snmpay" in current_user.username and target.username == "luojunping":
-        subject = "异常单转入(%s=>%s): %s %s, " % (current_user.username, target.username, order.crawl_source, order.order_no)
-        async_send_email(subject, subject)
+        try:
+            order.refresh_status()
+            assert order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC]
+        except:
+            subject = "异常单转入(%s=>%s): %s %s, " % (current_user.username, target.username, order.crawl_source, order.order_no)
+            async_send_email(subject, subject)
     return jsonify({"code": 1, "msg": msg})
 
 
