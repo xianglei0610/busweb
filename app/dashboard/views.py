@@ -687,7 +687,7 @@ def change_kefu():
     if "snmpay" in current_user.username and target.username == "luojunping":
         try:
             order.refresh_status()
-            assert order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC]
+            assert order.status in [STATUS_ISSUE_FAIL, STATUS_ISSUE_SUCC, STATUS_ISSUE_ING]
         except:
             subject = "异常单转入(%s=>%s): %s %s, " % (current_user.username, target.username, order.crawl_source, order.order_no)
             async_send_email(subject, subject)
