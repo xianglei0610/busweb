@@ -58,6 +58,7 @@ class Flow(BaseFlow):
         def _check_fail(msg):
             lst = [
                 u"售票不足",
+                u"您本次的购票受到限制",
             ]
             for s in lst:
                 if s in msg:

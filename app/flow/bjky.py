@@ -64,15 +64,15 @@ class Flow(BaseFlow):
                 self.request_clear_shopcart(rebot)
             elif errmsg:
                 result_code = 2
-                if "余票数不足" in errmsg[0]:
+                if "余票数不足" in errmsg[0] or "已停售" in errmsg[0]:
                     self.close_line(order.line, reason=errmsg[0])
                     result_code = 0
                 elif "每个证件号每天只能" in errmsg[0]:
                     result_code = 0
                 lock_result.update(result_code=result_code,
-                                    source_account=rebot.telephone,
-                                    result_reason='add_shopcart1'+errmsg[0],
-                                    lock_info={'result_reason': errmsg[0]})
+                                   source_account=rebot.telephone,
+                                   result_reason='add_shopcart1'+errmsg[0],
+                                   lock_info={'result_reason': errmsg[0]})
                 return lock_result
         shopcartct = self.request_query_shopcart(rebot)
         if shopcartct == '0':

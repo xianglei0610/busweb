@@ -42,7 +42,6 @@ class ProxyProducer(object):
             return
         for s in r.content.split("\n"):
             ipstr = s.strip()
-            print ipstr
             if self.valid_proxy(ipstr):
                 rebot_log.info("[crawl_from_kuaidaili] %s", ipstr)
                 self.add_proxy(ipstr)
@@ -386,7 +385,7 @@ class TongChengProxyConsumer(ProxyConsumer):
         rebot = TCAppRebot.get_one()
         url = "http://tcmobileapi.17usoft.com/bus/QueryHandler.ashx"
         try:
-            r = rebot.http_post(url, "getbusdestinations", {"city": "苏州"}, proxies={"http": "http://%s" % ipstr})
+            r = rebot.http_post(url, "getbusdestinations", {"city": "苏州"}, proxies={"http": "http://%s" % ipstr}, timeout=3)
         except Exception, e:
             return False
         if r.status_code == 200:
@@ -611,7 +610,7 @@ class QDKYProxyConsumer(ProxyConsumer):
                     'ctl00$ContentPlaceHolder1$chengcheriqi_id': '',
                     'ctl00$ContentPlaceHolder1$chengcheriqi_id0': '',
                 }
-                r = requests.post(url, headers=headers, data=data, cookies=r.cookies,proxies=proxies)
+                r = requests.post(url, headers=headers, data=data, cookies=r.cookies,proxies=proxies, timeout=5)
                 if u"青岛长途汽车售票网" in r.content:
                     return True
         except:
