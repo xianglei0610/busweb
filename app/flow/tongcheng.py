@@ -614,10 +614,10 @@ class Flow(BaseFlow):
         }
         try:
             r = rebot.http_post(url, "getbusschedule", data)
+            res = r.json()
         except Exception, e:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
             return result_info
-        res = r.json()
         res = res["response"]
         if res["header"]["rspCode"] != "0000" or not res["body"]:
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
