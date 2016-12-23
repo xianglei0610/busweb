@@ -136,7 +136,7 @@ class Flow(BaseFlow):
             })
         else:
             code = 0
-            if u"此线路服务费不可用" in desc:
+            if u"此线路服务费不可用" in desc or u"此线路暂不可预订" in desc:
                 code = 2
             if u"已暂停网售" in desc:
                 self.close_line(order.line, desc)
@@ -614,10 +614,10 @@ class Flow(BaseFlow):
         }
         try:
             r = rebot.http_post(url, "getbusschedule", data)
+            res = r.json()
         except Exception, e:
             result_info.update(result_msg="exception_ok", update_attrs={"left_tickets": 2, "refresh_datetime": now})
             return result_info
-        res = r.json()
         res = res["response"]
         if res["header"]["rspCode"] != "0000" or not res["body"]:
             result_info.update(result_msg="error response", update_attrs={"left_tickets": 0, "refresh_datetime": now})
