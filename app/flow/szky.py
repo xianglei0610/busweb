@@ -186,13 +186,13 @@ class Flow(BaseFlow):
             "User-Agent": rebot.user_agent,
         }
         cookies = json.loads(rebot.cookies)
-        base_url = "http://124.172.118.225/User/CommitGoods.aspx"
+        base_url = "http://211.162.125.225/User/CommitGoods.aspx"
         r = rebot.http_get(base_url, headers=headers, cookies=cookies)
         content = r.content
         soup = BeautifulSoup(content, "lxml")
         headers.update({
                         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                        "Referer": "http://124.172.118.225/User/CommitGoods.aspx",
+                        "Referer": "http://211.162.125.225/User/CommitGoods.aspx",
                     })
         params = {
             "__EVENTTARGET": soup.select("#__EVENTTARGET")[0].get("value"),
@@ -224,7 +224,7 @@ class Flow(BaseFlow):
         pay_money = ""
         flag = False
         if location_url and location_url == '/User/SendOI.aspx':
-            pay_url = "http://124.172.118.225"+location_url
+            pay_url = "http://211.162.125.225"+location_url
             r = rebot.http_get(pay_url,
                                headers=headers,
                                cookies=cookies,
@@ -256,10 +256,10 @@ class Flow(BaseFlow):
         """
         获取购物车条目
         """
-        base_url = "http://124.172.118.225/UserData/ShopCart.aspx"
+        base_url = "http://211.162.125.225/UserData/ShopCart.aspx"
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://124.172.118.225/User/CommitGoods.aspx",
+            "Referer": "http://211.162.125.225/User/CommitGoods.aspx",
             "X-Requested-With": "XMLHttpRequest",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
@@ -285,10 +285,10 @@ class Flow(BaseFlow):
         """
         删除购物车
         """
-        base_url = "http://124.172.118.225/UserData/ShopCart.aspx"
+        base_url = "http://211.162.125.225/UserData/ShopCart.aspx"
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://124.172.118.225/User/CommitGoods.aspx",
+            "Referer": "http://211.162.125.225/User/CommitGoods.aspx",
             "X-Requested-With": "XMLHttpRequest",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
@@ -308,10 +308,10 @@ class Flow(BaseFlow):
         加入购物车
         """
         line = order.line
-        base_url = "http://124.172.118.225/UserData/ShopCart.aspx"
+        base_url = "http://211.162.125.225/UserData/ShopCart.aspx"
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://124.172.118.225/User/Default.aspx",
+            "Referer": "http://211.162.125.225/User/Default.aspx",
             "X-Requested-With": "XMLHttpRequest",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             }
@@ -371,7 +371,7 @@ class Flow(BaseFlow):
         return result_info
 
     def send_order_request(self, rebot, order):
-        base_url = "http://124.172.118.225/UserData/UserCmd.aspx"
+        base_url = "http://211.162.125.225/UserData/UserCmd.aspx"
         params = {
             "BeginDate": "",
             "EndDate": "",
@@ -385,7 +385,7 @@ class Flow(BaseFlow):
 
         headers = {
             "User-Agent": rebot.user_agent,
-            "Referer": "http://124.172.118.225/User/OrderQuery.aspx",
+            "Referer": "http://211.162.125.225/User/OrderQuery.aspx",
             "X-Requested-With": "XMLHttpRequest",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
@@ -435,7 +435,7 @@ class Flow(BaseFlow):
                     return {"flag": "error", "content": "订单已支付成功或者失效"}
             else:
                 return {"flag": "error", "content": "没拿到源站订单号，不允许支付"}
-            base_url = "http://124.172.118.225/User/OrderQuery.aspx"
+            base_url = "http://211.162.125.225/User/OrderQuery.aspx"
             headers = {
                 "User-Agent": rebot.user_agent,
             }
@@ -443,7 +443,7 @@ class Flow(BaseFlow):
             r = rebot.http_get(base_url, headers=headers)
             soup = BeautifulSoup(r.content, "lxml")
             headers.update({"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                            "Referer": "http://124.172.118.225/User/OrderQuery.aspx"})
+                            "Referer": "http://211.162.125.225/User/OrderQuery.aspx"})
             params = {
                 "__EVENTARGUMENT": soup.select("#__EVENTARGUMENT")[0].get("value"),
                 "__EVENTTARGET": soup.select("#__EVENTTARGET")[0].get("value"),
@@ -463,7 +463,7 @@ class Flow(BaseFlow):
             location_url = r.headers.get('location', '')
             cookies.update(dict(r.cookies))
             if location_url and location_url == '/User/SendOI.aspx':
-                pay_url = "http://124.172.118.225"+location_url
+                pay_url = "http://211.162.125.225"+location_url
                 r = rebot.http_get(pay_url,
                                    headers=headers,
                                    cookies=cookies,
@@ -483,8 +483,8 @@ class Flow(BaseFlow):
 
         if order.status in [STATUS_LOCK_RETRY, STATUS_WAITING_LOCK]:
             cookies = {}
-            login_form = "http://124.172.118.225/UserData/UserCmd.aspx"
-            valid_url = "http://124.172.118.225/ValidateCode.aspx"
+            login_form = "http://211.162.125.225/UserData/UserCmd.aspx"
+            valid_url = "http://211.162.125.225/ValidateCode.aspx"
             headers = {"User-Agent": rebot.user_agent or random.choice(BROWSER_USER_AGENT)}
             r = rebot.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
@@ -530,10 +530,10 @@ class Flow(BaseFlow):
                     'cmd': "MQCenterGetClass",
                     'txtImgCode': valid_code,
                     }
-            line_url = 'http://124.172.118.225/UserData/MQCenterSale.aspx'
+            line_url = 'http://211.162.125.225/UserData/MQCenterSale.aspx'
             headers.update({
                         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                        "Referer": "http://124.172.118.225/User/Default.aspx",
+                        "Referer": "http://211.162.125.225/User/Default.aspx",
                         "X-Requested-With": "XMLHttpRequest",
                     })
             try:

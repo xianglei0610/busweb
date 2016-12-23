@@ -96,7 +96,7 @@ def registe(nickname, name, idcard, phone):
     
     
     
-    code_url = "http://124.172.118.225/ValidateCode.aspx?"
+    code_url = "http://211.162.125.225/ValidateCode.aspx?"
     r = requests.get(code_url, headers=headers, cookies=cookies)
     code = vcode_cqky(r.content)
     # local_filename = "/Users/luocky/Downloads/4.gif"
@@ -110,9 +110,9 @@ def registe(nickname, name, idcard, phone):
     
     headers["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0"
     headers["Content-Type"] = "application/x-www-form-urlencoded"
-    headers["Referer"] = "http://124.172.118.225/User/Register.aspx"
+    headers["Referer"] = "http://211.162.125.225/User/Register.aspx"
 
-    r = requests.post("http://124.172.118.225/User/Register.aspx", headers=headers, data=urllib.urlencode(params), cookies=cookies)
+    r = requests.post("http://211.162.125.225/User/Register.aspx", headers=headers, data=urllib.urlencode(params), cookies=cookies)
     msg_lst = re.findall(r"<script>alert\('(.+)'\);</script>", r.content)
     msg = ""
     if msg_lst:

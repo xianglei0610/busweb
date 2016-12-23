@@ -4462,7 +4462,7 @@ SOURCE_INFO = {
     },
     SOURCE_SZKY: {
         "name": "深圳客运",
-        "website": "http://124.172.118.225/User/Default.aspx",
+        "website": "http://211.162.125.225/User/Default.aspx",
         "accounts": {
             # 用户名 密码 注册姓名
             "a13267109876": ("123456", "向磊磊"),
