@@ -5219,8 +5219,8 @@ class SzkyWebRebot(Rebot):
             cookies = {}
         vcode_flag = False
         if not valid_code:
-            login_form = "http://124.172.118.225/UserData/UserCmd.aspx"
-            valid_url = "http://124.172.118.225/ValidateCode.aspx"
+            login_form = "http://211.162.125.225/UserData/UserCmd.aspx"
+            valid_url = "http://211.162.125.225/ValidateCode.aspx"
             headers = {"User-Agent": random.choice(BROWSER_USER_AGENT)}
             r = self.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
@@ -5237,7 +5237,7 @@ class SzkyWebRebot(Rebot):
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", "") or self.user_agent,
-                "Referer": "http://124.172.118.225/User/Default.aspx",
+                "Referer": "http://211.162.125.225/User/Default.aspx",
                 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                 "X-Requested-With": "XMLHttpRequest"
             }
@@ -5248,7 +5248,7 @@ class SzkyWebRebot(Rebot):
                 "loginValid": valid_code,
                 "cmd": "login",
             }
-            login_url = "http://124.172.118.225/UserData/UserCmd.aspx"
+            login_url = "http://211.162.125.225/UserData/UserCmd.aspx"
             r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
             res = json.loads(trans_js_str(r.content))
             success = res.get("success", True)
@@ -5278,7 +5278,7 @@ class SzkyWebRebot(Rebot):
             return "fail"
 
     def check_login(self):
-        user_url = "http://124.172.118.225/User/Default.aspx"
+        user_url = "http://211.162.125.225/User/Default.aspx"
         headers = {
             "User-Agent": self.user_agent,
         }
@@ -5296,8 +5296,8 @@ class SzkyWebRebot(Rebot):
         cookies = {}
         valid_code = ''
         if not valid_code:
-            login_form = "http://124.172.118.225/UserData/UserCmd.aspx"
-            valid_url = "http://124.172.118.225/ValidateCode.aspx"
+            login_form = "http://211.162.125.225/UserData/UserCmd.aspx"
+            valid_url = "http://211.162.125.225/ValidateCode.aspx"
             r = self.http_get(login_form, headers=headers, cookies=cookies)
             cookies.update(dict(r.cookies))
             for i in range(3):
@@ -5312,7 +5312,7 @@ class SzkyWebRebot(Rebot):
         if valid_code:
             headers = {
                 "User-Agent": headers.get("User-Agent", ""),
-                "Referer": "http://124.172.118.225/User/Default.aspx",
+                "Referer": "http://211.162.125.225/User/Default.aspx",
                 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                 "X-Requested-With": "XMLHttpRequest"
             }
@@ -5323,7 +5323,7 @@ class SzkyWebRebot(Rebot):
                 "loginValid": valid_code,
                 "cmd": "login",
             }
-            login_url = "http://124.172.118.225/UserData/UserCmd.aspx"
+            login_url = "http://211.162.125.225/UserData/UserCmd.aspx"
             r = self.http_post(login_url, data=urllib.urlencode(params), headers=headers, cookies=cookies)
             ret = json.loads(trans_js_str(r.content))
             success = ret.get("success", True)
