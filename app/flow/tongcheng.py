@@ -148,7 +148,7 @@ class Flow(BaseFlow):
         return lock_result
 
     def do_lock_ticket(self, order):
-        # order.line.refresh(force=1)
+        order.line.refresh(force=1)
         if order.line.s_province in ["湖北"]:
             return self.do_lock_ticket_by_web(order)
         else:

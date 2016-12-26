@@ -146,7 +146,7 @@ def query_line():
         start_date = post.get("start_date")
         assert (starting_name and dest_name and start_date)
         assert now.strftime("%Y-%m-%d") <= start_date
-    except:
+    except Exception, e:
         return jsonify({"code": RET_PARAM_ERROR, "message": "parameter error", "data": ""})
 
     try:

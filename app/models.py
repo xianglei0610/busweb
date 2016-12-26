@@ -3558,7 +3558,7 @@ class TCAppRebot(Rebot):
     is_for_lock = True
 
     def http_post(self, url, service_name, data, proxies={}, **kwargs):
-        if not proxies:
+        if not proxies and self.proxy_ip:
             proxies = {"http": "http://%s" % self.proxy_ip}
         stime = str(int(time.time() * 1000))
         account_id = "c26b007f-c89e-431a-b8cc-493becbdd8a2"
@@ -3611,9 +3611,9 @@ class TCAppRebot(Rebot):
     @property
     def proxy_ip(self):
         rds = get_redis("default")
-        ipstr = self.ip
-        if ipstr and rds.sismember(RK_PROXY_IP_TC, ipstr):
-            return ipstr
+        # ipstr = self.ip
+        # if ipstr and rds.sismember(RK_PROXY_IP_TC, ipstr):
+        #     return ipstr
         ipstr = rds.srandmember(RK_PROXY_IP_TC)
         self.modify(ip=ipstr)
         return ipstr
