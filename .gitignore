@@ -8,3 +8,8 @@ tmp/
 *.log.*
 .DS_Store
 .idea/
+snm/
+sms/
+snm_keyu/
+logs/
+
